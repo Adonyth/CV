@@ -7,19 +7,56 @@
     <meta name="theme-color" content="#0a0e18" />
     <meta
       name="description"
-      content="Academic CV — Jiaxuan Chen (陈嘉轩), Physics"
+      content="Academic CV of Jiaxuan Chen (陈嘉轩) — M.Sc. physics at Brown University. Research across high-energy/jet physics, astrophysics, and quantum thermal transport."
       id="meta-desc"
     />
+    <meta name="author" content="Jiaxuan Chen (陈嘉轩)" />
+    <meta
+      name="keywords"
+      content="Jiaxuan Chen, 陈嘉轩, physics, high-energy physics, jet physics, CMS, astrophysics, X-ray binary, carbon nanotube, thermal transport, dark matter, Brown University, academic CV"
+    />
+    <meta name="robots" content="index, follow" />
     <meta property="og:title" content="Jiaxuan Chen — Academic CV" id="meta-og-title" />
     <meta property="og:type" content="website" />
     <meta
       property="og:description"
-      content="Academic CV — Jiaxuan Chen (陈嘉轩), Physics"
+      content="Academic CV of Jiaxuan Chen (陈嘉轩) — M.Sc. physics at Brown University. Research across high-energy/jet physics, astrophysics, and quantum thermal transport."
       id="meta-og-desc"
     />
     <meta name="twitter:card" content="summary" />
+    <!--
+      After deploy, add absolute-URL tags (replace YOURDOMAIN with the live host):
+      <link rel="canonical" href="https://YOURDOMAIN/" />
+      <meta property="og:url" content="https://YOURDOMAIN/" />
+      <meta property="og:image" content="https://YOURDOMAIN/og-cover.png" />
+      <meta name="twitter:image" content="https://YOURDOMAIN/og-cover.png" />
+      …and switch twitter:card above to "summary_large_image".
+    -->
     <title>Jiaxuan Chen — Academic CV</title>
     <link rel="stylesheet" href="styles.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Jiaxuan Chen",
+        "alternateName": "陈嘉轩",
+        "jobTitle": "Physics researcher",
+        "email": "mailto:jiaxuan_chen1@brown.edu",
+        "affiliation": { "@type": "CollegeOrUniversity", "name": "Brown University" },
+        "alumniOf": [
+          { "@type": "CollegeOrUniversity", "name": "Brown University" },
+          { "@type": "CollegeOrUniversity", "name": "Shandong University" }
+        ],
+        "knowsAbout": [
+          "High-energy physics",
+          "Jet physics",
+          "Astrophysics",
+          "X-ray binaries",
+          "Carbon nanotube thermal transport",
+          "Dark matter phenomenology"
+        ]
+      }
+    </script>
   </head>
   <body class="cv-solar cv-solar--nye-backdrop">
     <a class="skip-link no-print" href="#main" id="skip-link">Skip to content</a>
@@ -27,9 +64,9 @@
     <div class="cv-nye-backdrop no-print" aria-hidden="true">
       <iframe
         class="cv-nye-backdrop__frame"
-        src="nye-clock-backdrop.html"
+        data-src="nye-clock-backdrop.html"
         title="Nye Clock — Sun, Earth, and Moon (full instrument)"
-        loading="eager"
+        loading="lazy"
         referrerpolicy="no-referrer-when-downgrade"
       ></iframe>
     </div>
@@ -89,11 +126,31 @@
             ><span class="contact-label i18n-zh">电话</span> +1 401-688-9544
           </li>
         </ul>
+
+        <!--
+          External links — give me the real URLs and I'll uncomment + wire this up.
+          (Styled by .links in styles.css; prints cleanly.)
+        <ul class="links" id="links-list">
+          <li><a href="https://github.com/USERNAME" rel="me noopener" target="_blank">GitHub</a></li>
+          <li><a href="https://scholar.google.com/citations?user=ID" rel="me noopener" target="_blank">Google Scholar</a></li>
+          <li><a href="https://orcid.org/0000-0000-0000-0000" rel="me noopener" target="_blank">ORCID</a></li>
+        </ul>
+        -->
       </header>
 
     <main id="main" class="wrap">
       <!-- English -->
       <div class="i18n-en" lang="en">
+        <section class="block" aria-labelledby="about-heading-en">
+          <h2 id="about-heading-en">About</h2>
+          <p class="lede">
+            Physicist (Sc.M., Brown University) working across high-energy collider
+            phenomenology, compact-object astrophysics, and quantum thermal transport —
+            equally at home in theory, observation, and the lab. Increasingly building
+            software where physics meets AI.
+          </p>
+        </section>
+
         <section class="block" aria-labelledby="edu-heading-en">
           <h2 id="edu-heading-en">Education</h2>
           <ul class="timeline">
@@ -198,6 +255,62 @@
           </ul>
         </section>
 
+        <section class="block" aria-labelledby="projects-heading-en">
+          <h2 id="projects-heading-en">Projects</h2>
+          <ul class="research-list">
+            <li>
+              <h3 class="item-title">Omytea</h3>
+              <p>
+                Omytea is building a quantum-information world-model protocol in which
+                streaming vector memory is compiled into density states, evolved by valid
+                operator/channel families, measured into forecast probabilities, and revised
+                by an outcome-scored ledger.
+              </p>
+              <ul class="artifact-list">
+                <li>
+                  <a
+                    href="https://pypi.org/project/omytea-quantum-substrate/"
+                    rel="noopener"
+                    target="_blank"
+                    >omytea-quantum-substrate</a
+                  >
+                  (PyPI)
+                </li>
+                <li>
+                  <a
+                    href="https://github.com/Adonyth/omytea-quantum-substrate"
+                    rel="noopener"
+                    target="_blank"
+                    >omytea-quantum-substrate</a
+                  >
+                  (GitHub)
+                </li>
+                <li>
+                  <a
+                    href="https://github.com/Adonyth/omytea-personal-console"
+                    rel="noopener"
+                    target="_blank"
+                    >omytea-personal-console</a
+                  >
+                  (GitHub)
+                </li>
+                <li>
+                  GolfCal-1k — benchmark + paper draft, submission in preparation
+                </li>
+              </ul>
+            </li>
+            <li>
+              <h3 class="item-title">Nye Clock</h3>
+              <p>
+                A celestial sexagenary instrument — the WebGL backdrop of this site.
+                <a href="nye-clock-backdrop.html" rel="noopener" target="_blank"
+                  >Open full instrument</a
+                >
+              </p>
+            </li>
+          </ul>
+        </section>
+
         <section class="block" aria-labelledby="skills-heading-en">
           <h2 id="skills-heading-en">Technical skills</h2>
           <p class="skills">
@@ -212,6 +325,13 @@
 
       <!-- Chinese -->
       <div class="i18n-zh" lang="zh-Hans">
+        <section class="block" aria-labelledby="about-heading-zh">
+          <h2 id="about-heading-zh">简介</h2>
+          <p class="lede">
+            物理学者（布朗大学理学硕士），研究横跨高能对撞机现象学、致密天体天体物理与量子热输运，于理论、观测与实验之间皆可游走；并日益投身于物理与&nbsp;AI 交叉处的软件构建。
+          </p>
+        </section>
+
         <section class="block" aria-labelledby="edu-heading-zh">
           <h2 id="edu-heading-zh">教育背景</h2>
           <ul class="timeline">
@@ -306,6 +426,57 @@
           </ul>
         </section>
 
+        <section class="block" aria-labelledby="projects-heading-zh">
+          <h2 id="projects-heading-zh">项目</h2>
+          <ul class="research-list">
+            <li>
+              <h3 class="item-title">Omytea</h3>
+              <p>
+                Omytea 正在构建一套量子信息世界模型协议：将流式向量记忆编译为密度态，经合法算符/信道族演化，测量为预测概率，并由结果评分的账本进行修订。
+              </p>
+              <ul class="artifact-list">
+                <li>
+                  <a
+                    href="https://pypi.org/project/omytea-quantum-substrate/"
+                    rel="noopener"
+                    target="_blank"
+                    >omytea-quantum-substrate</a
+                  >
+                  （PyPI）
+                </li>
+                <li>
+                  <a
+                    href="https://github.com/Adonyth/omytea-quantum-substrate"
+                    rel="noopener"
+                    target="_blank"
+                    >omytea-quantum-substrate</a
+                  >
+                  （GitHub）
+                </li>
+                <li>
+                  <a
+                    href="https://github.com/Adonyth/omytea-personal-console"
+                    rel="noopener"
+                    target="_blank"
+                    >omytea-personal-console</a
+                  >
+                  （GitHub）
+                </li>
+                <li>GolfCal-1k — 基准测试 + 论文草稿，投稿准备中</li>
+              </ul>
+            </li>
+            <li>
+              <h3 class="item-title">Nye Clock</h3>
+              <p>
+                符号天球六十甲子时仪 — 本站 WebGL 背景。
+                <a href="nye-clock-backdrop.html" rel="noopener" target="_blank"
+                  >打开完整时仪</a
+                >
+              </p>
+            </li>
+          </ul>
+        </section>
+
         <section class="block" aria-labelledby="skills-heading-zh">
           <h2 id="skills-heading-zh">专业技能</h2>
           <p class="skills">
@@ -319,14 +490,14 @@
 
     <footer class="site-footer wrap">
       <p class="footer-note i18n-en">
-        Last updated: <time datetime="2026-04-02">April 2026</time>
+        Last updated: <time datetime="2026-06-12">June 2026</time>
       </p>
       <p class="footer-note i18n-zh">
-        最后更新：<time datetime="2026-04-02">2026 年 4 月</time>
+        最后更新：<time datetime="2026-06-12">2026 年 6 月</time>
       </p>
     </footer>
     </div>
 
-    <script src="cv.js" defer></script>
+    <script src="cv.js?v=2" defer></script>
   </body>
 </html>
