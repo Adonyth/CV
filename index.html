@@ -7,14 +7,14 @@
     <meta name="theme-color" content="#0b0a09" />
     <meta
       name="description"
-      content="Jiaxuan Chen (陈嘉轩) — physicist and independent researcher across foundations of physics, gravitational-wave methodology, machine-learning interpretability, and the political economy of technology."
+      content="Jiaxuan Chen (陈嘉轩) — physicist and independent researcher. A living orrery: Earth, Moon, Sun and the natal constellations carry the work."
       id="meta-desc"
     />
     <meta name="author" content="Jiaxuan Chen (陈嘉轩)" />
     <meta name="robots" content="index, follow" />
     <meta property="og:title" content="Jiaxuan Chen" id="meta-og-title" />
     <meta property="og:type" content="website" />
-    <meta property="og:description" content="Physicist · Independent researcher. Sharp, honestly-scoped results — and a wager on the future." id="meta-og-desc" />
+    <meta property="og:description" content="Physicist · Independent researcher. The sky at the moment of birth carries the body of work." id="meta-og-desc" />
     <meta name="twitter:card" content="summary" />
     <title>Jiaxuan Chen · 陈嘉轩</title>
 
@@ -24,7 +24,7 @@
       href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=13" />
+    <link rel="stylesheet" href="styles.css?v=14" />
     <script>
       (function () {
         try {
@@ -51,138 +51,69 @@
     </script>
   </head>
 
-  <body class="home">
-    <a class="skip-link no-print" href="#portals">Skip to content</a>
+  <!-- ============================================================
+       ONE WORLD. No sections, no boxes, no scroll.
+       The site IS a living orrery: Earth (with the real footprint
+       burned onto it) at the center, the 干支 gear-rings carrying the
+       birth instant, the Sun toward Capricorn (主外), the Moon toward
+       Leo (主内), and the natal constellations whose stars ARE the
+       work — linked like an Obsidian graph. Drag to orbit. Zoom.
+       Click a star, a planet, the Earth. Everything else is cv.html.
+       ============================================================ -->
+  <body class="cosmos">
     <canvas id="deep" aria-hidden="true"></canvas>
-    <!-- The real Nye Clock runs as a transparent iframe backdrop (frames the WHOLE instrument,
-         Earth-centered, orbit-zoomable). The merged-into-#deep version (space.js MOUNT_NYE + nye-armature.js)
-         is designed but currently OFF while the interactive Earth-centered + natal-constellation
-         version is built & verified — see design-research/. -->
-    <iframe id="bazi-bg" class="bazi-clock" src="nye-clock-bazi.html" title="生辰八字 · Nye Clock (庚子·庚午·甲申)" loading="lazy" referrerpolicy="no-referrer" aria-hidden="true"></iframe>
     <canvas id="field" aria-hidden="true"></canvas>
 
-    <div class="content">
-      <!-- ============ slim top bar ============ -->
-      <nav class="nav no-print">
-        <div class="nav__in glass">
-          <a href="#top" class="brand">Jiaxuan Chen<span class="brand-zh" lang="zh">陈嘉轩</span></a>
-          <div class="nav__right">
-            <div class="nav__links">
-              <a href="#portals"><span class="i18n-en">Explore</span><span class="i18n-zh">探索</span></a>
-              <a href="#footprint"><span class="i18n-en">Footprint</span><span class="i18n-zh">足迹</span></a>
-              <a href="cv.html" class="nav__cta"><span class="i18n-en">Curriculum Vitae ↗</span><span class="i18n-zh">完整履历 ↗</span></a>
-            </div>
-            <div class="lang" role="group" aria-label="Language" id="lang-switch">
-              <button type="button" data-locale="en" aria-pressed="true" id="btn-en">EN</button>
-              <button type="button" data-locale="zh" aria-pressed="false" id="btn-zh">中文</button>
-            </div>
-            <button class="iconbtn" id="themebtn" type="button" aria-label="Toggle day / night">
-              <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-              <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-            </button>
-            <button class="iconbtn" id="fieldbtn" type="button" aria-pressed="false" aria-label="Toggle background field">
-              <svg class="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-              <svg class="eyeoff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10.4 10.4 0 0 1 12 19C5.5 19 2 12 2 12a18 18 0 0 1 5.1-5.9m3.2-1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-2.3 3.3M1 1l22 22"/></svg>
-            </button>
-          </div>
-        </div>
+    <!-- floating identity — the only card in the universe -->
+    <header class="cosmos-id glass" id="top">
+      <span class="eyebrow"><span class="i18n-en">Physicist · Independent researcher</span><span class="i18n-zh">物理学者 · 独立研究者</span></span>
+      <h1 class="cosmos-name">Jiaxuan&nbsp;Chen <span class="cosmos-name__zh" lang="zh">陈嘉轩</span></h1>
+      <nav class="cosmos-links" aria-label="Contact and profiles">
+        <a href="mailto:jiaxuan_chen1@alumni.brown.edu">Email</a>
+        <a href="https://orcid.org/0009-0008-5211-4313" rel="noopener" target="_blank">ORCID</a>
+        <a href="https://github.com/Adonyth" rel="noopener" target="_blank">GitHub</a>
+        <a href="https://ssrn.com/author=12014588" rel="noopener" target="_blank">SSRN</a>
+        <a href="cv.html" class="cosmos-links__cv"><span class="i18n-en">Curriculum Vitae ↗</span><span class="i18n-zh">完整履历 ↗</span></a>
       </nav>
+    </header>
 
-      <!-- ============ HERO ============ -->
-      <header class="home-hero" id="top">
-        <div class="rail home-hero__in">
-          <div class="home-hero__text">
-            <span class="eyebrow"><span class="i18n-en">Physicist · Independent researcher · 独立研究者</span><span class="i18n-zh">物理学者 · 独立研究者</span></span>
-            <h1 class="home-name">Jiaxuan&nbsp;Chen <span class="home-name__zh" lang="zh">陈嘉轩</span></h1>
-            <p class="home-lead">
-              <span class="i18n-en">I look for <span class="u">sharp, honestly-scoped results</span> — obstruction theorems, calibration certificates, and a wager on the future.</span>
-              <span class="i18n-zh">我追求<span class="u">范围诚实、锋利的结果</span>——障碍定理、校准证书，以及一场对未来的下注。</span>
-            </p>
-            <div class="home-links">
-              <a href="mailto:jiaxuan_chen1@alumni.brown.edu">Email</a>
-              <a href="https://orcid.org/0009-0008-5211-4313" rel="noopener" target="_blank">ORCID</a>
-              <a href="https://github.com/Adonyth" rel="noopener" target="_blank">GitHub</a>
-              <a href="https://ssrn.com/author=12014588" rel="noopener" target="_blank">SSRN</a>
-              <a href="cv.html" class="home-links__cv"><span class="i18n-en">Curriculum Vitae ↗</span><span class="i18n-zh">履历 ↗</span></a>
-            </div>
-          </div>
-          <!-- the 干支 orrery is merged into #deep (space.js + nye-armature.js) as one 3D scene -->
-          <div class="home-hero__aside" aria-hidden="true"></div>
-        </div>
-        <div class="home-hero__cue" aria-hidden="true">
-          <span class="i18n-en">scroll to explore</span><span class="i18n-zh">向下探索</span>
-        </div>
-      </header>
+    <!-- slim controls -->
+    <div class="cosmos-ui glass no-print">
+      <div class="lang" role="group" aria-label="Language" id="lang-switch">
+        <button type="button" data-locale="en" aria-pressed="true" id="btn-en">EN</button>
+        <button type="button" data-locale="zh" aria-pressed="false" id="btn-zh">中文</button>
+      </div>
+      <button class="iconbtn" id="themebtn" type="button" aria-label="Toggle day / night">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+      <button class="iconbtn" id="fieldbtn" type="button" aria-pressed="false" aria-label="Toggle particle field">
+        <svg class="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg class="eyeoff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10.4 10.4 0 0 1 12 19C5.5 19 2 12 2 12a18 18 0 0 1 5.1-5.9m3.2-1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-2.3 3.3M1 1l22 22"/></svg>
+      </button>
+    </div>
 
-      <!-- ============ PORTALS ============ -->
-      <section class="portals" id="portals">
-        <div class="rail">
-          <div class="portal-grid">
-            <a class="portal glass reveal" href="cv.html#research-programs" data-constellation="capricorn">
-              <span class="portal__i">i</span>
-              <h3><span class="i18n-en">Research</span><span class="i18n-zh">研究</span></h3>
-              <p><span class="i18n-en">Foundations of physics · gravitational-wave methods · world models</span><span class="i18n-zh">物理基础 · 引力波方法 · 世界模型</span></p>
-              <span class="portal__go">→</span>
-            </a>
-            <a class="portal glass reveal" href="cv.html#book-writing" data-constellation="leo">
-              <span class="portal__i">ii</span>
-              <h3><span class="i18n-en">Writing</span><span class="i18n-zh">写作</span></h3>
-              <p><span class="i18n-en">A book, essays, and a diagnosis of technological rent</span><span class="i18n-zh">一部专著、随笔，与对技术垄断租金的诊断</span></p>
-              <span class="portal__go">→</span>
-            </a>
-            <a class="portal glass reveal" href="cv.html#software" data-constellation="cancer">
-              <span class="portal__i">iii</span>
-              <h3><span class="i18n-en">Building</span><span class="i18n-zh">造物</span></h3>
-              <p><span class="i18n-en">Omytea · Nye Clock · open-source tools</span><span class="i18n-zh">Omytea · Nye Clock · 开源工具</span></p>
-              <span class="portal__go">→</span>
-            </a>
-            <a class="portal glass reveal" href="#bazi">
-              <span class="portal__i">iv</span>
-              <h3><span class="i18n-en">生辰八字</span><span class="i18n-zh">生辰八字</span></h3>
-              <p><span class="i18n-en">The Nye Clock — my celestial sexagenary chart</span><span class="i18n-zh">弐时仪 —— 我的天球干支命盘</span></p>
-              <span class="portal__go">→</span>
-            </a>
-            <a class="portal glass reveal portal--cv" href="cv.html">
-              <span class="portal__i">v</span>
-              <h3><span class="i18n-en">Curriculum Vitae</span><span class="i18n-zh">完整履历</span></h3>
-              <p><span class="i18n-en">The full record — publications, programs, experience</span><span class="i18n-zh">完整记录 —— 论文、研究纲领、经历</span></p>
-              <span class="portal__go">↗</span>
-            </a>
-          </div>
-        </div>
-      </section>
+    <!-- one legend, one hint -->
+    <footer class="cosmos-legend no-print" aria-hidden="true">
+      <span class="cosmos-legend__item">☉ <span class="i18n-en">Capricorn · the outer work</span><span class="i18n-zh">摩羯 · 主外之作</span></span>
+      <span class="cosmos-legend__item">☾ <span class="i18n-en">Leo · the inner fire</span><span class="i18n-zh">狮子 · 主内之火</span></span>
+      <span class="cosmos-legend__item">⊕ <span class="i18n-en">Earth · the footprint</span><span class="i18n-zh">地球 · 足迹</span></span>
+      <span class="cosmos-legend__item">◎ <span class="i18n-en">gear-rings · the birth instant</span><span class="i18n-zh">干支环 · 生辰</span></span>
+    </footer>
+    <div class="cosmos-hint no-print" id="cosmos-hint" aria-hidden="true">
+      <span class="i18n-en">drag to orbit · scroll to zoom · click the stars, the planets, the Earth</span>
+      <span class="i18n-zh">拖动旋转 · 滚轮缩放 · 点击星星、日月与地球</span>
+    </div>
 
-      <!-- placeholder anchor so the 生辰八字 portal resolves (the Nye Clock is the backdrop itself) -->
-      <span id="bazi" class="anchor-stub" aria-hidden="true"></span>
-
-      <!-- ============ FOOTPRINT — the raw-trace globe ============ -->
-      <section id="footprint" class="footprint">
-        <div class="rail">
-          <div class="secnum"><b>04</b> <span class="i18n-en">Footprint</span><span class="i18n-zh">足迹</span></div>
-          <h2 class="footprint__h"><span class="i18n-en">Every road, unsmoothed</span><span class="i18n-zh">每一段路，未经平滑</span></h2>
-          <p class="footprint__lead">
-            <span class="i18n-en">602,733 raw GPS points since I landed — no cleaning, no arcs, no counts. The routes <em>are</em> the map: dense where I live and drive, one thin cross-country thread, a few far marks abroad.</span>
-            <span class="i18n-zh">抵达以来的 602,733 个原始 GPS 点 —— 不清洗、不画弧、不统计。路线本身就是地图：常住常驶处最密，一条横贯大陆的细线，几处海外远点。</span>
-          </p>
-          <div class="footprint-globe" id="footprint-globe" role="img" aria-label="A globe plotting 602,733 raw GPS points tracing every route driven since 2024">
-            <span class="footprint-globe__hint" aria-hidden="true"><span class="i18n-en">drag to rotate · scroll to zoom</span><span class="i18n-zh">拖动旋转 · 滚轮缩放</span></span>
-          </div>
-        </div>
-      </section>
-
-      <footer class="home-foot">
-        <div class="rail foot">
-          <span class="foot__b">Jiaxuan Chen <span lang="zh">陈嘉轩</span></span>
-          <span class="foot__m">© 2026 · Providence, RI</span>
-        </div>
-      </footer>
+    <!-- fallback when 3D is gated off (mobile / low power / reduced motion) -->
+    <div class="cosmos-flat no-print" id="cosmos-flat" hidden>
+      <p><span class="i18n-en">The living orrery opens on a desktop browser.</span><span class="i18n-zh">动态星盘请在桌面浏览器中开启。</span></p>
+      <a href="cv.html"><span class="i18n-en">Read the full record ↗</span><span class="i18n-zh">阅读完整履历 ↗</span></a>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
     <script src="home.js?v=1" defer></script>
-    <script type="module" src="space.js?v=6"></script>
-    <script src="footprint.js?v=2" defer></script>
-    <script src="clock-view.js?v=1" defer></script>
+    <script type="module" src="space.js?v=7"></script>
   </body>
 </html>

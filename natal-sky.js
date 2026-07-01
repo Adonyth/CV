@@ -336,6 +336,17 @@ export function buildNatalSky(THREE, scene, data, opts) {
       if (!v && tip) { tip.style.opacity = "0"; hovered = -1; document.body.style.cursor = ""; }
       for (var i = 0; i < labelEls.length; i++) if (labelEls[i]) labelEls[i].style.opacity = "0";
     },
+    // world-space direction (from the sky's own center) toward a planet glyph — for aligning the orrery
+    getPlanetDir: function (id) {
+      for (var i = 0; i < planetSprites.length; i++) {
+        if (planetSprites[i].userData.planet === id) {
+          var pw = planetSprites[i].getWorldPosition(new T.Vector3());
+          var gw = group.getWorldPosition(new T.Vector3());
+          return pw.sub(gw).normalize();
+        }
+      }
+      return null;
+    },
     // live tuning levers (for judging on the real machine)
     setLineOpacity: function (v) { for (var i = 0; i < lineEntries.length; i++) { var e = lineEntries[i]; if (e) e.base = cons[i].loadBearing ? v : v * 0.48; } },
     setStarScale: function (v) { uniforms.uRefDepth.value = 560 * v; },

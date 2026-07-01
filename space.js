@@ -47,7 +47,15 @@
 
   var TIER = decideTier();
   window.__space = { tier: TIER, ready: false };
-  if (TIER === "flat") return; // gate says Flat → nothing loads, today's site is byte-untouched.
+  var COSMOS = document.body.classList.contains("cosmos");
+  if (TIER === "flat") {
+    // one-world page has no scroll content — show the graceful flat fallback
+    if (COSMOS) {
+      var flatEl = document.getElementById("cosmos-flat"); if (flatEl) flatEl.hidden = false;
+      var hintEl = document.getElementById("cosmos-hint"); if (hintEl) hintEl.style.display = "none";
+    }
+    return;
+  }
 
   /* ---------------- M1 stage + M2 fusion ---------------- */
   var THREE_URL = "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
@@ -67,7 +75,20 @@
     // NEVER set scene.background — one black on the page (CSS --page)
 
     var camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 1600);
-    camera.position.set(0, 0, 60);
+    /* cosmos: the camera ORBITS the Earth at the origin (one world, one gaze).
+       Everything lives inside the ember shell (R 285-405), so the sky is always
+       in view and nothing ever leaves the page. */
+    var orbit = { yaw: 0, pitch: 0.18, dist: 80, tYaw: 0, tPitch: 0.18, tDist: 80, lookY: 7,
+                  minDist: 16, maxDist: 150, dragging: false, moved: 0 };
+    function applyOrbit() {
+      orbit.yaw += (orbit.tYaw - orbit.yaw) * 0.07;
+      orbit.pitch += (orbit.tPitch - orbit.pitch) * 0.07;
+      orbit.dist += (orbit.tDist - orbit.dist) * 0.07;
+      var cp = Math.cos(orbit.pitch);
+      camera.position.set(orbit.dist * Math.sin(orbit.yaw) * cp, orbit.dist * Math.sin(orbit.pitch) + orbit.lookY, orbit.dist * Math.cos(orbit.yaw) * cp);
+      camera.lookAt(0, orbit.lookY, 0);
+    }
+    if (COSMOS) { applyOrbit(); } else { camera.position.set(0, 0, 60); }
 
     var MOBILE = innerWidth < 700;
     function resize() {
@@ -234,7 +255,9 @@
           transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending
         });
       }
-      var grp = new THREE.Group(); grp.name = "deepEmbers"; grp.position.set(0, 0, -355);
+      var grp = new THREE.Group(); grp.name = "deepEmbers";
+      // cosmos: the ember shell wraps the orrery at the ORIGIN (a sky dome around the world)
+      grp.position.set(0, 0, COSMOS ? 0 : -355);
       var farGeo = buildDeepLayerGeometry("far", farCount, 0xC0DE122);
       var farMat = makeMaterial(0.0, mobile ? 8.0 : 10.0, 330.0, calm ? 74.0 : 96.0);
       var farShell = new THREE.Points(farGeo, farMat); farShell.frustumCulled = false; grp.add(farShell);
@@ -242,7 +265,7 @@
       if (nearCount > 0) {
         nearGeo = buildDeepLayerGeometry("near", nearCount, 0xF0510A2);
         nearMat = makeMaterial(1.0, 24.0, 165.0, calm ? 42.0 : 58.0);
-        nearHaze = new THREE.Points(nearGeo, nearMat); nearHaze.position.set(0, -8, 150); nearHaze.frustumCulled = false; grp.add(nearHaze);
+        nearHaze = new THREE.Points(nearGeo, nearMat); nearHaze.position.set(0, -8, COSMOS ? 0 : 150); nearHaze.frustumCulled = false; grp.add(nearHaze);
       }
       scene.add(grp);
       return {
@@ -276,8 +299,12 @@
     applyTheme();
     new MutationObserver(applyTheme).observe(root, { attributes: true, attributeFilter: ["data-theme"] });
 
-    // honor field-off (3D over nothing looks broken)
-    function syncField() { var off = document.body.classList.contains("field-off"); canvas.style.display = off ? "none" : "block"; if (natalSky) natalSky.setVisible(!off); }
+    // honor field-off: on the cosmos page the 3D IS the site, so the toggle only rests the 2D field
+    function syncField() {
+      if (COSMOS) return;
+      var off = document.body.classList.contains("field-off");
+      canvas.style.display = off ? "none" : "block"; if (natalSky) natalSky.setVisible(!off);
+    }
     syncField();
     new MutationObserver(syncField).observe(document.body, { attributes: true, attributeFilter: ["class"] });
 
@@ -289,23 +316,105 @@
        One scene, one camera, one fog — so the orrery and the embers share
        real depth (no more two-layer "crossing"). It sits at world origin as
        the axis; the shader clearing (above) opens a calm pocket around it. */
-    var nyeArmature = null;
-    // TEMP REVERT (2026-07-01): the merged orrery regressed "see the whole Nye Clock" — space.js's
-    // single camera frames the Sun-centered spread-out layout, not the beloved Earth-centered
-    // instrument, and the real clock is meant to be orbited/zoomed (controls.target=earth, min8/max340).
-    // Reverted to the iframe backdrop while the interactive Earth-centered + natal-constellation
-    // version is designed & verified. Flip MOUNT_NYE=true (and remove the iframe) to re-enable.
-    var MOUNT_NYE = false;
-    if (MOUNT_NYE) import("./nye-armature.js").then(function (mod) {
+    var nyeArmature = null, earthGrpRef = null;
+
+    // once BOTH the orrery and the natal sky exist: swing the orrery so its real Sun
+    // points exactly at the drawn Capricornus (and report how close the Moon lands to Leo)
+    function tryAlignChart() {
+      if (!nyeArmature || !natalSky || !natalSky.getPlanetDir) return;
+      try {
+        var sunObj = nyeArmature.group.getObjectByName("NyeSun");
+        var moonObj = nyeArmature.group.getObjectByName("NyeMoon");
+        var sunDir = sunObj.getWorldPosition(new THREE.Vector3()).normalize();
+        var sunTarget = natalSky.getPlanetDir("sun");
+        if (!sunTarget) return;
+        var q = new THREE.Quaternion().setFromUnitVectors(sunDir, sunTarget);
+        nyeArmature.group.quaternion.premultiply(q);
+        nyeArmature.group.updateMatrixWorld(true);
+        var sunNow = sunObj.getWorldPosition(new THREE.Vector3()).normalize();
+        var moonNow = moonObj ? moonObj.getWorldPosition(new THREE.Vector3()).normalize() : null;
+        var moonTarget = natalSky.getPlanetDir("moon");
+        window.__space.align = {
+          sunDot: +sunNow.dot(sunTarget).toFixed(4),
+          moonDot: moonNow && moonTarget ? +moonNow.dot(moonTarget).toFixed(4) : null
+        };
+        // the alignment turned the whole orrery — relight Earth & Moon from where the Sun NOW burns
+        var sunW = sunObj.getWorldPosition(new THREE.Vector3());
+        var earthMesh = nyeArmature.group.getObjectByName("NyeEarthMesh");
+        if (earthMesh && earthMesh.material.uniforms && earthMesh.material.uniforms.uSunDirWorld) {
+          var eW = earthMesh.getWorldPosition(new THREE.Vector3());
+          earthMesh.material.uniforms.uSunDirWorld.value.copy(sunW.clone().sub(eW).normalize());
+        }
+        if (moonObj && moonObj.material && moonObj.material.uniforms && moonObj.material.uniforms.uSunDirWorld) {
+          var mW = moonObj.getWorldPosition(new THREE.Vector3());
+          moonObj.material.uniforms.uSunDirWorld.value.copy(sunW.clone().sub(mW).normalize());
+        }
+      } catch (e) { window.__space.alignError = String(e); }
+    }
+
+    // burn the REAL footprint (602k raw GPS points) onto the Earth as a glowing trace,
+    // and dress the Earth in real continents + night lights
+    function dressEarth(earthGrp) {
+      var earthMesh = earthGrp.getObjectByName("NyeEarthMesh");
+      if (!earthMesh) return;
+      var uni = earthMesh.material.uniforms;
+      var loader = new THREE.TextureLoader(); loader.crossOrigin = "anonymous";
+      function srgb(t) { if ("colorSpace" in t && THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace; return t; }
+      loader.load("https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/earth-blue-marble.jpg", function (t) {
+        srgb(t); uni.uAlbedoMap.value = t; uni.uUseAlbedoMap.value = 1;
+      });
+      loader.load("https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/earth-night.jpg", function (t) {
+        srgb(t); uni.uNightMap.value = t; uni.uUseNightMap.value = 1;
+      });
+      function bakeTrace() {
+        fetch("data/footprint-points.f32").then(function (r) { return r.arrayBuffer(); }).then(function (buf) {
+          var raw = new Float32Array(buf);
+          var W = MOBILE ? 2048 : 4096, H = W / 2;
+          var cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+          var ctx = cv.getContext("2d");
+          ctx.fillStyle = "rgba(255,175,115,0.5)";
+          for (var i = 0; i < raw.length; i += 2) {
+            var lat = raw[i], lon = raw[i + 1];
+            if (!isFinite(lat) || !isFinite(lon)) continue;
+            ctx.fillRect(((lon + 180) / 360) * W, ((90 - lat) / 180) * H, 1.3, 1.3);
+          }
+          var tex2 = new THREE.CanvasTexture(cv); srgb(tex2);
+          var rr = earthMesh.geometry.parameters.radius * 1.006;
+          var traceMat = new THREE.MeshBasicMaterial({ map: tex2, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.95 });
+          if ("toneMapped" in traceMat) traceMat.toneMapped = false;
+          var trace = new THREE.Mesh(new THREE.SphereGeometry(rr, 96, 96), traceMat);
+          trace.name = "FootprintTrace";
+          earthMesh.add(trace);          // child of the rotating Earth → trace stays glued to the continents
+          window.__space.tracePoints = raw.length / 2;
+        }).catch(function (e) { window.__space.traceError = String(e); });
+      }
+      // Do-Not-Repeat: never rely on requestIdleCallback alone — load-event + timeout fallback
+      var baked = false; function once() { if (!baked) { baked = true; bakeTrace(); } }
+      if ("requestIdleCallback" in window) requestIdleCallback(once, { timeout: 4000 });
+      setTimeout(once, 4500);
+    }
+
+    import("./nye-armature.js?v=2").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
           warm: true,
-          scale: MOBILE ? 0.82 : 0.92
+          scale: MOBILE ? 2.4 : 3.0
         });
-        // reconcile: open the clearing so embers don't cross the orrery
-        deepFusion.uniforms.uClearInner.value = 26.0;
-        deepFusion.uniforms.uClearOuter.value = 56.0;
+        /* GEOCENTRIC: shift the solar system so the EARTH sits at the world origin —
+           the axis everything orbits. The Sun then stands toward tropical Capricorn
+           (主外) and the Moon toward Leo (主内), exactly as the natal chart reads. */
+        var solar = nyeArmature.group.getObjectByName("NyeSolarSystem");
+        earthGrpRef = nyeArmature.group.getObjectByName("NyeEarth");
+        if (solar && earthGrpRef) {
+          solar.position.copy(earthGrpRef.position).negate();
+          nyeArmature.group.updateMatrixWorld(true);
+        }
+        // calm pocket in the embers around the orrery
+        deepFusion.uniforms.uClearInner.value = 42.0;
+        deepFusion.uniforms.uClearOuter.value = 96.0;
+        dressEarth(earthGrpRef);
+        tryAlignChart();
         window.__space.nye = nyeArmature;
         window.__space.setNyeScale = function (s) { if (nyeArmature) nyeArmature.group.scale.setScalar(s); };
         window.__space.setClearing = function (i, o) { deepFusion.uniforms.uClearInner.value = i; deepFusion.uniforms.uClearOuter.value = o; };
@@ -319,37 +428,96 @@
        GLOW sprite, same budget. #deep stays pointer-events:none; picking is a
        window raycaster. The iframe Nye Clock is untouched. */
     var natalSky = null;
+    // the natal sphere holds STILL around the world (the chart is a fact, not weather);
+    // the embers drift through it as living dust
+    var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=2").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=2").then(function (mod) {
+      return import("./natal-sky.js?v=3").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
-          group: deepFusion.group, R_STAR: 372, mobile: MOBILE, calm: (TIER !== "full"),
+          group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 205 : 372,
+          mobile: MOBILE, calm: (TIER !== "full"),
           camera: camera, interactive: true
         });
         natalSky.applyTheme(root.getAttribute("data-theme") === "dark");
-        natalSky.setVisible(!document.body.classList.contains("field-off"));
         window.__space.natal = natalSky;
         window.__space.natalStats = natalSky.stats;
-        // portals ↔ constellations: hovering an entrance blooms its constellation in the sky
-        document.querySelectorAll("[data-constellation]").forEach(function (el) {
-          var id = el.getAttribute("data-constellation");
-          el.addEventListener("mouseenter", function () { natalSky.highlight(id, true); });
-          el.addEventListener("mouseleave", function () { natalSky.highlight(id, false); });
-          el.addEventListener("focus", function () { natalSky.highlight(id, true); });
-          el.addEventListener("blur", function () { natalSky.highlight(id, false); });
-        });
+        tryAlignChart();
       });
     }).catch(function (e) { window.__space.natalError = String(e); });
+
+    /* ===== the hand on the world: drag orbits, wheel zooms, click enters ===== */
+    if (COSMOS) {
+      var lx = 0, ly = 0, downX = 0, downY = 0, hintFaded = false;
+      canvas.addEventListener("pointerdown", function (e) {
+        orbit.dragging = true; orbit.moved = 0; lx = downX = e.clientX; ly = downY = e.clientY;
+        try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+      });
+      addEventListener("pointerup", function () { orbit.dragging = false; });
+      addEventListener("pointermove", function (e) {
+        if (!orbit.dragging) return;
+        orbit.tYaw -= (e.clientX - lx) * 0.0052;
+        orbit.tPitch = Math.max(-1.15, Math.min(1.15, orbit.tPitch - (e.clientY - ly) * 0.0044));
+        orbit.moved += Math.abs(e.clientX - lx) + Math.abs(e.clientY - ly);
+        lx = e.clientX; ly = e.clientY;
+        if (!hintFaded && orbit.moved > 40) { hintFaded = true; var h = document.getElementById("cosmos-hint"); if (h) h.classList.add("is-faded"); }
+      });
+      canvas.addEventListener("wheel", function (e) {
+        e.preventDefault();
+        orbit.tDist = Math.max(orbit.minDist, Math.min(orbit.maxDist, orbit.tDist * (1 + Math.sign(e.deltaY) * 0.09)));
+      }, { passive: false });
+
+      // clean-click routing: a drag is never a click (capture phase kills stray navigations)
+      var pickRay = new THREE.Raycaster(), pickNdc = new THREE.Vector2();
+      function glideToAzimuth(az) {
+        var want = az + Math.PI;                       // camera stands opposite to look at it
+        var d = want - orbit.tYaw;                     // take the short way around
+        d = Math.atan2(Math.sin(d), Math.cos(d));
+        orbit.tYaw += d; orbit.tPitch = 0.16;
+      }
+      addEventListener("click", function (e) {
+        if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 6) {
+          e.stopImmediatePropagation(); e.preventDefault(); return;   // was a drag
+        }
+        if (!nyeArmature) return;
+        pickNdc.x = (e.clientX / innerWidth) * 2 - 1; pickNdc.y = -(e.clientY / innerHeight) * 2 + 1;
+        pickRay.setFromCamera(pickNdc, camera);
+        var hits = pickRay.intersectObject(nyeArmature.group, true);
+        for (var i = 0; i < hits.length; i++) {
+          var pick = null, o = hits[i].object;
+          while (o && !pick) { pick = o.userData && o.userData.nyePick; o = o.parent; }
+          if (!pick) continue;
+          var v = new THREE.Vector3();
+          if (pick === "sun") {
+            if (natalSky) { natalSky.highlight("capricorn", true); setTimeout(function () { natalSky.highlight("capricorn", false); }, 2800); }
+            nyeArmature.group.getObjectByName("NyeSun").getWorldPosition(v);
+            glideToAzimuth(Math.atan2(v.x, v.z)); orbit.tDist = Math.min(orbit.tDist, 96);
+          } else if (pick === "moon") {
+            if (natalSky) { natalSky.highlight("leo", true); setTimeout(function () { natalSky.highlight("leo", false); }, 2800); }
+            nyeArmature.group.getObjectByName("NyeMoon").getWorldPosition(v);
+            glideToAzimuth(Math.atan2(v.x, v.z)); orbit.tDist = Math.min(orbit.tDist, 70);
+          } else if (pick === "earth") {
+            orbit.tDist = 17;                          // close enough to read the footprint on the land
+          }
+          e.stopImmediatePropagation();                // handled — don't also fire a star link
+          return;
+        }
+      }, true);
+      canvas.addEventListener("dblclick", function () { orbit.tYaw = 0; orbit.yaw = Math.atan2(Math.sin(orbit.yaw), Math.cos(orbit.yaw)); orbit.tPitch = 0.24; orbit.tDist = 88; });
+    }
 
     var running = true;
     function frame(t) {
       if (!running) return;
       var sec = (t || 0) * 0.001;
-      // gentle scroll parallax on the camera — depth between the page and the cosmos
-      var sy = (typeof scrollY === "number" ? scrollY : 0);
-      var targetCamY = Math.max(-14, Math.min(14, -sy * 0.006));
-      camera.position.y += (targetCamY - camera.position.y) * 0.06;
-      camera.lookAt(0, camera.position.y * 0.4, -300);
+      if (COSMOS) {
+        applyOrbit();
+      } else {
+        var sy = (typeof scrollY === "number" ? scrollY : 0);
+        var targetCamY = Math.max(-14, Math.min(14, -sy * 0.006));
+        camera.position.y += (targetCamY - camera.position.y) * 0.06;
+        camera.lookAt(0, camera.position.y * 0.4, -300);
+      }
       deepFusion.tick(sec);
       if (nyeArmature) nyeArmature.tick(sec);
       if (natalSky) natalSky.tick(sec);
@@ -364,6 +532,11 @@
     // hooks for verification / governor / future scroll-driven fusion
     window.__space.ready = true;
     window.__space.canvas = canvas;
+    window.__space.orbit = (typeof orbit !== "undefined") ? orbit : null;
+    window.__space.snap = function () {
+      if (COSMOS) { orbit.yaw = orbit.tYaw; orbit.pitch = orbit.tPitch; orbit.dist = orbit.tDist; applyOrbit(); }
+      renderer.render(scene, camera); return canvas.toDataURL("image/jpeg", 0.8);
+    };
     window.__space.setOpacity = function (o) { canvas.style.opacity = String(o); };
     window.__space.setFusion = deepFusion.setFusion;
     window.__space.fusionStats = {
