@@ -230,18 +230,6 @@
       entranceUntil = performance.now() + 4600;
     } else { camera.position.set(0, 0, 60); }
 
-    // the 2D field fuses with the world: a live mask keeps the dust AROUND the
-    // system (never smearing it), breathing with pan and zoom
-    var fieldEl = document.getElementById("field"), _fmV = new THREE.Vector3(), fmTick = 0;
-    function updateFieldMask() {
-      if (!fieldEl || ((fmTick = (fmTick + 1) % 4) !== 0)) return;
-      _fmV.copy(controls.target).project(camera);
-      var fx = (_fmV.x * 0.5 + 0.5) * 100, fy = (-_fmV.y * 0.5 + 0.5) * 100;
-      var fr = Math.max(14, Math.min(60, (46 / controls.getRadius()) * 62));
-      fieldEl.style.setProperty("--fx", fx.toFixed(1) + "%");
-      fieldEl.style.setProperty("--fy", fy.toFixed(1) + "%");
-      fieldEl.style.setProperty("--fr", fr.toFixed(1) + "vmin");
-    }
 
     var MOBILE = innerWidth < 700;
     function resize() {
@@ -270,6 +258,7 @@
       "uniform float uClearInner;", "uniform float uClearOuter;",
       // fusion: embers toward the Sun's quarter of the sky catch its light
       "uniform vec3 uSunDir;",
+      "uniform vec3 uPointer;", "uniform float uPointerAmt;",
       "varying vec3 vColor;", "varying float vAlpha;", "varying float vGlow;",
       // aesthetic echo of home.js flow() at 0.42x phase — parallax, NOT a phase-lock
       "float flowEcho(vec3 p, float t){",
@@ -310,6 +299,10 @@
       "  displacement=safeNorm(displacement)*min(dl,2.15);",
       "  vec3 displaced=p0+displacement*uAmplitude*haze;",
       "  if(uLayerKind>0.5){ displaced+=normal*uAmplitude*(0.18+0.24*haze); }",
+      "  vec3 wp0=(modelMatrix*vec4(displaced,1.0)).xyz;",
+      "  float pd=distance(wp0,uPointer);",
+      "  float pf=uPointerAmt*smoothstep(22.0,2.0,pd);",
+      "  displaced+=normalize(wp0-uPointer+vec3(0.0001,0.0,0.0))*pf*5.5;",
       "  vec3 worldPos=(modelMatrix*vec4(displaced,1.0)).xyz;",
       "  vec4 mvPosition=modelViewMatrix*vec4(displaced,1.0);",
       "  float depth=max(45.0,-mvPosition.z);",
@@ -325,7 +318,7 @@
       // fade embers OUT of the pocket the orrery sits in (>=uClearOuter untouched)
       "  float clearing=smoothstep(uClearInner,uClearOuter,length(worldPos));",
       "  vGlow=pow(max(dot(normalize(worldPos+vec3(0.0001)),uSunDir),0.0),3.0);",
-      "  vAlpha=aAlpha*layerPresence*breath*clearing;",
+      "  vAlpha=aAlpha*layerPresence*breath*clearing*(1.0+pf*1.4);",
       "  vColor=aColor;",
       "}"
     ].join("\n");
@@ -364,7 +357,11 @@
         var u = (i + 0.5) / count, y = 1 - 2 * u, r = Math.sqrt(Math.max(0, 1 - y * y));
         var theta = i * golden + (rnd() - 0.5) * 0.018;
         var x = Math.cos(theta) * r, z = Math.sin(theta) * r, shellJitter = rnd(), k = i * 3;
-        if (kind === "far") {
+        if (kind === "breath") {
+          // near dust with the 2D field's own presence — parallaxes, occludes, breathes
+          var bR = lerp(26, 132, Math.pow(shellJitter, 0.6));
+          pos[k] = x * bR * 1.15; pos[k + 1] = y * bR * 0.85; pos[k + 2] = z * bR;
+        } else if (kind === "far") {
           var shellR = lerp(285, 405, Math.pow(shellJitter, 0.72)), ob = 0.92 + rnd() * 0.08;
           pos[k] = x * shellR; pos[k + 1] = y * shellR * ob; pos[k + 2] = z * shellR;
           // cosmos: two-thirds of the far embers settle into a nebula LANE that hugs the
@@ -376,7 +373,10 @@
         }
         var spark = rnd() < 0.06 ? 1 : 0, ember = rnd() < 0.22, hue = rnd(), c = coreColRGB(hue, spark);
         col[k] = c[0]; col[k + 1] = c[1]; col[k + 2] = c[2];
-        if (kind === "far") {
+        if (kind === "breath") {
+          size[i] = spark ? lerp(11.0, 18.0, rnd()) : ember ? lerp(8.0, 14.0, rnd()) : lerp(4.5, 9.0, rnd());
+          alpha[i] = spark ? lerp(0.30, 0.52, rnd()) : ember ? lerp(0.22, 0.40, rnd()) : lerp(0.10, 0.22, rnd());
+        } else if (kind === "far") {
           size[i] = spark ? lerp(2.7, 4.8, rnd()) : ember ? lerp(2.0, 4.1, rnd()) : lerp(1.05, 2.2, rnd());
           alpha[i] = spark ? lerp(0.48, 0.72, rnd()) : ember ? lerp(0.34, 0.58, rnd()) : lerp(0.18, 0.42, rnd());
         } else {
@@ -406,7 +406,8 @@
         // clearing DISABLED until the orrery mounts (smoothstep(-2,-1,len)==1 → no fade anywhere)
         uClearInner: { value: -2.0 }, uClearOuter: { value: -1.0 },
         // sun-coupling OFF until the chart aligns (uSunGlow 0 → identity)
-        uSunDir: { value: new THREE.Vector3(0, 0, -1) }, uSunGlow: { value: 0.0 }
+        uSunDir: { value: new THREE.Vector3(0, 0, -1) }, uSunGlow: { value: 0.0 },
+        uPointer: { value: new THREE.Vector3(0, 0, 9999) }, uPointerAmt: { value: 0.0 }
       };
       function makeMaterial(layerKind, maxPointSize, refDepth, amplitude) {
         return new THREE.ShaderMaterial({
@@ -414,10 +415,11 @@
             uMap: common.uMap, uTime: common.uTime, uFusion: common.uFusion, uPixelRatio: common.uPixelRatio,
             uClearInner: common.uClearInner, uClearOuter: common.uClearOuter,
             uSunDir: common.uSunDir, uSunGlow: common.uSunGlow,
+            uPointer: common.uPointer, uPointerAmt: common.uPointerAmt,
             uMaxPointSize: { value: maxPointSize }, uRefDepth: { value: refDepth }, uAmplitude: { value: amplitude }, uLayerKind: { value: layerKind }
           },
           vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
-          transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending
+          transparent: true, depthWrite: false, depthTest: true, blending: THREE.AdditiveBlending
         });
       }
       var grp = new THREE.Group(); grp.name = "deepEmbers";
@@ -432,6 +434,17 @@
         nearMat = makeMaterial(1.0, 24.0, 165.0, calm ? 42.0 : 58.0);
         nearHaze = new THREE.Points(nearGeo, nearMat); nearHaze.position.set(0, -8, COSMOS ? 0 : 150); nearHaze.frustumCulled = false; grp.add(nearHaze);
       }
+      var breathPts = null, breathMat = null, breathGeo = null;
+      if (COSMOS) {
+        breathGeo = buildDeepLayerGeometry("breath", mobile ? 1100 : 2600, 0xB4EA71);
+        breathMat = makeMaterial(1.0, 26.0, 130.0, calm ? 24.0 : 32.0);
+        // the breath keeps its own small clearing so the instrument's heart stays readable
+        breathMat.uniforms.uClearInner = { value: 14.0 };
+        breathMat.uniforms.uClearOuter = { value: 26.0 };
+        breathPts = new THREE.Points(breathGeo, breathMat);
+        breathPts.frustumCulled = false; breathPts.name = "breathDust";
+        grp.add(breathPts);
+      }
       scene.add(grp);
       return {
         group: grp, farCount: farCount, nearCount: nearCount, uniforms: common,
@@ -440,6 +453,8 @@
         applyTheme: function (dark) { var bl = dark ? THREE.AdditiveBlending : THREE.NormalBlending; farMat.blending = bl; farMat.needsUpdate = true; if (nearMat) { nearMat.blending = bl; nearMat.needsUpdate = true; } },
         tick: function (sec) {
           common.uTime.value = sec;
+          common.uPointerAmt.value *= 0.955;   // the stirred dust settles
+          if (breathPts) { breathPts.rotation.y = -sec * 0.0035; }
           var slow = calm ? 0.0042 : 0.0062;
           // scroll-linked drift: the whole cosmos (embers + natal sky ride the same group)
           // turns gently as you travel down the page — one space, one journey
@@ -449,7 +464,7 @@
           grp.rotation.y = sec * slow + drift; grp.rotation.x = baseTilt + Math.sin(sec * 0.027) * 0.025; farShell.rotation.z = Math.sin(sec * 0.018) * 0.018;
           if (nearHaze) { nearHaze.rotation.y = -(sec * slow + drift) * 0.58; nearHaze.rotation.z = Math.sin(sec * 0.041) * 0.035; }
         },
-        dispose: function () { scene.remove(grp); farGeo.dispose(); farMat.dispose(); if (nearGeo) nearGeo.dispose(); if (nearMat) nearMat.dispose(); }
+        dispose: function () { scene.remove(grp); farGeo.dispose(); farMat.dispose(); if (nearGeo) nearGeo.dispose(); if (nearMat) nearMat.dispose(); if (breathGeo) breathGeo.dispose(); if (breathMat) breathMat.dispose(); }
       };
     }
 
@@ -583,6 +598,14 @@
         // calm pocket in the embers around the orrery
         deepFusion.uniforms.uClearInner.value = 42.0;
         deepFusion.uniforms.uClearOuter.value = 96.0;
+        // the pillar readouts (月·庚子 / 日·庚午 / 时·甲申) and the ACTIVE ring glyphs are
+        // instrument text — they read through the planets, never occluded
+        nyeArmature.group.traverse(function (o) {
+          if (!o.isSprite || !o.material) return;
+          var isReadout = o.name && /Readout$/.test(o.name);
+          var isActiveGlyph = o.userData && o.userData.baseOpacity >= 0.9;
+          if (isReadout || isActiveGlyph) { o.material.depthTest = false; o.renderOrder = isReadout ? 30 : 25; o.material.needsUpdate = true; }
+        });
         dressEarth(earthGrpRef);
         tryAlignChart();
         window.__space.nye = nyeArmature;
@@ -613,7 +636,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=2").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=7").then(function (mod) {
+      return import("./natal-sky.js?v=8").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 205 : 372,
@@ -641,7 +664,13 @@
         panOn = (e.button === 2 || e.button === 1 || e.shiftKey);
         plx = e.clientX; ply = e.clientY;
       }, true);
+      var _stir = new THREE.Vector3();
       canvas.addEventListener("pointermove", function (e) {
+        // the visitor's hand stirs the breath-dust: cursor ray → a point in the volume
+        _stir.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1, 0.5).unproject(camera)
+          .sub(camera.position).normalize().multiplyScalar(Math.min(70, controls.getRadius() * 0.9)).add(camera.position);
+        deepFusion.uniforms.uPointer.value.copy(_stir);
+        deepFusion.uniforms.uPointerAmt.value = 1.0;
         movedAcc += Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0);
         if (!hintFaded && movedAcc > 40) { hintFaded = true; var h = document.getElementById("cosmos-hint"); if (h) h.classList.add("is-faded"); }
         if (!panOn) return;
@@ -729,7 +758,6 @@
         if (userMoved && nowMs - lastTouch > 12000 && glide.frames === 0) controls.rotateWorld(UP_Y, 0.00022);
         if (!userMoved && nowMs >= entranceUntil) controls.rotateWorld(UP_Y, 0.00022);
         controls.update();
-        updateFieldMask();
       } else if (COSMOS) {
         /* unreachable guard */
       } else {

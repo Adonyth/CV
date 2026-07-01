@@ -131,7 +131,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   };
   var starMat = new T.ShaderMaterial({
     uniforms: uniforms, vertexShader: o.vertexShader, fragmentShader: o.fragmentShader,
-    transparent: true, depthWrite: false, depthTest: false, blending: T.AdditiveBlending
+    transparent: true, depthWrite: false, depthTest: true, blending: T.AdditiveBlending
   });
   var starPoints = new T.Points(geo, starMat);
   starPoints.frustumCulled = false; starPoints.name = "natalStars";
@@ -176,7 +176,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var base = c.loadBearing ? 0.85 : 0.42;
     var mat = new T.PointsMaterial({
       map: o.tex, color: 0xf0a071, size: c.loadBearing ? 2.8 : 2.0, sizeAttenuation: true,
-      transparent: true, opacity: base, depthWrite: false, depthTest: false, blending: T.AdditiveBlending
+      transparent: true, opacity: base, depthWrite: false, depthTest: true, blending: T.AdditiveBlending
     });
     mat.fog = false;
     if ("toneMapped" in mat) mat.toneMapped = false;
@@ -268,7 +268,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     stars.forEach(function (st) {
       var key = cons[st.conIdx].loadBearing;
       if (!st.node && !(key && st.importance >= 0.7)) return;
-      var m = new T.SpriteMaterial({ map: o.tex, transparent: true, opacity: st.node ? 0.5 : 0.28, depthWrite: false, depthTest: false, blending: T.AdditiveBlending, fog: false });
+      var m = new T.SpriteMaterial({ map: o.tex, transparent: true, opacity: st.node ? 0.5 : 0.28, depthWrite: false, depthTest: true, blending: T.AdditiveBlending, fog: false });
       if ("toneMapped" in m) m.toneMapped = false;
       var h = new T.Sprite(m);
       var sc = st.node ? 11 : 6.5;

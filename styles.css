@@ -453,3 +453,7 @@ body.cosmos #field{
     transparent 0, transparent var(--fr,30vmin),
     rgba(0,0,0,.5) calc(var(--fr,30vmin) + 13vmin), #000 calc(var(--fr,30vmin) + 28vmin));
 }
+/* build 14 — the mask-hole approach is retired: the 2D field is now a quiet uniform
+   veil; the real dust lives INSIDE the scene (breath layer: parallax + true occlusion
+   + cursor-stirred), so fusion comes from depth, not from cutouts */
+body.cosmos #field{opacity:.42; -webkit-mask-image:none; mask-image:none;}
