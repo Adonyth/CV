@@ -78,39 +78,170 @@
     // NEVER set scene.background — one black on the page (CSS --page)
 
     var camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 1600);
-    /* cosmos: the camera ORBITS the Earth at the origin (one world, one gaze).
-       Everything lives inside the ember shell (R 285-405), so the sky is always
-       in view and nothing ever leaves the page. */
-    /* entrance: the camera arrives from deep space (far, off-axis → home);
-       the existing damping turns the approach into a slow cinematic glide */
-    var orbit = { yaw: -0.85, pitch: 0.52, dist: 178, tYaw: 0, tPitch: 0.18, tDist: 80,
-                  panX: 0, panY: 7, panZ: 0, tPanX: 0, tPanY: 7, tPanZ: 0,
-                  vYaw: 0, vPitch: 0, lastTouch: 0,
-                  minDist: 10, maxDist: 185, dragging: false, moved: 0 };
-    function applyOrbit() {
-      if (!orbit.dragging) {                       // inertia: a flick keeps the world turning
-        orbit.tYaw += orbit.vYaw;
-        orbit.tPitch = Math.max(-1.25, Math.min(1.25, orbit.tPitch + orbit.vPitch));
-        orbit.vYaw *= 0.93; orbit.vPitch *= 0.93;
-        if (Math.abs(orbit.vYaw) < 0.00002) orbit.vYaw = 0;
-        if (Math.abs(orbit.vPitch) < 0.00002) orbit.vPitch = 0;
-        // the world never stands still: after 8s of rest it turns on its own, slowly
-        if (performance.now() - orbit.lastTouch > 12000) orbit.tYaw += 0.00022;
+    /* cosmos: the camera orbits the world with the REAL Nye Clock's premium
+       trackball — world-space angular velocity about ANY axis, up-vector riding
+       along (ported from nye-clock-bazi.html createPremiumOrbitControls).
+       No pole lock, no plane that fights the hand. */
+    function createPremiumOrbitControls(cam, domElement, T3) {
+      var target = new T3.Vector3();
+      var minDistance = 8, maxDistance = 340;
+      var angVel = new T3.Vector3();
+      var tmpPull = new T3.Vector3(0, 0.22, 1);
+      var rotateSpeed = 0.00032, maxEventDelta = 0.008, dampingFactor = 0.036, zoomStep = 0.031, pinchGamma = 0.79;
+      function safeLookAtTarget() {
+        var dx = target.x - cam.position.x, dy = target.y - cam.position.y, dz = target.z - cam.position.z;
+        var d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (!isFinite(d) || d < 1e-5) {
+          tmpPull.set(0, 0.22, 1).normalize().multiplyScalar(Math.max(minDistance, 2.2));
+          cam.position.copy(target).add(tmpPull); cam.up.set(0, 1, 0);
+        }
+        cam.lookAt(target);
       }
-      orbit.yaw += (orbit.tYaw - orbit.yaw) * 0.09;
-      orbit.pitch += (orbit.tPitch - orbit.pitch) * 0.09;
-      orbit.dist += (orbit.tDist - orbit.dist) * 0.09;
-      orbit.panX += (orbit.tPanX - orbit.panX) * 0.09;
-      orbit.panY += (orbit.tPanY - orbit.panY) * 0.09;
-      orbit.panZ += (orbit.tPanZ - orbit.panZ) * 0.09;
-      var cp = Math.cos(orbit.pitch);
-      camera.position.set(
-        orbit.panX + orbit.dist * Math.sin(orbit.yaw) * cp,
-        orbit.panY + orbit.dist * Math.sin(orbit.pitch),
-        orbit.panZ + orbit.dist * Math.cos(orbit.yaw) * cp);
-      camera.lookAt(orbit.panX, orbit.panY, orbit.panZ);
+      function safeOrbitOffset() {
+        var off = cam.position.clone().sub(target);
+        if (!isFinite(off.length()) || off.length() < 1e-8) {
+          tmpPull.set(0, 0.22, 1).normalize().multiplyScalar(Math.max(minDistance, 2.2));
+          cam.position.copy(target).add(tmpPull); cam.up.set(0, 1, 0); safeLookAtTarget();
+          off.copy(cam.position).sub(target);
+        }
+        return off;
+      }
+      var activePointers = {}, pinchActive = false, pinchLastDist = 0, dragging = false, lastX = 0, lastY = 0;
+      function getPinchDist() {
+        var ids = Object.keys(activePointers); if (ids.length < 2) return 0;
+        var a = activePointers[ids[0]], b = activePointers[ids[1]];
+        return Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
+      }
+      function applyAngVel(av) {
+        var len = av.length(); if (len < 1e-10 || !isFinite(len)) return;
+        var axis = av.clone().normalize();
+        if (!isFinite(axis.x + axis.y + axis.z) || axis.lengthSq() < 1e-20) return;
+        var q = new T3.Quaternion().setFromAxisAngle(axis, len);
+        var off = cam.position.clone().sub(target).applyQuaternion(q);
+        cam.position.copy(target).add(off);
+        cam.up.applyQuaternion(q);
+        safeLookAtTarget();
+      }
+      var scope = {
+        target: target,
+        setDistanceLimits: function (mn, mx) { minDistance = mn; maxDistance = mx; },
+        setInteractionTuning: function (o2) {
+          if (!o2) return;
+          if (o2.rotateSpeed != null) rotateSpeed = o2.rotateSpeed;
+          if (o2.maxEventDelta != null) maxEventDelta = o2.maxEventDelta;
+          if (o2.dampingFactor != null) dampingFactor = o2.dampingFactor;
+          if (o2.zoomStep != null) zoomStep = o2.zoomStep;
+          if (o2.pinchGamma != null) pinchGamma = o2.pinchGamma;
+        },
+        clearDelta: function () { angVel.set(0, 0, 0); },
+        rotateWorld: function (axis, ang) {                 // idle turn / glides ride the same math
+          var q = new T3.Quaternion().setFromAxisAngle(axis, ang);
+          var off = cam.position.clone().sub(target).applyQuaternion(q);
+          cam.position.copy(target).add(off); cam.up.applyQuaternion(q); safeLookAtTarget();
+        },
+        setRadius: function (r) {
+          var off = safeOrbitOffset(); var r0 = off.length(); if (!isFinite(r0) || r0 < 1e-8) return;
+          off.normalize(); cam.position.copy(target).add(off.multiplyScalar(Math.max(minDistance, Math.min(maxDistance, r))));
+          safeLookAtTarget();
+        },
+        getRadius: function () { return cam.position.distanceTo(target); },
+        update: function () {
+          applyAngVel(angVel);
+          angVel.multiplyScalar(1 - dampingFactor);
+          if (angVel.lengthSq() < 1e-14) angVel.set(0, 0, 0);
+          var off = safeOrbitOffset(); var r = off.length();
+          if (!isFinite(r) || r < 1e-8) return;
+          if (r < minDistance || r > maxDistance) {
+            r = Math.max(minDistance, Math.min(maxDistance, r));
+            off.normalize(); cam.position.copy(target).add(off.multiplyScalar(r)); safeLookAtTarget();
+          }
+        }
+      };
+      function addRotation(dx, dy) {
+        cam.updateMatrixWorld();
+        var right = new T3.Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
+        var up = new T3.Vector3().setFromMatrixColumn(cam.matrixWorld, 1);
+        function clp(v) { return Math.max(-maxEventDelta, Math.min(maxEventDelta, v)); }
+        angVel.addScaledVector(up, clp(-dx * rotateSpeed));
+        angVel.addScaledVector(right, clp(-dy * rotateSpeed));
+      }
+      function onDown(e) {
+        if (e.pointerType === "mouse" && e.button !== 0) return;   // right/middle stay free for PAN
+        activePointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+        try { domElement.setPointerCapture(e.pointerId); } catch (_) {}
+        if (Object.keys(activePointers).length >= 2) { pinchActive = true; pinchLastDist = getPinchDist(); dragging = false; }
+        else { dragging = true; lastX = e.clientX; lastY = e.clientY; }
+        domElement.style.cursor = "grabbing";
+      }
+      function onMove(e) {
+        if (!(e.pointerId in activePointers)) { return; }
+        activePointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+        if (pinchActive) {
+          var d = getPinchDist();
+          if (pinchLastDist > 0 && d > 0) {
+            var off = safeOrbitOffset();
+            var ratio = Math.pow(Math.max(0.25, Math.min(4, pinchLastDist / d)), pinchGamma);
+            var r0 = off.length(); if (!isFinite(r0) || r0 < 1e-8) return;
+            var r = Math.max(minDistance, Math.min(maxDistance, r0 * ratio));
+            off.normalize(); cam.position.copy(target).add(off.multiplyScalar(r));
+          }
+          pinchLastDist = d; e.stopPropagation(); return;
+        }
+        if (!dragging) return;
+        addRotation(e.clientX - lastX, e.clientY - lastY);
+        lastX = e.clientX; lastY = e.clientY;
+        e.stopPropagation();
+      }
+      function onUp(e) {
+        delete activePointers[e.pointerId];
+        var ids = Object.keys(activePointers);
+        if (ids.length < 2) pinchActive = false;
+        if (ids.length === 1) { var rem = activePointers[ids[0]]; lastX = rem.x; lastY = rem.y; dragging = true; }
+        else if (ids.length === 0) { dragging = false; domElement.style.cursor = "grab"; }
+        try { if (e && e.pointerId != null) domElement.releasePointerCapture(e.pointerId); } catch (_) {}
+      }
+      domElement.addEventListener("pointerdown", onDown, true);
+      domElement.addEventListener("pointermove", onMove, true);
+      domElement.addEventListener("pointerup", onUp, true);
+      domElement.addEventListener("pointercancel", onUp, true);
+      domElement.addEventListener("wheel", function (e) {
+        e.preventDefault();
+        var off = safeOrbitOffset(); var r0 = off.length(); if (!isFinite(r0) || r0 < 1e-8) return;
+        var norm = e.deltaMode === 1 ? e.deltaY * 18 : e.deltaMode === 2 ? e.deltaY * 300 : e.deltaY;
+        var r = Math.max(minDistance, Math.min(maxDistance, r0 * (1 + Math.sign(norm) * zoomStep)));
+        off.normalize(); cam.position.copy(target).add(off.multiplyScalar(r));
+        e.stopPropagation();
+      }, { passive: false, capture: true });
+      return scope;
     }
-    if (COSMOS) { applyOrbit(); } else { camera.position.set(0, 0, 60); }
+
+    var controls = null;
+    var HOME = new THREE.Vector3(0, 7, 0), UP_Y = new THREE.Vector3(0, 1, 0);
+    var lastTouch = 0, userMoved = false, entranceUntil = 0;
+    var glide = { frames: 0, axis: null, step: 0, distTarget: 0 };
+    if (COSMOS) {
+      // entrance: arrive from deep space; the frame loop eases the radius home
+      camera.position.set(HOME.x - 116, HOME.y + 88, HOME.z + 102);
+      camera.lookAt(HOME);
+      controls = createPremiumOrbitControls(camera, canvas, THREE);
+      controls.target.copy(HOME);
+      controls.setDistanceLimits(10, 185);
+      controls.setInteractionTuning({ rotateSpeed: 0.00040, dampingFactor: 0.042, zoomStep: 0.045, maxEventDelta: 0.010 });
+      entranceUntil = performance.now() + 4600;
+    } else { camera.position.set(0, 0, 60); }
+
+    // the 2D field fuses with the world: a live mask keeps the dust AROUND the
+    // system (never smearing it), breathing with pan and zoom
+    var fieldEl = document.getElementById("field"), _fmV = new THREE.Vector3(), fmTick = 0;
+    function updateFieldMask() {
+      if (!fieldEl || ((fmTick = (fmTick + 1) % 4) !== 0)) return;
+      _fmV.copy(controls.target).project(camera);
+      var fx = (_fmV.x * 0.5 + 0.5) * 100, fy = (-_fmV.y * 0.5 + 0.5) * 100;
+      var fr = Math.max(14, Math.min(60, (46 / controls.getRadius()) * 62));
+      fieldEl.style.setProperty("--fx", fx.toFixed(1) + "%");
+      fieldEl.style.setProperty("--fy", fy.toFixed(1) + "%");
+      fieldEl.style.setProperty("--fr", fr.toFixed(1) + "vmin");
+    }
 
     var MOBILE = innerWidth < 700;
     function resize() {
@@ -482,7 +613,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=2").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=6").then(function (mod) {
+      return import("./natal-sky.js?v=7").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 205 : 372,
@@ -497,87 +628,55 @@
       });
     }).catch(function (e) { window.__space.natalError = String(e); });
 
-    /* ===== the hand on the world: drag orbits, wheel zooms, click enters ===== */
+    /* ===== the hand on the world: trackball rotate (controls), right/shift-drag PAN,
+       wheel zoom (controls), clean-click routing, double-click home ===== */
     if (COSMOS) {
-      var lx = 0, ly = 0, downX = 0, downY = 0, hintFaded = false;
-      var touches = {}, touchCount = 0, pinchD0 = 0, pinchDist0 = 0, panMode = false;
-      var _right = new THREE.Vector3(), _up = new THREE.Vector3();
-      function clampPan() {
-        var dx = orbit.tPanX, dy = orbit.tPanY - 7, dz = orbit.tPanZ;
-        var L = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (L > 36) { var f = 36 / L; orbit.tPanX = dx * f; orbit.tPanY = 7 + dy * f; orbit.tPanZ = dz * f; }
-      }
-      function doPan(dx, dy) {
-        var k = orbit.dist * 0.0012;
-        _right.setFromMatrixColumn(camera.matrixWorld, 0);
-        _up.setFromMatrixColumn(camera.matrixWorld, 1);
-        orbit.tPanX += -dx * k * _right.x + dy * k * _up.x;
-        orbit.tPanY += -dx * k * _right.y + dy * k * _up.y;
-        orbit.tPanZ += -dx * k * _right.z + dy * k * _up.z;
-        clampPan();
-      }
+      var downX = 0, downY = 0, panOn = false, plx = 0, ply = 0, hintFaded = false, movedAcc = 0;
+      var _pr = new THREE.Vector3(), _pu = new THREE.Vector3(), _pm = new THREE.Vector3();
       canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
       canvas.addEventListener("pointerdown", function (e) {
-        orbit.lastTouch = performance.now();
-        touches[e.pointerId] = { x: e.clientX, y: e.clientY }; touchCount++;
-        if (touchCount === 2) {                    // pinch begins
-          var ids = Object.keys(touches);
-          pinchD0 = Math.hypot(touches[ids[0]].x - touches[ids[1]].x, touches[ids[0]].y - touches[ids[1]].y);
-          pinchDist0 = orbit.tDist; orbit.dragging = false;
-          return;
-        }
-        orbit.dragging = true; orbit.moved = 0; orbit.vYaw = 0; orbit.vPitch = 0;
-        panMode = (e.button === 2 || e.button === 1 || e.shiftKey);
-        lx = downX = e.clientX; ly = downY = e.clientY;
-        try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
-      });
-      function endPointer(e) {
-        if (touches[e.pointerId]) { delete touches[e.pointerId]; touchCount = Math.max(0, touchCount - 1); }
-        if (touchCount < 2) pinchD0 = 0;
-        if (touchCount === 0) orbit.dragging = false;   // velocities persist → inertia
-      }
-      addEventListener("pointerup", endPointer);
-      addEventListener("pointercancel", endPointer);
-      addEventListener("pointermove", function (e) {
-        var t = touches[e.pointerId];
-        if (t) { t.x = e.clientX; t.y = e.clientY; }
-        if (pinchD0 > 0 && touchCount === 2) {          // two fingers: zoom
-          var ids = Object.keys(touches);
-          var d = Math.hypot(touches[ids[0]].x - touches[ids[1]].x, touches[ids[0]].y - touches[ids[1]].y);
-          if (d > 0) orbit.tDist = Math.max(orbit.minDist, Math.min(orbit.maxDist, pinchDist0 * pinchD0 / d));
-          return;
-        }
-        if (!orbit.dragging) return;
-        var dx = e.clientX - lx, dy = e.clientY - ly;
-        if (panMode) {
-          doPan(dx, dy);                                // 自由移动
-        } else {
-          var wy = -dx * 0.0052, wp = -dy * 0.0044;
-          orbit.tYaw += wy;
-          orbit.tPitch = Math.max(-1.25, Math.min(1.25, orbit.tPitch + wp));
-          orbit.vYaw = wy * 0.55; orbit.vPitch = wp * 0.55;   // remember the flick
-        }
-        orbit.moved += Math.abs(dx) + Math.abs(dy);
-        lx = e.clientX; ly = e.clientY;
-        if (!hintFaded && orbit.moved > 40) { hintFaded = true; var h = document.getElementById("cosmos-hint"); if (h) h.classList.add("is-faded"); }
-      });
-      canvas.addEventListener("wheel", function (e) {
-        e.preventDefault();
-        orbit.lastTouch = performance.now();
-        orbit.tDist = Math.max(orbit.minDist, Math.min(orbit.maxDist, orbit.tDist * (1 + Math.sign(e.deltaY) * 0.09)));
-      }, { passive: false });
+        lastTouch = performance.now(); userMoved = true;
+        downX = e.clientX; downY = e.clientY; movedAcc = 0;
+        glide.frames = 0;                                   // a touch cancels any glide
+        panOn = (e.button === 2 || e.button === 1 || e.shiftKey);
+        plx = e.clientX; ply = e.clientY;
+      }, true);
+      canvas.addEventListener("pointermove", function (e) {
+        movedAcc += Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0);
+        if (!hintFaded && movedAcc > 40) { hintFaded = true; var h = document.getElementById("cosmos-hint"); if (h) h.classList.add("is-faded"); }
+        if (!panOn) return;
+        var dx = e.clientX - plx, dy = e.clientY - ply; plx = e.clientX; ply = e.clientY;
+        var k = controls.getRadius() * 0.0012;
+        camera.updateMatrixWorld();
+        _pr.setFromMatrixColumn(camera.matrixWorld, 0);
+        _pu.setFromMatrixColumn(camera.matrixWorld, 1);
+        _pm.set(0, 0, 0).addScaledVector(_pr, -dx * k).addScaledVector(_pu, dy * k);
+        var nt = controls.target.clone().add(_pm);
+        var dHome = nt.clone().sub(HOME);
+        if (dHome.length() > 36) { dHome.setLength(36); nt.copy(HOME).add(dHome); _pm.copy(nt).sub(controls.target); }
+        controls.target.copy(nt); camera.position.add(_pm);
+      }, true);
+      addEventListener("pointerup", function () { panOn = false; });
+      canvas.addEventListener("wheel", function () { lastTouch = performance.now(); userMoved = true; }, { passive: true });
 
-      // clean-click routing: a drag is never a click (capture phase kills stray navigations)
+      // clean-click routing: a drag is never a click
       var pickRay = new THREE.Raycaster(), pickNdc = new THREE.Vector2();
-      function glideToAzimuth(az) {
-        var want = az + Math.PI;                       // camera stands opposite to look at it
-        var d = want - orbit.tYaw;                     // take the short way around
-        d = Math.atan2(Math.sin(d), Math.cos(d));
-        orbit.tYaw += d; orbit.tPitch = 0.16;
+      function glideToBody(objName, distCap) {
+        var obj = nyeArmature.group.getObjectByName(objName); if (!obj) return;
+        var w = obj.getWorldPosition(new THREE.Vector3());
+        var cur = camera.position.clone().sub(controls.target).normalize();
+        var des = w.clone().sub(controls.target).normalize().negate();   // stand opposite → the body fills the gaze
+        var dot = Math.max(-1, Math.min(1, cur.dot(des)));
+        var ang = Math.acos(dot);
+        var axis = new THREE.Vector3().crossVectors(cur, des);
+        if (axis.lengthSq() < 1e-9) axis.copy(UP_Y);
+        axis.normalize();
+        glide.axis = axis; glide.step = ang / 42; glide.frames = 42;
+        glide.distTarget = distCap ? Math.min(controls.getRadius(), distCap) : 0;
       }
       addEventListener("click", function (e) {
         if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 6) {
-          e.stopImmediatePropagation(); e.preventDefault(); return;   // was a drag
+          e.stopImmediatePropagation(); e.preventDefault(); return;
         }
         if (!nyeArmature) return;
         pickNdc.x = (e.clientX / innerWidth) * 2 - 1; pickNdc.y = -(e.clientY / innerHeight) * 2 + 1;
@@ -587,27 +686,25 @@
           var pick = null, o = hits[i].object;
           while (o && !pick) { pick = o.userData && o.userData.nyePick; o = o.parent; }
           if (!pick) continue;
-          var v = new THREE.Vector3();
           if (pick === "sun") {
             if (natalSky) { natalSky.highlight("capricorn", true); setTimeout(function () { natalSky.highlight("capricorn", false); }, 2800); }
-            nyeArmature.group.getObjectByName("NyeSun").getWorldPosition(v);
-            glideToAzimuth(Math.atan2(v.x, v.z)); orbit.tDist = Math.min(orbit.tDist, 96);
+            glideToBody("NyeSun", 96);
           } else if (pick === "moon") {
             if (natalSky) { natalSky.highlight("leo", true); setTimeout(function () { natalSky.highlight("leo", false); }, 2800); }
-            nyeArmature.group.getObjectByName("NyeMoon").getWorldPosition(v);
-            glideToAzimuth(Math.atan2(v.x, v.z)); orbit.tDist = Math.min(orbit.tDist, 70);
+            glideToBody("NyeMoon", 70);
           } else if (pick === "earth") {
-            orbit.tDist = 17;                          // close enough to read the footprint on the land
+            glide.axis = null; glide.step = 0; glide.frames = 30; glide.distTarget = 17;
           }
-          e.stopImmediatePropagation();                // handled — don't also fire a star link
+          e.stopImmediatePropagation();
           return;
         }
       }, true);
       canvas.addEventListener("dblclick", function () {
-        orbit.tYaw = 0; orbit.yaw = Math.atan2(Math.sin(orbit.yaw), Math.cos(orbit.yaw));
-        orbit.tPitch = 0.18; orbit.tDist = 80;
-        orbit.tPanX = 0; orbit.tPanY = 7; orbit.tPanZ = 0;
-        orbit.vYaw = 0; orbit.vPitch = 0;
+        controls.target.copy(HOME);
+        camera.up.set(0, 1, 0);
+        camera.position.set(HOME.x, HOME.y + 80 * Math.sin(0.18), HOME.z + 80 * Math.cos(0.18));
+        camera.lookAt(HOME);
+        controls.clearDelta(); glide.frames = 0;
       });
     }
 
@@ -615,8 +712,26 @@
     function frame(t) {
       if (!running) return;
       var sec = (t || 0) * 0.001;
-      if (COSMOS) {
-        applyOrbit();
+      if (COSMOS && controls) {
+        var nowMs = performance.now();
+        // cinematic approach: ease the radius home until the visitor takes over
+        if (!userMoved && nowMs < entranceUntil) {
+          var r0 = controls.getRadius();
+          controls.setRadius(r0 + (80 - r0) * 0.045);
+        }
+        // guided glide after clicking a body (any touch cancels)
+        if (glide.frames > 0) {
+          if (glide.axis) controls.rotateWorld(glide.axis, glide.step);
+          if (glide.distTarget) { var rg = controls.getRadius(); controls.setRadius(rg + (glide.distTarget - rg) * 0.12); }
+          glide.frames--;
+        }
+        // after 12s of stillness the world turns slowly on its own; manual always wins
+        if (userMoved && nowMs - lastTouch > 12000 && glide.frames === 0) controls.rotateWorld(UP_Y, 0.00022);
+        if (!userMoved && nowMs >= entranceUntil) controls.rotateWorld(UP_Y, 0.00022);
+        controls.update();
+        updateFieldMask();
+      } else if (COSMOS) {
+        /* unreachable guard */
       } else {
         var sy = (typeof scrollY === "number" ? scrollY : 0);
         var targetCamY = Math.max(-14, Math.min(14, -sy * 0.006));
@@ -648,9 +763,10 @@
     // hooks for verification / governor / future scroll-driven fusion
     window.__space.ready = true;
     window.__space.canvas = canvas;
-    window.__space.orbit = (typeof orbit !== "undefined") ? orbit : null;
+    window.__space.controls = controls;
+    window.__space.camera = camera;
     window.__space.snap = function () {
-      if (COSMOS) { orbit.yaw = orbit.tYaw; orbit.pitch = orbit.tPitch; orbit.dist = orbit.tDist; applyOrbit(); }
+      if (COSMOS && controls) controls.update();
       renderer.render(scene, camera); return canvas.toDataURL("image/jpeg", 0.8);
     };
     window.__space.setOpacity = function (o) { canvas.style.opacity = String(o); };

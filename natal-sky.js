@@ -155,17 +155,32 @@ export function buildNatalSky(THREE, scene, data, opts) {
     });
     if (!segs.length) { lineEntries[ci] = null; return; }
     segs.sort(function (p, r) { return p.midZ - r.midZ; });  // far first, near last → additive reads clean
-    var lp = new Float32Array(segs.length * 6);
-    segs.forEach(function (s, i) {
-      lp[i * 6] = s.a.x; lp[i * 6 + 1] = s.a.y; lp[i * 6 + 2] = s.a.z;
-      lp[i * 6 + 3] = s.b.x; lp[i * 6 + 4] = s.b.y; lp[i * 6 + 5] = s.b.z;
+    /* the figures are drawn in STARDUST — chains of the same GLOW embers as
+       everything else in this cosmos (no more vector-CAD lines) */
+    var pts = [];
+    segs.forEach(function (sg) {
+      var L = sg.a.distanceTo(sg.b);
+      var n = Math.max(4, Math.round(L / 2.1));
+      for (var ii = 0; ii <= n; ii++) {
+        var t = ii / n;
+        pts.push(
+          sg.a.x + (sg.b.x - sg.a.x) * t + (hash(pts.length * 3 + ci * 17) - 0.5) * 0.9,
+          sg.a.y + (sg.b.y - sg.a.y) * t + (hash(pts.length * 5 + ci * 29) - 0.5) * 0.9,
+          sg.a.z + (sg.b.z - sg.a.z) * t + (hash(pts.length * 7 + ci * 41) - 0.5) * 0.9
+        );
+      }
     });
     totalSegs += segs.length;
     var lgeo = new T.BufferGeometry();
-    lgeo.setAttribute("position", new T.BufferAttribute(lp, 3));
-    var base = c.loadBearing ? 0.66 : 0.32;
-    var mat = new T.LineBasicMaterial({ color: 0xe0876a, transparent: true, opacity: base, depthWrite: false, depthTest: false, blending: T.AdditiveBlending, fog: false });
-    var fl = new T.LineSegments(lgeo, mat);
+    lgeo.setAttribute("position", new T.BufferAttribute(new Float32Array(pts), 3));
+    var base = c.loadBearing ? 0.85 : 0.42;
+    var mat = new T.PointsMaterial({
+      map: o.tex, color: 0xf0a071, size: c.loadBearing ? 2.8 : 2.0, sizeAttenuation: true,
+      transparent: true, opacity: base, depthWrite: false, depthTest: false, blending: T.AdditiveBlending
+    });
+    mat.fog = false;
+    if ("toneMapped" in mat) mat.toneMapped = false;
+    var fl = new T.Points(lgeo, mat);
     fl.frustumCulled = false; fl.name = "natalFigure_" + c.id;
     belt.add(fl);
     lineEntries[ci] = { mat: mat, base: base, geo: lgeo };

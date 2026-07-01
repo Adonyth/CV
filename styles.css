@@ -441,3 +441,15 @@ body.cosmos .natal-tip{z-index:6;}
 /* THE fix: author display:flex was defeating the hidden attribute — the "flat fallback"
    was an invisible full-viewport wall over every machine, eating all pointer input */
 .cosmos-flat[hidden]{display:none !important;}
+/* build 13 — the 2D ember field FUSES with the 3D world: a live radial mask
+   (center/size driven from space.js each frame) keeps the dust breathing AROUND
+   the solar system instead of smearing over it; pan/zoom move the clearing */
+body.cosmos #field{
+  opacity:.85;
+  -webkit-mask-image:radial-gradient(circle at var(--fx,50%) var(--fy,46%),
+    transparent 0, transparent var(--fr,30vmin),
+    rgba(0,0,0,.5) calc(var(--fr,30vmin) + 13vmin), #000 calc(var(--fr,30vmin) + 28vmin));
+  mask-image:radial-gradient(circle at var(--fx,50%) var(--fy,46%),
+    transparent 0, transparent var(--fr,30vmin),
+    rgba(0,0,0,.5) calc(var(--fr,30vmin) + 13vmin), #000 calc(var(--fr,30vmin) + 28vmin));
+}
