@@ -216,7 +216,8 @@
     }
 
     var controls = null;
-    var HOME = new THREE.Vector3(0, 7, 0), UP_Y = new THREE.Vector3(0, 1, 0);
+    var fieldEl2 = document.getElementById("field"), fmT2 = 0;
+    var HOME = new THREE.Vector3(0, 0, 0), UP_Y = new THREE.Vector3(0, 1, 0);
     var lastTouch = 0, userMoved = false, entranceUntil = 0;
     var glide = { frames: 0, axis: null, step: 0, distTarget: 0 };
     if (COSMOS) {
@@ -225,7 +226,7 @@
       camera.lookAt(HOME);
       controls = createPremiumOrbitControls(camera, canvas, THREE);
       controls.target.copy(HOME);
-      controls.setDistanceLimits(6.5, 200);
+      controls.setDistanceLimits(6.5, 430);
       controls.setInteractionTuning({ rotateSpeed: 0.00050, dampingFactor: 0.042, zoomStep: 0.045, maxEventDelta: 0.014 });
       entranceUntil = performance.now() + 4600;
     } else { camera.position.set(0, 0, 60); }
@@ -586,7 +587,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=6").then(function (mod) {
+    import("./nye-armature.js?v=7").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -772,6 +773,10 @@
         if (userMoved && nowMs - lastTouch > 20000 && glide.frames === 0) controls.rotateWorld(camera.up, 0.00018);
         if (!userMoved && nowMs >= entranceUntil) controls.rotateWorld(camera.up, 0.00018);
         controls.update();
+        if (fieldEl2 && (fmT2 = (fmT2 + 1) % 12) === 0) {
+          var rr2 = controls.getRadius();
+          fieldEl2.style.opacity = (0.5 + 0.28 * Math.max(0, Math.min(1, (rr2 - 90) / 320))).toFixed(2);
+        }
       } else if (COSMOS) {
         /* unreachable guard */
       } else {

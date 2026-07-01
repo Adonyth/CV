@@ -144,18 +144,18 @@ export function mountNyeArmature(THREE, scene, opts) {
   var yearGear = createPillarGear({
     name: "YearPillarGear",
     pillar: yearPillar,
-    stemRadius: AU_SCALE - 0.9,
-    branchRadius: AU_SCALE + 0.95,
+    stemRadius: AU_SCALE + 4.2,
+    branchRadius: AU_SCALE + 8.2,
     toothScale: 1.9,
     glyphStemScale: 2.3,
-    glyphBranchScale: 2.55,
+    glyphBranchScale: 2.6,
     couplingOpacity: 0.12
   });
   yearEclipticGroup.add(yearGear.group);
   var sunAngle = earthOrbitAngle + Math.PI;
   yearGear.stemSwivel.rotation.z = sunAngle - yearPillar.stemIndex * (TAU / 10);
   yearGear.branchSwivel.rotation.z = sunAngle - yearPillar.branchIndex * (TAU / 12);
-  placeLabel(yearGear.label, AU_SCALE + 5.6, sunAngle + 0.16, 0.3);
+  placeLabel(yearGear.label, AU_SCALE + 12.4, sunAngle + 0.1, 0.3);
 
   const dayClockOrbitPlaneGroup = new T.Group();
   dayClockOrbitPlaneGroup.name = "DayClockOrbitPlane";
@@ -231,7 +231,7 @@ export function mountNyeArmature(THREE, scene, opts) {
       var slot = m2[1], kind = m2[2], p2 = pil[slot];
       var idx = (kind === "stem") ? o.userData.stemIndex : o.userData.branchIndex;
       var active = idx === ((kind === "stem") ? p2.stemIndex : p2.branchIndex);
-      if (!active) { o.material.opacity = 0.28; return; }
+      if (!active) { o.material.opacity = 0.48; return; }
       var t2 = tier2[slot + "-" + kind] || 1;
       o.scale.multiplyScalar(t2 === 3 ? 1.8 : t2 === 2 ? 1.5 : 1.25);
       o.material.opacity = t2 === 3 ? 1.0 : t2 === 2 ? 0.98 : 0.93;
