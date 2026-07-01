@@ -579,7 +579,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=4").then(function (mod) {
+    import("./nye-armature.js?v=5").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -639,7 +639,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=2").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=9").then(function (mod) {
+      return import("./natal-sky.js?v=10").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 205 : 372,

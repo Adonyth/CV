@@ -125,6 +125,29 @@ export function mountNyeArmature(THREE, scene, opts) {
   gearMotions.push({ target: monthGear.stemSwivel, base: monthGear.stemSwivel.rotation.z, speed: 0.0009 });
   gearMotions.push({ target: monthGear.branchSwivel, base: monthGear.branchSwivel.rotation.z, speed: -0.00072 });
 
+  /* YEAR pillar 辛巳 — the outermost gear, same factory as the other three pillars.
+     The year is the Sun's own cycle: the active pair is anchored at the Sun's
+     azimuth as seen from the Earth. Slowest turn of all the rings. */
+  var yearPillar = { slot: "year", label: "年", pair: "辛巳", stem: "辛", branch: "巳", stemIndex: 7, branchIndex: 5 };
+  yearPillar.index60 = sexagenaryIndex(7, 5);
+  var yearGear = createPillarGear({
+    name: "YearPillarGear",
+    pillar: yearPillar,
+    stemRadius: AU_SCALE * 2.78,
+    branchRadius: AU_SCALE * 2.97,
+    toothScale: 1.55,
+    glyphStemScale: 1.42,
+    glyphBranchScale: 1.55,
+    couplingOpacity: 0.12
+  });
+  eclipticGroup.add(yearGear.group);
+  var sunAngle = earthOrbitAngle + Math.PI;
+  yearGear.stemSwivel.rotation.z = sunAngle - yearPillar.stemIndex * (TAU / 10);
+  yearGear.branchSwivel.rotation.z = sunAngle - yearPillar.branchIndex * (TAU / 12);
+  placeLabel(yearGear.label, AU_SCALE * 2.97 + 5.2, sunAngle, 0.3);
+  gearMotions.push({ target: yearGear.stemSwivel, base: yearGear.stemSwivel.rotation.z, speed: 0.00034 });
+  gearMotions.push({ target: yearGear.branchSwivel, base: yearGear.branchSwivel.rotation.z, speed: -0.00027 });
+
   const dayClockOrbitPlaneGroup = new T.Group();
   dayClockOrbitPlaneGroup.name = "DayClockOrbitPlane";
   dayClockOrbitPlaneGroup.userData.nyePart = "day-gear-plane";
