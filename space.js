@@ -48,6 +48,9 @@
   var TIER = decideTier();
   window.__space = { tier: TIER, ready: false };
   var COSMOS = document.body.classList.contains("cosmos");
+  if (COSMOS && TIER !== "flat") {   // belt & braces: the 3D page must never show the flat wall
+    var flatBB = document.getElementById("cosmos-flat"); if (flatBB) flatBB.hidden = true;
+  }
   if (TIER === "flat") {
     // one-world page has no scroll content — show the graceful flat fallback
     if (COSMOS) {
@@ -92,7 +95,7 @@
         if (Math.abs(orbit.vYaw) < 0.00002) orbit.vYaw = 0;
         if (Math.abs(orbit.vPitch) < 0.00002) orbit.vPitch = 0;
         // the world never stands still: after 8s of rest it turns on its own, slowly
-        if (performance.now() - orbit.lastTouch > 8000) orbit.tYaw += 0.00028;
+        if (performance.now() - orbit.lastTouch > 12000) orbit.tYaw += 0.00022;
       }
       orbit.yaw += (orbit.tYaw - orbit.yaw) * 0.09;
       orbit.pitch += (orbit.tPitch - orbit.pitch) * 0.09;
@@ -452,6 +455,7 @@
         dressEarth(earthGrpRef);
         tryAlignChart();
         window.__space.nye = nyeArmature;
+        applySceneLocale();
         window.__space.setNyeScale = function (s) { if (nyeArmature) nyeArmature.group.scale.setScalar(s); };
         window.__space.setClearing = function (i, o) { deepFusion.uniforms.uClearInner.value = i; deepFusion.uniforms.uClearOuter.value = o; };
       } catch (e) { window.__space.nyeError = String(e); }
@@ -463,12 +467,22 @@
        piece of the work (☉→Capricorn 主外, ☾→Leo 主内). Same shader, same
        GLOW sprite, same budget. #deep stays pointer-events:none; picking is a
        window raycaster. The iframe Nye Clock is untouched. */
+    function pageLocale() { return root.className.indexOf("locale-zh") >= 0 ? "zh" : "en"; }
+    function applySceneLocale() {
+      var loc = pageLocale();
+      if (natalSky && natalSky.setLocale) natalSky.setLocale(loc);
+      if (nyeArmature) nyeArmature.group.traverse(function (o) {
+        if (o.name && /Readout$/.test(o.name)) o.visible = (loc === "zh");
+      });
+    }
+    new MutationObserver(applySceneLocale).observe(root, { attributes: true, attributeFilter: ["class"] });
+
     var natalSky = null;
     // the natal sphere holds STILL around the world (the chart is a fact, not weather);
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=2").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=5").then(function (mod) {
+      return import("./natal-sky.js?v=6").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 205 : 372,
@@ -479,6 +493,7 @@
         window.__space.natal = natalSky;
         window.__space.natalStats = natalSky.stats;
         tryAlignChart();
+        applySceneLocale();
       });
     }).catch(function (e) { window.__space.natalError = String(e); });
 

@@ -208,30 +208,42 @@ export function buildNatalSky(THREE, scene, data, opts) {
   })();
 
   /* ---------------- constellation names: IN-SCENE Songti sprites (same craft as the 干支 glyphs) ---------------- */
-  function makeNameSprite(zh, en, key) {
+  function nameTexture(zh, en, key, loc) {
     var cv = document.createElement("canvas"); cv.width = 512; cv.height = 224;
     var ctx = cv.getContext("2d"); ctx.clearRect(0, 0, 512, 224);
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillStyle = key ? "rgba(236,147,118,0.98)" : "rgba(216,204,186,0.85)";
-    ctx.font = (key ? "600 " : "500 ") + '76px "Songti SC","STSong","Noto Serif SC",serif';
-    ctx.fillText(zh, 256, 92);
-    ctx.fillStyle = key ? "rgba(240,228,203,0.8)" : "rgba(190,180,164,0.6)";
-    ctx.font = '500 26px "JetBrains Mono","SFMono-Regular",monospace';
-    ctx.fillText(en.toUpperCase(), 256, 172);
+    if (loc === "zh") {
+      ctx.fillStyle = key ? "rgba(236,147,118,0.98)" : "rgba(216,204,186,0.85)";
+      ctx.font = (key ? "600 " : "500 ") + '76px "Songti SC","STSong","Noto Serif SC",serif';
+      ctx.fillText(zh, 256, 112);
+    } else {
+      ctx.fillStyle = key ? "rgba(236,147,118,0.98)" : "rgba(216,204,186,0.85)";
+      ctx.font = (key ? "600 " : "500 ") + '54px "Newsreader",Georgia,serif';
+      ctx.fillText(en.toUpperCase(), 256, 112);
+    }
     var tx = new T.CanvasTexture(cv);
     if ("colorSpace" in tx && T.SRGBColorSpace) tx.colorSpace = T.SRGBColorSpace;
-    var m = new T.SpriteMaterial({ map: tx, transparent: true, opacity: key ? 0.96 : 0.62, depthWrite: false, depthTest: false, blending: T.NormalBlending, fog: false });
+    return tx;
+  }
+  function makeNameSprite(zh, en, key, loc) {
+    var zhTex = nameTexture(zh, en, key, "zh"), enTex = nameTexture(zh, en, key, "en");
+    var m = new T.SpriteMaterial({ map: loc === "zh" ? zhTex : enTex, transparent: true, opacity: key ? 0.96 : 0.62, depthWrite: false, depthTest: false, blending: T.NormalBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     var sp = new T.Sprite(m);
     var sc = key ? 40 : 27;
     sp.scale.set(sc, sc * 224 / 512, 1);
     sp.userData.baseOpacity = m.opacity;
+    sp.userData.zhTex = zhTex; sp.userData.enTex = enTex;
     return sp;
+  }
+  function pageLocale() {
+    try { return document.documentElement.className.indexOf("locale-zh") >= 0 ? "zh" : "en"; } catch (e) { return "en"; }
   }
   var nameSprites = [];
   if (typeof document !== "undefined") {
+    var loc0 = pageLocale();
     cons.forEach(function (c, ci) {
-      var sp = makeNameSprite(c.name.zh, c.name.en, c.loadBearing);
+      var sp = makeNameSprite(c.name.zh, c.name.en, c.loadBearing, loc0);
       sp.position.copy(conCentroid[ci]).multiplyScalar(1.10);
       belt.add(sp); nameSprites[ci] = sp;
     });
@@ -348,6 +360,14 @@ export function buildNatalSky(THREE, scene, data, opts) {
     setVisible: function (v) {
       group.visible = !!v;
       if (!v && tip) { tip.style.opacity = "0"; hovered = -1; document.body.style.cursor = ""; }
+    },
+    // language of the in-scene nameplates follows the page locale (EN mode shows no Chinese)
+    setLocale: function (loc) {
+      for (var i = 0; i < nameSprites.length; i++) {
+        var sp = nameSprites[i]; if (!sp) continue;
+        sp.material.map = (loc === "zh") ? sp.userData.zhTex : sp.userData.enTex;
+        sp.material.needsUpdate = true;
+      }
     },
     // world-space direction (from the sky's own center) toward a planet glyph — for aligning the orrery
     getPlanetDir: function (id) {
