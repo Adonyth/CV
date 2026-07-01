@@ -38,7 +38,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
     return { lon: lon, lat: lat };
   }
   function eclVec(lon, lat, r) {                // ecliptic (radians) -> Vector3
-    return new T.Vector3(r * Math.cos(lat) * Math.cos(lon), r * Math.cos(lat) * Math.sin(lon), r * Math.sin(lat));
+    // ecliptic plane lies in x–z (a horizon band sweeping THROUGH the view), latitude rises toward y —
+    // so the zodiac reads like a real sky, and one y-rotation can center any sign in the camera's gaze
+    return new T.Vector3(r * Math.cos(lat) * Math.cos(lon), r * Math.sin(lat), r * Math.cos(lat) * Math.sin(lon));
   }
   function hash(i) { var t = (i + 1) * 0x6D2B79F5; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
   function coreCol(h, spark) { return spark ? [1.0, 228 / 255, 190 / 255] : [1.0, (150 + 45 * h) / 255, (96 + 34 * h) / 255]; }
@@ -105,8 +107,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var h = hash(i * 7 + 3);
     var c = coreCol(h, spark);
     col[k] = c[0]; col[k + 1] = c[1]; col[k + 2] = c[2];
-    aSize[i] = lerp(1.15, 4.8, w) + (st.importance === 1.0 ? 1.7 : 0);   // data-nodes read as the bright stars
-    aAlpha[i] = lerp(0.22, 0.74, w) * (st.importance === 1.0 ? 1.15 : 1.0);
+    aSize[i] = lerp(1.5, 6.0, w) + (st.importance === 1.0 ? 2.2 : 0);   // data-nodes read as the bright stars
+    aAlpha[i] = Math.min(0.98, lerp(0.30, 0.86, w) * (st.importance === 1.0 ? 1.15 : 1.0));
     aSeed[i] = hash(i * 13 + 1);
     aSpark[i] = spark;
     if (st.node) nodeIndex[i] = { node: st.node, base: aAlpha[i], pos: st.pos };
@@ -123,7 +125,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   var uniforms = {
     uMap: { value: o.tex }, uTime: { value: 0 }, uFusion: { value: 0.52 },
     uPixelRatio: { value: Math.min((typeof devicePixelRatio !== "undefined" ? devicePixelRatio : 1) || 1, mobile ? 1.5 : 2) },
-    uMaxPointSize: { value: mobile ? 8.0 : 10.0 }, uRefDepth: { value: 420.0 }, // lift far-hemisphere stars into visibility
+    uMaxPointSize: { value: mobile ? 8.0 : 10.0 }, uRefDepth: { value: 560.0 }, // lift far-hemisphere stars into visibility
     uAmplitude: { value: 6.0 },              // near-frozen: figures hold their shape
     uLayerKind: { value: 0.0 }, uClearInner: { value: -2.0 }, uClearOuter: { value: -1.0 }
   };
@@ -135,29 +137,40 @@ export function buildNatalSky(THREE, scene, data, opts) {
   starPoints.frustumCulled = false; starPoints.name = "natalStars";
   belt.add(starPoints);
 
-  /* ---------------- figure-lines: ONE LineSegments, depth-sorted once ---------------- */
-  var segs = [];  // { a:Vector3, b:Vector3, midZtilt:number }
+  /* ---------------- figure-lines: one LineSegments PER constellation ----------------
+     (per-constellation materials -> the two load-bearing figures read brighter, and
+     portals/hover can bloom a single constellation) */
   var q = new T.Quaternion().setFromAxisAngle(new T.Vector3(1, 0, 0), EPS); // bake belt tilt for sort only
-  cons.forEach(function (c) {
+  var lineEntries = [];  // { mat, base }  indexed by constellation
+  var lineByCon = {};
+  var totalSegs = 0;
+  var isDark = true, hlSet = {};
+  cons.forEach(function (c, ci) {
+    var segs = [];
     c.figureLines.forEach(function (seg) {
       var a = c._starPos[seg[0]], b = c._starPos[seg[1]];
       if (!a || !b) return;
       var mid = a.clone().add(b).multiplyScalar(0.5).applyQuaternion(q);
       segs.push({ a: a, b: b, midZ: mid.z });
     });
+    if (!segs.length) { lineEntries[ci] = null; return; }
+    segs.sort(function (p, r) { return p.midZ - r.midZ; });  // far first, near last → additive reads clean
+    var lp = new Float32Array(segs.length * 6);
+    segs.forEach(function (s, i) {
+      lp[i * 6] = s.a.x; lp[i * 6 + 1] = s.a.y; lp[i * 6 + 2] = s.a.z;
+      lp[i * 6 + 3] = s.b.x; lp[i * 6 + 4] = s.b.y; lp[i * 6 + 5] = s.b.z;
+    });
+    totalSegs += segs.length;
+    var lgeo = new T.BufferGeometry();
+    lgeo.setAttribute("position", new T.BufferAttribute(lp, 3));
+    var base = c.loadBearing ? 0.66 : 0.32;
+    var mat = new T.LineBasicMaterial({ color: 0xe0876a, transparent: true, opacity: base, depthWrite: false, depthTest: false, blending: T.AdditiveBlending, fog: false });
+    var fl = new T.LineSegments(lgeo, mat);
+    fl.frustumCulled = false; fl.name = "natalFigure_" + c.id;
+    belt.add(fl);
+    lineEntries[ci] = { mat: mat, base: base, geo: lgeo };
+    lineByCon[c.id] = ci;
   });
-  segs.sort(function (p, r) { return p.midZ - r.midZ; });  // far (−z) first, near last → additive reads clean
-  var lp = new Float32Array(segs.length * 6);
-  segs.forEach(function (s, i) {
-    lp[i * 6] = s.a.x; lp[i * 6 + 1] = s.a.y; lp[i * 6 + 2] = s.a.z;
-    lp[i * 6 + 3] = s.b.x; lp[i * 6 + 4] = s.b.y; lp[i * 6 + 5] = s.b.z;
-  });
-  var lgeo = new T.BufferGeometry();
-  lgeo.setAttribute("position", new T.BufferAttribute(lp, 3));
-  var lineMat = new T.LineBasicMaterial({ color: 0xe0876a, transparent: true, opacity: 0.5, depthWrite: false, depthTest: false, blending: T.AdditiveBlending });
-  var figLines = new T.LineSegments(lgeo, lineMat);
-  figLines.frustumCulled = false; figLines.name = "natalFigures";
-  belt.add(figLines);
 
   /* ---------------- planet glyphs (☉ in Capricorn, ☾ in Leo, …) ---------------- */
   var GLYPH = { sun: "☉", moon: "☽", mercury: "☿", venus: "♀", mars: "♂", jupiter: "♃", saturn: "♄" };
@@ -169,9 +182,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
     g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(ch, 64, 68);
     var tex = new T.CanvasTexture(cv);
     if ("colorSpace" in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
-    var m = new T.SpriteMaterial({ map: tex, transparent: true, opacity: bright ? 0.96 : 0.8, depthWrite: false, depthTest: false, blending: T.AdditiveBlending });
+    var m = new T.SpriteMaterial({ map: tex, transparent: true, opacity: bright ? 0.98 : 0.88, depthWrite: false, depthTest: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
-    var sp = new T.Sprite(m); var s = (mobile ? 15 : 20) * sizeScale; sp.scale.set(s, s, 1);
+    var sp = new T.Sprite(m); var s = (mobile ? 18 : 24) * sizeScale; sp.scale.set(s, s, 1);
     return sp;
   }
   var planetSprites = [];
@@ -179,7 +192,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var ch = GLYPH[p.id]; if (!ch || typeof document === "undefined") return;
     var lon = p.eclLonDeg * Math.PI / 180, lat = (p.eclLatDeg || 0) * Math.PI / 180;
     var big = (p.id === "sun" || p.id === "moon");
-    var sp = glyphSprite(ch, big ? 1.35 : 1.0, big);
+    var sp = glyphSprite(ch, big ? 1.6 : 1.1, big);
     sp.position.copy(eclVec(lon, lat, R * 0.965));
     sp.userData.planet = p.id;
     belt.add(sp); planetSprites.push(sp);
@@ -190,7 +203,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var sunP = (data.planets || []).filter(function (p) { return p.id === "sun"; })[0];
     if (!sunP) return;
     var v = eclVec(sunP.eclLonDeg * Math.PI / 180, (sunP.eclLatDeg || 0) * Math.PI / 180, 1).applyAxisAngle(new T.Vector3(1, 0, 0), EPS);
-    group.rotation.y = Math.atan2(v.x, v.z) + Math.PI;  // bring the Sun direction round to +z (toward the camera)
+    // rotate azimuth(sun) → π (the −z the camera looks into): ☉ Capricornus greets the viewer
+    group.rotation.y = Math.PI - Math.atan2(v.x, v.z);
   })();
 
   /* ---------------- constellation-name DOM labels (<=12, projected) ---------------- */
@@ -255,7 +269,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   // transient hover bloom (a brief brighter sprite at the node)
   var bloomSprite = null;
   if (interactive) {
-    var bm = new T.SpriteMaterial({ map: o.tex, transparent: true, opacity: 0, depthWrite: false, depthTest: false, blending: T.AdditiveBlending });
+    var bm = new T.SpriteMaterial({ map: o.tex, transparent: true, opacity: 0, depthWrite: false, depthTest: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in bm) bm.toneMapped = false;
     bloomSprite = new T.Sprite(bm); bloomSprite.scale.set(26, 26, 1); bloomSprite.visible = false;
     belt.add(bloomSprite);
@@ -278,24 +292,44 @@ export function buildNatalSky(THREE, scene, data, opts) {
       if (onScreen) {
         el.style.left = ((_v.x * 0.5 + 0.5) * innerWidth) + "px";
         el.style.top = ((-_v.y * 0.5 + 0.5) * innerHeight) + "px";
-        el.style.opacity = cons[ci].loadBearing ? "0.5" : "0.24";
+        el.style.opacity = hlSet[cons[ci].id] ? "1" : (cons[ci].loadBearing ? "0.9" : "0.45");
       } else { el.style.opacity = "0"; }
     }
   }
 
   /* ---------------- lifecycle ---------------- */
+  var t0 = null;
+  function lineOpacities(sec) {
+    // entrance pulse: the constellations announce themselves, then settle
+    if (t0 === null) t0 = sec;
+    var age = sec - t0;
+    var pulse = age < 9 ? 1 + 0.8 * Math.max(0, 1 - age / 9) : 1;
+    for (var ci = 0; ci < lineEntries.length; ci++) {
+      var e = lineEntries[ci]; if (!e) continue;
+      var hl = hlSet[cons[ci].id] ? 1.7 : 1;
+      e.mat.opacity = Math.min(0.95, e.base * (isDark ? 1 : 1.18) * pulse * hl);
+    }
+  }
   var api = {
     group: group,
     starPoints: starPoints,
     tick: function (sec) {
       uniforms.uTime.value = sec;
+      lineOpacities(sec);
       if (bloomSprite && bloomT > 0) { bloomT = Math.max(0, bloomT - 0.045); bloomSprite.material.opacity = bloomT * 0.7; if (bloomT === 0) bloomSprite.visible = false; }
       updateLabels();
     },
     applyTheme: function (dark) {
+      isDark = dark;
       var bl = dark ? T.AdditiveBlending : T.NormalBlending;
       starMat.blending = bl; starMat.needsUpdate = true;
-      lineMat.blending = bl; lineMat.opacity = dark ? 0.5 : 0.6; lineMat.needsUpdate = true;
+      for (var i = 0; i < lineEntries.length; i++) { var e = lineEntries[i]; if (!e) continue; e.mat.blending = bl; e.mat.needsUpdate = true; }
+    },
+    highlight: function (id, on) {
+      if (lineByCon[id] == null) return;
+      hlSet[id] = !!on;
+      var ci = lineByCon[id];
+      if (on && conCentroid[ci]) bloom(conCentroid[ci]);
     },
     setVisible: function (v) {
       group.visible = !!v;
@@ -303,16 +337,17 @@ export function buildNatalSky(THREE, scene, data, opts) {
       for (var i = 0; i < labelEls.length; i++) if (labelEls[i]) labelEls[i].style.opacity = "0";
     },
     // live tuning levers (for judging on the real machine)
-    setLineOpacity: function (v) { lineMat.opacity = v; lineMat.needsUpdate = true; },
-    setStarScale: function (v) { uniforms.uRefDepth.value = 420 * v; },
-    stats: { stars: N, segments: segs.length, dataNodes: nodeIndex.filter(Boolean).length, planets: planetSprites.length, constellations: cons.length },
+    setLineOpacity: function (v) { for (var i = 0; i < lineEntries.length; i++) { var e = lineEntries[i]; if (e) e.base = cons[i].loadBearing ? v : v * 0.48; } },
+    setStarScale: function (v) { uniforms.uRefDepth.value = 560 * v; },
+    stats: { stars: N, segments: totalSegs, dataNodes: nodeIndex.filter(Boolean).length, planets: planetSprites.length, constellations: cons.length },
     dispose: function () {
       if (onMove) removeEventListener("pointermove", onMove);
       if (onClick) removeEventListener("click", onClick);
       if (tip && tip.parentNode) tip.parentNode.removeChild(tip);
       if (labelHost && labelHost.parentNode && labelHost.className === "natal-labels") labelHost.parentNode.removeChild(labelHost);
       (o.group || scene).remove(group);
-      geo.dispose(); starMat.dispose(); lgeo.dispose(); lineMat.dispose();
+      geo.dispose(); starMat.dispose();
+      for (var i = 0; i < lineEntries.length; i++) { var e = lineEntries[i]; if (e) { e.geo.dispose(); e.mat.dispose(); } }
       planetSprites.forEach(function (s) { if (s.material.map) s.material.map.dispose(); s.material.dispose(); });
     }
   };

@@ -29,6 +29,8 @@
       .catch(function (e) { host.classList.remove("is-loading"); host.classList.add("footprint-globe--fallback"); host.setAttribute("data-err", String(e)); });
   }
 
+  window.__footprintBoot = boot;   // manual boot hook (verification / headless)
+
   // lazy: only when the section nears the viewport
   if ("IntersectionObserver" in window) {
     var io = new IntersectionObserver(function (ents) {
@@ -121,9 +123,22 @@
 
     var points = new THREE.Points(geo, ptMat); points.frustumCulled = false; globe.add(points);
 
-    // orient so North America (where the trace lives) faces the camera at rest
+    // faint warm graticule — keeps the sphere legible even where no trace has been
+    (function () {
+      var seg = [], t = [0, 0, 0], u = [0, 0, 0], R2 = RG * 1.004;
+      function arc(fn, steps) { for (var i = 0; i < steps; i++) { fn(i / steps, t); fn((i + 1) / steps, u); seg.push(t[0], t[1], t[2], u[0], u[1], u[2]); } }
+      for (var lo = 0; lo < 360; lo += 30) (function (LO) { arc(function (f, o) { lonLatToVec3(-80 + 160 * f, LO, R2, o); }, 40); })(lo);
+      for (var la = -60; la <= 60; la += 30) (function (LA) { arc(function (f, o) { lonLatToVec3(LA, 360 * f, R2, o); }, 60); })(la);
+      var gg = new THREE.BufferGeometry();
+      gg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(seg), 3));
+      var gm = new THREE.LineBasicMaterial({ color: 0xe0876a, transparent: true, opacity: 0.12, depthWrite: false, blending: THREE.AdditiveBlending });
+      var grid = new THREE.LineSegments(gg, gm); grid.name = "graticule"; globe.add(grid);
+    })();
+
+    // orient so North America (where the trace lives) faces the camera at rest:
+    // yaw = -azimuth(us) brings the US meridian to +z (the camera side); pitch tips lat 39°N toward center
     var usDir = [0, 0, 0]; lonLatToVec3(39, -98, 1, usDir);
-    var camDist = RG * 2.6;
+    var camDist = RG * 2.2;
     var scene_cam = new THREE.PerspectiveCamera(42, 1, 0.1, 4000);
 
     function sizeCanvas() {
@@ -137,7 +152,7 @@
     host.classList.remove("is-loading"); host.classList.add("is-live");
 
     // manual orbit: yaw/pitch on the globe, dolly on wheel
-    var yaw = Math.atan2(usDir[0], usDir[2]) + Math.PI, pitch = -0.32, targetYaw = yaw, targetPitch = pitch, dist = camDist, targetDist = camDist;
+    var yaw = -Math.atan2(usDir[0], usDir[2]), pitch = 0.52, targetYaw = yaw, targetPitch = pitch, dist = camDist, targetDist = camDist;
     var dragging = false, lx = 0, ly = 0, idle = 0;
     renderer.domElement.style.touchAction = "none";
     renderer.domElement.addEventListener("pointerdown", function (e) { dragging = true; lx = e.clientX; ly = e.clientY; idle = 0; renderer.domElement.setPointerCapture(e.pointerId); });
@@ -175,6 +190,8 @@
     window.__footprint = {
       points: count, total: total,
       setSize: function (s) { ptMat.uniforms.uMaxSize.value = s; },
+      setView: function (y, p, d) { if (y != null) targetYaw = y; if (p != null) targetPitch = p; if (d != null) targetDist = d; },
+      snap: function () { yaw = targetYaw; pitch = targetPitch; dist = targetDist; globe.rotation.y = yaw; globe.rotation.x = pitch; scene_cam.position.set(0, 0, dist); scene_cam.lookAt(0, 0, 0); renderer.render(scene, scene_cam); return renderer.domElement.toDataURL("image/jpeg", 0.8); },
       teardown: function () { running = false; try { geo.dispose(); ptMat.dispose(); tex.dispose(); renderer.dispose(); if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement); } catch (e) {} }
     };
   }

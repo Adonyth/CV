@@ -253,8 +253,11 @@
         tick: function (sec) {
           common.uTime.value = sec;
           var slow = calm ? 0.0042 : 0.0062;
-          grp.rotation.y = sec * slow; grp.rotation.x = Math.sin(sec * 0.027) * 0.025; farShell.rotation.z = Math.sin(sec * 0.018) * 0.018;
-          if (nearHaze) { nearHaze.rotation.y = -sec * slow * 0.58; nearHaze.rotation.z = Math.sin(sec * 0.041) * 0.035; }
+          // scroll-linked drift: the whole cosmos (embers + natal sky ride the same group)
+          // turns gently as you travel down the page — one space, one journey
+          var drift = (typeof scrollY === "number" ? scrollY : 0) * 0.00026;
+          grp.rotation.y = sec * slow + drift; grp.rotation.x = Math.sin(sec * 0.027) * 0.025; farShell.rotation.z = Math.sin(sec * 0.018) * 0.018;
+          if (nearHaze) { nearHaze.rotation.y = -(sec * slow + drift) * 0.58; nearHaze.rotation.z = Math.sin(sec * 0.041) * 0.035; }
         },
         dispose: function () { scene.remove(grp); farGeo.dispose(); farMat.dispose(); if (nearGeo) nearGeo.dispose(); if (nearMat) nearMat.dispose(); }
       };
@@ -316,8 +319,8 @@
        GLOW sprite, same budget. #deep stays pointer-events:none; picking is a
        window raycaster. The iframe Nye Clock is untouched. */
     var natalSky = null;
-    fetch("data/natal-sky.json").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js").then(function (mod) {
+    fetch("data/natal-sky.json?v=2").then(function (r) { return r.json(); }).then(function (natalData) {
+      return import("./natal-sky.js?v=2").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: deepFusion.group, R_STAR: 372, mobile: MOBILE, calm: (TIER !== "full"),
@@ -327,6 +330,14 @@
         natalSky.setVisible(!document.body.classList.contains("field-off"));
         window.__space.natal = natalSky;
         window.__space.natalStats = natalSky.stats;
+        // portals ↔ constellations: hovering an entrance blooms its constellation in the sky
+        document.querySelectorAll("[data-constellation]").forEach(function (el) {
+          var id = el.getAttribute("data-constellation");
+          el.addEventListener("mouseenter", function () { natalSky.highlight(id, true); });
+          el.addEventListener("mouseleave", function () { natalSky.highlight(id, false); });
+          el.addEventListener("focus", function () { natalSky.highlight(id, true); });
+          el.addEventListener("blur", function () { natalSky.highlight(id, false); });
+        });
       });
     }).catch(function (e) { window.__space.natalError = String(e); });
 
@@ -334,6 +345,11 @@
     function frame(t) {
       if (!running) return;
       var sec = (t || 0) * 0.001;
+      // gentle scroll parallax on the camera — depth between the page and the cosmos
+      var sy = (typeof scrollY === "number" ? scrollY : 0);
+      var targetCamY = Math.max(-14, Math.min(14, -sy * 0.006));
+      camera.position.y += (targetCamY - camera.position.y) * 0.06;
+      camera.lookAt(0, camera.position.y * 0.4, -300);
       deepFusion.tick(sec);
       if (nyeArmature) nyeArmature.tick(sec);
       if (natalSky) natalSky.tick(sec);
