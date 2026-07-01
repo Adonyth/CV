@@ -220,10 +220,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
     ctx.fillText(en.toUpperCase(), 256, 172);
     var tx = new T.CanvasTexture(cv);
     if ("colorSpace" in tx && T.SRGBColorSpace) tx.colorSpace = T.SRGBColorSpace;
-    var m = new T.SpriteMaterial({ map: tx, transparent: true, opacity: key ? 0.92 : 0.5, depthWrite: false, depthTest: false, blending: T.NormalBlending, fog: false });
+    var m = new T.SpriteMaterial({ map: tx, transparent: true, opacity: key ? 0.96 : 0.62, depthWrite: false, depthTest: false, blending: T.NormalBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     var sp = new T.Sprite(m);
-    var sc = key ? 30 : 21;
+    var sc = key ? 40 : 27;
     sp.scale.set(sc, sc * 224 / 512, 1);
     sp.userData.baseOpacity = m.opacity;
     return sp;

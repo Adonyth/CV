@@ -78,9 +78,11 @@
     /* cosmos: the camera ORBITS the Earth at the origin (one world, one gaze).
        Everything lives inside the ember shell (R 285-405), so the sky is always
        in view and nothing ever leaves the page. */
-    var orbit = { yaw: 0, pitch: 0.18, dist: 80, tYaw: 0, tPitch: 0.18, tDist: 80,
+    /* entrance: the camera arrives from deep space (far, off-axis → home);
+       the existing damping turns the approach into a slow cinematic glide */
+    var orbit = { yaw: -0.85, pitch: 0.52, dist: 178, tYaw: 0, tPitch: 0.18, tDist: 80,
                   panX: 0, panY: 7, panZ: 0, tPanX: 0, tPanY: 7, tPanZ: 0,
-                  vYaw: 0, vPitch: 0,
+                  vYaw: 0, vPitch: 0, lastTouch: 0,
                   minDist: 10, maxDist: 185, dragging: false, moved: 0 };
     function applyOrbit() {
       if (!orbit.dragging) {                       // inertia: a flick keeps the world turning
@@ -89,6 +91,8 @@
         orbit.vYaw *= 0.93; orbit.vPitch *= 0.93;
         if (Math.abs(orbit.vYaw) < 0.00002) orbit.vYaw = 0;
         if (Math.abs(orbit.vPitch) < 0.00002) orbit.vPitch = 0;
+        // the world never stands still: after 8s of rest it turns on its own, slowly
+        if (performance.now() - orbit.lastTouch > 8000) orbit.tYaw += 0.00028;
       }
       orbit.yaw += (orbit.tYaw - orbit.yaw) * 0.09;
       orbit.pitch += (orbit.tPitch - orbit.pitch) * 0.09;
@@ -426,7 +430,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=3").then(function (mod) {
+    import("./nye-armature.js?v=4").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -464,7 +468,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=2").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=4").then(function (mod) {
+      return import("./natal-sky.js?v=5").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 205 : 372,
@@ -499,6 +503,7 @@
       }
       canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
       canvas.addEventListener("pointerdown", function (e) {
+        orbit.lastTouch = performance.now();
         touches[e.pointerId] = { x: e.clientX, y: e.clientY }; touchCount++;
         if (touchCount === 2) {                    // pinch begins
           var ids = Object.keys(touches);
@@ -543,6 +548,7 @@
       });
       canvas.addEventListener("wheel", function (e) {
         e.preventDefault();
+        orbit.lastTouch = performance.now();
         orbit.tDist = Math.max(orbit.minDist, Math.min(orbit.maxDist, orbit.tDist * (1 + Math.sign(e.deltaY) * 0.09)));
       }, { passive: false });
 
@@ -612,6 +618,17 @@
     document.addEventListener("visibilitychange", function () {
       if (document.hidden) running = false; else if (!running) { running = true; requestAnimationFrame(frame); }
     });
+
+    // self-diagnosing build stamp: 日=orrery 盘=chart 皮=earth-skin 迹=trace — truth at a glance
+    function stampStatus() {
+      var el = document.querySelector(".cosmos-build"); if (!el) return;
+      var s = window.__space, bits = [];
+      bits.push(s.nye ? "日✓" : (s.nyeError ? "日✗" : "日…"));
+      bits.push(s.natal ? "盘✓" : (s.natalError ? "盘✗" : "盘…"));
+      bits.push(s.tracePoints ? "迹✓" : (s.traceError ? "迹✗" : "迹…"));
+      el.textContent = el.textContent.replace(/ · [日盘迹].*$/, "") + " · " + bits.join(" ");
+    }
+    setInterval(stampStatus, 1500); setTimeout(stampStatus, 800);
 
     // hooks for verification / governor / future scroll-driven fusion
     window.__space.ready = true;

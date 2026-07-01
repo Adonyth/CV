@@ -23,7 +23,7 @@ export function mountNyeArmature(THREE, scene, opts) {
   const options = opts || {};
   const TAU = Math.PI * 2;
   const AU_SCALE = 18;
-  const SUN_BASE_R = 1.85;
+  const SUN_BASE_R = 2.05;
   const DEFAULT_INSTANT = new Date(2002, 0, 2, 15, 45, 0, 0);
   const instant =
     options.instant && typeof options.instant.getTime === "function" && isFinite(options.instant.getTime())
@@ -279,9 +279,9 @@ export function mountNyeArmature(THREE, scene, opts) {
       "  float gran=smoothstep(0.32,0.72,plasma);",
       "  vec3 cLane=vec3(1.00,0.33,0.03);",
       "  vec3 cGran=vec3(1.00,0.76,0.28);",
-      "  vec3 cPhot=vec3(1.12,1.04,0.96);",
+      "  vec3 cPhot=vec3(1.10,0.88,0.58);",
       "  vec3 col=mix(cLane,cGran,gran);",
-      "  col=mix(col,cPhot,pow(mu,0.95)*0.90);",
+      "  col=mix(col,cPhot,pow(mu,0.95)*0.55);",
       "  float fac=smoothstep(0.74,0.97,p1)*smoothstep(0.36,0.80,p2)*mu;",
       "  col+=vec3(0.48,0.42,0.28)*fac*0.62;",
       "  float tw=smoothstep(0.88,0.995,p2*p4)*pow(mu,0.35);",
@@ -300,7 +300,7 @@ export function mountNyeArmature(THREE, scene, opts) {
 
     const sunCoreUni = {
       uTime: { value: 0 },
-      uExposure: { value: warm ? 0.78 : 1.0 },
+      uExposure: { value: warm ? 0.72 : 1.0 },
       uWarmTint: { value: warm ? new T.Vector3(1.0, 0.86, 0.72) : new T.Vector3(1.0, 1.0, 1.0) }
     };
     const sunCoreMat = new T.ShaderMaterial({
@@ -373,10 +373,10 @@ export function mountNyeArmature(THREE, scene, opts) {
     ].join("\n");
 
     const coronaDef = [
-      [1.04, 1.00, 1.28, 0.86, 0.48, 1.00, 0.46, 100],
-      [1.72, 0.82, 1.18, 0.58, 0.28, 0.95, 0.56, 68],
-      [3.25, 0.55, 1.02, 0.42, 0.24, 0.68, 0.66, 56],
-      [5.85, 0.34, 0.90, 0.30, 0.18, 0.35, 0.82, 44]
+      [1.04, 1.00, 1.28, 0.86, 0.48, 1.00, 0.42, 100],
+      [1.72, 0.95, 1.18, 0.58, 0.28, 0.95, 0.50, 68],
+      [3.25, 0.78, 1.02, 0.42, 0.24, 0.68, 0.58, 56],
+      [5.85, 0.52, 0.90, 0.30, 0.18, 0.35, 0.72, 44]
     ];
     for (let i = 0; i < coronaDef.length; i++) {
       const cd = coronaDef[i];
