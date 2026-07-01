@@ -207,23 +207,48 @@ export function buildNatalSky(THREE, scene, data, opts) {
     group.rotation.y = Math.PI - Math.atan2(v.x, v.z);
   })();
 
-  /* ---------------- constellation-name DOM labels (<=12, projected) ---------------- */
-  var labelHost = null, labelEls = [];
-  if (interactive) {
-    labelHost = o.labelHost || (function () {
-      var d = document.createElement("div"); d.className = "natal-labels"; d.setAttribute("aria-hidden", "true");
-      d.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden;";
-      (document.querySelector(".content") || document.body).appendChild(d); return d;
-    })();
+  /* ---------------- constellation names: IN-SCENE Songti sprites (same craft as the 干支 glyphs) ---------------- */
+  function makeNameSprite(zh, en, key) {
+    var cv = document.createElement("canvas"); cv.width = 512; cv.height = 224;
+    var ctx = cv.getContext("2d"); ctx.clearRect(0, 0, 512, 224);
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = key ? "rgba(236,147,118,0.98)" : "rgba(216,204,186,0.85)";
+    ctx.font = (key ? "600 " : "500 ") + '76px "Songti SC","STSong","Noto Serif SC",serif';
+    ctx.fillText(zh, 256, 92);
+    ctx.fillStyle = key ? "rgba(240,228,203,0.8)" : "rgba(190,180,164,0.6)";
+    ctx.font = '500 26px "JetBrains Mono","SFMono-Regular",monospace';
+    ctx.fillText(en.toUpperCase(), 256, 172);
+    var tx = new T.CanvasTexture(cv);
+    if ("colorSpace" in tx && T.SRGBColorSpace) tx.colorSpace = T.SRGBColorSpace;
+    var m = new T.SpriteMaterial({ map: tx, transparent: true, opacity: key ? 0.92 : 0.5, depthWrite: false, depthTest: false, blending: T.NormalBlending, fog: false });
+    if ("toneMapped" in m) m.toneMapped = false;
+    var sp = new T.Sprite(m);
+    var sc = key ? 30 : 21;
+    sp.scale.set(sc, sc * 224 / 512, 1);
+    sp.userData.baseOpacity = m.opacity;
+    return sp;
+  }
+  var nameSprites = [];
+  if (typeof document !== "undefined") {
     cons.forEach(function (c, ci) {
-      if (!c.loadBearing && hash(ci * 31) > 0.62) { labelEls[ci] = null; return; } // keep it uncluttered: all load-bearing + a subset of backdrops
-      var el = document.createElement("div");
-      el.className = "natal-label" + (c.loadBearing ? " natal-label--key" : "");
-      el.innerHTML = '<span class="i18n-en">' + c.name.en + '</span><span class="i18n-zh">' + c.name.zh + '</span>';
-      el.style.cssText = "position:absolute;transform:translate(-50%,-50%);font-family:Newsreader,serif;white-space:nowrap;opacity:0;transition:opacity .6s ease;";
-      labelHost.appendChild(el); labelEls[ci] = el;
+      var sp = makeNameSprite(c.name.zh, c.name.en, c.loadBearing);
+      sp.position.copy(conCentroid[ci]).multiplyScalar(1.10);
+      belt.add(sp); nameSprites[ci] = sp;
     });
   }
+  /* soft halos behind the stars that carry weight (data-nodes + the two natal figures) */
+  (function () {
+    stars.forEach(function (st) {
+      var key = cons[st.conIdx].loadBearing;
+      if (!st.node && !(key && st.importance >= 0.7)) return;
+      var m = new T.SpriteMaterial({ map: o.tex, transparent: true, opacity: st.node ? 0.5 : 0.28, depthWrite: false, depthTest: false, blending: T.AdditiveBlending, fog: false });
+      if ("toneMapped" in m) m.toneMapped = false;
+      var h = new T.Sprite(m);
+      var sc = st.node ? 11 : 6.5;
+      h.scale.set(sc, sc, 1); h.position.copy(st.pos);
+      belt.add(h);
+    });
+  })();
 
   /* ---------------- interaction: window raycaster (never touches #deep) ---------------- */
   var tip = null, raycaster = null, ndc = null, hovered = -1, onMove = null, onClick = null;
@@ -278,22 +303,11 @@ export function buildNatalSky(THREE, scene, data, opts) {
   function bloom(p) { if (!bloomSprite) return; bloomSprite.position.copy(p); bloomSprite.visible = true; bloomT = 1.0; }
 
   /* ---------------- labels projection + housekeeping per frame ---------------- */
-  var _v = new T.Vector3(), camDir = new T.Vector3();
   function updateLabels() {
-    if (!interactive || !labelHost) return;
-    o.camera.getWorldDirection(camDir);
-    for (var ci = 0; ci < cons.length; ci++) {
-      var el = labelEls[ci]; if (!el) continue;
-      belt.localToWorld(_v.copy(conCentroid[ci]));
-      var toC = _v.clone().sub(o.camera.position).normalize();
-      var facing = toC.dot(camDir) > 0.15;                 // in front of camera
-      _v.project(o.camera);
-      var onScreen = facing && _v.x > -1.05 && _v.x < 1.05 && _v.y > -1.05 && _v.y < 1.05;
-      if (onScreen) {
-        el.style.left = ((_v.x * 0.5 + 0.5) * innerWidth) + "px";
-        el.style.top = ((-_v.y * 0.5 + 0.5) * innerHeight) + "px";
-        el.style.opacity = hlSet[cons[ci].id] ? "1" : (cons[ci].loadBearing ? "0.9" : "0.45");
-      } else { el.style.opacity = "0"; }
+    for (var ci = 0; ci < nameSprites.length; ci++) {
+      var sp = nameSprites[ci]; if (!sp) continue;
+      var want = hlSet[cons[ci].id] ? 1.0 : sp.userData.baseOpacity;
+      sp.material.opacity += (want - sp.material.opacity) * 0.12;
     }
   }
 
@@ -334,7 +348,6 @@ export function buildNatalSky(THREE, scene, data, opts) {
     setVisible: function (v) {
       group.visible = !!v;
       if (!v && tip) { tip.style.opacity = "0"; hovered = -1; document.body.style.cursor = ""; }
-      for (var i = 0; i < labelEls.length; i++) if (labelEls[i]) labelEls[i].style.opacity = "0";
     },
     // world-space direction (from the sky's own center) toward a planet glyph — for aligning the orrery
     getPlanetDir: function (id) {
@@ -355,7 +368,6 @@ export function buildNatalSky(THREE, scene, data, opts) {
       if (onMove) removeEventListener("pointermove", onMove);
       if (onClick) removeEventListener("click", onClick);
       if (tip && tip.parentNode) tip.parentNode.removeChild(tip);
-      if (labelHost && labelHost.parentNode && labelHost.className === "natal-labels") labelHost.parentNode.removeChild(labelHost);
       (o.group || scene).remove(group);
       geo.dispose(); starMat.dispose();
       for (var i = 0; i < lineEntries.length; i++) { var e = lineEntries[i]; if (e) { e.geo.dispose(); e.mat.dispose(); } }

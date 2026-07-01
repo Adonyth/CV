@@ -78,15 +78,30 @@
     /* cosmos: the camera ORBITS the Earth at the origin (one world, one gaze).
        Everything lives inside the ember shell (R 285-405), so the sky is always
        in view and nothing ever leaves the page. */
-    var orbit = { yaw: 0, pitch: 0.18, dist: 80, tYaw: 0, tPitch: 0.18, tDist: 80, lookY: 7,
-                  minDist: 16, maxDist: 150, dragging: false, moved: 0 };
+    var orbit = { yaw: 0, pitch: 0.18, dist: 80, tYaw: 0, tPitch: 0.18, tDist: 80,
+                  panX: 0, panY: 7, panZ: 0, tPanX: 0, tPanY: 7, tPanZ: 0,
+                  vYaw: 0, vPitch: 0,
+                  minDist: 10, maxDist: 185, dragging: false, moved: 0 };
     function applyOrbit() {
-      orbit.yaw += (orbit.tYaw - orbit.yaw) * 0.07;
-      orbit.pitch += (orbit.tPitch - orbit.pitch) * 0.07;
-      orbit.dist += (orbit.tDist - orbit.dist) * 0.07;
+      if (!orbit.dragging) {                       // inertia: a flick keeps the world turning
+        orbit.tYaw += orbit.vYaw;
+        orbit.tPitch = Math.max(-1.25, Math.min(1.25, orbit.tPitch + orbit.vPitch));
+        orbit.vYaw *= 0.93; orbit.vPitch *= 0.93;
+        if (Math.abs(orbit.vYaw) < 0.00002) orbit.vYaw = 0;
+        if (Math.abs(orbit.vPitch) < 0.00002) orbit.vPitch = 0;
+      }
+      orbit.yaw += (orbit.tYaw - orbit.yaw) * 0.09;
+      orbit.pitch += (orbit.tPitch - orbit.pitch) * 0.09;
+      orbit.dist += (orbit.tDist - orbit.dist) * 0.09;
+      orbit.panX += (orbit.tPanX - orbit.panX) * 0.09;
+      orbit.panY += (orbit.tPanY - orbit.panY) * 0.09;
+      orbit.panZ += (orbit.tPanZ - orbit.panZ) * 0.09;
       var cp = Math.cos(orbit.pitch);
-      camera.position.set(orbit.dist * Math.sin(orbit.yaw) * cp, orbit.dist * Math.sin(orbit.pitch) + orbit.lookY, orbit.dist * Math.cos(orbit.yaw) * cp);
-      camera.lookAt(0, orbit.lookY, 0);
+      camera.position.set(
+        orbit.panX + orbit.dist * Math.sin(orbit.yaw) * cp,
+        orbit.panY + orbit.dist * Math.sin(orbit.pitch),
+        orbit.panZ + orbit.dist * Math.cos(orbit.yaw) * cp);
+      camera.lookAt(orbit.panX, orbit.panY, orbit.panZ);
     }
     if (COSMOS) { applyOrbit(); } else { camera.position.set(0, 0, 60); }
 
@@ -115,7 +130,9 @@
       "uniform float uMaxPointSize;", "uniform float uRefDepth;", "uniform float uAmplitude;", "uniform float uLayerKind;",
       // M10 reconciliation: carve a calm clearing around the orrery at world origin
       "uniform float uClearInner;", "uniform float uClearOuter;",
-      "varying vec3 vColor;", "varying float vAlpha;",
+      // fusion: embers toward the Sun's quarter of the sky catch its light
+      "uniform vec3 uSunDir;",
+      "varying vec3 vColor;", "varying float vAlpha;", "varying float vGlow;",
       // aesthetic echo of home.js flow() at 0.42x phase — parallax, NOT a phase-lock
       "float flowEcho(vec3 p, float t){",
       "  float ft=t*0.42;",
@@ -169,6 +186,7 @@
       "  float breath=0.82+0.18*sin(uTime*0.21+aSeed*12.9898);",
       // fade embers OUT of the pocket the orrery sits in (>=uClearOuter untouched)
       "  float clearing=smoothstep(uClearInner,uClearOuter,length(worldPos));",
+      "  vGlow=pow(max(dot(normalize(worldPos+vec3(0.0001)),uSunDir),0.0),3.0);",
       "  vAlpha=aAlpha*layerPresence*breath*clearing;",
       "  vColor=aColor;",
       "}"
@@ -176,12 +194,15 @@
 
     var DEEP_FRAGMENT_SHADER = [
       "precision mediump float;",
-      "uniform sampler2D uMap;", "varying vec3 vColor;", "varying float vAlpha;",
+      "uniform sampler2D uMap;", "uniform float uSunGlow;",
+      "varying vec3 vColor;", "varying float vAlpha;", "varying float vGlow;",
       "void main(){",
       "  vec4 sprite=texture2D(uMap,gl_PointCoord);",
-      "  float alpha=sprite.a*vAlpha;",
+      "  float g=uSunGlow*vGlow;",
+      "  float alpha=sprite.a*vAlpha*(1.0+0.45*g);",
       "  if(alpha<0.003) discard;",
-      "  gl_FragColor=vec4(vColor*sprite.rgb,alpha);",
+      "  vec3 lit=vColor*(1.0+1.15*g)+vec3(0.30,0.20,0.10)*g;",   // sunlit embers warm toward the fire
+      "  gl_FragColor=vec4(lit*sprite.rgb,alpha);",
       "}"
     ].join("\n");
 
@@ -208,6 +229,9 @@
         if (kind === "far") {
           var shellR = lerp(285, 405, Math.pow(shellJitter, 0.72)), ob = 0.92 + rnd() * 0.08;
           pos[k] = x * shellR; pos[k + 1] = y * shellR * ob; pos[k + 2] = z * shellR;
+          // cosmos: two-thirds of the far embers settle into a nebula LANE that hugs the
+          // ecliptic band — the dust and the zodiac share one plane, one weather
+          if (COSMOS && rnd() < 0.66) pos[k + 1] *= 0.32;
         } else {
           var hazeR = lerp(42, 190, Math.pow(shellJitter, 0.46)), lobe = 0.72 + 0.28 * Math.sin(theta * 2.0 + y * 4.0);
           pos[k] = x * hazeR * 1.32; pos[k + 1] = y * hazeR * 0.74; pos[k + 2] = z * hazeR * 0.92 + lobe * 28;
@@ -242,13 +266,16 @@
         uMap: { value: tex }, uTime: { value: 0 }, uFusion: { value: 0.52 },
         uPixelRatio: { value: Math.min(devicePixelRatio || 1, mobile ? 1.5 : 2) },
         // clearing DISABLED until the orrery mounts (smoothstep(-2,-1,len)==1 → no fade anywhere)
-        uClearInner: { value: -2.0 }, uClearOuter: { value: -1.0 }
+        uClearInner: { value: -2.0 }, uClearOuter: { value: -1.0 },
+        // sun-coupling OFF until the chart aligns (uSunGlow 0 → identity)
+        uSunDir: { value: new THREE.Vector3(0, 0, -1) }, uSunGlow: { value: 0.0 }
       };
       function makeMaterial(layerKind, maxPointSize, refDepth, amplitude) {
         return new THREE.ShaderMaterial({
           uniforms: {
             uMap: common.uMap, uTime: common.uTime, uFusion: common.uFusion, uPixelRatio: common.uPixelRatio,
             uClearInner: common.uClearInner, uClearOuter: common.uClearOuter,
+            uSunDir: common.uSunDir, uSunGlow: common.uSunGlow,
             uMaxPointSize: { value: maxPointSize }, uRefDepth: { value: refDepth }, uAmplitude: { value: amplitude }, uLayerKind: { value: layerKind }
           },
           vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
@@ -279,7 +306,9 @@
           // scroll-linked drift: the whole cosmos (embers + natal sky ride the same group)
           // turns gently as you travel down the page — one space, one journey
           var drift = (typeof scrollY === "number" ? scrollY : 0) * 0.00026;
-          grp.rotation.y = sec * slow + drift; grp.rotation.x = Math.sin(sec * 0.027) * 0.025; farShell.rotation.z = Math.sin(sec * 0.018) * 0.018;
+          // cosmos: the nebula lane leans onto the ecliptic (same tilt as the zodiac belt)
+          var baseTilt = COSMOS ? 0.409 : 0;
+          grp.rotation.y = sec * slow + drift; grp.rotation.x = baseTilt + Math.sin(sec * 0.027) * 0.025; farShell.rotation.z = Math.sin(sec * 0.018) * 0.018;
           if (nearHaze) { nearHaze.rotation.y = -(sec * slow + drift) * 0.58; nearHaze.rotation.z = Math.sin(sec * 0.041) * 0.035; }
         },
         dispose: function () { scene.remove(grp); farGeo.dispose(); farMat.dispose(); if (nearGeo) nearGeo.dispose(); if (nearMat) nearMat.dispose(); }
@@ -349,6 +378,9 @@
           var mW = moonObj.getWorldPosition(new THREE.Vector3());
           moonObj.material.uniforms.uSunDirWorld.value.copy(sunW.clone().sub(mW).normalize());
         }
+        // ...and let the sunward embers catch the light (dust + planets share one sun)
+        deepFusion.uniforms.uSunDir.value.copy(sunW.clone().normalize());
+        deepFusion.uniforms.uSunGlow.value = 0.85;
       } catch (e) { window.__space.alignError = String(e); }
     }
 
@@ -394,7 +426,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=2").then(function (mod) {
+    import("./nye-armature.js?v=3").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -432,7 +464,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=2").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=3").then(function (mod) {
+      return import("./natal-sky.js?v=4").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 205 : 372,
@@ -449,16 +481,63 @@
     /* ===== the hand on the world: drag orbits, wheel zooms, click enters ===== */
     if (COSMOS) {
       var lx = 0, ly = 0, downX = 0, downY = 0, hintFaded = false;
+      var touches = {}, touchCount = 0, pinchD0 = 0, pinchDist0 = 0, panMode = false;
+      var _right = new THREE.Vector3(), _up = new THREE.Vector3();
+      function clampPan() {
+        var dx = orbit.tPanX, dy = orbit.tPanY - 7, dz = orbit.tPanZ;
+        var L = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (L > 36) { var f = 36 / L; orbit.tPanX = dx * f; orbit.tPanY = 7 + dy * f; orbit.tPanZ = dz * f; }
+      }
+      function doPan(dx, dy) {
+        var k = orbit.dist * 0.0012;
+        _right.setFromMatrixColumn(camera.matrixWorld, 0);
+        _up.setFromMatrixColumn(camera.matrixWorld, 1);
+        orbit.tPanX += -dx * k * _right.x + dy * k * _up.x;
+        orbit.tPanY += -dx * k * _right.y + dy * k * _up.y;
+        orbit.tPanZ += -dx * k * _right.z + dy * k * _up.z;
+        clampPan();
+      }
+      canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
       canvas.addEventListener("pointerdown", function (e) {
-        orbit.dragging = true; orbit.moved = 0; lx = downX = e.clientX; ly = downY = e.clientY;
+        touches[e.pointerId] = { x: e.clientX, y: e.clientY }; touchCount++;
+        if (touchCount === 2) {                    // pinch begins
+          var ids = Object.keys(touches);
+          pinchD0 = Math.hypot(touches[ids[0]].x - touches[ids[1]].x, touches[ids[0]].y - touches[ids[1]].y);
+          pinchDist0 = orbit.tDist; orbit.dragging = false;
+          return;
+        }
+        orbit.dragging = true; orbit.moved = 0; orbit.vYaw = 0; orbit.vPitch = 0;
+        panMode = (e.button === 2 || e.button === 1 || e.shiftKey);
+        lx = downX = e.clientX; ly = downY = e.clientY;
         try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
       });
-      addEventListener("pointerup", function () { orbit.dragging = false; });
+      function endPointer(e) {
+        if (touches[e.pointerId]) { delete touches[e.pointerId]; touchCount = Math.max(0, touchCount - 1); }
+        if (touchCount < 2) pinchD0 = 0;
+        if (touchCount === 0) orbit.dragging = false;   // velocities persist → inertia
+      }
+      addEventListener("pointerup", endPointer);
+      addEventListener("pointercancel", endPointer);
       addEventListener("pointermove", function (e) {
+        var t = touches[e.pointerId];
+        if (t) { t.x = e.clientX; t.y = e.clientY; }
+        if (pinchD0 > 0 && touchCount === 2) {          // two fingers: zoom
+          var ids = Object.keys(touches);
+          var d = Math.hypot(touches[ids[0]].x - touches[ids[1]].x, touches[ids[0]].y - touches[ids[1]].y);
+          if (d > 0) orbit.tDist = Math.max(orbit.minDist, Math.min(orbit.maxDist, pinchDist0 * pinchD0 / d));
+          return;
+        }
         if (!orbit.dragging) return;
-        orbit.tYaw -= (e.clientX - lx) * 0.0052;
-        orbit.tPitch = Math.max(-1.15, Math.min(1.15, orbit.tPitch - (e.clientY - ly) * 0.0044));
-        orbit.moved += Math.abs(e.clientX - lx) + Math.abs(e.clientY - ly);
+        var dx = e.clientX - lx, dy = e.clientY - ly;
+        if (panMode) {
+          doPan(dx, dy);                                // 自由移动
+        } else {
+          var wy = -dx * 0.0052, wp = -dy * 0.0044;
+          orbit.tYaw += wy;
+          orbit.tPitch = Math.max(-1.25, Math.min(1.25, orbit.tPitch + wp));
+          orbit.vYaw = wy * 0.55; orbit.vPitch = wp * 0.55;   // remember the flick
+        }
+        orbit.moved += Math.abs(dx) + Math.abs(dy);
         lx = e.clientX; ly = e.clientY;
         if (!hintFaded && orbit.moved > 40) { hintFaded = true; var h = document.getElementById("cosmos-hint"); if (h) h.classList.add("is-faded"); }
       });
@@ -503,7 +582,12 @@
           return;
         }
       }, true);
-      canvas.addEventListener("dblclick", function () { orbit.tYaw = 0; orbit.yaw = Math.atan2(Math.sin(orbit.yaw), Math.cos(orbit.yaw)); orbit.tPitch = 0.24; orbit.tDist = 88; });
+      canvas.addEventListener("dblclick", function () {
+        orbit.tYaw = 0; orbit.yaw = Math.atan2(Math.sin(orbit.yaw), Math.cos(orbit.yaw));
+        orbit.tPitch = 0.18; orbit.tDist = 80;
+        orbit.tPanX = 0; orbit.tPanY = 7; orbit.tPanZ = 0;
+        orbit.vYaw = 0; orbit.vPitch = 0;
+      });
     }
 
     var running = true;

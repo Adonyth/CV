@@ -285,11 +285,11 @@ export function mountNyeArmature(THREE, scene, opts) {
       "  float fac=smoothstep(0.74,0.97,p1)*smoothstep(0.36,0.80,p2)*mu;",
       "  col+=vec3(0.48,0.42,0.28)*fac*0.62;",
       "  float tw=smoothstep(0.88,0.995,p2*p4)*pow(mu,0.35);",
-      "  col+=vec3(1.55,1.35,1.05)*tw*0.55;",
+      "  col+=vec3(1.55,1.35,1.05)*tw*0.26;",
       "  col*=(1.14+0.82*gran)*ld;",
       "  float limbE=pow(max(1.0-mu,0.0),3.2);",
       "  col+=vec3(1.0,0.36,0.10)*limbE*0.72;",
-      "  float hotCore=pow(mu,2.4)*0.28;",
+      "  float hotCore=pow(mu,2.4)*0.16;",
       "  col+=vec3(1.22,1.10,1.0)*hotCore;",
       "  col*=0.91+0.09*sin(uTime*0.21+plasma*6.8);",
       "  col=mix(col,col*uWarmTint,0.18);",
@@ -300,7 +300,7 @@ export function mountNyeArmature(THREE, scene, opts) {
 
     const sunCoreUni = {
       uTime: { value: 0 },
-      uExposure: { value: warm ? 0.92 : 1.0 },
+      uExposure: { value: warm ? 0.78 : 1.0 },
       uWarmTint: { value: warm ? new T.Vector3(1.0, 0.86, 0.72) : new T.Vector3(1.0, 1.0, 1.0) }
     };
     const sunCoreMat = new T.ShaderMaterial({
@@ -373,10 +373,10 @@ export function mountNyeArmature(THREE, scene, opts) {
     ].join("\n");
 
     const coronaDef = [
-      [1.04, 0.92, 1.28, 0.86, 0.48, 1.00, 0.52, 100],
-      [1.72, 0.60, 1.18, 0.58, 0.28, 0.95, 0.64, 68],
-      [3.25, 0.36, 1.02, 0.42, 0.24, 0.68, 0.76, 56],
-      [5.85, 0.22, 0.90, 0.30, 0.18, 0.35, 0.92, 44]
+      [1.04, 1.00, 1.28, 0.86, 0.48, 1.00, 0.46, 100],
+      [1.72, 0.82, 1.18, 0.58, 0.28, 0.95, 0.56, 68],
+      [3.25, 0.55, 1.02, 0.42, 0.24, 0.68, 0.66, 56],
+      [5.85, 0.34, 0.90, 0.30, 0.18, 0.35, 0.82, 44]
     ];
     for (let i = 0; i < coronaDef.length; i++) {
       const cd = coronaDef[i];
