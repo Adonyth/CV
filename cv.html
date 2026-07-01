@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en" class="locale-en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#0b0a09" />
+    <meta
+      name="description"
+      content="Academic CV of Jiaxuan Chen (陈嘉轩) — Sc.M. Physics, Brown University. Independent research across foundations of physics, gravitational-wave methodology, machine-learning interpretability, and the political economy of technology."
+      id="meta-desc"
+    />
+    <meta name="author" content="Jiaxuan Chen (陈嘉轩)" />
+    <meta
+      name="keywords"
+      content="Jiaxuan Chen, 陈嘉轩, physics, foundations of physics, gravitational waves, ringdown, interpretability, jet physics, CMS, astrophysics, X-ray binary, carbon nanotube, thermal transport, political economy, Brown University, academic CV"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:title" content="Jiaxuan Chen — Academic CV" id="meta-og-title" />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:description"
+      content="Academic CV of Jiaxuan Chen (陈嘉轩) — Sc.M. Physics, Brown University. Independent research across foundations of physics, gravitational-wave methodology, ML interpretability, and the political economy of technology."
+      id="meta-og-desc"
+    />
+    <meta name="twitter:card" content="summary" />
+    <!--
+      After deploy, add absolute-URL tags (replace YOURDOMAIN with the live host):
+      <link rel="canonical" href="https://YOURDOMAIN/" />
+      <meta property="og:url" content="https://YOURDOMAIN/" />
+      <meta property="og:image" content="https://YOURDOMAIN/og-cover.png" />
+      <meta name="twitter:image" content="https://YOURDOMAIN/og-cover.png" />
+      …and switch twitter:card above to "summary_large_image".
+    -->
+    <title>Jiaxuan Chen — Academic CV</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css?v=5" />
+    <script>
+      // set theme before paint to avoid a flash — default to night (like omyteaai.com); honor a stored choice
+      (function () {
+        try {
+          var t = localStorage.getItem("cv-theme");
+          if (t !== "light") document.documentElement.setAttribute("data-theme", "dark");
+        } catch (e) {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      })();
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Jiaxuan Chen",
+        "alternateName": "陈嘉轩",
+        "jobTitle": "Physicist / Independent researcher",
+        "email": "mailto:jiaxuan_chen1@alumni.brown.edu",
+        "identifier": "https://orcid.org/0009-0008-5211-4313",
+        "affiliation": { "@type": "CollegeOrUniversity", "name": "Brown University" },
+        "alumniOf": [
+          { "@type": "CollegeOrUniversity", "name": "Brown University" },
+          { "@type": "CollegeOrUniversity", "name": "Shandong University" }
+        ],
+        "knowsAbout": [
+          "Foundations of physics",
+          "Gravitational-wave data analysis",
+          "Mechanistic interpretability",
+          "Conformal prediction",
+          "High-energy physics",
+          "Astrophysics",
+          "Political economy of technology"
+        ]
+      }
+    </script>
+  </head>
+
+  <body>
+    <a class="skip-link no-print" href="#about" id="skip-link">Skip to content</a>
+
+    <canvas id="field" aria-hidden="true"></canvas>
+
+    <div class="content">
+      <!-- ============================================================ NAV -->
+      <nav class="nav no-print">
+        <div class="nav__in glass">
+          <a href="index.html" class="brand"
+            >Jiaxuan Chen<sup>CV</sup><span class="brand-zh" lang="zh">陈嘉轩</span></a
+          >
+          <div class="nav__right">
+            <div class="nav__links">
+              <a href="#publications"><span class="i18n-en">Publications</span><span class="i18n-zh">论文</span></a>
+              <a href="#research-programs"><span class="i18n-en">Programs</span><span class="i18n-zh">研究</span></a>
+              <a href="#book-writing"><span class="i18n-en">Writing</span><span class="i18n-zh">著作</span></a>
+              <a href="#contact" class="nav__cta"><span class="i18n-en">Contact</span><span class="i18n-zh">联系</span></a>
+            </div>
+
+            <div class="lang" role="group" aria-label="Language" id="lang-switch">
+              <button type="button" data-locale="en" aria-pressed="true" id="btn-en">EN</button>
+              <button type="button" data-locale="zh" aria-pressed="false" id="btn-zh">中文</button>
+            </div>
+
+            <button class="iconbtn" id="themebtn" type="button" aria-label="Toggle day / night">
+              <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+              <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+            </button>
+
+            <button class="iconbtn" id="fieldbtn" type="button" aria-pressed="false" aria-label="Toggle background field">
+              <svg class="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="eyeoff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10.4 10.4 0 0 1 12 19C5.5 19 2 12 2 12a18 18 0 0 1 5.1-5.9m3.2-1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-2.3 3.3M1 1l22 22"/></svg>
+            </button>
+
+            <button class="pill" id="btn-pdf" type="button">
+              <span class="i18n-en">Save PDF</span><span class="i18n-zh">存为 PDF</span>
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <!-- ============================================================ HERO -->
+      <header class="hero" id="top">
+        <div class="rail">
+          <div class="hero__in">
+            <span class="eyebrow"
+              ><span class="i18n-en">Independent research · Physics × Foundations × AI</span
+              ><span class="i18n-zh">独立研究 · 物理 × 基础 × AI</span></span
+            >
+            <h1>
+              <span class="i18n-zh name-en">Jiaxuan Chen</span
+              ><span class="i18n-en">Jiaxuan Chen</span
+              ><span class="i18n-zh">陈嘉轩</span
+              ><span class="name-zh i18n-en" lang="zh">陈嘉轩</span>
+            </h1>
+            <p class="lead">
+              <span class="i18n-en"
+                >Physicist (Sc.M., Brown University), now an independent researcher across
+                foundations of physics, gravitational-wave methodology, ML interpretability,
+                and the political economy of technology — favoring
+                <span class="u">sharp, honestly-scoped results</span> over grand claims.</span
+              >
+              <span class="i18n-zh"
+                >物理学者（布朗大学理学硕士），现以独立研究者身份工作，兴趣横跨物理基础、引力波方法学、机器学习可解释性与技术的政治经济学——偏好<span class="u">范围诚实、锋利的结果</span>，而非宏大主张。</span
+              >
+            </p>
+            <div class="hero__contact">
+              <span class="dot" aria-hidden="true">●</span>
+              <a href="mailto:jiaxuan_chen1@alumni.brown.edu">jiaxuan_chen1@alumni.brown.edu</a>
+              <a href="https://orcid.org/0009-0008-5211-4313" rel="noopener" target="_blank">ORCID 0009-0008-5211-4313</a>
+              <span><span class="i18n-en">Providence, RI · USA</span><span class="i18n-zh">美国 · 罗德岛普罗维登斯</span></span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ============================================================ 01 ABOUT -->
+      <section id="about">
+        <div class="rail reveal">
+          <div class="secnum"><b>01</b> <span class="i18n-en">About</span><span class="i18n-zh">关于</span></div>
+          <p class="lede">
+            <span class="i18n-en"
+              >Physicist trained across high-energy, condensed-matter, and astrophysical
+              experiment, now working as an independent researcher at the intersection of
+              foundations of physics, gravitational-wave methodology, machine-learning
+              interpretability, and the political economy of technology. My work favors sharp,
+              honestly-scoped results — obstruction theorems, calibration certificates, and
+              pre-registered falsification — over grand unverified claims.</span
+            >
+            <span class="i18n-zh"
+              >物理学者，研究经历横跨高能物理、凝聚态与天体物理实验，现以独立研究者身份工作，兴趣集中在物理基础、引力波方法学、机器学习可解释性，以及技术的政治经济学交叉处。我偏好范围诚实、锋利的结果——障碍定理、校准证书与预注册的可证伪性——而非宏大却未经验证的主张。</span
+            >
+          </p>
+        </div>
+      </section>
+
+      <!-- ============================================================ 02 EDUCATION -->
+      <section id="education">
+        <div class="rail reveal">
+          <div class="secnum"><b>02</b> <span class="i18n-en">Education</span><span class="i18n-zh">教育背景</span></div>
+          <ul class="timeline">
+            <li>
+              <div class="row">
+                <span class="where"><span class="i18n-en">Brown University — Sc.M. in Physics</span><span class="i18n-zh">布朗大学 —— 物理学理学硕士 (Sc.M.)</span></span>
+                <span class="when">2024 — 2026</span>
+              </div>
+              <p class="degree"><span class="i18n-en">Providence, Rhode Island, USA. Research spanned CMS jet physics and carbon-nanotube 3ω thermal characterization.</span><span class="i18n-zh">美国罗德岛普罗维登斯。研究涵盖 CMS 喷流物理与碳纳米管 3ω 热学表征。</span></p>
+            </li>
+            <li>
+              <div class="row">
+                <span class="where"><span class="i18n-en">Shandong University (Weihai) — B.S. in Space Science and Technology</span><span class="i18n-zh">山东大学（威海）—— 空间科学与技术学士</span></span>
+                <span class="when">2020 — 2024</span>
+              </div>
+              <p class="degree"><span class="i18n-en">School of Space Science and Physics. Undergraduate work in X-ray binary and stellar-flare astrophysics.</span><span class="i18n-zh">空间科学与物理学院。本科阶段从事 X 射线双星与恒星耀发天体物理研究。</span></p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============================================================ 03 PUBLICATIONS -->
+      <section id="publications">
+        <div class="rail reveal">
+          <div class="secnum"><b>03</b> <span class="i18n-en">Selected Publications &amp; Preprints</span><span class="i18n-zh">代表性论文与预印本</span></div>
+          <ul class="entries">
+            <li class="entry">
+              <h3><span class="i18n-en">Technological Monopoly Rent: A Category for the Political Economy of the New Productive Forces</span><span class="i18n-zh">技术垄断租金：新质生产力政治经济学的一个范畴</span></h3>
+              <div class="entry-meta"><span class="tag tag--public">Public · SSRN</span> <span class="venue">SSRN</span> <span class="sep">·</span> <span class="i18n-en">public preprint (not peer-reviewed) · posted 19 Jun 2026 · Abstract 6950759</span><span class="i18n-zh">公开预印本（未经同行评审）· 2026-06-19 发布 · 摘要 6950759</span></div>
+              <p><span class="i18n-en">A bounded conceptual paper naming "inference rent" / technological monopoly rent as the above-normal return that arises when high-fixed-cost, non-rival AI model capability is metered into priced scarcity.</span><span class="i18n-zh">一篇界定清晰的概念论文，提出"推理租金"/技术垄断租金——指高固定成本、非竞争性的 AI 模型能力被计量化为定价稀缺时产生的超额回报。</span></p>
+              <ul class="artifacts">
+                <li><a href="https://ssrn.com/abstract=6950759" rel="noopener" target="_blank">SSRN abstract 6950759</a></li>
+                <li><a href="https://ssrn.com/author=12014588" rel="noopener" target="_blank">SSRN author page</a></li>
+              </ul>
+            </li>
+
+            <li class="entry">
+              <h3><span class="i18n-en">Formation Mechanism of Blazar Jets</span><span class="i18n-zh">耀变体喷流的形成机制</span></h3>
+              <div class="entry-meta"><span class="tag tag--prep"><span class="i18n-en">Accepted</span><span class="i18n-zh">已录用</span></span> <span class="venue">CONF-CIAP 2023</span> <span class="sep">·</span> <span class="i18n-en">2nd Intl. Conf. on Computational Innovation and Applied Physics · 2023</span><span class="i18n-zh">第二届计算创新与应用物理国际会议 · 2023</span></div>
+              <p><span class="i18n-en">Single-author conference paper on the formation mechanism of blazar (AGN) jets, fitting jet power spectra via Blandford–Payne / Blandford–Znajek theory.</span><span class="i18n-zh">单作者会议论文，研究耀变体（活动星系核）喷流的形成机制，基于 Blandford–Payne / Blandford–Znajek 理论拟合喷流功率谱。</span></p>
+            </li>
+
+            <li class="entry">
+              <h3><span class="i18n-en">A Universal Prior Selects No Preferred Factorization: A Bounded-Alphabet Locality No-Go, with the Same Cross-Context Gap Recurring in Born-Rule Derivations</span><span class="i18n-zh">通用先验不选出优先分解：有界字母表下的局域性不可行定理，及其在玻恩规则推导中复现的跨语境缺口</span></h3>
+              <div class="entry-meta"><span class="tag tag--prep"><span class="i18n-en">Manuscript prepared</span><span class="i18n-zh">投稿包已备</span></span> <span class="venue">SciPost Physics Core</span> <span class="sep">·</span> <span class="i18n-en">foundations of physics · single author · 2026</span><span class="i18n-zh">物理基础 · 单作者 · 2026</span></div>
+              <p><span class="i18n-en">Proves that a universal (Solomonoff–Levin) algorithmic prior selects no preferred tensor factorization — via a constant-complexity carry-increment recoding — and therefore cannot by itself supply locality, then maps the same cross-context gap route-by-route across derivations of the Born rule.</span><span class="i18n-zh">证明通用（Solomonoff–Levin）算法先验不选出任何优先的张量分解——借助一个常复杂度的进位递增重编码给出可审计反例——因而其自身无法提供局域性，并将同一"跨语境缺口"逐条映射到各条玻恩规则推导路线上。</span></p>
+            </li>
+
+            <li class="entry">
+              <h3><span class="i18n-en">Covariance-Estimator Dependence of Ringdown Overtone Significance: A Coverage-Validated Real-Noise Calibration Standard</span><span class="i18n-zh">铃宕泛音显著性对协方差估计器的依赖性：一个经覆盖率验证的真实噪声标定标准</span></h3>
+              <div class="entry-meta"><span class="tag tag--prep"><span class="i18n-en">Manuscript prepared</span><span class="i18n-zh">投稿包已备</span></span> <span class="venue">RASTI (OUP/RAS)</span> <span class="sep">·</span> <span class="i18n-en">gravitational-wave methods · single author · 2026</span><span class="i18n-zh">引力波方法学 · 单作者 · 2026</span></div>
+              <p><span class="i18n-en">Shows a black-hole ringdown overtone's reported significance can swing by an order of magnitude with the analyst's noise-covariance estimator, and introduces a coverage-validated, covariance-choice-independent real-noise calibration standard, demonstrated on GW250114 and GW150914.</span><span class="i18n-zh">证明黑洞铃宕泛音的显著性会因分析者所选噪声协方差估计而波动一个量级，提出一个经覆盖率验证、与协方差选择无关的真实噪声标定标准，并在 GW250114 与 GW150914 上演示。</span></p>
+            </li>
+
+            <li class="entry">
+              <h3><span class="i18n-en">Unified Theory for 3ω Thermal Characterization: Finite Heater Length and Environmental Coupling Effects</span><span class="i18n-zh">3ω 热学表征的统一理论：有限加热丝长度与环境耦合效应</span></h3>
+              <div class="entry-meta"><span class="tag tag--prep"><span class="i18n-en">In preparation</span><span class="i18n-zh">撰写中</span></span> <span class="venue"><span class="i18n-en">Kuehne group, Brown</span><span class="i18n-zh">布朗大学 Kuehne 组</span></span> <span class="sep">·</span> <span class="i18n-en">co-authored (C. Peng, J. Chen, J. Ginzburg, M. Kuehne) · draft Feb 2026</span><span class="i18n-zh">合著（C. Peng, J. Chen, J. Ginzburg, M. Kuehne）· 草稿 2026-02</span></div>
+              <p><span class="i18n-en">Co-authored manuscript deriving an analytical, unified 3ω impedance theory for a finite-length heater across vacuum, isotropic-fluid, and on-substrate environments, including heater heat capacity and interfacial boundary resistance.</span><span class="i18n-zh">合著论文，推导有限长度加热丝在真空、各向同性流体及衬底上的统一 3ω 阻抗解析理论，含加热丝热容与界面热阻。</span></p>
+            </li>
+
+            <li class="entry">
+              <h3><span class="i18n-en">Study of the Outburst Process of the Black-Hole X-ray Binary MAXI J1348-630</span><span class="i18n-zh">黑洞 X 射线双星 MAXI J1348-630 爆发过程的研究</span></h3>
+              <div class="entry-meta"><span class="tag tag--thesis"><span class="i18n-en">Thesis</span><span class="i18n-zh">毕业论文</span></span> <span class="venue"><span class="i18n-en">Shandong University (Weihai)</span><span class="i18n-zh">山东大学（威海）</span></span> <span class="sep">·</span> <span class="i18n-en">undergraduate graduation thesis · 2024</span><span class="i18n-zh">本科毕业设计论文 · 2024</span></div>
+              <p><span class="i18n-en">Undergraduate thesis analyzing NICER and NuSTAR observations of the black-hole X-ray binary MAXI J1348-630, fitting power-density and energy spectra to identify outflow structure and estimate outflow velocity and timescales.</span><span class="i18n-zh">本科毕设论文，处理 NICER 与 NuSTAR 观测数据，拟合黑洞 X 射线双星 MAXI J1348-630 的功率密度谱与能谱，识别外流结构并估算外流速度与时间尺度。</span></p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============================================================ 04 RESEARCH PROGRAMS -->
+      <section id="research-programs">
+        <div class="rail reveal">
+          <div class="secnum"><b>04</b> <span class="i18n-en">Research Programs</span><span class="i18n-zh">研究纲领</span></div>
+          <ul class="entries">
+            <li class="entry">
+              <h3><span class="i18n-en">Omytea — A Density-Matrix Belief-State World Model</span><span class="i18n-zh">Omytea —— 密度矩阵信念态世界模型</span></h3>
+              <div class="entry-meta"><span class="tag tag--prep">Active</span> <span class="i18n-en">Independent theoretical / computational physics research program · 2026</span><span class="i18n-zh">独立的理论 / 计算物理研究纲领 · 2026</span></div>
+              <p><span class="i18n-en">A research program, in the mold of a small lab, that represents uncertainty over multiple futures as an open-system density matrix (ρ), evolves it with an operator/channel algebra, and revises it through a proper-scored, auditable measurement-update ledger — aimed ultimately at a Grand Unified World Model. The honest current headline is a calibrated, auditable system with no demonstrated raw-accuracy advantage over strong classical baselines; the program makes no primacy or "beats-baseline" claim. In-preparation manuscripts include an honest negative-result systems paper (real-data L3 calibration/coverage certificate) and a Lindblad-form open-system extension of Cui &amp; Ma (2026).</span><span class="i18n-zh">一个以小型实验室方式运作的研究纲领，用开系统密度矩阵（ρ）表示多重未来的不确定性，由算子/信道代数演化，并通过可审计、经正当评分的测量更新账本进行修正，终极目标指向大统一世界模型。诚实的当前结论是：得到一个可校准、可审计的系统，但在原始精度上未证明胜过强经典基线；纲领不作任何首创或"胜过基线"主张。撰写中的手稿包括一篇诚实的负结果系统论文（真实数据 L3 校准/覆盖率证书）与对 Cui &amp; Ma（2026）的 Lindblad 开系统扩展。</span></p>
+            </li>
+
+            <li class="entry">
+              <h3><span class="i18n-en">ACAEXPL — Certificate-Discipline Physics (Gravitational Waves &amp; Tachyon Theory)</span><span class="i18n-zh">ACAEXPL —— 证书纪律物理（引力波与快子理论）</span></h3>
+              <div class="entry-meta"><span class="tag tag--prep">Active</span> <span class="i18n-en">Independent, pre-registration-disciplined research program · since Jun 2026</span><span class="i18n-zh">独立的、坚持预注册纪律的研究项目 · 2026 年 6 月起</span></div>
+              <p><span class="i18n-en">An independent, pre-registration-disciplined program whose most mature output is the coverage-validated real-noise ringdown significance standard (see Publications). Running in parallel are an in-preparation feature-local certificate for gravitational-wave population-feature significance (applied to GWTC-4) and an independent theoretical strand on tachyonic phase-boundary classification with a formalized finite-window certificate line.</span><span class="i18n-zh">一个独立的、坚持预注册纪律的研究项目，其最成熟产出是经覆盖率验证的真实噪声铃宕显著性标定标准（见"论文"）。并行推进的还有一个撰写中的、用于引力波族群特征显著性的特征局域证书（应用于 GWTC-4），以及一条关于快子相边界分类、附有形式化有限窗口证书线的独立理论研究。</span></p>
+            </li>
+
+            <li class="entry">
+              <h3><span class="i18n-en">Random Sequence Scintillation (RSS) — Foundations of Physics</span><span class="i18n-zh">随机序列闪烁 (RSS) —— 物理基础研究</span></h3>
+              <div class="entry-meta"><span class="tag tag--prep">Active</span> <span class="i18n-en">Independent foundations-of-physics research program · 2024–2026</span><span class="i18n-zh">独立的物理基础研究纲领 · 2024–2026</span></div>
+              <p><span class="i18n-en">An independent foundations-of-physics program taking observer self-states plus a Solomonoff-prior-weighted transition rule as primitive, and asking what physics (locality, modular flow, the Born rule) does and does not follow from the universal prior. After a 2026 self-audit, it is expressed mainly through honest obstruction / delimitation / negative-result manuscripts — including the SciPost-bound locality no-go (see Publications), an algorithmic-idealism → modular-flow delimitation, a half-line free-fermion type-forced mass-axis obstruction, and Boltzmann-brain / other-minds diagnostics.</span><span class="i18n-zh">一个独立的物理基础研究纲领，以观察者自态加 Solomonoff 先验加权的转移规则为本原，追问物理（局域性、模流、玻恩规则）在多大程度上可由通用先验导出。经过 2026 年的一次自审，纲领现主要以诚实的障碍 / 界定 / 否定性结果手稿呈现——包括投往 SciPost 的局域性不可行定理（见"论文"）、算法唯心论→模流的界定、半直线自由费米子由型强制的质量轴障碍，以及玻尔兹曼脑 / 他心问题诊断。</span></p>
+            </li>
+
+            <li class="entry">
+              <h3><span class="i18n-en">Calibrated Belief-State Probing in LLMs</span><span class="i18n-zh">大模型中的校准信念态探测</span></h3>
+              <div class="entry-meta"><span class="tag tag--prep"><span class="i18n-en">In preparation</span><span class="i18n-zh">撰写中</span></span> <span class="i18n-en">Independent ML-interpretability research (pre-registered) · 2026</span><span class="i18n-zh">独立的机器学习可解释性研究（预注册）· 2026</span></div>
+              <p><span class="i18n-en">A pre-registered replication-and-extension study testing whether an LLM's uncertainty and incorrectness live in separable sparse-autoencoder features that enable coverage-guaranteed abstention. At Gemma-2-2B scale it delivers an honest-negative headline (the anchor result does not replicate; softmax confidence beats the SAE probe), with the surviving contribution a score-agnostic two-mode distribution-free risk certificate.</span><span class="i18n-zh">一项预注册的复现+扩展研究，检验大模型的"不确定"与"错误"是否由可分离的稀疏自编码器特征编码、从而支持带覆盖保证的诚实弃答。在 Gemma-2-2B 规模上给出诚实的否定性主结论（锚定结果未复现；softmax 置信度胜过 SAE 探针），存活的贡献是一个与打分无关的双模式无分布风险证书。</span></p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============================================================ 05 SOFTWARE -->
+      <section id="software">
+        <div class="rail reveal">
+          <div class="secnum"><b>05</b> <span class="i18n-en">Software &amp; Benchmarks</span><span class="i18n-zh">软件与基准</span></div>
+          <ul class="projs">
+            <li class="proj glass">
+              <h3>omytea-quantum-substrate</h3>
+              <div class="entry-meta"><span class="tag tag--public"><span class="i18n-en">Public · PyPI</span><span class="i18n-zh">公开 · PyPI</span></span> <span class="i18n-en">Open-source Python library (Apache-2.0) · v0.1.x · 2026</span><span class="i18n-zh">开源 Python 库 (Apache-2.0) · v0.1.x · 2026</span></div>
+              <p><span class="i18n-en">A dependency-light (numpy + stdlib) standalone Python library providing the density-matrix / open-system quantum substrate used by the Omytea program, released via GitHub OIDC Trusted Publishing.</span><span class="i18n-zh">一个依赖极轻（numpy + 标准库）的独立 Python 库，提供 Omytea 纲领所用的密度矩阵 / 开系统量子基底，经 GitHub OIDC Trusted Publishing 发布。</span></p>
+              <ul class="artifacts">
+                <li><a href="https://pypi.org/project/omytea-quantum-substrate/" rel="noopener" target="_blank">PyPI</a></li>
+                <li><a href="https://github.com/Adonyth/omytea-quantum-substrate" rel="noopener" target="_blank">GitHub</a></li>
+              </ul>
+            </li>
+            <li class="proj glass">
+              <h3><span class="i18n-en">Omytea Personal Future Console</span><span class="i18n-zh">Omytea 个人未来推演台</span></h3>
+              <div class="entry-meta"><span class="tag tag--public"><span class="i18n-en">Public · live demo</span><span class="i18n-zh">公开 · 在线演示</span></span> <span class="i18n-en">Open-source decision-support app · GitHub + Streamlit · 2026</span><span class="i18n-zh">开源决策支持应用 · GitHub + Streamlit · 2026</span></div>
+              <p><span class="i18n-en">A probability-calibrated, local-first decision-support tool: enter a decision or upload a short video and get multiple future scenarios with calibrated probabilities, operator-coherence decay, and measurement-update as new evidence arrives; built on omytea-quantum-substrate.</span><span class="i18n-zh">一个概率校准、本地优先的决策支持工具：输入一个决策或上传短视频，得到带校准概率的多重未来情景、算子相干性随时间衰减，并随新证据进行测量更新；构建于 omytea-quantum-substrate 之上。</span></p>
+              <ul class="artifacts">
+                <li><a href="https://github.com/Adonyth/omytea-personal-console" rel="noopener" target="_blank">GitHub</a></li>
+                <li><a href="https://omytea-personal-console.streamlit.app" rel="noopener" target="_blank"><span class="i18n-en">Live demo</span><span class="i18n-zh">在线演示</span></a></li>
+              </ul>
+            </li>
+            <li class="proj glass">
+              <h3>GolfCal-1k</h3>
+              <div class="entry-meta"><span class="tag tag--internal"><span class="i18n-en">Internal · in prep</span><span class="i18n-zh">内部 · 撰写中</span></span> <span class="i18n-en">Calibration benchmark spec + reference harness · L2-synthetic · 2026</span><span class="i18n-zh">校准基准规范 + 参考框架 · L2 合成 · 2026</span></div>
+              <p><span class="i18n-en">A calibration-first benchmark specification and reproducible reference harness for probabilistic golf-shot forecasting — predicting a categorical landing distribution scored by Brier, Energy Score, reliability, adaptive-conformal coverage, and strokes-gained — shipping a hierarchical Dirichlet-categorical baseline.</span><span class="i18n-zh">一个以校准为先的高尔夫击球概率预测基准规范与可复现参考框架——预测落点分类分布，用 Brier、Energy Score、可靠度、自适应共形覆盖及得杆差评分——并附带分层 Dirichlet-categorical 基线。</span></p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============================================================ 06 BOOK & WRITING -->
+      <section id="book-writing">
+        <div class="rail reveal">
+          <div class="secnum"><b>06</b> <span class="i18n-en">Book &amp; Writing</span><span class="i18n-zh">著作与写作</span></div>
+
+          <div class="featured glass">
+            <div class="entry-meta"><span class="tag tag--public"><span class="i18n-en">Book · Kindle available</span><span class="i18n-zh">专著 · Kindle 已上线</span></span> <span class="i18n-en">single-author · self-published · 2026</span><span class="i18n-zh">单作者 · 自出版 · 2026</span></div>
+            <h3>An Invitation After Abundance: <span style="font-style:italic;font-weight:400">Reading the Present, Wagering the Future</span></h3>
+            <p><span class="i18n-en">An independent, original political-economy treatise (~1,162 pp) introducing the category of <em>Technological Monopoly Rent</em> to analyze how six simultaneous technological ruptures — AI, quantum, brain–computer interfaces, gene editing, robotics, fusion — are being enclosed as private property. Kindle edition live; paperback and hardcover in final proof.</span><span class="i18n-zh">一部独立、原创的政治经济学专著（约 1,162 页），提出"技术垄断租金"范畴，分析人工智能、量子、脑机接口、基因编辑、机器人、聚变六大同时到来的技术断裂如何被圈占为私有财产。Kindle 版已上线；平装与精装终校中。</span></p>
+            <div class="isbns">
+              <span>ISBN 979-8-9960105-0-9 <span class="i18n-en">(ebook)</span><span class="i18n-zh">（电子书）</span></span>
+              <span>979-8-9960105-2-3 <span class="i18n-en">(paperback)</span><span class="i18n-zh">（平装）</span></span>
+              <span>979-8-9960105-3-0 <span class="i18n-en">(hardcover)</span><span class="i18n-zh">（精装）</span></span>
+            </div>
+          </div>
+
+          <ul class="entries">
+            <li class="entry">
+              <h3><span class="i18n-en">Stack Power: Frontier AI and the Politics of Market Non-Correction</span><span class="i18n-zh">堆栈权力：前沿 AI 与市场不自我纠正的政治</span></h3>
+              <div class="entry-meta"><span class="tag tag--prep"><span class="i18n-en">In preparation</span><span class="i18n-zh">撰写中</span></span> <span class="venue"><span class="i18n-en">International Organization (CUP)</span><span class="i18n-zh">《国际组织》(CUP)</span></span> <span class="sep">·</span> <span class="i18n-en">journal essay · 2026</span><span class="i18n-zh">期刊论文 · 2026</span></div>
+              <p><span class="i18n-en">An essay distinguishing competition from correction in frontier AI, introducing "stack power" — the persistence and relocation of private control across compute, cloud, energy, deployment, and state-procurement layers even as model-layer prices fall.</span><span class="i18n-zh">一篇论文，区分前沿 AI 中的"竞争"与"纠正"，提出"堆栈权力"——即使模型层价格下降，私人控制权仍在算力、云、能源、部署与国家采购各层持续或转移。</span></p>
+            </li>
+            <li class="entry">
+              <h3><span class="i18n-en">Camera, Player, Engine: An Epistemology for Writing About a System You Are Inside</span><span class="i18n-zh">相机、棋手、引擎：书写自身身处其中之系统的一种认识论</span></h3>
+              <div class="entry-meta"><span class="tag tag--essay"><span class="i18n-en">Companion essay · public</span><span class="i18n-zh">伴随文章 · 公开</span></span> <span class="i18n-en">method / epistemology · PDF · 2026</span><span class="i18n-zh">方法论 / 认识论 · PDF · 2026</span></div>
+              <p><span class="i18n-en">A methodological essay proposing a camera / player / engine typology for how claims about a technological system function when the analyst is embedded inside that system.</span><span class="i18n-zh">一篇方法论文章，提出"相机 / 棋手 / 引擎"类型学，说明当分析者身处技术系统内部时其论断如何发挥作用。</span></p>
+            </li>
+            <li class="entry">
+              <h3><span class="i18n-en">Magazine essays — "The Abundance That Isn't" &amp; "The Rent Machine"</span><span class="i18n-zh">杂志文章 ——《The Abundance That Isn't》与《The Rent Machine》</span></h3>
+              <div class="entry-meta"><span class="tag tag--essay"><span class="i18n-en">Draft · not yet placed</span><span class="i18n-zh">草稿 · 尚未刊出</span></span> <span class="i18n-en">standalone essays drawn from the book · pitched to Noema &amp; Phenomenal World · 2026</span><span class="i18n-zh">取自专著的独立文章 · 拟投 Noema 与 Phenomenal World · 2026</span></div>
+              <p><span class="i18n-en">Two standalone essays adapting the book's argument — that simultaneous technological abundance is being enclosed rather than shared, and a rent-decomposition of that enclosure.</span><span class="i18n-zh">两篇取自专著论点的独立文章——同时到来的技术富足正在被圈占而非共享，以及对这种圈占的租金分解。</span></p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============================================================ 07 RESEARCH EXPERIENCE -->
+      <section id="research">
+        <div class="rail reveal">
+          <div class="secnum"><b>07</b> <span class="i18n-en">Research Experience</span><span class="i18n-zh">研究经历</span></div>
+          <ul class="entries">
+            <li class="entry">
+              <h3><span class="i18n-en">CMS Jet Physics — Roloff Group, Brown University</span><span class="i18n-zh">CMS 喷流物理 —— 布朗大学 Roloff 组</span></h3>
+              <p class="item-affil"><span class="i18n-en">Graduate research · Brown University · 2024–2026</span><span class="i18n-zh">研究生研究 · 布朗大学 · 2024–2026</span></p>
+              <p><span class="i18n-en">High-energy experimental physics on CMS jet physics, including jet-simulation work with PYTHIA; jet structure, parton-shower cascades, and beyond-the-Standard-Model signatures in jet topology.</span><span class="i18n-zh">高能实验物理，方向为 CMS 喷流物理，包含使用 PYTHIA 的喷流模拟；研究喷注结构、部分子级联及喷注拓扑中的超出标准模型特征。</span></p>
+            </li>
+            <li class="entry">
+              <h3><span class="i18n-en">Carbon-Nanotube 3ω Thermal Characterization — Kuehne Group, Brown University</span><span class="i18n-zh">碳纳米管 3ω 热学表征 —— 布朗大学 Kuehne 组</span></h3>
+              <p class="item-affil"><span class="i18n-en">Graduate research · Brown University · 2024–2026</span><span class="i18n-zh">研究生研究 · 布朗大学 · 2024–2026</span></p>
+              <p><span class="i18n-en">Condensed-matter thermal-transport research on 3ω characterization of single-walled carbon nanotubes, contributing to a unified finite-heater 3ω impedance theory (see Publications).</span><span class="i18n-zh">凝聚态热输运研究，方向为单壁碳纳米管的 3ω 表征，参与统一有限加热丝 3ω 阻抗理论的工作（见"论文"）。</span></p>
+            </li>
+            <li class="entry">
+              <h3><span class="i18n-en">MAXI J1348-630 X-ray Binary — Shandong University</span><span class="i18n-zh">MAXI J1348-630 X 射线双星 —— 山东大学</span></h3>
+              <p class="item-affil"><span class="i18n-en">Undergraduate research · Shandong University (Weihai) · 2023–2024</span><span class="i18n-zh">本科研究 · 山东大学（威海）· 2023–2024</span></p>
+              <p><span class="i18n-en">Astrophysical data analysis of NICER / NuSTAR observations of the black-hole X-ray binary MAXI J1348-630 (basis of the undergraduate thesis).</span><span class="i18n-zh">对黑洞 X 射线双星 MAXI J1348-630 的 NICER / NuSTAR 观测进行天体物理数据分析（本科毕业论文的基础）。</span></p>
+            </li>
+            <li class="entry">
+              <h3><span class="i18n-en">TOI Stellar-Flare Spectroscopy — Shandong University</span><span class="i18n-zh">TOI 恒星耀发光谱 —— 山东大学</span></h3>
+              <p class="item-affil"><span class="i18n-en">Undergraduate research · Shandong University (Weihai) · 2022–2023</span><span class="i18n-zh">本科研究 · 山东大学（威海）· 2022–2023</span></p>
+              <p><span class="i18n-en">Spectroscopic study of stellar flares on TESS Objects of Interest (TOI) to assess exoplanet habitability and radiation environment.</span><span class="i18n-zh">对 TESS 关注目标 (TOI) 的恒星耀发进行光谱学研究，评估系外行星宜居性与辐射环境。</span></p>
+            </li>
+            <li class="entry">
+              <h3><span class="i18n-en">AGN / Blazar Jets — University College London</span><span class="i18n-zh">活动星系核 / 耀变体喷流 —— 伦敦大学学院 (UCL)</span></h3>
+              <p class="item-affil"><span class="i18n-en">Research project · University College London · 2022–2023</span><span class="i18n-zh">研究项目 · 伦敦大学学院 · 2022–2023</span></p>
+              <p><span class="i18n-en">Astrophysics project on AGN / blazar jets, underpinning the CONF-CIAP 2023 conference paper on blazar-jet formation.</span><span class="i18n-zh">关于活动星系核 / 耀变体喷流的天体物理项目，是 CONF-CIAP 2023 耀变体喷流形成会议论文的基础。</span></p>
+            </li>
+            <li class="entry">
+              <h3><span class="i18n-en">In-Beam γ-ray Spectroscopy — Shandong University</span><span class="i18n-zh">在束 γ 射线能谱学 —— 山东大学</span></h3>
+              <p class="item-affil"><span class="i18n-en">Undergraduate research · Shandong University (Weihai) · 2022</span><span class="i18n-zh">本科研究 · 山东大学（威海）· 2022</span></p>
+              <p><span class="i18n-en">Nuclear-physics research in in-beam γ-ray spectroscopy, analyzing γ spectra from α-induced reactions to identify residual nuclides.</span><span class="i18n-zh">核物理研究，方向为在束 γ 射线能谱学，分析 α 粒子轰击后的 γ 能谱以鉴别剩余核素。</span></p>
+            </li>
+            <li class="entry">
+              <h3><span class="i18n-en">Axion-Like Dark Matter — Beijing Normal University</span><span class="i18n-zh">类轴子暗物质 —— 北京师范大学</span></h3>
+              <p class="item-affil"><span class="i18n-en">Research project · Beijing Normal University · 2022</span><span class="i18n-zh">研究项目 · 北京师范大学 · 2022</span></p>
+              <p><span class="i18n-en">Theory / phenomenology on axion-like dark matter, analyzing photon survival probabilities to constrain the parameter space.</span><span class="i18n-zh">关于类轴子暗物质的理论 / 唯象学，分析光子"生存概率"以约束参数空间。</span></p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============================================================ 08 SKILLS -->
+      <section id="skills">
+        <div class="rail reveal">
+          <div class="secnum"><b>08</b> <span class="i18n-en">Technical Skills</span><span class="i18n-zh">技术技能</span></div>
+          <h3 class="skill-group i18n-en">Computational &amp; Analytical</h3>
+          <h3 class="skill-group i18n-zh">计算与分析</h3>
+          <div class="skills i18n-en">
+            <span>Python (numpy · scientific stack)</span>
+            <span>Open-system / density-matrix simulation</span>
+            <span>Gravitational-wave data analysis</span>
+            <span>Real-noise covariance calibration &amp; coverage validation</span>
+            <span>Conformal prediction · distribution-free risk certificates</span>
+            <span>X-ray / timing spectral fitting (NICER · NuSTAR · HEASOFT)</span>
+            <span>High-energy jet simulation (PYTHIA)</span>
+            <span>Lean formalization</span>
+          </div>
+          <div class="skills i18n-zh">
+            <span>Python（numpy · 科学计算生态）</span>
+            <span>开系统 / 密度矩阵模拟</span>
+            <span>引力波数据分析</span>
+            <span>真实噪声协方差标定与覆盖率验证</span>
+            <span>共形预测 · 无分布风险证书</span>
+            <span>X 射线 / 时变能谱拟合（NICER · NuSTAR · HEASOFT）</span>
+            <span>高能喷流模拟（PYTHIA）</span>
+            <span>Lean 形式化</span>
+          </div>
+          <h3 class="skill-group i18n-en">Writing &amp; Publishing</h3>
+          <h3 class="skill-group i18n-zh">写作与出版</h3>
+          <div class="skills i18n-en">
+            <span>LaTeX / RevTeX manuscript preparation</span>
+            <span>Pre-registration &amp; falsification discipline</span>
+            <span>Bilingual (English / 中文) academic &amp; long-form writing</span>
+            <span>Independent book production &amp; self-publishing</span>
+          </div>
+          <div class="skills i18n-zh">
+            <span>LaTeX / RevTeX 论文排版</span>
+            <span>预注册与可证伪性纪律</span>
+            <span>中英双语学术与长文写作</span>
+            <span>独立书籍制作与自出版</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ 09 生辰八字 · NATAL INSTRUMENT -->
+      <section id="bazi">
+        <div class="rail reveal">
+          <div class="secnum"><b>09</b> <span class="i18n-en">Natal Chart · 生辰八字</span><span class="i18n-zh">生辰八字</span></div>
+          <p class="bazi__intro">
+            <span class="i18n-en">A personal coda. The <em>Nye Clock</em> — my celestial sexagenary instrument — rendered here as my 生辰八字 (heavenly-stem &amp; earthly-branch natal chart): a date-true Sun–Earth–Moon orrery with the 干支 dial. Open it to explore.</span>
+            <span class="i18n-zh">一段个人的收束。<em>Nye Clock</em>（弐时仪）—— 我的天球六十甲子时仪 —— 在此作为我的<strong>生辰八字</strong>呈现：一台按真实历元运行的日–地–月天球，配以干支盘。点击展开探索。</span>
+          </p>
+          <div class="bazi-frame glass" id="baziFrame">
+            <div class="bazi-frame__poster" id="baziPoster" role="button" tabindex="0" aria-label="Open the Nye Clock natal instrument">
+              <span class="glyph">命</span>
+              <span class="ttl"><span class="i18n-en">The Nye Clock · 生辰八字</span><span class="i18n-zh">弐时仪 · 生辰八字</span></span>
+              <span class="sub"><span class="i18n-en">Celestial sexagenary instrument — 干支 · 天球日地月</span><span class="i18n-zh">天球六十甲子时仪 · 干支 · 日地月</span></span>
+              <span class="play"><span class="i18n-en">▶ Open instrument</span><span class="i18n-zh">▶ 展开时仪</span></span>
+            </div>
+            <iframe
+              id="baziIframe"
+              data-src="nye-clock-backdrop.html"
+              title="Nye Clock — celestial sexagenary natal instrument (生辰八字)"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+            ></iframe>
+          </div>
+          <div class="bazi__cap">
+            <span><b>干支</b> <span class="i18n-en">heavenly stems &amp; earthly branches</span><span class="i18n-zh">天干地支</span></span>
+            <span><span class="i18n-en">Nye Clock is also listed under Software / built by the author</span><span class="i18n-zh">Nye Clock 亦为作者自建</span></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ 10 CONTACT -->
+      <section id="contact">
+        <div class="rail reveal">
+          <div class="secnum"><b>10</b> <span class="i18n-en">Contact</span><span class="i18n-zh">联系方式</span></div>
+          <h2 class="sec-h2"><span class="i18n-en">Open to research &amp; collaboration.</span><span class="i18n-zh">欢迎研究与合作洽谈。</span></h2>
+          <a href="mailto:jiaxuan_chen1@alumni.brown.edu" class="contact-mail">jiaxuan_chen1@alumni.brown.edu</a>
+          <div class="contact-row">
+            <span>+86 152 3406 0102</span>
+            <a href="https://orcid.org/0009-0008-5211-4313" rel="noopener" target="_blank">ORCID 0009-0008-5211-4313</a>
+            <a href="https://ssrn.com/author=12014588" rel="noopener" target="_blank">SSRN</a>
+            <a href="https://github.com/Adonyth" rel="noopener" target="_blank">GitHub</a>
+            <span><span class="i18n-en">Providence, RI · USA</span><span class="i18n-zh">美国 · 罗德岛州普罗维登斯</span></span>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <div class="rail foot">
+          <span class="foot__b">Jiaxuan Chen <span lang="zh">陈嘉轩</span></span>
+          <span class="foot__m">
+            <span class="i18n-en">Last updated: <time datetime="2026-06-30">June 2026</time></span>
+            <span class="i18n-zh">最后更新：<time datetime="2026-06-30">2026 年 6 月</time></span>
+          </span>
+        </div>
+      </footer>
+    </div>
+
+    <!-- GSAP motion layer -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+    <script src="cv.js?v=5" defer></script>
+  </body>
+</html>

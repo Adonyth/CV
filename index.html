@@ -3,501 +3,185 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#0a0e18" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#0b0a09" />
     <meta
       name="description"
-      content="Academic CV of Jiaxuan Chen (陈嘉轩) — M.Sc. physics at Brown University. Research across high-energy/jet physics, astrophysics, and quantum thermal transport."
+      content="Jiaxuan Chen (陈嘉轩) — physicist and independent researcher across foundations of physics, gravitational-wave methodology, machine-learning interpretability, and the political economy of technology."
       id="meta-desc"
     />
     <meta name="author" content="Jiaxuan Chen (陈嘉轩)" />
-    <meta
-      name="keywords"
-      content="Jiaxuan Chen, 陈嘉轩, physics, high-energy physics, jet physics, CMS, astrophysics, X-ray binary, carbon nanotube, thermal transport, dark matter, Brown University, academic CV"
-    />
     <meta name="robots" content="index, follow" />
-    <meta property="og:title" content="Jiaxuan Chen — Academic CV" id="meta-og-title" />
+    <meta property="og:title" content="Jiaxuan Chen" id="meta-og-title" />
     <meta property="og:type" content="website" />
-    <meta
-      property="og:description"
-      content="Academic CV of Jiaxuan Chen (陈嘉轩) — M.Sc. physics at Brown University. Research across high-energy/jet physics, astrophysics, and quantum thermal transport."
-      id="meta-og-desc"
-    />
+    <meta property="og:description" content="Physicist · Independent researcher. Sharp, honestly-scoped results — and a wager on the future." id="meta-og-desc" />
     <meta name="twitter:card" content="summary" />
-    <!--
-      After deploy, add absolute-URL tags (replace YOURDOMAIN with the live host):
-      <link rel="canonical" href="https://YOURDOMAIN/" />
-      <meta property="og:url" content="https://YOURDOMAIN/" />
-      <meta property="og:image" content="https://YOURDOMAIN/og-cover.png" />
-      <meta name="twitter:image" content="https://YOURDOMAIN/og-cover.png" />
-      …and switch twitter:card above to "summary_large_image".
-    -->
-    <title>Jiaxuan Chen — Academic CV</title>
-    <link rel="stylesheet" href="styles.css" />
+    <title>Jiaxuan Chen · 陈嘉轩</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css?v=12" />
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("cv-theme");
+          if (t !== "light") document.documentElement.setAttribute("data-theme", "dark");
+        } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+      })();
+    </script>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "Person",
         "name": "Jiaxuan Chen",
         "alternateName": "陈嘉轩",
-        "jobTitle": "Physics researcher",
-        "email": "mailto:jiaxuan_chen1@brown.edu",
-        "affiliation": { "@type": "CollegeOrUniversity", "name": "Brown University" },
+        "jobTitle": "Physicist / Independent researcher",
+        "url": "",
+        "email": "mailto:jiaxuan_chen1@alumni.brown.edu",
+        "identifier": "https://orcid.org/0009-0008-5211-4313",
         "alumniOf": [
           { "@type": "CollegeOrUniversity", "name": "Brown University" },
           { "@type": "CollegeOrUniversity", "name": "Shandong University" }
-        ],
-        "knowsAbout": [
-          "High-energy physics",
-          "Jet physics",
-          "Astrophysics",
-          "X-ray binaries",
-          "Carbon nanotube thermal transport",
-          "Dark matter phenomenology"
         ]
       }
     </script>
   </head>
-  <body class="cv-solar cv-solar--nye-backdrop">
-    <a class="skip-link no-print" href="#main" id="skip-link">Skip to content</a>
 
-    <div class="cv-nye-backdrop no-print" aria-hidden="true">
-      <iframe
-        class="cv-nye-backdrop__frame"
-        data-src="nye-clock-backdrop.html"
-        title="Nye Clock — Sun, Earth, and Moon (full instrument)"
-        loading="lazy"
-        referrerpolicy="no-referrer-when-downgrade"
-      ></iframe>
-    </div>
+  <body class="home">
+    <a class="skip-link no-print" href="#portals">Skip to content</a>
+    <canvas id="deep" aria-hidden="true"></canvas>
+    <!-- The real Nye Clock runs as a transparent iframe backdrop (frames the WHOLE instrument,
+         Earth-centered, orbit-zoomable). The merged-into-#deep version (space.js MOUNT_NYE + nye-armature.js)
+         is designed but currently OFF while the interactive Earth-centered + natal-constellation
+         version is built & verified — see design-research/. -->
+    <iframe id="bazi-bg" class="bazi-clock" src="nye-clock-bazi.html" title="生辰八字 · Nye Clock (庚子·庚午·甲申)" loading="lazy" referrerpolicy="no-referrer" aria-hidden="true"></iframe>
+    <canvas id="field" aria-hidden="true"></canvas>
 
-    <div class="app-chrome no-print" aria-label="Preferences">
-      <div class="lang-switch" role="group" aria-label="Language" id="lang-switch">
-        <button
-          type="button"
-          class="lang-switch__btn lang-switch__btn--active"
-          data-locale="en"
-          aria-pressed="true"
-          id="btn-en"
-        >
-          EN
-        </button>
-        <button
-          type="button"
-          class="lang-switch__btn"
-          data-locale="zh"
-          aria-pressed="false"
-          id="btn-zh"
-        >
-          中文
-        </button>
-      </div>
-      <button
-        type="button"
-        class="btn-pdf btn-bg-toggle"
-        id="btn-bg-toggle"
-        aria-pressed="false"
-        aria-label="Hide background"
-      >
-        <span class="i18n-en bg-toggle-visible">Hide background</span>
-        <span class="i18n-en bg-toggle-hidden">Show background</span>
-        <span class="i18n-zh bg-toggle-visible">隐藏背景</span>
-        <span class="i18n-zh bg-toggle-hidden">显示背景</span>
-      </button>
-      <button type="button" class="btn-pdf" id="btn-pdf">
-        <span class="i18n-en">Save as PDF</span>
-        <span class="i18n-zh">另存为 PDF</span>
-      </button>
-    </div>
+    <div class="content">
+      <!-- ============ slim top bar ============ -->
+      <nav class="nav no-print">
+        <div class="nav__in glass">
+          <a href="#top" class="brand">Jiaxuan Chen<span class="brand-zh" lang="zh">陈嘉轩</span></a>
+          <div class="nav__right">
+            <div class="nav__links">
+              <a href="#portals"><span class="i18n-en">Explore</span><span class="i18n-zh">探索</span></a>
+              <a href="#footprint"><span class="i18n-en">Footprint</span><span class="i18n-zh">足迹</span></a>
+              <a href="cv.html" class="nav__cta"><span class="i18n-en">Curriculum Vitae ↗</span><span class="i18n-zh">完整履历 ↗</span></a>
+            </div>
+            <div class="lang" role="group" aria-label="Language" id="lang-switch">
+              <button type="button" data-locale="en" aria-pressed="true" id="btn-en">EN</button>
+              <button type="button" data-locale="zh" aria-pressed="false" id="btn-zh">中文</button>
+            </div>
+            <button class="iconbtn" id="themebtn" type="button" aria-label="Toggle day / night">
+              <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+              <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+            </button>
+            <button class="iconbtn" id="fieldbtn" type="button" aria-pressed="false" aria-label="Toggle background field">
+              <svg class="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="eyeoff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10.4 10.4 0 0 1 12 19C5.5 19 2 12 2 12a18 18 0 0 1 5.1-5.9m3.2-1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-2.3 3.3M1 1l22 22"/></svg>
+            </button>
+          </div>
+        </div>
+      </nav>
 
-    <div class="app-shell">
-      <header class="site-header wrap">
-        <h1 class="name">Jiaxuan Chen <span class="name-zh" lang="zh">陈嘉轩</span></h1>
-
-        <ul class="contact" id="contact-list">
-          <li>
-            <a href="mailto:jiaxuan_chen1@brown.edu">jiaxuan_chen1@brown.edu</a>
-          </li>
-          <li>
-            <a href="mailto:lewxam0102@gmail.com">lewxam0102@gmail.com</a>
-          </li>
-          <li>
-            <span class="contact-label i18n-en">Phone</span
-            ><span class="contact-label i18n-zh">电话</span> +1 401-688-9544
-          </li>
-        </ul>
-
-        <!--
-          External links — give me the real URLs and I'll uncomment + wire this up.
-          (Styled by .links in styles.css; prints cleanly.)
-        <ul class="links" id="links-list">
-          <li><a href="https://github.com/USERNAME" rel="me noopener" target="_blank">GitHub</a></li>
-          <li><a href="https://scholar.google.com/citations?user=ID" rel="me noopener" target="_blank">Google Scholar</a></li>
-          <li><a href="https://orcid.org/0000-0000-0000-0000" rel="me noopener" target="_blank">ORCID</a></li>
-        </ul>
-        -->
+      <!-- ============ HERO ============ -->
+      <header class="home-hero" id="top">
+        <div class="rail home-hero__in">
+          <div class="home-hero__text">
+            <span class="eyebrow"><span class="i18n-en">Physicist · Independent researcher · 独立研究者</span><span class="i18n-zh">物理学者 · 独立研究者</span></span>
+            <h1 class="home-name">Jiaxuan&nbsp;Chen <span class="home-name__zh" lang="zh">陈嘉轩</span></h1>
+            <p class="home-lead">
+              <span class="i18n-en">I look for <span class="u">sharp, honestly-scoped results</span> — obstruction theorems, calibration certificates, and a wager on the future.</span>
+              <span class="i18n-zh">我追求<span class="u">范围诚实、锋利的结果</span>——障碍定理、校准证书，以及一场对未来的下注。</span>
+            </p>
+            <div class="home-links">
+              <a href="mailto:jiaxuan_chen1@alumni.brown.edu">Email</a>
+              <a href="https://orcid.org/0009-0008-5211-4313" rel="noopener" target="_blank">ORCID</a>
+              <a href="https://github.com/Adonyth" rel="noopener" target="_blank">GitHub</a>
+              <a href="https://ssrn.com/author=12014588" rel="noopener" target="_blank">SSRN</a>
+              <a href="cv.html" class="home-links__cv"><span class="i18n-en">Curriculum Vitae ↗</span><span class="i18n-zh">履历 ↗</span></a>
+            </div>
+          </div>
+          <!-- the 干支 orrery is merged into #deep (space.js + nye-armature.js) as one 3D scene -->
+          <div class="home-hero__aside" aria-hidden="true"></div>
+        </div>
+        <div class="home-hero__cue" aria-hidden="true">
+          <span class="i18n-en">scroll to explore</span><span class="i18n-zh">向下探索</span>
+        </div>
       </header>
 
-    <main id="main" class="wrap">
-      <!-- English -->
-      <div class="i18n-en" lang="en">
-        <section class="block" aria-labelledby="about-heading-en">
-          <h2 id="about-heading-en">About</h2>
-          <p class="lede">
-            Physicist (Sc.M., Brown University) working across high-energy collider
-            phenomenology, compact-object astrophysics, and quantum thermal transport —
-            equally at home in theory, observation, and the lab. Increasingly building
-            software where physics meets AI.
+      <!-- ============ PORTALS ============ -->
+      <section class="portals" id="portals">
+        <div class="rail">
+          <div class="portal-grid">
+            <a class="portal glass reveal" href="cv.html#research-programs">
+              <span class="portal__i">i</span>
+              <h3><span class="i18n-en">Research</span><span class="i18n-zh">研究</span></h3>
+              <p><span class="i18n-en">Foundations of physics · gravitational-wave methods · world models</span><span class="i18n-zh">物理基础 · 引力波方法 · 世界模型</span></p>
+              <span class="portal__go">→</span>
+            </a>
+            <a class="portal glass reveal" href="cv.html#book-writing">
+              <span class="portal__i">ii</span>
+              <h3><span class="i18n-en">Writing</span><span class="i18n-zh">写作</span></h3>
+              <p><span class="i18n-en">A book, essays, and a diagnosis of technological rent</span><span class="i18n-zh">一部专著、随笔，与对技术垄断租金的诊断</span></p>
+              <span class="portal__go">→</span>
+            </a>
+            <a class="portal glass reveal" href="cv.html#software">
+              <span class="portal__i">iii</span>
+              <h3><span class="i18n-en">Building</span><span class="i18n-zh">造物</span></h3>
+              <p><span class="i18n-en">Omytea · Nye Clock · open-source tools</span><span class="i18n-zh">Omytea · Nye Clock · 开源工具</span></p>
+              <span class="portal__go">→</span>
+            </a>
+            <a class="portal glass reveal" href="#bazi">
+              <span class="portal__i">iv</span>
+              <h3><span class="i18n-en">生辰八字</span><span class="i18n-zh">生辰八字</span></h3>
+              <p><span class="i18n-en">The Nye Clock — my celestial sexagenary chart</span><span class="i18n-zh">弐时仪 —— 我的天球干支命盘</span></p>
+              <span class="portal__go">→</span>
+            </a>
+            <a class="portal glass reveal portal--cv" href="cv.html">
+              <span class="portal__i">v</span>
+              <h3><span class="i18n-en">Curriculum Vitae</span><span class="i18n-zh">完整履历</span></h3>
+              <p><span class="i18n-en">The full record — publications, programs, experience</span><span class="i18n-zh">完整记录 —— 论文、研究纲领、经历</span></p>
+              <span class="portal__go">↗</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- placeholder anchor so the 生辰八字 portal resolves (the Nye Clock is the backdrop itself) -->
+      <span id="bazi" class="anchor-stub" aria-hidden="true"></span>
+
+      <!-- ============ FOOTPRINT — the raw-trace globe ============ -->
+      <section id="footprint" class="footprint">
+        <div class="rail">
+          <div class="secnum"><b>04</b> <span class="i18n-en">Footprint</span><span class="i18n-zh">足迹</span></div>
+          <h2 class="footprint__h"><span class="i18n-en">Every road, unsmoothed</span><span class="i18n-zh">每一段路，未经平滑</span></h2>
+          <p class="footprint__lead">
+            <span class="i18n-en">602,733 raw GPS points since I landed — no cleaning, no arcs, no counts. The routes <em>are</em> the map: dense where I live and drive, one thin cross-country thread, a few far marks abroad.</span>
+            <span class="i18n-zh">抵达以来的 602,733 个原始 GPS 点 —— 不清洗、不画弧、不统计。路线本身就是地图：常住常驶处最密，一条横贯大陆的细线，几处海外远点。</span>
           </p>
-        </section>
+          <div class="footprint-globe" id="footprint-globe" role="img" aria-label="A globe plotting 602,733 raw GPS points tracing every route driven since 2024">
+            <span class="footprint-globe__hint" aria-hidden="true"><span class="i18n-en">drag to rotate · scroll to zoom</span><span class="i18n-zh">拖动旋转 · 滚轮缩放</span></span>
+          </div>
+        </div>
+      </section>
 
-        <section class="block" aria-labelledby="edu-heading-en">
-          <h2 id="edu-heading-en">Education</h2>
-          <ul class="timeline">
-            <li>
-              <div class="timeline-meta">
-                <span class="where">Brown University</span>
-                <span class="when">2024 — 2026</span>
-              </div>
-              <p class="degree">Sc.M., Physics · Providence, RI, USA</p>
-            </li>
-            <li>
-              <div class="timeline-meta">
-                <span class="where">Shandong University</span>
-                <span class="when">2020 — 2024</span>
-              </div>
-              <p class="degree">B.S., Space Science and Technology · China</p>
-            </li>
-          </ul>
-        </section>
-
-        <section class="block" aria-labelledby="research-heading-en">
-          <h2 id="research-heading-en">Research experience</h2>
-          <ul class="research-list">
-            <li>
-              <h3 class="item-title">
-                CMS jet physics &amp; beyond-the-Standard-Model phenomenology
-              </h3>
-              <p class="item-affil">
-                Jennifer Roloff group, Brown University · Fall 2024 — September 2025
-              </p>
-              <p>
-                Simulated high-energy jet events with Pythia&nbsp;8; studied jet structure
-                and parton-shower cascades in the strong-interaction regime; analyzed
-                beyond-the-Standard-Model signatures in jet topology and constructed
-                theory-comparison templates for CMS-oriented studies.
-              </p>
-            </li>
-            <li>
-              <h3 class="item-title">Carbon nanotube thermal transport (3ω method)</h3>
-              <p class="item-affil">
-                Matthias Kuehne group, Brown University · Fall 2024 — February 2026
-              </p>
-              <p>
-                Measured thermal conductivity of single-walled carbon nanotubes with the
-                3ω method; investigated non-equilibrium thermal transport in quasi
-                one-dimensional systems.
-              </p>
-            </li>
-            <li>
-              <h3 class="item-title">Black hole X-ray binary MAXI J1348-630 (outburst)</h3>
-              <p class="item-affil">Shandong University · Sep 2023 — May 2024</p>
-              <p>
-                Reduced and analyzed NICER and NuSTAR data; fitted power-density and
-                energy spectra; characterized the outflow and estimated outflow speed and
-                characteristic time scales.
-              </p>
-            </li>
-            <li>
-              <h3 class="item-title">TOI stellar flare spectroscopy</h3>
-              <p class="item-affil">Shandong University · Apr 2022 — Apr 2023</p>
-              <p>
-                Analyzed M-dwarf flare spectra to assess exoplanet habitability and the
-                radiation environment.
-              </p>
-            </li>
-            <li>
-              <h3 class="item-title">AGN jet physics (blazars)</h3>
-              <p class="item-affil">University College London · Jul 2022 — Jan 2023</p>
-              <p>
-                Fitted blazar jet power spectra using BP/BZ-theory-based models.
-              </p>
-            </li>
-            <li>
-              <h3 class="item-title">In-beam γ-ray spectroscopy (nuclear reactions)</h3>
-              <p class="item-affil">Shandong University · Apr 2022</p>
-              <p>
-                Analyzed γ-ray spectra from α-induced reactions to identify residual
-                nuclides.
-              </p>
-            </li>
-            <li>
-              <h3 class="item-title">Axion-like dark matter (astrophysical constraints)</h3>
-              <p class="item-affil">Beijing Normal University · Mar 2022 — May 2022</p>
-              <p>
-                Analyzed photon survival probabilities to constrain axion-like dark matter
-                parameter space.
-              </p>
-            </li>
-          </ul>
-        </section>
-
-        <section class="block" aria-labelledby="pub-heading-en">
-          <h2 id="pub-heading-en">Publications &amp; proceedings</h2>
-          <ul class="pub-list">
-            <li>
-              <cite class="pub-title">Formation Mechanism of Blazar Jets</cite>.
-              <span class="pub-venue"
-                >2nd International Conference on Computational Innovation and Applied
-                Physics (CONF-CIAP 2023)</span
-              >. <span class="pub-note">Accepted.</span>
-            </li>
-          </ul>
-        </section>
-
-        <section class="block" aria-labelledby="projects-heading-en">
-          <h2 id="projects-heading-en">Projects</h2>
-          <ul class="research-list">
-            <li>
-              <h3 class="item-title">Omytea</h3>
-              <p>
-                Omytea is building a quantum-information world-model protocol in which
-                streaming vector memory is compiled into density states, evolved by valid
-                operator/channel families, measured into forecast probabilities, and revised
-                by an outcome-scored ledger.
-              </p>
-              <ul class="artifact-list">
-                <li>
-                  <a
-                    href="https://pypi.org/project/omytea-quantum-substrate/"
-                    rel="noopener"
-                    target="_blank"
-                    >omytea-quantum-substrate</a
-                  >
-                  (PyPI)
-                </li>
-                <li>
-                  <a
-                    href="https://github.com/Adonyth/omytea-quantum-substrate"
-                    rel="noopener"
-                    target="_blank"
-                    >omytea-quantum-substrate</a
-                  >
-                  (GitHub)
-                </li>
-                <li>
-                  <a
-                    href="https://github.com/Adonyth/omytea-personal-console"
-                    rel="noopener"
-                    target="_blank"
-                    >omytea-personal-console</a
-                  >
-                  (GitHub)
-                </li>
-                <li>
-                  GolfCal-1k — benchmark + paper draft, submission in preparation
-                </li>
-              </ul>
-            </li>
-            <li>
-              <h3 class="item-title">Nye Clock</h3>
-              <p>
-                A celestial sexagenary instrument — the WebGL backdrop of this site.
-                <a href="nye-clock-backdrop.html" rel="noopener" target="_blank"
-                  >Open full instrument</a
-                >
-              </p>
-            </li>
-          </ul>
-        </section>
-
-        <section class="block" aria-labelledby="skills-heading-en">
-          <h2 id="skills-heading-en">Technical skills</h2>
-          <p class="skills">
-            Python (scientific computing, data analysis) · Pythia&nbsp;8 · NICER / NuSTAR
-            data reduction · spectral and timing analysis · 3ω electrothermal measurements ·
-            numerical modeling · extensive experience in vibe coding (rapid, exploratory
-            AI-assisted development) · shipped and contributed to products across numerous
-            startups
-          </p>
-        </section>
-      </div>
-
-      <!-- Chinese -->
-      <div class="i18n-zh" lang="zh-Hans">
-        <section class="block" aria-labelledby="about-heading-zh">
-          <h2 id="about-heading-zh">简介</h2>
-          <p class="lede">
-            物理学者（布朗大学理学硕士），研究横跨高能对撞机现象学、致密天体天体物理与量子热输运，于理论、观测与实验之间皆可游走；并日益投身于物理与&nbsp;AI 交叉处的软件构建。
-          </p>
-        </section>
-
-        <section class="block" aria-labelledby="edu-heading-zh">
-          <h2 id="edu-heading-zh">教育背景</h2>
-          <ul class="timeline">
-            <li>
-              <div class="timeline-meta">
-                <span class="where">布朗大学 Brown University</span>
-                <span class="when">2024 — 2026</span>
-              </div>
-              <p class="degree">理学硕士（Sc.M.），物理学 · 美国罗德岛州普罗维登斯</p>
-            </li>
-            <li>
-              <div class="timeline-meta">
-                <span class="where">山东大学 Shandong University</span>
-                <span class="when">2020 — 2024</span>
-              </div>
-              <p class="degree">理学学士，空间科学与技术 · 中国</p>
-            </li>
-          </ul>
-        </section>
-
-        <section class="block" aria-labelledby="research-heading-zh">
-          <h2 id="research-heading-zh">科研经历</h2>
-          <ul class="research-list">
-            <li>
-              <h3 class="item-title">
-                CMS 实验喷注物理与超出标准模型（BSM）现象学研究
-              </h3>
-              <p class="item-affil">
-                Jennifer Roloff 课题组，布朗大学 · 2024 年秋 — 2025 年 9 月
-              </p>
-              <p>
-                基于 Pythia&nbsp;8 开展高能喷注事例模拟；研究喷注结构及强相互作用下的部分子级联过程；分析 BSM
-                物理在喷注拓扑中的可观测特征，并为面向 CMS 的研究构建理论对照模板。
-              </p>
-            </li>
-            <li>
-              <h3 class="item-title">单壁碳纳米管热输运（3ω 法）</h3>
-              <p class="item-affil">
-                Matthias Kuehne 课题组，布朗大学 · 2024 年秋 — 2026 年 2 月
-              </p>
-              <p>
-                采用 3ω 法测量单壁碳纳米管热导率；研究准一维体系中的非平衡热输运机制。
-              </p>
-            </li>
-            <li>
-              <h3 class="item-title">黑洞 X 射线双星 MAXI J1348-630（爆发期）</h3>
-              <p class="item-affil">山东大学 · 2023 年 9 月 — 2024 年 5 月</p>
-              <p>
-                处理并分析 NICER 与 NuSTAR 观测数据；拟合功率密度谱与能谱；刻画外流结构并估算外流速度及特征时间尺度。
-              </p>
-            </li>
-            <li>
-              <h3 class="item-title">TOI 源恒星耀斑光谱研究</h3>
-              <p class="item-affil">山东大学 · 2022 年 4 月 — 2023 年 4 月</p>
-              <p>
-                分析 M 型矮星耀斑光谱，评估系外行星宜居性与辐射环境。
-              </p>
-            </li>
-            <li>
-              <h3 class="item-title">活动星系核喷流物理（耀变体）</h3>
-              <p class="item-affil">伦敦大学学院 UCL · 2022 年 7 月 — 2023 年 1 月</p>
-              <p>
-                基于 BP/BZ 理论框架拟合耀变体喷流功率谱。
-              </p>
-            </li>
-            <li>
-              <h3 class="item-title">核反应入束 γ 能谱实验</h3>
-              <p class="item-affil">山东大学 · 2022 年 4 月</p>
-              <p>
-                分析 α 粒子轰击样品后的 γ 能谱，鉴别剩余核素。
-              </p>
-            </li>
-            <li>
-              <h3 class="item-title">类轴子暗物质（天体物理限制）</h3>
-              <p class="item-affil">北京师范大学 · 2022 年 3 月 — 2022 年 5 月</p>
-              <p>
-                分析光子“生存概率”，约束类轴子暗物质参数空间。
-              </p>
-            </li>
-          </ul>
-        </section>
-
-        <section class="block" aria-labelledby="pub-heading-zh">
-          <h2 id="pub-heading-zh">论文与会议论文集</h2>
-          <ul class="pub-list">
-            <li>
-              <cite class="pub-title">Formation Mechanism of Blazar Jets</cite>.
-              <span class="pub-venue"
-                >第二届计算创新与应用物理国际会议（CONF-CIAP 2023）</span
-              >。<span class="pub-note">已录用。</span>
-            </li>
-          </ul>
-        </section>
-
-        <section class="block" aria-labelledby="projects-heading-zh">
-          <h2 id="projects-heading-zh">项目</h2>
-          <ul class="research-list">
-            <li>
-              <h3 class="item-title">Omytea</h3>
-              <p>
-                Omytea 正在构建一套量子信息世界模型协议：将流式向量记忆编译为密度态，经合法算符/信道族演化，测量为预测概率，并由结果评分的账本进行修订。
-              </p>
-              <ul class="artifact-list">
-                <li>
-                  <a
-                    href="https://pypi.org/project/omytea-quantum-substrate/"
-                    rel="noopener"
-                    target="_blank"
-                    >omytea-quantum-substrate</a
-                  >
-                  （PyPI）
-                </li>
-                <li>
-                  <a
-                    href="https://github.com/Adonyth/omytea-quantum-substrate"
-                    rel="noopener"
-                    target="_blank"
-                    >omytea-quantum-substrate</a
-                  >
-                  （GitHub）
-                </li>
-                <li>
-                  <a
-                    href="https://github.com/Adonyth/omytea-personal-console"
-                    rel="noopener"
-                    target="_blank"
-                    >omytea-personal-console</a
-                  >
-                  （GitHub）
-                </li>
-                <li>GolfCal-1k — 基准测试 + 论文草稿，投稿准备中</li>
-              </ul>
-            </li>
-            <li>
-              <h3 class="item-title">Nye Clock</h3>
-              <p>
-                符号天球六十甲子时仪 — 本站 WebGL 背景。
-                <a href="nye-clock-backdrop.html" rel="noopener" target="_blank"
-                  >打开完整时仪</a
-                >
-              </p>
-            </li>
-          </ul>
-        </section>
-
-        <section class="block" aria-labelledby="skills-heading-zh">
-          <h2 id="skills-heading-zh">专业技能</h2>
-          <p class="skills">
-            Python（科学计算、数据分析）· Pythia&nbsp;8 · NICER / NuSTAR 数据归约 ·
-            能谱与时域分析 · 3ω 法电热测量 · 数值建模 · 丰富的 vibe coding（快速、探索式的
-            AI 辅助开发）经验 · 在多家初创公司中参与产品交付与工程贡献
-          </p>
-        </section>
-      </div>
-    </main>
-
-    <footer class="site-footer wrap">
-      <p class="footer-note i18n-en">
-        Last updated: <time datetime="2026-06-12">June 2026</time>
-      </p>
-      <p class="footer-note i18n-zh">
-        最后更新：<time datetime="2026-06-12">2026 年 6 月</time>
-      </p>
-    </footer>
+      <footer class="home-foot">
+        <div class="rail foot">
+          <span class="foot__b">Jiaxuan Chen <span lang="zh">陈嘉轩</span></span>
+          <span class="foot__m">© 2026 · Providence, RI</span>
+        </div>
+      </footer>
     </div>
 
-    <script src="cv.js?v=2" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+    <script src="home.js?v=1" defer></script>
+    <script type="module" src="space.js?v=5"></script>
+    <script src="footprint.js?v=1" defer></script>
   </body>
 </html>

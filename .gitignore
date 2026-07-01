@@ -1,2 +1,13 @@
 .DS_Store
 *.log
+
+# local agent tooling & private working notes — never publish
+.wolf/
+.claude/
+.codex/
+.agents/
+CLAUDE.md
+AGENTS.md
+SPATIAL_SPEC.md
+design-research/
+nye-armature.js
