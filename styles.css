@@ -457,3 +457,6 @@ body.cosmos #field{
    veil; the real dust lives INSIDE the scene (breath layer: parallax + true occlusion
    + cursor-stirred), so fusion comes from depth, not from cutouts */
 body.cosmos #field{opacity:.42; -webkit-mask-image:none; mask-image:none;}
+/* build 16 — the 2D field IS the far cosmos: it moves BELOW the 3D stage, so the
+   Sun, Earth, Moon and gears naturally occlude the star-dust behind them */
+body.cosmos #field{z-index:-1; opacity:.62;}

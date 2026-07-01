@@ -206,8 +206,16 @@ export function buildNatalSky(THREE, scene, data, opts) {
   (data.planets || []).forEach(function (p) {
     var ch = GLYPH[p.id]; if (!ch || typeof document === "undefined") return;
     var lon = p.eclLonDeg * Math.PI / 180, lat = (p.eclLatDeg || 0) * Math.PI / 180;
-    var big = (p.id === "sun" || p.id === "moon");
-    var sp = glyphSprite(ch, big ? 1.6 : 1.1, big);
+    if (p.id === "sun" || p.id === "moon") {
+      // the REAL Sun and Moon models carry these — no symbols; an invisible
+      // marker keeps the chart-alignment math alive
+      var mk = new T.Object3D();
+      mk.position.copy(eclVec(lon, lat, R * 0.965));
+      mk.userData.planet = p.id;
+      belt.add(mk); planetSprites.push(mk);
+      return;
+    }
+    var sp = glyphSprite(ch, 1.1, false);
     sp.position.copy(eclVec(lon, lat, R * 0.965));
     sp.userData.planet = p.id;
     belt.add(sp); planetSprites.push(sp);
@@ -220,6 +228,82 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var v = eclVec(sunP.eclLonDeg * Math.PI / 180, (sunP.eclLatDeg || 0) * Math.PI / 180, 1).applyAxisAngle(new T.Vector3(1, 0, 0), EPS);
     // rotate azimuth(sun) → π (the −z the camera looks into): ☉ Capricornus greets the viewer
     group.rotation.y = Math.PI - Math.atan2(v.x, v.z);
+  })();
+
+  /* ---------------- YEAR pillar ring: 六十甲子 on the zodiac plane ----------------
+     The year is the Sun's own cycle — so the natal year pair 辛巳 (2002-01-02,
+     before 立春, hence the 辛巳 year) is anchored exactly at the Sun's true
+     ecliptic longitude; the other 59 pairs follow faintly around the belt. */
+  var yearReadout = null;
+  (function buildYearRing() {
+    if (typeof document === "undefined") return;
+    var STEMS = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"];
+    var BRANCHES = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"];
+    var ACTIVE_K = 17;                                    // 辛巳 (k%10=7 辛, k%12=5 巳)
+    var RY = R * 0.78;
+    var sunP = (data.planets || []).filter(function (pp) { return pp.id === "sun"; })[0];
+    var sunLon = sunP ? sunP.eclLonDeg * Math.PI / 180 : 0;
+    var TAU = Math.PI * 2;
+    function pairSprite(txt, active) {
+      var cv = document.createElement("canvas"); cv.width = 176; cv.height = 96;
+      var ctx = cv.getContext("2d"); ctx.clearRect(0, 0, 176, 96);
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      if (active) {
+        ctx.strokeStyle = "rgba(236,147,118,0.9)"; ctx.lineWidth = 3.4;
+        ctx.beginPath(); ctx.arc(88, 48, 42, 0, TAU); ctx.stroke();
+      }
+      ctx.fillStyle = active ? "rgba(244,234,210,0.99)" : "rgba(214,200,180,0.6)";
+      ctx.font = (active ? "700 " : "500 ") + '46px "Songti SC","STSong","Noto Serif SC",serif';
+      ctx.fillText(txt, 88, 50);
+      var tx = new T.CanvasTexture(cv);
+      if ("colorSpace" in tx && T.SRGBColorSpace) tx.colorSpace = T.SRGBColorSpace;
+      var m = new T.SpriteMaterial({ map: tx, transparent: true, opacity: active ? 0.98 : 0.34, depthWrite: false, depthTest: true, blending: T.NormalBlending, fog: false });
+      if ("toneMapped" in m) m.toneMapped = false;
+      var sp = new T.Sprite(m);
+      var sc = active ? 17 : 10;
+      sp.scale.set(sc, sc * 96 / 176, 1);
+      return sp;
+    }
+    for (var k = 0; k < 60; k++) {
+      var ang = sunLon + (k - ACTIVE_K) * (TAU / 60);
+      var sp = pairSprite(STEMS[k % 10] + BRANCHES[k % 12], k === ACTIVE_K);
+      sp.position.copy(eclVec(ang, 0, RY));
+      sp.userData.yearPair = k;
+      belt.add(sp);
+    }
+    // the ring itself, drawn in the same stardust craft
+    var rp = [];
+    var nDots = 300;
+    for (var d = 0; d < nDots; d++) {
+      var a2 = (d / nDots) * TAU;
+      var v = eclVec(a2, 0, RY);
+      rp.push(v.x + (hash(d * 3) - 0.5) * 1.1, v.y + (hash(d * 5) - 0.5) * 1.1, v.z + (hash(d * 7) - 0.5) * 1.1);
+    }
+    var rg = new T.BufferGeometry();
+    rg.setAttribute("position", new T.BufferAttribute(new Float32Array(rp), 3));
+    var rm = new T.PointsMaterial({ map: o.tex, color: 0xe0876a, size: 1.7, sizeAttenuation: true, transparent: true, opacity: 0.3, depthWrite: false, depthTest: true, blending: T.AdditiveBlending });
+    rm.fog = false; if ("toneMapped" in rm) rm.toneMapped = false;
+    var ringPts = new T.Points(rg, rm); ringPts.frustumCulled = false; ringPts.name = "yearRingDust";
+    belt.add(ringPts);
+    // 年·辛巳 readout (中文 mode only — same rule as the other pillar readouts)
+    var cv2 = document.createElement("canvas"); cv2.width = 512; cv2.height = 192;
+    var c2 = cv2.getContext("2d"); c2.clearRect(0, 0, 512, 192);
+    c2.textAlign = "center"; c2.textBaseline = "middle";
+    c2.fillStyle = "rgba(244,234,210,0.96)";
+    c2.font = '600 52px "Songti SC","STSong","Noto Serif SC",serif';
+    c2.fillText("年 · 辛巳", 256, 74);
+    c2.fillStyle = "rgba(240,228,203,0.6)";
+    c2.font = '500 24px "JetBrains Mono","SFMono-Regular",monospace';
+    c2.fillText("10×12 / 60", 256, 132);
+    var tx2 = new T.CanvasTexture(cv2);
+    if ("colorSpace" in tx2 && T.SRGBColorSpace) tx2.colorSpace = T.SRGBColorSpace;
+    var m2 = new T.SpriteMaterial({ map: tx2, transparent: true, opacity: 0.9, depthWrite: false, depthTest: false, blending: T.NormalBlending, fog: false });
+    if ("toneMapped" in m2) m2.toneMapped = false;
+    yearReadout = new T.Sprite(m2);
+    yearReadout.name = "YearPillarReadout";
+    yearReadout.scale.set(34, 34 * 192 / 512, 1);
+    yearReadout.position.copy(eclVec(sunLon, 0, RY)).add(new T.Vector3(0, 13, 0));
+    belt.add(yearReadout);
   })();
 
   /* ---------------- constellation names: IN-SCENE Songti sprites (same craft as the 干支 glyphs) ---------------- */
@@ -378,6 +462,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     },
     // language of the in-scene nameplates follows the page locale (EN mode shows no Chinese)
     setLocale: function (loc) {
+      if (yearReadout) yearReadout.visible = (loc === "zh");
       for (var i = 0; i < nameSprites.length; i++) {
         var sp = nameSprites[i]; if (!sp) continue;
         sp.material.map = (loc === "zh") ? sp.userData.zhTex : sp.userData.enTex;
@@ -406,7 +491,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
       (o.group || scene).remove(group);
       geo.dispose(); starMat.dispose();
       for (var i = 0; i < lineEntries.length; i++) { var e = lineEntries[i]; if (e) { e.geo.dispose(); e.mat.dispose(); } }
-      planetSprites.forEach(function (s) { if (s.material.map) s.material.map.dispose(); s.material.dispose(); });
+      planetSprites.forEach(function (s) { if (!s.material) return; if (s.material.map) s.material.map.dispose(); s.material.dispose(); });
     }
   };
   return api;
