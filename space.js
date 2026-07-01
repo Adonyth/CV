@@ -557,11 +557,18 @@
           var W = MOBILE ? 2048 : 4096, H = W / 2;
           var cv = document.createElement("canvas"); cv.width = W; cv.height = H;
           var ctx = cv.getContext("2d");
-          ctx.fillStyle = "rgba(255,175,115,0.5)";
+          // two passes: a soft warm bed, then a bright core — the roads must READ
+          ctx.fillStyle = "rgba(255,150,90,0.32)";
           for (var i = 0; i < raw.length; i += 2) {
             var lat = raw[i], lon = raw[i + 1];
             if (!isFinite(lat) || !isFinite(lon)) continue;
-            ctx.fillRect(((lon + 180) / 360) * W, ((90 - lat) / 180) * H, 1.3, 1.3);
+            ctx.fillRect(((lon + 180) / 360) * W - 1, ((90 - lat) / 180) * H - 1, 3.4, 3.4);
+          }
+          ctx.fillStyle = "rgba(255,210,155,0.95)";
+          for (var i2 = 0; i2 < raw.length; i2 += 2) {
+            var lat2 = raw[i2], lon2 = raw[i2 + 1];
+            if (!isFinite(lat2) || !isFinite(lon2)) continue;
+            ctx.fillRect(((lon2 + 180) / 360) * W, ((90 - lat2) / 180) * H, 1.7, 1.7);
           }
           var tex2 = new THREE.CanvasTexture(cv); srgb(tex2);
           var rr = earthMesh.geometry.parameters.radius * 1.006;
@@ -579,7 +586,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=5").then(function (mod) {
+    import("./nye-armature.js?v=6").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),

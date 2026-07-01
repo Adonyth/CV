@@ -33,13 +33,18 @@ export function mountNyeArmature(THREE, scene, opts) {
 
   const STEMS = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"];
   const BRANCHES = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"];
+  /* 五行配色,阴阳定深浅(阳浅阴深) — 甲乙木 丙丁火 戊己土 庚辛金 壬癸水 */
   const STEM_COLORS = [
-    "#c9a06f", "#d6b078", "#e0876a", "#e79a74", "#c8a961",
-    "#d8b870", "#f0e4cb", "#f4ead2", "#b8926a", "#c49b72"
+    "#a8d68e", "#557f4c",
+    "#ff9070", "#bf4a32",
+    "#e0b87e", "#8a6a3f",
+    "#f4ecca", "#bb9a5c",
+    "#92bdec", "#3f6291"
   ];
+  /* 子水 丑土 寅卯木 辰土 巳午火 未土 申酉金 戌土 亥水 */
   const BRANCH_COLORS = [
-    "#d2a66c", "#c8a961", "#c99a6f", "#d3ad76", "#c8a961", "#d78468",
-    "#e0876a", "#d8b870", "#f0e4cb", "#f4ead2", "#c8a961", "#c49b72"
+    "#92bdec", "#8a6a3f", "#a8d68e", "#557f4c", "#e0b87e", "#bf4a32",
+    "#ff9070", "#8a6a3f", "#f4ecca", "#bb9a5c", "#e0b87e", "#3f6291"
   ];
   const PILLARS = {
     month: { slot: "month", label: "月", pair: "庚子", stem: "庚", branch: "子", stemIndex: 6, branchIndex: 0 },
@@ -125,28 +130,32 @@ export function mountNyeArmature(THREE, scene, opts) {
   gearMotions.push({ target: monthGear.stemSwivel, base: monthGear.stemSwivel.rotation.z, speed: 0.0009 });
   gearMotions.push({ target: monthGear.branchSwivel, base: monthGear.branchSwivel.rotation.z, speed: -0.00072 });
 
-  /* YEAR pillar 辛巳 — the outermost gear, same factory as the other three pillars.
-     The year is the Sun's own cycle: the active pair is anchored at the Sun's
-     azimuth as seen from the Earth. Slowest turn of all the rings. */
+  /* YEAR pillar 辛巳 — same factory, but the ring is EARTH-centred with radius =
+     the Earth–Sun distance: the month ring circles the Sun and passes through the
+     Earth; the year ring circles the Earth and passes through the Sun. Mirrors.
+     The active 辛巳 stands AT the Sun. Char sizes grow 时<日<月<年. */
   var yearPillar = { slot: "year", label: "年", pair: "辛巳", stem: "辛", branch: "巳", stemIndex: 7, branchIndex: 5 };
   yearPillar.index60 = sexagenaryIndex(7, 5);
+  var yearEclipticGroup = new T.Group();
+  yearEclipticGroup.name = "YearEclipticPlane";
+  yearEclipticGroup.userData.nyePart = "year-gear-plane";
+  yearEclipticGroup.quaternion.copy(eclipticGroup.quaternion);
+  earth.group.add(yearEclipticGroup);
   var yearGear = createPillarGear({
     name: "YearPillarGear",
     pillar: yearPillar,
-    stemRadius: AU_SCALE * 2.78,
-    branchRadius: AU_SCALE * 2.97,
-    toothScale: 1.55,
-    glyphStemScale: 1.42,
-    glyphBranchScale: 1.55,
+    stemRadius: AU_SCALE - 0.9,
+    branchRadius: AU_SCALE + 0.95,
+    toothScale: 1.9,
+    glyphStemScale: 2.3,
+    glyphBranchScale: 2.55,
     couplingOpacity: 0.12
   });
-  eclipticGroup.add(yearGear.group);
+  yearEclipticGroup.add(yearGear.group);
   var sunAngle = earthOrbitAngle + Math.PI;
   yearGear.stemSwivel.rotation.z = sunAngle - yearPillar.stemIndex * (TAU / 10);
   yearGear.branchSwivel.rotation.z = sunAngle - yearPillar.branchIndex * (TAU / 12);
-  placeLabel(yearGear.label, AU_SCALE * 2.97 + 5.2, sunAngle, 0.3);
-  gearMotions.push({ target: yearGear.stemSwivel, base: yearGear.stemSwivel.rotation.z, speed: 0.00034 });
-  gearMotions.push({ target: yearGear.branchSwivel, base: yearGear.branchSwivel.rotation.z, speed: -0.00027 });
+  placeLabel(yearGear.label, AU_SCALE + 5.6, sunAngle + 0.16, 0.3);
 
   const dayClockOrbitPlaneGroup = new T.Group();
   dayClockOrbitPlaneGroup.name = "DayClockOrbitPlane";
@@ -210,6 +219,25 @@ export function mountNyeArmature(THREE, scene, opts) {
   orbitTrace.quaternion.copy(eclipticGroup.quaternion);
   solarSystem.add(orbitTrace);
 
+  /* prominence of the EIGHT CHARACTERS: 日柱庚 brightest, then 日午 + 月子,
+     then the rest of the natal pairs; every unrelated glyph recedes */
+  (function prominencePass() {
+    var pil = { year: yearPillar, month: PILLARS.month, day: PILLARS.day, hour: PILLARS.hour };
+    var tier2 = { "day-stem": 3, "day-branch": 2, "month-branch": 2 };
+    group.traverse(function (o) {
+      if (!o.isSprite || !o.userData || !o.userData.nyePart) return;
+      var m2 = String(o.userData.nyePart).match(/^(year|month|day|hour)-(stem|branch)-glyph$/);
+      if (!m2) return;
+      var slot = m2[1], kind = m2[2], p2 = pil[slot];
+      var idx = (kind === "stem") ? o.userData.stemIndex : o.userData.branchIndex;
+      var active = idx === ((kind === "stem") ? p2.stemIndex : p2.branchIndex);
+      if (!active) { o.material.opacity = 0.28; return; }
+      var t2 = tier2[slot + "-" + kind] || 1;
+      o.scale.multiplyScalar(t2 === 3 ? 1.8 : t2 === 2 ? 1.5 : 1.25);
+      o.material.opacity = t2 === 3 ? 1.0 : t2 === 2 ? 0.98 : 0.93;
+    });
+  })();
+
   markSubtree(group, { nyeArmature: true });
 
   return {
@@ -231,10 +259,8 @@ export function mountNyeArmature(THREE, scene, opts) {
       layer.mesh.rotation.y = t * (0.004 + i * 0.0016);
       layer.mesh.rotation.z = t * (i % 2 ? -0.0022 : 0.0018);
     }
-    for (let i = 0; i < gearMotions.length; i++) {
-      const g = gearMotions[i];
-      g.target.rotation.z = g.base + t * g.speed;
-    }
+    /* the rings are STATIC by decree: stem and branch never turn relative to each
+       other — 辛巳 / 庚子 / 庚午 / 甲申 stay aligned forever */
     earth.uniforms.uTime.value = t;
   }
 
@@ -732,7 +758,7 @@ export function mountNyeArmature(THREE, scene, opts) {
 
     for (let i = 0; i < 10; i++) {
       const a = (i / 10) * TAU;
-      const sprite = makeGlyphSprite(STEMS[i], i === pillar.stemIndex ? "#f4ead2" : STEM_COLORS[i], config.glyphStemScale, i === pillar.stemIndex);
+      const sprite = makeGlyphSprite(STEMS[i], STEM_COLORS[i], config.glyphStemScale, i === pillar.stemIndex);
       sprite.name = config.name + "StemGlyph_" + STEMS[i];
       sprite.position.set(config.stemRadius * Math.cos(a), config.stemRadius * Math.sin(a), 0.19 * config.toothScale);
       sprite.userData.nyePart = pillar.slot + "-stem-glyph";
@@ -742,7 +768,7 @@ export function mountNyeArmature(THREE, scene, opts) {
     }
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * TAU;
-      const sprite = makeGlyphSprite(BRANCHES[i], i === pillar.branchIndex ? "#ffbf9a" : BRANCH_COLORS[i], config.glyphBranchScale, i === pillar.branchIndex);
+      const sprite = makeGlyphSprite(BRANCHES[i], BRANCH_COLORS[i], config.glyphBranchScale, i === pillar.branchIndex);
       sprite.name = config.name + "BranchGlyph_" + BRANCHES[i];
       sprite.position.set(config.branchRadius * Math.cos(a), config.branchRadius * Math.sin(a), 0.23 * config.toothScale);
       sprite.userData.nyePart = pillar.slot + "-branch-glyph";
