@@ -225,8 +225,8 @@
       camera.lookAt(HOME);
       controls = createPremiumOrbitControls(camera, canvas, THREE);
       controls.target.copy(HOME);
-      controls.setDistanceLimits(10, 185);
-      controls.setInteractionTuning({ rotateSpeed: 0.00040, dampingFactor: 0.042, zoomStep: 0.045, maxEventDelta: 0.010 });
+      controls.setDistanceLimits(6.5, 200);
+      controls.setInteractionTuning({ rotateSpeed: 0.00050, dampingFactor: 0.042, zoomStep: 0.045, maxEventDelta: 0.014 });
       entranceUntil = performance.now() + 4600;
     } else { camera.position.set(0, 0, 60); }
 
@@ -598,14 +598,17 @@
         // calm pocket in the embers around the orrery
         deepFusion.uniforms.uClearInner.value = 42.0;
         deepFusion.uniforms.uClearOuter.value = 96.0;
-        // the pillar readouts (月·庚子 / 日·庚午 / 时·甲申) and the ACTIVE ring glyphs are
-        // instrument text — they read through the planets, never occluded
-        nyeArmature.group.traverse(function (o) {
-          if (!o.isSprite || !o.material) return;
-          var isReadout = o.name && /Readout$/.test(o.name);
-          var isActiveGlyph = o.userData && o.userData.baseOpacity >= 0.9;
-          if (isReadout || isActiveGlyph) { o.material.depthTest = false; o.renderOrder = isReadout ? 30 : 25; o.material.needsUpdate = true; }
-        });
+        /* 月柱大环与地月系在空间上分开(而不是让文字透视压在足迹上):
+           lift the month gear-plane + orbit trace off the Earth along the ecliptic
+           normal — ring and 庚子 read clear, the footprint on the globe stays untouched */
+        var eclPlane = nyeArmature.group.getObjectByName("MonthEclipticGearPlane");
+        var orbTrace = nyeArmature.group.getObjectByName("EarthOrbitTrace");
+        if (eclPlane) {
+          var eclN = new THREE.Vector3(0, 0, 1).applyQuaternion(eclPlane.quaternion).normalize();
+          eclPlane.position.addScaledVector(eclN, 3.1);
+          if (orbTrace) orbTrace.position.addScaledVector(eclN, 3.1);
+          nyeArmature.group.updateMatrixWorld(true);
+        }
         dressEarth(earthGrpRef);
         tryAlignChart();
         window.__space.nye = nyeArmature;
@@ -682,7 +685,7 @@
         _pm.set(0, 0, 0).addScaledVector(_pr, -dx * k).addScaledVector(_pu, dy * k);
         var nt = controls.target.clone().add(_pm);
         var dHome = nt.clone().sub(HOME);
-        if (dHome.length() > 36) { dHome.setLength(36); nt.copy(HOME).add(dHome); _pm.copy(nt).sub(controls.target); }
+        if (dHome.length() > 150) { dHome.setLength(150); nt.copy(HOME).add(dHome); _pm.copy(nt).sub(controls.target); }
         controls.target.copy(nt); camera.position.add(_pm);
       }, true);
       addEventListener("pointerup", function () { panOn = false; });
@@ -693,6 +696,7 @@
       function glideToBody(objName, distCap) {
         var obj = nyeArmature.group.getObjectByName(objName); if (!obj) return;
         var w = obj.getWorldPosition(new THREE.Vector3());
+        glide.targetTo = w.clone();                    // 点哪个天体,就绕哪个天体转
         var cur = camera.position.clone().sub(controls.target).normalize();
         var des = w.clone().sub(controls.target).normalize().negate();   // stand opposite → the body fills the gaze
         var dot = Math.max(-1, Math.min(1, cur.dot(des)));
@@ -723,6 +727,7 @@
             glideToBody("NyeMoon", 70);
           } else if (pick === "earth") {
             glide.axis = null; glide.step = 0; glide.frames = 30; glide.distTarget = 17;
+            glide.targetTo = new THREE.Vector3(0, 0, 0);      // orbit the Earth itself
           }
           e.stopImmediatePropagation();
           return;
@@ -750,13 +755,15 @@
         }
         // guided glide after clicking a body (any touch cancels)
         if (glide.frames > 0) {
+          if (glide.targetTo) { var dT = glide.targetTo.clone().sub(controls.target).multiplyScalar(0.12); controls.target.add(dT); camera.position.add(dT); }
           if (glide.axis) controls.rotateWorld(glide.axis, glide.step);
           if (glide.distTarget) { var rg = controls.getRadius(); controls.setRadius(rg + (glide.distTarget - rg) * 0.12); }
           glide.frames--;
+          if (glide.frames === 0) glide.targetTo = null;
         }
         // after 12s of stillness the world turns slowly on its own; manual always wins
-        if (userMoved && nowMs - lastTouch > 12000 && glide.frames === 0) controls.rotateWorld(UP_Y, 0.00022);
-        if (!userMoved && nowMs >= entranceUntil) controls.rotateWorld(UP_Y, 0.00022);
+        if (userMoved && nowMs - lastTouch > 20000 && glide.frames === 0) controls.rotateWorld(camera.up, 0.00018);
+        if (!userMoved && nowMs >= entranceUntil) controls.rotateWorld(camera.up, 0.00018);
         controls.update();
       } else if (COSMOS) {
         /* unreachable guard */
