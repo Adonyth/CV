@@ -217,6 +217,9 @@
 
     var controls = null;
     var fieldEl2 = document.getElementById("field"), fmT2 = 0;
+    /* parallax lock: project a world-fixed far point; its per-frame screen delta is
+       handed to the 2D star-sky so BOTH layers turn as ONE celestial sphere */
+    var _refFar = null, _refPrev = { x: 0, y: 0, ok: false };
     var HOME = new THREE.Vector3(0, 0, 0), UP_Y = new THREE.Vector3(0, 1, 0);
     var lastTouch = 0, userMoved = false, entranceUntil = 0;
     var glide = { frames: 0, axis: null, step: 0, distTarget: 0 };
@@ -773,6 +776,17 @@
         if (userMoved && nowMs - lastTouch > 20000 && glide.frames === 0) controls.rotateWorld(camera.up, 0.00018);
         if (!userMoved && nowMs >= entranceUntil) controls.rotateWorld(camera.up, 0.00018);
         controls.update();
+        if (!_refFar) _refFar = new THREE.Vector3();
+        _refFar.set(0, 0, -800).project(camera);
+        if (_refFar.z < 1 && isFinite(_refFar.x)) {
+          var rsx = (_refFar.x * 0.5 + 0.5) * innerWidth, rsy = (-_refFar.y * 0.5 + 0.5) * innerHeight;
+          if (_refPrev.ok) {
+            var pdx = rsx - _refPrev.x, pdy = rsy - _refPrev.y;
+            if (Math.abs(pdx) < 140 && Math.abs(pdy) < 140) window.__viewDelta = { x: pdx, y: pdy };
+            else window.__viewDelta = null;
+          }
+          _refPrev.x = rsx; _refPrev.y = rsy; _refPrev.ok = true;
+        } else { _refPrev.ok = false; window.__viewDelta = null; }
         if (fieldEl2 && (fmT2 = (fmT2 + 1) % 12) === 0) {
           var rr2 = controls.getRadius();
           fieldEl2.style.opacity = (0.5 + 0.28 * Math.max(0, Math.min(1, (rr2 - 90) / 320))).toFixed(2);

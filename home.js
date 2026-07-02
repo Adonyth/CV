@@ -97,12 +97,21 @@
   function R(a, b) { return a + Math.random() * (b - a); }
   function isDark() { return root.getAttribute("data-theme") === "dark"; }
   function spawnAmb(p) {
-    p.x = Math.random() * W; p.y = Math.random() * H; p.spd = R(0.4, 1.25); p.hue = Math.random();
+    p.x = Math.random() * W; p.y = Math.random() * H; p.hue = Math.random();
+    if (STARMODE) {
+      // distant stars: near-still, sparse embers, tight cores — the depth comes
+      // from the parallax lock, the life from twinkle and YOUR hand (jets/bursts full-strength)
+      p.spd = R(0.06, 0.3);
+      p.ember = Math.random() < 0.12; p.spark = Math.random() < 0.06;
+      p.size = p.ember ? R(1.5, 2.5) : R(0.8, 1.7); p.baseA = p.ember ? R(0.5, 0.8) : R(0.30, 0.6);
+      return;
+    }
+    p.spd = R(0.4, 1.25);
     p.ember = Math.random() < 0.22; p.spark = Math.random() < 0.06;
     p.size = p.ember ? R(1.9, 3.2) : R(1.0, 2.1); p.baseA = p.ember ? R(0.62, 0.92) : R(0.40, 0.72);
   }
   function build() {
-    var n = Math.floor(W * H / 240); n = Math.min(5200, n); NJ = Math.floor(W * H / 700); NJ = Math.min(1800, NJ);
+    var n = Math.floor(W * H / (STARMODE ? 400 : 240)); n = Math.min(5200, n); NJ = Math.floor(W * H / 700); NJ = Math.min(1800, NJ);
     if (W < 700) { n = Math.floor(n * 0.5); NJ = Math.floor(NJ * 0.5); }
     amb = []; for (var i = 0; i < n; i++) { var p = {}; spawnAmb(p); amb.push(p); }
     jets = []; for (var j = 0; j < NJ; j++) jets.push({ life: 0 });
@@ -122,7 +131,7 @@
   function staticDraw() {
     var dark = isDark(); ctx.clearRect(0, 0, W, H); ctx.globalCompositeOperation = dark ? "lighter" : "source-over";
     for (var i = 0; i < amb.length; i++) { var p = amb[i], col = coreCol(p, dark);
-      if (p.ember || p.spark) { var gr = p.size * (dark ? 4.2 : 3.4); ctx.globalAlpha = Math.min(0.7, p.baseA * (dark ? 0.85 : 0.55));
+      if (p.ember || p.spark) { var gr = p.size * (STARMODE ? 2.9 : (dark ? 4.2 : 3.4)); ctx.globalAlpha = Math.min(0.7, p.baseA * (dark ? 0.85 : 0.55));
         ctx.drawImage(SPRITE, p.x - gr, p.y - gr, gr * 2, gr * 2); ctx.globalAlpha = 1; }
       ctx.fillStyle = "rgba(" + col + "," + p.baseA + ")"; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, 6.283); ctx.fill(); }
     ctx.globalCompositeOperation = "source-over";
@@ -149,6 +158,9 @@
     if (mAct) { var dx = mx - pmx, dy = my - pmy; mSpeed = Math.hypot(dx, dy); if (mSpeed > 0.02) mDir = Math.atan2(dy, dx); pmx = mx; pmy = my; } else mSpeed *= 0.9;
     var dark = isDark(); ctx.clearRect(0, 0, W, H); ctx.globalCompositeOperation = dark ? "lighter" : "source-over";
     if (mAct && mSpeed > 1.0) { var burst = Math.min(22, Math.floor(mSpeed * 0.7) + 1); for (var k = 0; k < burst; k++) emitJet(); }
+    var _vd = (STARMODE && window.__viewDelta) ? window.__viewDelta : null;
+    if (_vd) { for (var vi = 0; vi < amb.length; vi++) { amb[vi].x += _vd.x; amb[vi].y += _vd.y; }
+               for (var vj = 0; vj < jets.length; vj++) { if (jets[vj].life > 0) { jets[vj].x += _vd.x; jets[vj].y += _vd.y; } } }
     for (var i = 0; i < amb.length; i++) { var p = amb[i]; var fa = flow(p.x, p.y);
       var surge = !introOn ? 0 : Math.max(0, 1 - el / STREAM); var sp = p.spd * (1 + 7.0 * surge * surge);
       p.x += Math.cos(fa) * sp + 0.18; p.y += Math.sin(fa) * sp;
@@ -158,7 +170,7 @@
       if (introOn) { var odx = p.x - cx, ody = p.y - cy, od = Math.sqrt(odx * odx + ody * ody), wr = (el / BURST) * maxR;
         if (od > wr) { var s = wr / od; px = cx + odx * s; py = cy + ody * s; front = Math.max(0, 1 - (od - wr) / EDGE); } }
       var col = coreCol(p, dark), a = p.baseA * front * (introOn ? Math.min(1, 0.2 + el / 220) : 1);
-      if (p.ember || p.spark) { var gr = p.size * (dark ? 4.2 : 3.4); ctx.globalAlpha = Math.min(0.7, a * (dark ? 0.85 : 0.55));
+      if (p.ember || p.spark) { var gr = p.size * (STARMODE ? 2.9 : (dark ? 4.2 : 3.4)); ctx.globalAlpha = Math.min(0.7, a * (dark ? 0.85 : 0.55));
         ctx.drawImage(SPRITE, px - gr, py - gr, gr * 2, gr * 2); ctx.globalAlpha = 1; }
       ctx.fillStyle = "rgba(" + col + "," + a + ")"; ctx.beginPath(); ctx.arc(px, py, p.size, 0, 6.283); ctx.fill(); }
     for (var j = 0; j < jets.length; j++) { var q = jets[j]; if (q.life <= 0) continue;
