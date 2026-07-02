@@ -496,5 +496,5 @@ body.to-map .cosmos-legend, body.to-map .cosmos-hint{opacity:0 !important; trans
   transition:opacity .2s ease .12s, transform .2s ease .12s, visibility 0s linear .12s;}
 .cosmos-nav__group:hover .cosmos-nav__head i, .cosmos-nav__group:focus-within .cosmos-nav__head i{opacity:1;}
 .cosmos-nav__group.open .cosmos-nav__head i{opacity:1; transform:rotate(90deg);}
-@media(max-width:1220px){ .cosmos-nav{left:auto; right:16px; transform:none; top:84px;} }
+@media(max-width:1360px){ .cosmos-nav{left:auto; right:16px; transform:none; top:84px;} }
 @media(max-width:900px){ .cosmos-nav{display:none;} }

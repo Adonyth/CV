@@ -640,7 +640,7 @@
       var loc = pageLocale();
       if (natalSky && natalSky.setLocale) natalSky.setLocale(loc);
       if (nyeArmature) nyeArmature.group.traverse(function (o) {
-        if (o.name && /Readout$/.test(o.name)) o.visible = (loc === "zh");
+        if (o.name && /Readout$/.test(o.name)) o.visible = false;   /* legacy nye-clock readout plates — the ring glyphs already say it */
       });
     }
     new MutationObserver(applySceneLocale).observe(root, { attributes: true, attributeFilter: ["class"] });
@@ -753,8 +753,7 @@
           glide.targetTo = new THREE.Vector3(0, 0, 0);
           glide.onDone = openFootprintMap;
         } else if (name === "sun") {
-          glideToBody("NyeSun", 34, 110);
-          if (natalSky) { natalSky.highlight("capricorn", true); setTimeout(function () { natalSky.highlight("capricorn", false); }, 4200); }
+          glideToBody("NyeSun", 34, 110);   /* the sun = the journey (履历) anchor */
         } else if (name === "moon") {
           glideToBody("NyeMoon", 9, 110);
           if (natalSky) { natalSky.highlight("leo", true); setTimeout(function () { natalSky.highlight("leo", false); }, 4200); }

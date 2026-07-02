@@ -24,7 +24,7 @@
       href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=24" />
+    <link rel="stylesheet" href="styles.css?v=25" />
     <script>
       (function () {
         try {
@@ -106,29 +106,28 @@
       <span class="i18n-en">drag to orbit · right-drag to pan · scroll to zoom · click the stars, the planets, the Earth</span>
       <span class="i18n-zh">拖动旋转 · 右键平移 · 滚轮缩放 · 点击星星、日月与地球</span>
     </div>
-    <!-- the TOUR bar = the content atlas (CONTENT-TREE.md) projected across the top.
-         Leaves drop straight down; groups can never cover each other. Content groups
-         (研究/人文社科/书籍/履历) return as their planets & pages are built — no button
-         ships before its door exists. -->
-    <nav class="cosmos-nav no-print" aria-label="Site tour — the content atlas">
+    <!-- the NAV bar carries CONTENT CATEGORIES only (研究/履历/创造/足迹 — CONTENT-TREE.md).
+         The chart itself (sun, moon, constellations) is never a menu entry: it is the
+         symbolic UI, clicked in the scene. Leaves land here as their pages are built. -->
+    <nav class="cosmos-nav no-print" aria-label="Site navigation — the content atlas">
       <div class="cosmos-nav__group">
-        <button type="button" class="cosmos-nav__head" data-magnet><span class="i18n-en">The Chart</span><span class="i18n-zh">命盘</span><i>▸</i></button>
+        <button type="button" class="cosmos-nav__head" data-magnet><span class="i18n-en">Research</span><span class="i18n-zh">研究</span><i>▸</i></button>
         <div class="cosmos-nav__kids">
-          <button type="button" data-tour="pillars" data-magnet><span class="i18n-en">Birth pillars</span><span class="i18n-zh">生辰四柱</span></button>
-          <button type="button" data-tour="zodiac" data-magnet><span class="i18n-en">Zodiac mandala</span><span class="i18n-zh">星座全图</span></button>
-          <button type="button" data-tour="sun" data-magnet><span class="i18n-en">Sun · Capricorn</span><span class="i18n-zh">太阳与摩羯</span></button>
-          <button type="button" data-tour="moon" data-magnet><span class="i18n-en">Moon · Leo</span><span class="i18n-zh">月亮与狮子</span></button>
+          <button type="button" data-tour="star:capricorn" data-magnet><span class="i18n-en">Sciences</span><span class="i18n-zh">科学研究</span></button>
+          <!-- 人文社科 Humanities & social science — lands with Saturn/Gemini and its pages -->
         </div>
       </div>
+      <button type="button" data-tour="sun" data-magnet><span class="i18n-en">Journey</span><span class="i18n-zh">履历</span></button>
       <div class="cosmos-nav__group">
-        <button type="button" class="cosmos-nav__head" data-magnet><span class="i18n-en">Products</span><span class="i18n-zh">产品</span><i>▸</i></button>
+        <button type="button" class="cosmos-nav__head" data-magnet><span class="i18n-en">Creation</span><span class="i18n-zh">创造</span><i>▸</i></button>
         <div class="cosmos-nav__kids">
+          <!-- 著作 Books (Jupiter/Cancer) and 音乐 Music (Chinese orchestra · gamelan · guqin) land with their pages -->
           <a href="https://omyteaai.com" target="_blank" rel="noopener" data-magnet><span class="i18n-en">Omytea ↗</span><span class="i18n-zh">Omytea ↗</span></a>
           <a href="https://nyeclock.pages.dev" target="_blank" rel="noopener" data-magnet><span class="i18n-en">Nye Clock ↗</span><span class="i18n-zh">弐时仪 ↗</span></a>
         </div>
       </div>
-      <button type="button" data-tour="footprint" data-magnet><span class="i18n-en">⊕ Footprint</span><span class="i18n-zh">⊕ 足迹地图</span></button>
-      <a href="cv.html" class="cosmos-nav__cv" data-magnet><span class="i18n-en">Curriculum Vitae ↗</span><span class="i18n-zh">完整履历 ↗</span></a>
+      <button type="button" data-tour="footprint" data-magnet><span class="i18n-en">⊕ Footprint</span><span class="i18n-zh">⊕ 足迹</span></button>
+      <a href="cv.html" class="cosmos-nav__cv" data-magnet><span class="i18n-en">CV ↗</span><span class="i18n-zh">完整履历 ↗</span></a>
     </nav>
 
     <!-- hovering the Earth summons this doorway (positioned & shown by space.js) -->
@@ -137,7 +136,7 @@
     </button>
 
     <!-- visible build stamp — so "which version am I seeing" is never a mystery again -->
-    <div class="cosmos-build no-print" aria-hidden="true">build 30 · 07-02</div>
+    <div class="cosmos-build no-print" aria-hidden="true">build 31 · 07-02</div>
 
     <!-- fallback when 3D is gated off (mobile / low power / reduced motion) -->
     <div class="cosmos-flat no-print" id="cosmos-flat" hidden>
@@ -149,6 +148,6 @@
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
     <script src="home.js?v=5" defer></script>
     <script src="magnet.js?v=1" defer></script>
-    <script type="module" src="space.js?v=27"></script>
+    <script type="module" src="space.js?v=28"></script>
   </body>
 </html>
