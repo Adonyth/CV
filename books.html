@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh" class="locale-zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#0b0a09" />
+  <title>Books</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root{ --page:#0b0a09; --ink:#f4f0e8; --body:#bdb6a8; --muted:#8a8276;
+           --accent:#e0876a; --gold:#e8c37a; --hairline:rgba(255,255,255,.10);
+           --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+           --serif:"Newsreader",Georgia,"Songti SC",serif; }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:var(--page); color:var(--body); font-family:var(--serif);
+         -webkit-font-smoothing:antialiased; overflow-x:hidden; min-height:100vh;}
+    .locale-en .i18n-zh{display:none!important;} .locale-zh .i18n-en{display:none!important;}
+    a{color:inherit;text-decoration:none;}
+    .chrome{position:fixed; top:18px; left:18px; right:18px; z-index:10; display:flex; justify-content:space-between; pointer-events:none;}
+    .chrome > *{pointer-events:auto;}
+    .backs{display:flex; gap:8px;}
+    .map-back{display:inline-flex; align-items:center; gap:8px; font-family:var(--mono); font-size:12.5px;
+      letter-spacing:.06em; color:var(--ink); background:rgba(11,10,9,.72); border:1px solid rgba(255,255,255,.14);
+      border-radius:999px; padding:9px 16px; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);}
+    .map-back:hover{color:var(--accent); border-color:var(--accent);}
+    .lang{display:inline-flex; padding:3px; border-radius:999px; border:1px solid var(--hairline);
+      background:rgba(11,10,9,.72); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); height:fit-content;}
+    .lang button{border:none; background:transparent; color:var(--muted); font-family:var(--mono);
+      font-size:12px; padding:6px 11px; border-radius:999px; cursor:pointer; line-height:1;}
+    .lang button[aria-pressed="true"]{background:var(--accent); color:#fff;}
+    .stamp{position:fixed; right:20px; bottom:8px; z-index:10; font-family:var(--mono); font-size:10px;
+      color:var(--muted); opacity:.55; pointer-events:none;}
+    main{max-width:760px; margin:0 auto; padding:120px 24px 90px;}
+    .eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.22em; color:var(--gold); text-transform:uppercase;}
+    h1{font-size:clamp(26px,4.4vw,40px); font-weight:500; color:var(--ink); line-height:1.22; margin:14px 0 16px; letter-spacing:.005em;}
+    .meta{font-family:var(--mono); font-size:12px; color:var(--muted); letter-spacing:.06em; line-height:2;}
+    .meta b{color:var(--accent); font-weight:500;}
+    .rule{height:1px; background:linear-gradient(to right, rgba(232,195,122,.4), transparent); margin:26px 0 28px;}
+    .desc p{font-size:16.5px; line-height:1.78; margin-bottom:16px; max-width:64ch;}
+    .locale-zh .desc p{line-height:1.9;}
+    .links{margin-top:34px; display:flex; flex-wrap:wrap; gap:10px;}
+    .links a{font-family:var(--mono); font-size:12.5px; letter-spacing:.05em; color:var(--ink);
+      border:1px solid rgba(255,255,255,.16); border-radius:999px; padding:9px 16px;}
+    .links a:hover{color:var(--accent); border-color:var(--accent);}
+    .skyline{margin-top:44px; font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:.14em; opacity:.75;}
+    /* index list */
+    .lede{font-size:16px; line-height:1.75; margin:14px 0 8px; max-width:62ch;}
+    .toc{margin-top:34px; display:flex; flex-direction:column;}
+    .toc a{display:block; padding:20px 2px; border-bottom:1px solid rgba(255,255,255,.07);}
+    .toc a:hover .t{color:var(--accent);}
+    .toc .t{font-size:19px; color:var(--ink); line-height:1.35; transition:color .2s;}
+    .toc .m{font-family:var(--mono); font-size:11.5px; color:var(--muted); letter-spacing:.06em; margin-top:6px;}
+    .toc .d{font-size:14.5px; color:var(--body); margin-top:6px; line-height:1.6; max-width:60ch;}
+</style>
+</head>
+<body>
+  <div class="chrome">
+    <div class="backs"><a class="map-back" data-magnet href="index.html">⟵ <span>星盘 · Orrery</span></a></div>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" id="btn-en">EN</button>
+      <button type="button" id="btn-zh">中文</button>
+    </div>
+  </div>
+  <main>
+    <div class="eyebrow"><span class="i18n-en">CREATION · BOOKS</span><span class="i18n-zh">创造 · 著作</span></div>
+    <h1><span class="i18n-en">Books</span><span class="i18n-zh">书籍著作</span> <span style="font-family:var(--mono);font-size:15px;color:var(--muted);vertical-align:middle;">· 2</span></h1>
+    <p class="lede"><span class="i18n-en">Two volumes under the publisher's star: Jupiter stood at opposition in Cancer the night of birth.</span><span class="i18n-zh">出版之星下的两部书:出生当夜,木星在巨蟹座正值冲日。</span></p>
+    <div class="toc">
+      <a href="books/invitation.html" data-magnet>
+        <div class="t"><span class="i18n-en">An Invitation After Abundance: Reading the Present, Wagering the Future</span><span class="i18n-zh">An Invitation After Abundance:读现在,赌未来</span></div>
+        <div class="m">2026 · <span class="i18n-en">Publish-ready</span><span class="i18n-zh">成书 · 待出版</span></div>
+        <div class="d"><span class="i18n-en">A political-economy volume: reading the present and wagering the future — technology, power, and institutions after abundance.</span><span class="i18n-zh">一部政治经济学专著:读现在,赌未来——富足之后的技术、权力与制度。</span></div>
+      </a>
+      <a href="books/sovereign.html" data-magnet>
+        <div class="t"><span class="i18n-en">Sovereign Scintillation Over Grand Fluctuation: An Observer-State Theory of Physics</span><span class="i18n-zh">Sovereign Scintillation Over Grand Fluctuation:观察者态物理理论</span></div>
+        <div class="m">2024 — 2026 · <span class="i18n-en">In manuscript (unpublished)</span><span class="i18n-zh">成稿中 · 未出版</span></div>
+        <div class="d"><span class="i18n-en">A single-volume framework: observer self-states plus a universal-prior-weighted transition rule as primitives, asking what physics — locality, modular flow, the Born rule — does and does not follow.</span><span class="i18n-zh">单卷本框架专著:以观察者自态与通用先验加权的转移规则为原语,追问物理——局域性、模流、玻恩规则——什么能从中导出,什么不能。</span></div>
+      </a>
+    </div>
+    <div class="skyline">✦ <span class="i18n-en">Cancer — where Jupiter stood</span><span class="i18n-zh">巨蟹座 · 木星所在</span></div>
+  </main>
+  <div class="stamp">build 34 · 07-02</div>
+  <script src="magnet.js?v=1"></script>
+  <script>
+    (function () {
+      var root = document.documentElement;
+      function apply(loc) {
+        root.className = "locale-" + loc; root.lang = loc === "zh" ? "zh" : "en";
+        document.getElementById("btn-en").setAttribute("aria-pressed", loc === "en" ? "true" : "false");
+        document.getElementById("btn-zh").setAttribute("aria-pressed", loc === "zh" ? "true" : "false");
+        try { localStorage.setItem("cv-locale", loc); } catch (e) {}
+      }
+      var saved = null; try { saved = localStorage.getItem("cv-locale"); } catch (e) {}
+      apply(saved === "en" ? "en" : "zh");
+      document.getElementById("btn-en").addEventListener("click", function () { apply("en"); });
+      document.getElementById("btn-zh").addEventListener("click", function () { apply("zh"); });
+    })();
+</script>
+</body>
+</html>

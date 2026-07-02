@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh" class="locale-zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#0b0a09" />
+  <title>In-Beam γ-ray Spectroscopy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root{ --page:#0b0a09; --ink:#f4f0e8; --body:#bdb6a8; --muted:#8a8276;
+           --accent:#e0876a; --gold:#e8c37a; --hairline:rgba(255,255,255,.10);
+           --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+           --serif:"Newsreader",Georgia,"Songti SC",serif; }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:var(--page); color:var(--body); font-family:var(--serif);
+         -webkit-font-smoothing:antialiased; overflow-x:hidden; min-height:100vh;}
+    .locale-en .i18n-zh{display:none!important;} .locale-zh .i18n-en{display:none!important;}
+    a{color:inherit;text-decoration:none;}
+    .chrome{position:fixed; top:18px; left:18px; right:18px; z-index:10; display:flex; justify-content:space-between; pointer-events:none;}
+    .chrome > *{pointer-events:auto;}
+    .backs{display:flex; gap:8px;}
+    .map-back{display:inline-flex; align-items:center; gap:8px; font-family:var(--mono); font-size:12.5px;
+      letter-spacing:.06em; color:var(--ink); background:rgba(11,10,9,.72); border:1px solid rgba(255,255,255,.14);
+      border-radius:999px; padding:9px 16px; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);}
+    .map-back:hover{color:var(--accent); border-color:var(--accent);}
+    .lang{display:inline-flex; padding:3px; border-radius:999px; border:1px solid var(--hairline);
+      background:rgba(11,10,9,.72); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); height:fit-content;}
+    .lang button{border:none; background:transparent; color:var(--muted); font-family:var(--mono);
+      font-size:12px; padding:6px 11px; border-radius:999px; cursor:pointer; line-height:1;}
+    .lang button[aria-pressed="true"]{background:var(--accent); color:#fff;}
+    .stamp{position:fixed; right:20px; bottom:8px; z-index:10; font-family:var(--mono); font-size:10px;
+      color:var(--muted); opacity:.55; pointer-events:none;}
+    main{max-width:760px; margin:0 auto; padding:120px 24px 90px;}
+    .eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.22em; color:var(--gold); text-transform:uppercase;}
+    h1{font-size:clamp(26px,4.4vw,40px); font-weight:500; color:var(--ink); line-height:1.22; margin:14px 0 16px; letter-spacing:.005em;}
+    .meta{font-family:var(--mono); font-size:12px; color:var(--muted); letter-spacing:.06em; line-height:2;}
+    .meta b{color:var(--accent); font-weight:500;}
+    .rule{height:1px; background:linear-gradient(to right, rgba(232,195,122,.4), transparent); margin:26px 0 28px;}
+    .desc p{font-size:16.5px; line-height:1.78; margin-bottom:16px; max-width:64ch;}
+    .locale-zh .desc p{line-height:1.9;}
+    .links{margin-top:34px; display:flex; flex-wrap:wrap; gap:10px;}
+    .links a{font-family:var(--mono); font-size:12.5px; letter-spacing:.05em; color:var(--ink);
+      border:1px solid rgba(255,255,255,.16); border-radius:999px; padding:9px 16px;}
+    .links a:hover{color:var(--accent); border-color:var(--accent);}
+    .skyline{margin-top:44px; font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:.14em; opacity:.75;}
+    /* index list */
+    .lede{font-size:16px; line-height:1.75; margin:14px 0 8px; max-width:62ch;}
+    .toc{margin-top:34px; display:flex; flex-direction:column;}
+    .toc a{display:block; padding:20px 2px; border-bottom:1px solid rgba(255,255,255,.07);}
+    .toc a:hover .t{color:var(--accent);}
+    .toc .t{font-size:19px; color:var(--ink); line-height:1.35; transition:color .2s;}
+    .toc .m{font-family:var(--mono); font-size:11.5px; color:var(--muted); letter-spacing:.06em; margin-top:6px;}
+    .toc .d{font-size:14.5px; color:var(--body); margin-top:6px; line-height:1.6; max-width:60ch;}
+</style>
+</head>
+<body>
+  <div class="chrome">
+    <div class="backs"><a class="map-back" data-magnet href="../index.html">⟵ <span>星盘 · Orrery</span></a><a class="map-back" data-magnet href="../research.html">⟵ <span><span class="i18n-en">Sciences</span><span class="i18n-zh">科学研究</span></span></a></div>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" id="btn-en">EN</button>
+      <button type="button" id="btn-zh">中文</button>
+    </div>
+  </div>
+  <main>
+    <div class="eyebrow"><span class="i18n-en">RESEARCH · SCIENCES</span><span class="i18n-zh">研究 · 科学研究</span></div>
+    <h1><span class="i18n-en">In-Beam γ-ray Spectroscopy</span><span class="i18n-zh">在束 γ 射线能谱学</span></h1>
+    <div class="meta"><b>2022</b> · <span class="i18n-en">Shandong University (Weihai) · undergraduate research</span><span class="i18n-zh">山东大学(威海)· 本科研究</span><br/><span class="i18n-en">Completed</span><span class="i18n-zh">已完成</span></div>
+    <div class="rule"></div>
+    <div class="desc"><p><span class="i18n-en">Nuclear physics: analyzing γ spectra from α-induced reactions, gating on energy matrices to identify residual nuclides.</span><span class="i18n-zh">核物理研究:分析 α 粒子轰击后的 γ 能谱,以能量矩阵开窗鉴别剩余核素。</span></p></div>
+    
+    <div class="skyline">✦ <span class="i18n-en">Capricornus — the outward word</span><span class="i18n-zh">摩羯座 · 主外之言</span></div>
+  </main>
+  <div class="stamp">build 34 · 07-02</div>
+  <script src="../magnet.js?v=1"></script>
+  <script>
+    (function () {
+      var root = document.documentElement;
+      function apply(loc) {
+        root.className = "locale-" + loc; root.lang = loc === "zh" ? "zh" : "en";
+        document.getElementById("btn-en").setAttribute("aria-pressed", loc === "en" ? "true" : "false");
+        document.getElementById("btn-zh").setAttribute("aria-pressed", loc === "zh" ? "true" : "false");
+        try { localStorage.setItem("cv-locale", loc); } catch (e) {}
+      }
+      var saved = null; try { saved = localStorage.getItem("cv-locale"); } catch (e) {}
+      apply(saved === "en" ? "en" : "zh");
+      document.getElementById("btn-en").addEventListener("click", function () { apply("en"); });
+      document.getElementById("btn-zh").addEventListener("click", function () { apply("zh"); });
+    })();
+</script>
+</body>
+</html>

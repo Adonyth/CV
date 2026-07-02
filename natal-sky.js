@@ -147,7 +147,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   var lineEntries = [];  // { mat, base }  indexed by constellation
   var lineByCon = {};
   var totalSegs = 0;
-  var isDark = true, hlSet = {}, hoverCon = -1;
+  var isDark = true, hlSet = {}, hoverCon = -1, conClickCb = null;
   cons.forEach(function (c, ci) {
     var segs = [];
     c.figureLines.forEach(function (seg) {
@@ -405,8 +405,14 @@ export function buildNatalSky(THREE, scene, data, opts) {
       if (idx >= 0) { tip.style.left = e.clientX + "px"; tip.style.top = e.clientY + "px"; }
     };
     onClick = function (e) {
-      var idx = pick(e.clientX, e.clientY).node;
-      if (idx < 0) return;
+      var pk2 = pick(e.clientX, e.clientY);
+      var idx = pk2.node;
+      if (idx < 0) {
+        // a click on the constellation itself (not a work-star): hand it to the host —
+        // every element has the right to become the pivot
+        if (pk2.con >= 0 && conClickCb) conClickCb(cons[pk2.con].id);
+        return;
+      }
       var href = nodeIndex[idx].node.href;
       if (href && href.charAt(0) === "#") { var t = document.querySelector(href); if (t) { t.scrollIntoView({ behavior: "smooth", block: "start" }); } }
       else if (href) { location.href = href; }
@@ -473,6 +479,11 @@ export function buildNatalSky(THREE, scene, data, opts) {
     },
     group: group,
     bodyGroup: bodyGroup,
+    getConCentroid: function (id) {
+      var ci = lineByCon[id]; if (ci == null || !conCentroid[ci]) return null;
+      return belt.localToWorld(conCentroid[ci].clone());
+    },
+    onConstellationClick: function (cb) { conClickCb = cb; },
     setVisible: function (v) {
       group.visible = !!v;
       if (!v) { hoverCon = -1; if (tip) { tip.style.opacity = "0"; hovered = -1; document.body.style.cursor = ""; } }

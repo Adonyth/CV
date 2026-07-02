@@ -649,8 +649,8 @@
     // the natal sphere holds STILL around the world (the chart is a fact, not weather);
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
-    fetch("data/natal-sky.json?v=4").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=15").then(function (mod) {
+    fetch("data/natal-sky.json?v=5").then(function (r) { return r.json(); }).then(function (natalData) {
+      return import("./natal-sky.js?v=16").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 205 : 372,
@@ -659,6 +659,7 @@
         });
         natalSky.applyTheme(root.getAttribute("data-theme") === "dark");
         window.__space.natal = natalSky;
+        if (natalSky.onConstellationClick) natalSky.onConstellationClick(function (cid) { window.__space.focusCon(cid); });
         window.__space.natalStats = natalSky.stats;
         tryAlignChart();
         applySceneLocale();
@@ -794,20 +795,8 @@
           glide.camTo = HOME.clone().add(hDir.multiplyScalar(name === "pillars" ? 92 : 390));
           glide.axis = null; glide.step = 0; glide.distTarget = 0;
           glide.frames = name === "pillars" ? 90 : 110;
-        } else if (name === "star:capricorn" || name === "star:leo") {
-          /* travel to face the constellation (the Sun stands in Capricorn, the Moon in Leo),
-             bloom it, then walk through to the linked record */
-          var pid = (name === "star:capricorn") ? "sun" : "moon";
-          var cid = (name === "star:capricorn") ? "capricorn" : "leo";
-          if (natalSky && natalSky.getPlanetDir) {
-            var cdir = natalSky.getPlanetDir(pid);
-            if (cdir) {
-              glide.targetTo = HOME.clone();
-              glide.camTo = HOME.clone().sub(cdir.multiplyScalar(130));   // stand opposite, gaze through home to the sign
-              glide.axis = null; glide.step = 0; glide.distTarget = 0; glide.frames = 110;
-            }
-            natalSky.highlight(cid, true); setTimeout(function () { natalSky.highlight(cid, false); }, 4600);
-          }
+        } else if (name && name.indexOf("star:") === 0) {
+          focusConstellation(name.slice(5), 110);
         }
         if (href) glide.onDone = function () { setTimeout(function () { location.href = href; }, 600); };
       };
@@ -887,6 +876,21 @@
         glide.axis = null; glide.step = 0; glide.distTarget = 0;
         glide.frames = nFrames || 42;
       }
+      /* any constellation becomes the pivot: stand INSIDE the belt looking outward,
+         so the Earth, the Sun and the rings are all BEHIND the camera — nothing can veil it */
+      function focusConstellation(id, nFrames) {
+        if (!natalSky || !natalSky.getConCentroid) return;
+        var c = natalSky.getConCentroid(id); if (!c) return;
+        var dir = c.clone().normalize();
+        glide.targetTo = c.clone();
+        glide.camTo = c.clone().sub(dir.multiplyScalar(85));
+        glide.axis = null; glide.step = 0; glide.distTarget = 0;
+        glide.frames = nFrames || 110;
+        soloBody = null;
+        natalSky.highlight(id, true); setTimeout(function () { natalSky.highlight(id, false); }, 4200);
+      }
+      window.__space.focusCon = focusConstellation;
+
       addEventListener("click", function (e) {
         if (e.target !== canvas) return;              // DOM buttons/links are none of our business
         if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 6) {

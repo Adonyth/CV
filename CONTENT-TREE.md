@@ -85,10 +85,14 @@
 1. ✅ journey.html(build 32)→ 履历按钮到站开门 + 太阳 hover CTA
 2. ✅ 木星+土星入盘(build 33:黄经/黄纬精确落位、临边变暗条纹、土星环+卡西尼缝、
    scene 点击即巡航、tour('jupiter'/'saturn') 独显隐环;木星与太阳实测点积 −1.000 正冲)
-3. 摩羯座重排 18 颗研究星 → research/<id>.html 逐题
-4. 双子 3 题、巨蟹 2 本接线
-5. 狮子座:产品星直接外链 + 音乐星(待用户提供素材)→ music.html
-6. 每步:星点 href 转正 → 导览回填 → 行星 hover CTA 接线
+3. ✅ 摩羯 18 星重排 + 全部 28 星点接线(build 34):18 研究星→research/<id>.html,
+   双子 3 星→humanities/,巨蟹 2 星→books/,狮子 5 星→产品官方直链+music.html
+4. ✅ 23 个独立内容页 + 3 索引页(scripts/gen-works.py ← data/works.json)+ music.html;
+   journey.html 收敛为纯求学履历(研究经历移入研究类)
+5. ✅ 导览四分类全量接口(研究[科学18/人文社科3]/履历/创造[著作2/音乐/产品2]/足迹+CV)
+6. ✅ 任意元素可为旋转中心:focusConstellation(点击星座本体即聚焦,枢轴=星座质心,
+   相机站带内向外看——日/地/环全在身后,结构性不可遮挡);天体点击枢轴随行(build 33)
+7. 待:行星 hover CTA 扩展(木星→books.html/土星→humanities.html);音乐素材细化
 
 ## 五、当前状态(build 31)
 

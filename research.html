@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh" class="locale-zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#0b0a09" />
+  <title>Sciences</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root{ --page:#0b0a09; --ink:#f4f0e8; --body:#bdb6a8; --muted:#8a8276;
+           --accent:#e0876a; --gold:#e8c37a; --hairline:rgba(255,255,255,.10);
+           --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+           --serif:"Newsreader",Georgia,"Songti SC",serif; }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:var(--page); color:var(--body); font-family:var(--serif);
+         -webkit-font-smoothing:antialiased; overflow-x:hidden; min-height:100vh;}
+    .locale-en .i18n-zh{display:none!important;} .locale-zh .i18n-en{display:none!important;}
+    a{color:inherit;text-decoration:none;}
+    .chrome{position:fixed; top:18px; left:18px; right:18px; z-index:10; display:flex; justify-content:space-between; pointer-events:none;}
+    .chrome > *{pointer-events:auto;}
+    .backs{display:flex; gap:8px;}
+    .map-back{display:inline-flex; align-items:center; gap:8px; font-family:var(--mono); font-size:12.5px;
+      letter-spacing:.06em; color:var(--ink); background:rgba(11,10,9,.72); border:1px solid rgba(255,255,255,.14);
+      border-radius:999px; padding:9px 16px; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);}
+    .map-back:hover{color:var(--accent); border-color:var(--accent);}
+    .lang{display:inline-flex; padding:3px; border-radius:999px; border:1px solid var(--hairline);
+      background:rgba(11,10,9,.72); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); height:fit-content;}
+    .lang button{border:none; background:transparent; color:var(--muted); font-family:var(--mono);
+      font-size:12px; padding:6px 11px; border-radius:999px; cursor:pointer; line-height:1;}
+    .lang button[aria-pressed="true"]{background:var(--accent); color:#fff;}
+    .stamp{position:fixed; right:20px; bottom:8px; z-index:10; font-family:var(--mono); font-size:10px;
+      color:var(--muted); opacity:.55; pointer-events:none;}
+    main{max-width:760px; margin:0 auto; padding:120px 24px 90px;}
+    .eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.22em; color:var(--gold); text-transform:uppercase;}
+    h1{font-size:clamp(26px,4.4vw,40px); font-weight:500; color:var(--ink); line-height:1.22; margin:14px 0 16px; letter-spacing:.005em;}
+    .meta{font-family:var(--mono); font-size:12px; color:var(--muted); letter-spacing:.06em; line-height:2;}
+    .meta b{color:var(--accent); font-weight:500;}
+    .rule{height:1px; background:linear-gradient(to right, rgba(232,195,122,.4), transparent); margin:26px 0 28px;}
+    .desc p{font-size:16.5px; line-height:1.78; margin-bottom:16px; max-width:64ch;}
+    .locale-zh .desc p{line-height:1.9;}
+    .links{margin-top:34px; display:flex; flex-wrap:wrap; gap:10px;}
+    .links a{font-family:var(--mono); font-size:12.5px; letter-spacing:.05em; color:var(--ink);
+      border:1px solid rgba(255,255,255,.16); border-radius:999px; padding:9px 16px;}
+    .links a:hover{color:var(--accent); border-color:var(--accent);}
+    .skyline{margin-top:44px; font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:.14em; opacity:.75;}
+    /* index list */
+    .lede{font-size:16px; line-height:1.75; margin:14px 0 8px; max-width:62ch;}
+    .toc{margin-top:34px; display:flex; flex-direction:column;}
+    .toc a{display:block; padding:20px 2px; border-bottom:1px solid rgba(255,255,255,.07);}
+    .toc a:hover .t{color:var(--accent);}
+    .toc .t{font-size:19px; color:var(--ink); line-height:1.35; transition:color .2s;}
+    .toc .m{font-family:var(--mono); font-size:11.5px; color:var(--muted); letter-spacing:.06em; margin-top:6px;}
+    .toc .d{font-size:14.5px; color:var(--body); margin-top:6px; line-height:1.6; max-width:60ch;}
+</style>
+</head>
+<body>
+  <div class="chrome">
+    <div class="backs"><a class="map-back" data-magnet href="index.html">⟵ <span>星盘 · Orrery</span></a></div>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" id="btn-en">EN</button>
+      <button type="button" id="btn-zh">中文</button>
+    </div>
+  </div>
+  <main>
+    <div class="eyebrow"><span class="i18n-en">RESEARCH · SCIENCES</span><span class="i18n-zh">研究 · 科学研究</span></div>
+    <h1><span class="i18n-en">Sciences</span><span class="i18n-zh">科学研究</span> <span style="font-family:var(--mono);font-size:15px;color:var(--muted);vertical-align:middle;">· 18</span></h1>
+    <p class="lede"><span class="i18n-en">Every topic below is a star in Capricornus — the sun-sign, the outward word. Each opens its own page.</span><span class="i18n-zh">以下每一个课题都是摩羯座中的一颗星——日座,主外之言。每一题各有其页。</span></p>
+    <div class="toc">
+      <a href="research/worldmodel.html" data-magnet>
+        <div class="t"><span class="i18n-en">A Density-Matrix Belief-State World Model</span><span class="i18n-zh">密度矩阵信念态世界模型</span></div>
+        <div class="m">2026 — · <span class="i18n-en">Active research program</span><span class="i18n-zh">研究纲领 · 进行中</span></div>
+        <div class="d"><span class="i18n-en">A quantum-computing × world-model theory line: uncertainty over multiple futures is carried as an open-system density matrix (ρ), evolved by an operator/channel algebra, and revised through a proper-scored, auditable measurement-update ledger.</span><span class="i18n-zh">量子计算×世界模型交叉的理论研究线:以开系统密度矩阵(ρ)承载多重未来的不确定性,由算子/信道代数演化,并通过经正当评分、可审计的测量更新账本进行修正。</span></div>
+      </a>
+      <a href="research/paperA.html" data-magnet>
+        <div class="t"><span class="i18n-en">What an Algorithmic-Idealism Modular Identification Requires: A Foundational Delimitation</span><span class="i18n-zh">算法理想主义的模块化识别需要什么:一个基础性界定</span></div>
+        <div class="m">2026 · <span class="i18n-en">Manuscript in preparation</span><span class="i18n-zh">手稿备稿中</span></div>
+        <div class="d"><span class="i18n-en">Separates the assumptions an algorithmic-idealism reading must pay for a modular identification, and proves a foundational delimitation: which identifications come free, and which demand structural cost.</span><span class="i18n-zh">逐项分离&quot;算法理想主义&quot;作出模块化识别所需付出的假设,并给出基础性界定:哪些识别是免费的,哪些必须付出结构性代价。</span></div>
+      </a>
+      <a href="research/paperB.html" data-magnet>
+        <div class="t"><span class="i18n-en">The Universal Prior Does Not Select a Factorization</span><span class="i18n-zh">通用先验不选出分解</span></div>
+        <div class="m">2026 · <span class="i18n-en">Under journal consideration</span><span class="i18n-zh">投稿轮转中</span></div>
+        <div class="d"><span class="i18n-en">Proves, via a constant-complexity carry-increment recoding witness, that the universal (Solomonoff–Levin) algorithmic prior selects no preferred tensor factorization — and therefore cannot, by itself, supply locality.</span><span class="i18n-zh">借一个常数复杂度的进位递增重编码作为可审计见证,证明通用(Solomonoff–Levin)算法先验不选出任何优先的张量分解——因而其自身无法提供局域性。</span></div>
+      </a>
+      <a href="research/paperB2.html" data-magnet>
+        <div class="t"><span class="i18n-en">A Universal Prior Selects No Preferred Factorization: the Same Cross-Context Gap in Born-Rule Derivations</span><span class="i18n-zh">通用先验不选优先分解:同一跨语境缺口在玻恩规则推导中的复现</span></div>
+        <div class="m">2026 · <span class="i18n-en">Manuscript prepared (SciPost Physics Core)</span><span class="i18n-zh">投稿包已备(SciPost Physics Core)</span></div>
+        <div class="d"><span class="i18n-en">Builds on the locality no-go and maps the same cross-context gap, route by route, across the major derivations of the Born rule — a unified diagnosis of what each derivation quietly assumes.</span><span class="i18n-zh">在局域性 no-go 之上,将同一&quot;跨语境缺口&quot;逐条映射到玻恩规则的各主要推导路线——对每条推导暗中假设了什么,给出统一诊断。</span></div>
+      </a>
+      <a href="research/paperC1.html" data-magnet>
+        <div class="t"><span class="i18n-en">Boltzmann Brains under an Observer-State Ontology</span><span class="i18n-zh">观察者态本体论下的玻尔兹曼大脑</span></div>
+        <div class="m">2026 · <span class="i18n-en">In preparation (Synthese track)</span><span class="i18n-zh">撰写中(Synthese 方向)</span></div>
+        <div class="d"><span class="i18n-en">Re-examines the Boltzmann-brain problem in an observer-state framework: measure, typicality, and what self-locating evidence can and cannot license.</span><span class="i18n-zh">在观察者态框架下重审玻尔兹曼大脑问题:测度、典型性,以及自定位证据能许可什么、不能许可什么。</span></div>
+      </a>
+      <a href="research/paperC2.html" data-magnet>
+        <div class="t"><span class="i18n-en">Other Minds under an Observer-State Ontology</span><span class="i18n-zh">观察者态本体论下的他心问题</span></div>
+        <div class="m">2026 · <span class="i18n-en">In preparation (Synthese track)</span><span class="i18n-zh">撰写中(Synthese 方向)</span></div>
+        <div class="d"><span class="i18n-en">The other-minds question inside a single-observer ontology: under what conditions multi-observer consistency can be recovered.</span><span class="i18n-zh">单观察者本体论中的他心问题:在什么条件下可以恢复多观察者一致性。</span></div>
+      </a>
+      <a href="research/paperD.html" data-magnet>
+        <div class="t"><span class="i18n-en">Half-Line Free Fermions: Local CAR and Modular Scaling with a Type-Forced Mass-Axis Obstruction</span><span class="i18n-zh">半直线自由费米子:局域 CAR 与模流标度,及类型强制的质量轴障碍</span></div>
+        <div class="m">2026 · <span class="i18n-en">Submission package ready (AHP)</span><span class="i18n-zh">投稿包就绪(AHP)</span></div>
+        <div class="d"><span class="i18n-en">Along the scaling axis: wavelet-embedded quasi-free states converge in norm on every finite-mode CAR subalgebra, upgraded to local modular-automorphism convergence on the analytic core. Along the mass axis: a type I∞ / III₁ incompatibility forces the global folium comparison to fail — the obstruction is proved, not conjectured.</span><span class="i18n-zh">标度轴上:经小波嵌入的准自由态在每个有限模 CAR 子代数上范数收敛,并升级为解析核上的局域模自同构收敛;质量轴上:I∞ 与 III₁ 的类型不相容强制全局 folium 比较失败——障碍是被证明的,不是猜想。</span></div>
+      </a>
+      <a href="research/bornNaturalness.html" data-magnet>
+        <div class="t"><span class="i18n-en">Born Rule &amp; Naturalness</span><span class="i18n-zh">玻恩规则与自然性</span></div>
+        <div class="m">2026 — · <span class="i18n-en">Active — capstone track</span><span class="i18n-zh">代表作课题 · 进行中</span></div>
+        <div class="d"><span class="i18n-en">Chases the bridge-obligation through Born-rule derivations: whether a positive minimal-successor construction discharges that obligation or merely relocates it — the make-or-break criterion of the whole line.</span><span class="i18n-zh">追索玻恩规则推导中的&quot;桥接义务&quot;:一个正向的最小后继构造究竟是解除了义务,还是仅仅把它转移了——这条线的成败判据即在于此。</span></div>
+      </a>
+      <a href="research/ringdown.html" data-magnet>
+        <div class="t"><span class="i18n-en">Covariance-Estimator Dependence of Ringdown Overtone Significance: A Coverage-Validated Real-Noise Calibration Standard</span><span class="i18n-zh">铃宕泛音显著性对协方差估计器的依赖:一个经覆盖率验证的真实噪声标定标准</span></div>
+        <div class="m">2026 · <span class="i18n-en">Manuscript prepared (RASTI, OUP/RAS)</span><span class="i18n-zh">投稿包已备(RASTI · OUP/RAS)</span></div>
+        <div class="d"><span class="i18n-en">Shows a black-hole ringdown overtone&#x27;s reported significance can swing by an order of magnitude with the analyst&#x27;s noise-covariance estimator, and introduces a coverage-validated, covariance-choice-independent real-noise calibration standard — demonstrated on GW250114 and GW150914.</span><span class="i18n-zh">证明黑洞铃宕泛音的报告显著性会因分析者所选的噪声协方差估计器而波动一个量级;提出一个经覆盖率验证、与协方差选择无关的真实噪声标定标准,并在 GW250114 与 GW150914 上演示。</span></div>
+      </a>
+      <a href="research/tachyon.html" data-magnet>
+        <div class="t"><span class="i18n-en">Tachyonic Phase-Boundary Classification</span><span class="i18n-zh">快子相边界分类</span></div>
+        <div class="m">2026 — · <span class="i18n-en">Active line, with a formalized finite-window certificate</span><span class="i18n-zh">理论课题 · 进行中,附形式化有限窗口证书线</span></div>
+        <div class="d"><span class="i18n-en">A classification study of tachyonic phase boundaries, carried with a formalized finite-window certificate line — turning &quot;when may one claim the transition&quot; into a checkable criterion.</span><span class="i18n-zh">快子场相边界的分类研究,并携带一条形式化的有限窗口证书线——把&quot;何时可以宣称相变&quot;变成可核查的判据。</span></div>
+      </a>
+      <a href="research/gwPopulation.html" data-magnet>
+        <div class="t"><span class="i18n-en">Feature-Local Significance Certificates for Gravitational-Wave Populations (GWTC-4)</span><span class="i18n-zh">引力波族群特征的特征局域显著性证书(GWTC-4)</span></div>
+        <div class="m">2026 · <span class="i18n-en">In preparation</span><span class="i18n-zh">撰写中</span></div>
+        <div class="d"><span class="i18n-en">Constructs feature-local certificates for the significance of gravitational-wave population features, applied to the GWTC-4 catalog.</span><span class="i18n-zh">为引力波族群特征的显著性构造特征局域证书,并应用于 GWTC-4 目录。</span></div>
+      </a>
+      <a href="research/cmsJets.html" data-magnet>
+        <div class="t"><span class="i18n-en">CMS Jet Physics</span><span class="i18n-zh">CMS 喷流物理</span></div>
+        <div class="m">2024 — 2026 · <span class="i18n-en">Graduate research</span><span class="i18n-zh">研究生研究</span></div>
+        <div class="d"><span class="i18n-en">High-energy experimental physics on CMS jet physics: jet simulation with PYTHIA; jet structure, parton-shower cascades, and beyond-the-Standard-Model signatures in jet topology.</span><span class="i18n-zh">CMS 喷流方向的高能实验物理:使用 PYTHIA 的喷流模拟;喷注结构、部分子级联,以及喷注拓扑中的超出标准模型特征。</span></div>
+      </a>
+      <a href="research/cnt3omega.html" data-magnet>
+        <div class="t"><span class="i18n-en">Unified Theory for 3ω Thermal Characterization: Finite Heater Length and Environmental Coupling</span><span class="i18n-zh">3ω 热学表征的统一理论:有限加热丝长度与环境耦合</span></div>
+        <div class="m">2024 — 2026 · <span class="i18n-en">In preparation</span><span class="i18n-zh">撰写中</span></div>
+        <div class="d"><span class="i18n-en">Condensed-matter thermal transport: 3ω characterization of single-walled carbon nanotubes, contributing to a unified finite-heater 3ω impedance theory with environmental-coupling effects.</span><span class="i18n-zh">凝聚态热输运:单壁碳纳米管的 3ω 表征,参与建立含环境耦合效应的统一有限加热丝 3ω 阻抗理论。</span></div>
+      </a>
+      <a href="research/blazar.html" data-magnet>
+        <div class="t"><span class="i18n-en">Formation Mechanism of Blazar Jets</span><span class="i18n-zh">耀变体喷流的形成机制</span></div>
+        <div class="m">2022 — 2023 · <span class="i18n-en">Conference paper accepted</span><span class="i18n-zh">会议论文已录用</span></div>
+        <div class="d"><span class="i18n-en">Single-author conference paper on the formation mechanism of blazar (AGN) jets, fitting jet power spectra via Blandford–Payne / Blandford–Znajek theory.</span><span class="i18n-zh">单作者会议论文:基于 Blandford–Payne / Blandford–Znajek 理论拟合喷流功率谱,研究耀变体(活动星系核)喷流的形成机制。</span></div>
+      </a>
+      <a href="research/gammaSpec.html" data-magnet>
+        <div class="t"><span class="i18n-en">In-Beam γ-ray Spectroscopy</span><span class="i18n-zh">在束 γ 射线能谱学</span></div>
+        <div class="m">2022 · <span class="i18n-en">Completed</span><span class="i18n-zh">已完成</span></div>
+        <div class="d"><span class="i18n-en">Nuclear physics: analyzing γ spectra from α-induced reactions, gating on energy matrices to identify residual nuclides.</span><span class="i18n-zh">核物理研究:分析 α 粒子轰击后的 γ 能谱,以能量矩阵开窗鉴别剩余核素。</span></div>
+      </a>
+      <a href="research/alpDM.html" data-magnet>
+        <div class="t"><span class="i18n-en">Axion-Like Dark Matter</span><span class="i18n-zh">类轴子暗物质</span></div>
+        <div class="m">2022 · <span class="i18n-en">Completed</span><span class="i18n-zh">已完成</span></div>
+        <div class="d"><span class="i18n-en">Theory / phenomenology of axion-like dark matter: analyzing photon survival probabilities to constrain the parameter space.</span><span class="i18n-zh">类轴子暗物质的理论与唯象研究:分析光子&quot;生存概率&quot;以约束参数空间。</span></div>
+      </a>
+      <a href="research/maxi.html" data-magnet>
+        <div class="t"><span class="i18n-en">MAXI J1348-630 Black-Hole X-ray Binary</span><span class="i18n-zh">MAXI J1348-630 黑洞 X 射线双星</span></div>
+        <div class="m">2023 — 2024 · <span class="i18n-en">Thesis completed</span><span class="i18n-zh">论文已完成</span></div>
+        <div class="d"><span class="i18n-en">Astrophysical data analysis of NICER / NuSTAR observations of the black-hole X-ray binary MAXI J1348-630 — the basis of the undergraduate thesis.</span><span class="i18n-zh">对黑洞 X 射线双星 MAXI J1348-630 的 NICER / NuSTAR 观测进行天体物理数据分析——本科毕业论文的基础。</span></div>
+      </a>
+      <a href="research/toiFlares.html" data-magnet>
+        <div class="t"><span class="i18n-en">TOI Stellar-Flare Spectroscopy</span><span class="i18n-zh">TOI 恒星耀发光谱</span></div>
+        <div class="m">2022 — 2023 · <span class="i18n-en">Completed</span><span class="i18n-zh">已完成</span></div>
+        <div class="d"><span class="i18n-en">Spectroscopic study of stellar flares on TESS Objects of Interest, assessing exoplanet habitability and radiation environment.</span><span class="i18n-zh">对 TESS 关注目标(TOI)的恒星耀发进行光谱学研究,评估系外行星宜居性与辐射环境。</span></div>
+      </a>
+    </div>
+    <div class="skyline">✦ <span class="i18n-en">Capricornus — the outward word</span><span class="i18n-zh">摩羯座 · 主外之言</span></div>
+  </main>
+  <div class="stamp">build 34 · 07-02</div>
+  <script src="magnet.js?v=1"></script>
+  <script>
+    (function () {
+      var root = document.documentElement;
+      function apply(loc) {
+        root.className = "locale-" + loc; root.lang = loc === "zh" ? "zh" : "en";
+        document.getElementById("btn-en").setAttribute("aria-pressed", loc === "en" ? "true" : "false");
+        document.getElementById("btn-zh").setAttribute("aria-pressed", loc === "zh" ? "true" : "false");
+        try { localStorage.setItem("cv-locale", loc); } catch (e) {}
+      }
+      var saved = null; try { saved = localStorage.getItem("cv-locale"); } catch (e) {}
+      apply(saved === "en" ? "en" : "zh");
+      document.getElementById("btn-en").addEventListener("click", function () { apply("en"); });
+      document.getElementById("btn-zh").addEventListener("click", function () { apply("zh"); });
+    })();
+</script>
+</body>
+</html>
