@@ -470,7 +470,8 @@ body.cosmos #field{z-index:-1; opacity:.62;}
 .earth-cta:hover{color:var(--accent); border-color:var(--accent);}
 body.to-map #deep, body.to-map #field, body.to-map .cosmos-id, body.to-map .cosmos-ui,
 body.to-map .cosmos-legend, body.to-map .cosmos-hint{opacity:0 !important; transition:opacity .38s ease;}
-/* build 27 — the tour rail: the site's table of contents, left edge */
+/* build 28 — the tour rail = the content tree (CONTENT-TREE.md) on the left edge.
+   group heads unfold their leaves on hover / focus / click */
 .cosmos-nav{position:fixed; left:22px; top:50%; transform:translateY(-50%); z-index:4;
   display:flex; flex-direction:column; gap:8px; align-items:flex-start;}
 .cosmos-nav button, .cosmos-nav a{display:block; font-family:var(--mono); font-size:11.5px; letter-spacing:.08em;
@@ -479,4 +480,16 @@ body.to-map .cosmos-legend, body.to-map .cosmos-hint{opacity:0 !important; trans
   transition:color .2s, border-color .2s;}
 .cosmos-nav button:hover, .cosmos-nav a:hover{color:var(--accent); border-color:var(--accent);}
 .cosmos-nav__cv{color:var(--accent-deep) !important;}
+.cosmos-nav__group{display:flex; flex-direction:column; gap:6px; align-items:flex-start;}
+.cosmos-nav__head{color:var(--ink) !important;}
+.cosmos-nav__head i{font-style:normal; display:inline-block; margin-left:7px; opacity:.55;
+  transition:transform .28s ease; transform:rotate(0deg);}
+.cosmos-nav__kids{display:flex; flex-direction:column; gap:6px; align-items:flex-start; margin-left:16px;
+  max-height:0; overflow:hidden; opacity:0; pointer-events:none;
+  transition:max-height .32s ease, opacity .26s ease;}
+.cosmos-nav__kids button, .cosmos-nav__kids a{font-size:10.5px; padding:6px 12px;}
+.cosmos-nav__group:hover .cosmos-nav__kids, .cosmos-nav__group:focus-within .cosmos-nav__kids,
+.cosmos-nav__group.open .cosmos-nav__kids{max-height:180px; opacity:1; pointer-events:auto;}
+.cosmos-nav__group:hover .cosmos-nav__head i, .cosmos-nav__group:focus-within .cosmos-nav__head i,
+.cosmos-nav__group.open .cosmos-nav__head i{transform:rotate(90deg);}
 @media(max-width:900px){ .cosmos-nav{display:none;} }

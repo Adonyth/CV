@@ -24,7 +24,7 @@
       href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=21" />
+    <link rel="stylesheet" href="styles.css?v=22" />
     <script>
       (function () {
         try {
@@ -104,13 +104,39 @@
       <span class="i18n-en">drag to orbit · right-drag to pan · scroll to zoom · click the stars, the planets, the Earth</span>
       <span class="i18n-zh">拖动旋转 · 右键平移 · 滚轮缩放 · 点击星星、日月与地球</span>
     </div>
-    <!-- the TOUR rail: the site's table of contents — click, and the camera travels there and opens it -->
-    <nav class="cosmos-nav no-print" aria-label="Site tour">
-      <button type="button" data-tour="pillars" data-magnet><span class="i18n-en">Birth chart</span><span class="i18n-zh">生辰四柱</span></button>
-      <button type="button" data-tour="sun" data-magnet><span class="i18n-en">Sun · Research</span><span class="i18n-zh">太阳 · 研究</span></button>
-      <button type="button" data-tour="moon" data-magnet><span class="i18n-en">Moon · Writing</span><span class="i18n-zh">月亮 · 写作</span></button>
-      <button type="button" data-tour="zodiac" data-magnet><span class="i18n-en">Constellations</span><span class="i18n-zh">星座全图</span></button>
-      <button type="button" data-tour="footprint" data-magnet><span class="i18n-en">Footprint map</span><span class="i18n-zh">足迹地图</span></button>
+    <!-- the TOUR rail = the content tree (CONTENT-TREE.md) projected onto the screen.
+         group heads unfold their leaves; every leaf is a camera journey + an opening -->
+    <nav class="cosmos-nav no-print" aria-label="Site tour — the content tree">
+      <div class="cosmos-nav__group">
+        <button type="button" class="cosmos-nav__head" data-magnet><span class="i18n-en">The Chart</span><span class="i18n-zh">命盘</span><i>▸</i></button>
+        <div class="cosmos-nav__kids">
+          <button type="button" data-tour="pillars" data-magnet><span class="i18n-en">Birth pillars</span><span class="i18n-zh">生辰四柱</span></button>
+          <button type="button" data-tour="zodiac" data-magnet><span class="i18n-en">Zodiac mandala</span><span class="i18n-zh">星座全图</span></button>
+        </div>
+      </div>
+      <div class="cosmos-nav__group">
+        <button type="button" class="cosmos-nav__head" data-magnet><span class="i18n-en">☉ Research</span><span class="i18n-zh">☉ 研究</span><i>▸</i></button>
+        <div class="cosmos-nav__kids">
+          <button type="button" data-tour="sun" data-magnet><span class="i18n-en">Sun · Capricorn</span><span class="i18n-zh">太阳与摩羯</span></button>
+          <button type="button" data-tour="star:capricorn" data-href="cv.html#research-programs" data-magnet><span class="i18n-en">Programs ↗</span><span class="i18n-zh">研究纲领 ↗</span></button>
+          <button type="button" data-tour="star:capricorn" data-href="cv.html#publications" data-magnet><span class="i18n-en">Papers &amp; preprints ↗</span><span class="i18n-zh">论文与预印本 ↗</span></button>
+        </div>
+      </div>
+      <div class="cosmos-nav__group">
+        <button type="button" class="cosmos-nav__head" data-magnet><span class="i18n-en">☾ Writing</span><span class="i18n-zh">☾ 写作</span><i>▸</i></button>
+        <div class="cosmos-nav__kids">
+          <button type="button" data-tour="moon" data-magnet><span class="i18n-en">Moon · Leo</span><span class="i18n-zh">月亮与狮子</span></button>
+          <button type="button" data-tour="star:leo" data-href="cv.html#book-writing" data-magnet><span class="i18n-en">Book &amp; political economy ↗</span><span class="i18n-zh">著作与政经 ↗</span></button>
+        </div>
+      </div>
+      <div class="cosmos-nav__group">
+        <button type="button" class="cosmos-nav__head" data-magnet><span class="i18n-en">Building</span><span class="i18n-zh">造物</span><i>▸</i></button>
+        <div class="cosmos-nav__kids">
+          <button type="button" data-tour="star:leo" data-href="cv.html#software" data-magnet><span class="i18n-en">Omytea &amp; open source ↗</span><span class="i18n-zh">Omytea 与开源 ↗</span></button>
+          <a href="https://nyeclock.pages.dev" target="_blank" rel="noopener" data-magnet><span class="i18n-en">Nye Clock ↗</span><span class="i18n-zh">弐时仪 ↗</span></a>
+        </div>
+      </div>
+      <button type="button" data-tour="footprint" data-magnet><span class="i18n-en">⊕ Footprint map</span><span class="i18n-zh">⊕ 足迹地图</span></button>
       <a href="cv.html" class="cosmos-nav__cv" data-magnet><span class="i18n-en">Curriculum Vitae ↗</span><span class="i18n-zh">完整履历 ↗</span></a>
     </nav>
 
@@ -120,7 +146,7 @@
     </button>
 
     <!-- visible build stamp — so "which version am I seeing" is never a mystery again -->
-    <div class="cosmos-build no-print" aria-hidden="true">build 27 · 07-01</div>
+    <div class="cosmos-build no-print" aria-hidden="true">build 28 · 07-01</div>
 
     <!-- fallback when 3D is gated off (mobile / low power / reduced motion) -->
     <div class="cosmos-flat no-print" id="cosmos-flat" hidden>
@@ -132,6 +158,6 @@
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
     <script src="home.js?v=5" defer></script>
     <script src="magnet.js?v=1" defer></script>
-    <script type="module" src="space.js?v=24"></script>
+    <script type="module" src="space.js?v=25"></script>
   </body>
 </html>

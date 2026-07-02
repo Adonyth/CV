@@ -745,28 +745,52 @@
       window.__space.applyRingFade = applyRingFade;
 
       /* ===== the TOUR: the nav asks, the camera travels, the door opens ===== */
-      window.__space.tour = function (name) {
+      window.__space.tour = function (name, href) {
         lastTouch = performance.now(); userMoved = true; glide.onDone = null;
         if (name === "footprint") {
           glide.axis = null; glide.step = 0; glide.frames = 110; glide.distTarget = 9;
           glide.targetTo = new THREE.Vector3(0, 0, 0);
           glide.onDone = openFootprintMap;
         } else if (name === "sun") {
-          glideToBody("NyeSun", 96, 110);
+          glideToBody("NyeSun", 34, 110);
           if (natalSky) { natalSky.highlight("capricorn", true); setTimeout(function () { natalSky.highlight("capricorn", false); }, 4200); }
         } else if (name === "moon") {
-          glideToBody("NyeMoon", 70, 110);
+          glideToBody("NyeMoon", 9, 110);
           if (natalSky) { natalSky.highlight("leo", true); setTimeout(function () { natalSky.highlight("leo", false); }, 4200); }
-        } else if (name === "pillars") {
-          glide.axis = null; glide.step = 0; glide.frames = 90; glide.distTarget = 80;
+        } else if (name === "pillars" || name === "zodiac") {
+          /* return to the canonical framing: keep the current azimuth (the sky keeps
+             turning) but restore the entrance elevation — never arrive edge-on */
+          var hOff = camera.position.clone().sub(controls.target);
+          var hAz = (hOff.x * hOff.x + hOff.z * hOff.z > 1e-6) ? Math.atan2(hOff.x, hOff.z) : 0.8;
+          var hEl = 0.517;
+          var hDir = new THREE.Vector3(Math.sin(hAz) * Math.cos(hEl), Math.sin(hEl), Math.cos(hAz) * Math.cos(hEl));
           glide.targetTo = HOME.clone();
-        } else if (name === "zodiac") {
-          glide.axis = null; glide.step = 0; glide.frames = 110; glide.distTarget = 390;
-          glide.targetTo = HOME.clone();
+          glide.camTo = HOME.clone().add(hDir.multiplyScalar(name === "pillars" ? 92 : 390));
+          glide.axis = null; glide.step = 0; glide.distTarget = 0;
+          glide.frames = name === "pillars" ? 90 : 110;
+        } else if (name === "star:capricorn" || name === "star:leo") {
+          /* travel to face the constellation (the Sun stands in Capricorn, the Moon in Leo),
+             bloom it, then walk through to the linked record */
+          var pid = (name === "star:capricorn") ? "sun" : "moon";
+          var cid = (name === "star:capricorn") ? "capricorn" : "leo";
+          if (natalSky && natalSky.getPlanetDir) {
+            var cdir = natalSky.getPlanetDir(pid);
+            if (cdir) {
+              glide.targetTo = HOME.clone();
+              glide.camTo = HOME.clone().sub(cdir.multiplyScalar(130));   // stand opposite, gaze through home to the sign
+              glide.axis = null; glide.step = 0; glide.distTarget = 0; glide.frames = 110;
+            }
+            natalSky.highlight(cid, true); setTimeout(function () { natalSky.highlight(cid, false); }, 4600);
+          }
         }
+        if (href) glide.onDone = function () { setTimeout(function () { location.href = href; }, 600); };
       };
       document.querySelectorAll("[data-tour]").forEach(function (el) {
-        el.addEventListener("click", function (ev) { ev.preventDefault(); window.__space.tour(el.getAttribute("data-tour")); });
+        el.addEventListener("click", function (ev) { ev.preventDefault(); window.__space.tour(el.getAttribute("data-tour"), el.getAttribute("data-href")); });
+      });
+      // tree heads unfold their leaves (hover already opens via CSS; click pins open for touch/keyboard)
+      document.querySelectorAll(".cosmos-nav__head").forEach(function (el) {
+        el.addEventListener("click", function () { el.parentElement.classList.toggle("open"); });
       });
 
       var _stir = new THREE.Vector3();
@@ -796,20 +820,32 @@
 
       // clean-click routing: a drag is never a click
       var pickRay = new THREE.Raycaster(), pickNdc = new THREE.Vector2();
-      function glideToBody(objName, distCap, nFrames) {
+      function glideToBody(objName, viewDist, nFrames) {
         var obj = nyeArmature.group.getObjectByName(objName); if (!obj) return;
         var w = obj.getWorldPosition(new THREE.Vector3());
-        glide.targetTo = w.clone();                    // 点哪个天体,就绕哪个天体转
-        var cur = camera.position.clone().sub(controls.target).normalize();
-        var des = w.clone().sub(controls.target).normalize().negate();   // stand opposite → the body fills the gaze
-        var dot = Math.max(-1, Math.min(1, cur.dot(des)));
-        var ang = Math.acos(dot);
-        var axis = new THREE.Vector3().crossVectors(cur, des);
-        if (axis.lengthSq() < 1e-9) axis.copy(UP_Y);
-        axis.normalize();
-        var nf = nFrames || 42;
-        glide.axis = axis; glide.step = ang / nf; glide.frames = nf;
-        glide.distTarget = distCap ? Math.min(controls.getRadius(), distCap) : 0;
+        /* stand OUTSIDE the body along the Earth→body line, swung aside within the
+           gear-ring plane AND lifted above it — the sightline can never pass through
+           the Earth, the Sun, or the glyph medallions riding the rings */
+        var outward = w.clone().normalize();
+        if (outward.lengthSq() < 1e-9) outward.set(0, 0, 1);
+        var ringN = new THREE.Vector3(0, 1, 0)
+          .applyQuaternion(nyeArmature.group.getWorldQuaternion(new THREE.Quaternion())).normalize();
+        if (objName === "NyeMoon") {
+          /* arrive from the sunlit side — the moon shows her lit face, Earth hangs behind */
+          var sunObj = nyeArmature.group.getObjectByName("NyeSun");
+          if (sunObj) {
+            var toSun = sunObj.getWorldPosition(new THREE.Vector3()).sub(w).normalize();
+            outward.multiplyScalar(0.5).addScaledVector(toSun, 0.85).normalize();
+          }
+          outward.multiplyScalar(Math.cos(0.22)).addScaledVector(ringN, Math.sin(0.22)).normalize();
+        } else {
+          outward.applyAxisAngle(ringN, -0.5);   /* this side keeps the year-seal beside, not before, the body */
+          outward.multiplyScalar(Math.cos(0.42)).addScaledVector(ringN, Math.sin(0.42)).normalize();
+        }
+        glide.targetTo = w.clone();
+        glide.camTo = w.clone().add(outward.multiplyScalar(viewDist || 40));
+        glide.axis = null; glide.step = 0; glide.distTarget = 0;
+        glide.frames = nFrames || 42;
       }
       addEventListener("click", function (e) {
         if (e.target !== canvas) return;              // DOM buttons/links are none of our business
@@ -827,10 +863,10 @@
           if (pick !== "sun" && pick !== "moon" && pick !== "earth") continue;   // glyphs never swallow a click
           if (pick === "sun") {
             if (natalSky) { natalSky.highlight("capricorn", true); setTimeout(function () { natalSky.highlight("capricorn", false); }, 2800); }
-            glideToBody("NyeSun", 96);
+            glideToBody("NyeSun", 34);
           } else if (pick === "moon") {
             if (natalSky) { natalSky.highlight("leo", true); setTimeout(function () { natalSky.highlight("leo", false); }, 2800); }
-            glideToBody("NyeMoon", 70);
+            glideToBody("NyeMoon", 9);
           } else if (pick === "earth") {
             glide.axis = null; glide.step = 0; glide.frames = 30; glide.distTarget = 7;
             glide.targetTo = new THREE.Vector3(0, 0, 0);      // orbit the Earth itself
@@ -871,12 +907,19 @@
         }
         // guided glide after clicking a body (any touch cancels)
         if (glide.frames > 0) {
-          if (glide.targetTo) { var dT = glide.targetTo.clone().sub(controls.target).multiplyScalar(0.12); controls.target.add(dT); camera.position.add(dT); }
-          if (glide.axis) controls.rotateWorld(glide.axis, glide.step);
-          if (glide.distTarget) { var rg = controls.getRadius(); controls.setRadius(rg + (glide.distTarget - rg) * 0.12); }
+          if (glide.camTo) {
+            controls.target.lerp(glide.targetTo, 0.1);
+            camera.position.lerp(glide.camTo, 0.1);
+            camera.up.lerp(UP_Y, 0.08).normalize();
+            camera.lookAt(controls.target);
+          } else {
+            if (glide.targetTo) { var dT = glide.targetTo.clone().sub(controls.target).multiplyScalar(0.12); controls.target.add(dT); camera.position.add(dT); }
+            if (glide.axis) controls.rotateWorld(glide.axis, glide.step);
+            if (glide.distTarget) { var rg = controls.getRadius(); controls.setRadius(rg + (glide.distTarget - rg) * 0.12); }
+          }
           glide.frames--;
           if (glide.frames === 0) {
-            glide.targetTo = null;
+            glide.targetTo = null; glide.camTo = null;
             if (glide.onDone) { var fD = glide.onDone; glide.onDone = null; fD(); }
           }
         }
