@@ -24,7 +24,7 @@
       href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20" />
+    <link rel="stylesheet" href="styles.css?v=21" />
     <script>
       (function () {
         try {
@@ -104,13 +104,23 @@
       <span class="i18n-en">drag to orbit · right-drag to pan · scroll to zoom · click the stars, the planets, the Earth</span>
       <span class="i18n-zh">拖动旋转 · 右键平移 · 滚轮缩放 · 点击星星、日月与地球</span>
     </div>
+    <!-- the TOUR rail: the site's table of contents — click, and the camera travels there and opens it -->
+    <nav class="cosmos-nav no-print" aria-label="Site tour">
+      <button type="button" data-tour="pillars" data-magnet><span class="i18n-en">Birth chart</span><span class="i18n-zh">生辰四柱</span></button>
+      <button type="button" data-tour="sun" data-magnet><span class="i18n-en">Sun · Research</span><span class="i18n-zh">太阳 · 研究</span></button>
+      <button type="button" data-tour="moon" data-magnet><span class="i18n-en">Moon · Writing</span><span class="i18n-zh">月亮 · 写作</span></button>
+      <button type="button" data-tour="zodiac" data-magnet><span class="i18n-en">Constellations</span><span class="i18n-zh">星座全图</span></button>
+      <button type="button" data-tour="footprint" data-magnet><span class="i18n-en">Footprint map</span><span class="i18n-zh">足迹地图</span></button>
+      <a href="cv.html" class="cosmos-nav__cv" data-magnet><span class="i18n-en">Curriculum Vitae ↗</span><span class="i18n-zh">完整履历 ↗</span></a>
+    </nav>
+
     <!-- hovering the Earth summons this doorway (positioned & shown by space.js) -->
     <button id="earth-cta" class="earth-cta no-print" type="button" data-magnet>
       <span class="i18n-en">Open the footprint map ↗</span><span class="i18n-zh">打开足迹地图 ↗</span>
     </button>
 
     <!-- visible build stamp — so "which version am I seeing" is never a mystery again -->
-    <div class="cosmos-build no-print" aria-hidden="true">build 26 · 07-01</div>
+    <div class="cosmos-build no-print" aria-hidden="true">build 27 · 07-01</div>
 
     <!-- fallback when 3D is gated off (mobile / low power / reduced motion) -->
     <div class="cosmos-flat no-print" id="cosmos-flat" hidden>
@@ -122,6 +132,6 @@
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
     <script src="home.js?v=5" defer></script>
     <script src="magnet.js?v=1" defer></script>
-    <script type="module" src="space.js?v=23"></script>
+    <script type="module" src="space.js?v=24"></script>
   </body>
 </html>

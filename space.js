@@ -694,6 +694,7 @@
         var hits = _ctaRay.intersectObject(nyeArmature.group, true);
         var onEarth = false;
         for (var hI = 0; hI < hits.length; hI++) {
+          if (hits[hI].object.name === "NyeEarthPickShell") continue;   // the oversized shell is not the globe
           var oo = hits[hI].object, pk = null;
           while (oo && !pk) { pk = oo.userData && oo.userData.nyePick; oo = oo.parent; }
           if (pk === "earth") { onEarth = true; break; }   // ring glyphs may sit in front — scan on
@@ -705,13 +706,68 @@
         }
         setCta(onEarth);
       }
+      function openFootprintMap() {
+        document.body.classList.add("to-map");
+        setTimeout(function () { location.href = "footprint.html"; }, 380);
+      }
       if (earthCta) {
         earthCta.addEventListener("mouseenter", function () { setCta(true); earthCta.classList.add("is-on"); });
-        earthCta.addEventListener("click", function () {
-          document.body.classList.add("to-map");
-          setTimeout(function () { location.href = "footprint.html"; }, 380);
+        earthCta.addEventListener("click", openFootprintMap);
+      }
+
+      /* when the Earth owns the page (close zoom) and the hand hovers it, the
+         干支 rings step aside — the globe becomes the sole subject */
+      var ringFadeMats = null, ringFade = 1;
+      function collectRingMats() {
+        if (ringFadeMats || !nyeArmature) return;
+        ringFadeMats = [];
+        ["MonthEclipticGearPlane", "EarthOrbitTrace", "YearEclipticPlane", "DayClockOrbitPlane", "HeroHourLocalRing", "HourPillarReadout"].forEach(function (nm) {
+          var rootO = nyeArmature.group.getObjectByName(nm); if (!rootO) return;
+          rootO.traverse(function (oo) {
+            var mats = Array.isArray(oo.material) ? oo.material : (oo.material ? [oo.material] : []);
+            mats.forEach(function (mm) { ringFadeMats.push({ m: mm, base: (mm.opacity != null ? mm.opacity : 1), o: oo }); });
+          });
         });
       }
+      function applyRingFade() {
+        if (!nyeArmature) return;
+        collectRingMats(); if (!ringFadeMats) return;
+        var want = (ctaOn && controls.getRadius() < 16) ? 0 : 1;
+        if (Math.abs(ringFade - want) < 0.004) { ringFade = want; return; }
+        ringFade += (want - ringFade) * 0.1;
+        for (var rf = 0; rf < ringFadeMats.length; rf++) {
+          var e2 = ringFadeMats[rf];
+          e2.m.transparent = true;
+          e2.m.opacity = e2.base * ringFade;
+          e2.o.visible = ringFade > 0.03;
+        }
+      }
+      window.__space.applyRingFade = applyRingFade;
+
+      /* ===== the TOUR: the nav asks, the camera travels, the door opens ===== */
+      window.__space.tour = function (name) {
+        lastTouch = performance.now(); userMoved = true; glide.onDone = null;
+        if (name === "footprint") {
+          glide.axis = null; glide.step = 0; glide.frames = 110; glide.distTarget = 9;
+          glide.targetTo = new THREE.Vector3(0, 0, 0);
+          glide.onDone = openFootprintMap;
+        } else if (name === "sun") {
+          glideToBody("NyeSun", 96, 110);
+          if (natalSky) { natalSky.highlight("capricorn", true); setTimeout(function () { natalSky.highlight("capricorn", false); }, 4200); }
+        } else if (name === "moon") {
+          glideToBody("NyeMoon", 70, 110);
+          if (natalSky) { natalSky.highlight("leo", true); setTimeout(function () { natalSky.highlight("leo", false); }, 4200); }
+        } else if (name === "pillars") {
+          glide.axis = null; glide.step = 0; glide.frames = 90; glide.distTarget = 80;
+          glide.targetTo = HOME.clone();
+        } else if (name === "zodiac") {
+          glide.axis = null; glide.step = 0; glide.frames = 110; glide.distTarget = 390;
+          glide.targetTo = HOME.clone();
+        }
+      };
+      document.querySelectorAll("[data-tour]").forEach(function (el) {
+        el.addEventListener("click", function (ev) { ev.preventDefault(); window.__space.tour(el.getAttribute("data-tour")); });
+      });
 
       var _stir = new THREE.Vector3();
       canvas.addEventListener("pointermove", function (e) {
@@ -740,7 +796,7 @@
 
       // clean-click routing: a drag is never a click
       var pickRay = new THREE.Raycaster(), pickNdc = new THREE.Vector2();
-      function glideToBody(objName, distCap) {
+      function glideToBody(objName, distCap, nFrames) {
         var obj = nyeArmature.group.getObjectByName(objName); if (!obj) return;
         var w = obj.getWorldPosition(new THREE.Vector3());
         glide.targetTo = w.clone();                    // 点哪个天体,就绕哪个天体转
@@ -751,7 +807,8 @@
         var axis = new THREE.Vector3().crossVectors(cur, des);
         if (axis.lengthSq() < 1e-9) axis.copy(UP_Y);
         axis.normalize();
-        glide.axis = axis; glide.step = ang / 42; glide.frames = 42;
+        var nf = nFrames || 42;
+        glide.axis = axis; glide.step = ang / nf; glide.frames = nf;
         glide.distTarget = distCap ? Math.min(controls.getRadius(), distCap) : 0;
       }
       addEventListener("click", function (e) {
@@ -764,6 +821,7 @@
         pickRay.setFromCamera(pickNdc, camera);
         var hits = pickRay.intersectObject(nyeArmature.group, true);
         for (var i = 0; i < hits.length; i++) {
+          if (hits[i].object.name === "NyeEarthPickShell") continue;   // the oversized shell is not the globe
           var pick = null, o = hits[i].object;
           while (o && !pick) { pick = o.userData && o.userData.nyePick; o = o.parent; }
           if (pick !== "sun" && pick !== "moon" && pick !== "earth") continue;   // glyphs never swallow a click
@@ -817,12 +875,16 @@
           if (glide.axis) controls.rotateWorld(glide.axis, glide.step);
           if (glide.distTarget) { var rg = controls.getRadius(); controls.setRadius(rg + (glide.distTarget - rg) * 0.12); }
           glide.frames--;
-          if (glide.frames === 0) glide.targetTo = null;
+          if (glide.frames === 0) {
+            glide.targetTo = null;
+            if (glide.onDone) { var fD = glide.onDone; glide.onDone = null; fD(); }
+          }
         }
         // after 20s of stillness the world turns slowly on its own; manual always wins (dt-based: same speed at any frame rate)
         if (userMoved && nowMs - lastTouch > 20000 && glide.frames === 0) controls.rotateWorld(camera.up, 0.0108 * dt);
         if (!userMoved && nowMs >= entranceUntil) controls.rotateWorld(camera.up, 0.0108 * dt);
         controls.update();
+        if (window.__space.applyRingFade) window.__space.applyRingFade();
         if (!_refFar) _refFar = new THREE.Vector3();
         _refFar.set(0, 0, -800).project(camera);
         if (_refFar.z < 1 && isFinite(_refFar.x)) {
@@ -875,6 +937,7 @@
     window.__space.canvas = canvas;
     window.__space.controls = controls;
     window.__space.camera = camera;
+    window.__space.pump = function (n2) { var base = performance.now(); for (var q = 0; q < (n2 || 1); q++) frame(base + q * 16.7); };
     window.__space.snap = function () {
       if (COSMOS && controls) controls.update();
       renderer.render(scene, camera); return canvas.toDataURL("image/jpeg", 0.8);

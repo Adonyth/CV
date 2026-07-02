@@ -22,8 +22,16 @@ L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
 /* ---------------- the trace overlay: one canvas, typed-array fast ---------------- */
 let X01 = null, Y01 = null, N = 0;               // normalized web-mercator coords
 const overlay = document.createElement("canvas");
-overlay.style.cssText = "position:absolute;inset:0;pointer-events:none;z-index:400;";
+overlay.className = "leaflet-zoom-animated";      // ride Leaflet's zoom animation
+overlay.style.cssText = "position:absolute;pointer-events:none;z-index:400;";
 map.getPanes().overlayPane.appendChild(overlay);
+/* during the zoom animation the previous drawing is CSS-scaled in perfect sync
+   with the tiles (Leaflet.heat pattern) — the crisp redraw lands on zoomend */
+map.on("zoomanim", (e) => {
+  const scale = map.getZoomScale(e.zoom);
+  const offset = map._getCenterOffset(e.center)._multiplyBy(-scale).subtract(map._getMapPanePos());
+  L.DomUtil.setTransform(overlay, offset, scale);
+});
 
 function mercatorize(raw) {  // (sets __fp.n at the end)
   const n = raw.length / 2 | 0;
