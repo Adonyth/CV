@@ -176,9 +176,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
     totalSegs += segs.length;
     var lgeo = new T.BufferGeometry();
     lgeo.setAttribute("position", new T.BufferAttribute(new Float32Array(pts), 3));
-    var base = c.loadBearing ? 1.0 : 0.72;
+    var base = c.loadBearing ? 1.0 : 0.85;
     var mat = new T.PointsMaterial({
-      map: o.tex, color: c.loadBearing ? 0xffc79a : 0xf3ac83, size: c.loadBearing ? 5.0 : 3.6, sizeAttenuation: true,
+      map: o.tex, color: c.loadBearing ? 0xffc79a : 0xf6b088, size: c.loadBearing ? 6.0 : 4.4, sizeAttenuation: true,
       transparent: true, opacity: base, depthWrite: false, depthTest: true, blending: T.AdditiveBlending
     });
     mat.fog = false;
@@ -186,7 +186,18 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var fl = new T.Points(lgeo, mat);
     fl.frustumCulled = false; fl.name = "natalFigure_" + c.id;
     belt.add(fl);
-    lineEntries[ci] = { mat: mat, base: base, geo: lgeo };
+    /* wide soft under-glow beneath the crisp chain — the figure reads as a
+       LUMINOUS BRUSHSTROKE, unmistakable against the loose star sea */
+    var glowMat = new T.PointsMaterial({
+      map: o.tex, color: c.loadBearing ? 0xf7a877 : 0xe8946c, size: (c.loadBearing ? 6.0 : 4.4) * 2.1, sizeAttenuation: true,
+      transparent: true, opacity: base * 0.34, depthWrite: false, depthTest: true, blending: T.AdditiveBlending
+    });
+    glowMat.fog = false;
+    if ("toneMapped" in glowMat) glowMat.toneMapped = false;
+    var flGlow = new T.Points(lgeo, glowMat);
+    flGlow.frustumCulled = false; flGlow.name = "natalFigureGlow_" + c.id;
+    belt.add(flGlow);
+    lineEntries[ci] = { mat: mat, glowMat: glowMat, base: base, geo: lgeo };
     lineByCon[c.id] = ci;
   });
 
@@ -233,15 +244,17 @@ export function buildNatalSky(THREE, scene, data, opts) {
     group.rotation.y = Math.PI - Math.atan2(v.x, v.z);
   })();
 
-  /* a quiet nebula blush cradles the two NATAL signs — you find yours at a glance */
+  /* every constellation rests on a nebula under-light — twelve soft clouds you
+     can count across the sky at any distance; the two NATAL signs burn warmest */
   cons.forEach(function (c, ci) {
-    if (!c.loadBearing) return;
-    var bm2 = new T.SpriteMaterial({ map: o.tex, transparent: true, opacity: 0.13, depthWrite: false, depthTest: true, blending: T.AdditiveBlending, fog: false, color: 0xe8916c });
+    var key3 = c.loadBearing;
+    var bm2 = new T.SpriteMaterial({ map: o.tex, transparent: true, opacity: key3 ? 0.17 : 0.10, depthWrite: false, depthTest: true, blending: T.AdditiveBlending, fog: false, color: key3 ? 0xe8916c : 0xd9855f });
     if ("toneMapped" in bm2) bm2.toneMapped = false;
     var aura = new T.Sprite(bm2);
-    aura.scale.set(64, 64, 1);
+    var asc = key3 ? 70 : 52;
+    aura.scale.set(asc, asc, 1);
     aura.position.copy(conCentroid[ci]);
-    aura.name = "natalAura_" + c.id;
+    aura.name = (key3 ? "natalAura_" : "conAura_") + c.id;
     belt.add(aura);
   });
 
@@ -277,24 +290,18 @@ export function buildNatalSky(THREE, scene, data, opts) {
   function pageLocale() {
     try { return document.documentElement.className.indexOf("locale-zh") >= 0 ? "zh" : "en"; } catch (e) { return "en"; }
   }
-  var nameSprites = [];
-  if (typeof document !== "undefined") {
-    var loc0 = pageLocale();
-    cons.forEach(function (c, ci) {
-      var sp = makeNameSprite(c.name.zh, c.name.en, c.loadBearing, loc0);
-      sp.position.copy(conCentroid[ci]).multiplyScalar(1.10);
-      belt.add(sp); nameSprites[ci] = sp;
-    });
-  }
+  var nameSprites = [];   // nameplates retired by decree: the sky is unlabeled,
+                          // like the Sun and Moon themselves (hover tooltips on
+                          // work-stars remain — they are the knowledge graph)
   /* soft halos behind the stars that carry weight (data-nodes + the two natal figures) */
   (function () {
     stars.forEach(function (st) {
       var key = cons[st.conIdx].loadBearing;
-      if (!st.node && !(key && st.importance >= 0.7)) return;
-      var m = new T.SpriteMaterial({ map: o.tex, transparent: true, opacity: st.node ? 0.62 : 0.44, depthWrite: false, depthTest: true, blending: T.AdditiveBlending, fog: false });
+      if (!st.node && st.importance < 0.7) return;      // every figure vertex glows
+      var m = new T.SpriteMaterial({ map: o.tex, transparent: true, opacity: st.node ? 0.62 : (key ? 0.48 : 0.38), depthWrite: false, depthTest: true, blending: T.AdditiveBlending, fog: false });
       if ("toneMapped" in m) m.toneMapped = false;
       var h = new T.Sprite(m);
-      var sc = st.node ? 11 : 6.5;
+      var sc = st.node ? 12 : (key ? 9 : 7.5);
       h.scale.set(sc, sc, 1); h.position.copy(st.pos);
       belt.add(h);
     });
@@ -380,6 +387,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var e = lineEntries[ci]; if (!e) continue;
       var hl = isLit(ci) ? 1.9 : 1;
       e.mat.opacity = Math.min(1.0, e.base * (isDark ? 1 : 1.18) * pulse * hl);
+      if (e.glowMat) e.glowMat.opacity = Math.min(0.6, e.base * 0.34 * pulse * hl);
     }
   }
   var api = {
@@ -395,7 +403,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
       isDark = dark;
       var bl = dark ? T.AdditiveBlending : T.NormalBlending;
       starMat.blending = bl; starMat.needsUpdate = true;
-      for (var i = 0; i < lineEntries.length; i++) { var e = lineEntries[i]; if (!e) continue; e.mat.blending = bl; e.mat.needsUpdate = true; }
+      for (var i = 0; i < lineEntries.length; i++) { var e = lineEntries[i]; if (!e) continue; e.mat.blending = bl; e.mat.needsUpdate = true; if (e.glowMat) { e.glowMat.blending = bl; e.glowMat.needsUpdate = true; } }
     },
     highlight: function (id, on) {
       if (lineByCon[id] == null) return;
@@ -436,7 +444,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
       if (tip && tip.parentNode) tip.parentNode.removeChild(tip);
       (o.group || scene).remove(group);
       geo.dispose(); starMat.dispose();
-      for (var i = 0; i < lineEntries.length; i++) { var e = lineEntries[i]; if (e) { e.geo.dispose(); e.mat.dispose(); } }
+      for (var i = 0; i < lineEntries.length; i++) { var e = lineEntries[i]; if (e) { e.geo.dispose(); e.mat.dispose(); if (e.glowMat) e.glowMat.dispose(); } }
       planetSprites.forEach(function (s) { if (!s.material) return; if (s.material.map) s.material.map.dispose(); s.material.dispose(); });
     }
   };
