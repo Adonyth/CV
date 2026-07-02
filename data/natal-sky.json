@@ -222,8 +222,9 @@
           },
           "role": "RASTI (under review)",
           "importance": 1.0,
-          "href": "cv.html#research",
-          "spine": "certificate"
+          "href": "",
+          "spine": "certificate",
+          "page": "papers.html#ringdown"
         },
         {
           "id": "beliefprobe",
@@ -234,8 +235,9 @@
           },
           "role": "pre-registered · honest-negative",
           "importance": 1.0,
-          "href": "cv.html#research",
-          "spine": "certificate"
+          "href": "",
+          "spine": "certificate",
+          "page": "papers.html#beliefprobe"
         },
         {
           "id": "localityNoGo",
@@ -246,8 +248,9 @@
           },
           "role": "SciPost Physics Core (under review)",
           "importance": 1.0,
-          "href": "cv.html#research",
-          "spine": "obstruction"
+          "href": "",
+          "spine": "obstruction",
+          "page": "papers.html#localityNoGo"
         },
         {
           "id": "acaexpl",
@@ -258,8 +261,9 @@
           },
           "role": "program",
           "importance": 0.85,
-          "href": "cv.html#research",
-          "spine": "certificate"
+          "href": "",
+          "spine": "certificate",
+          "page": "research.html#acaexpl"
         },
         {
           "id": "rss",
@@ -270,8 +274,9 @@
           },
           "role": "Foundations of Physics (submitted)",
           "importance": 0.85,
-          "href": "cv.html#research",
-          "spine": "obstruction"
+          "href": "",
+          "spine": "obstruction",
+          "page": "papers.html#rss"
         },
         {
           "id": "cpe",
@@ -282,8 +287,9 @@
           },
           "role": "epistemology",
           "importance": 0.7,
-          "href": "cv.html#research",
-          "spine": "bridge"
+          "href": "",
+          "spine": "bridge",
+          "page": "writings.html#cpe"
         },
         {
           "id": "omyteaSub",
@@ -294,7 +300,8 @@
           },
           "role": "PyPI · Apache-2.0",
           "importance": 0.7,
-          "href": "cv.html#software"
+          "href": "",
+          "page": "works.html#omyteaSub"
         },
         {
           "id": "golfcal",
@@ -305,8 +312,9 @@
           },
           "role": "calibration benchmark",
           "importance": 0.7,
-          "href": "cv.html#software",
-          "spine": "certificate"
+          "href": "",
+          "spine": "certificate",
+          "page": "works.html#golfcal"
         }
       ]
     },
@@ -438,8 +446,9 @@
           },
           "role": "toward a Grand Unified World Model",
           "importance": 1.0,
-          "href": "cv.html#software",
-          "spine": "certificate"
+          "href": "",
+          "spine": "certificate",
+          "page": "research.html#omytea"
         },
         {
           "id": "invitation",
@@ -450,7 +459,8 @@
           },
           "role": "book · ~1,164pp",
           "importance": 1.0,
-          "href": "cv.html#book-writing"
+          "href": "",
+          "page": "writings.html#invitation"
         },
         {
           "id": "monopolyRent",
@@ -461,8 +471,9 @@
           },
           "role": "SSRN working paper",
           "importance": 0.85,
-          "href": "cv.html#book-writing",
-          "spine": "rent"
+          "href": "",
+          "spine": "rent",
+          "page": "writings.html#monopolyRent"
         },
         {
           "id": "stackPower",
@@ -473,8 +484,9 @@
           },
           "role": "International Organization (CUP) — under review",
           "importance": 0.85,
-          "href": "cv.html#book-writing",
-          "spine": "rent"
+          "href": "",
+          "spine": "rent",
+          "page": "writings.html#stackPower"
         }
       ]
     }
@@ -558,7 +570,8 @@
           },
           "role": "CONF-CIAP 2023",
           "importance": 0.6,
-          "href": "cv.html#research"
+          "href": "",
+          "page": "papers.html#blazar"
         },
         {
           "id": "maxi",
@@ -569,7 +582,8 @@
           },
           "role": "undergrad thesis",
           "importance": 0.6,
-          "href": "cv.html#research"
+          "href": "",
+          "page": "papers.html#maxi"
         }
       ]
     },
@@ -641,7 +655,8 @@
           },
           "role": "live demo",
           "importance": 0.7,
-          "href": "cv.html#software"
+          "href": "",
+          "page": "works.html#console"
         }
       ]
     },

@@ -649,7 +649,7 @@
     // the natal sphere holds STILL around the world (the chart is a fact, not weather);
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
-    fetch("data/natal-sky.json?v=2").then(function (r) { return r.json(); }).then(function (natalData) {
+    fetch("data/natal-sky.json?v=3").then(function (r) { return r.json(); }).then(function (natalData) {
       return import("./natal-sky.js?v=14").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
@@ -717,7 +717,7 @@
 
       /* when the Earth owns the page (close zoom) and the hand hovers it, the
          干支 rings step aside — the globe becomes the sole subject */
-      var ringFadeMats = null, ringFade = 1;
+      var ringFadeMats = null, ringFade = 1, soloBody = null;   /* "sun"|"moon": rings step aside entirely */
       function collectRingMats() {
         if (ringFadeMats || !nyeArmature) return;
         ringFadeMats = [];
@@ -732,7 +732,7 @@
       function applyRingFade() {
         if (!nyeArmature) return;
         collectRingMats(); if (!ringFadeMats) return;
-        var want = (ctaOn && controls.getRadius() < 16) ? 0 : 1;
+        var want = (soloBody || (ctaOn && controls.getRadius() < 16)) ? 0 : 1;
         if (Math.abs(ringFade - want) < 0.004) { ringFade = want; return; }
         ringFade += (want - ringFade) * 0.1;
         for (var rf = 0; rf < ringFadeMats.length; rf++) {
@@ -747,6 +747,7 @@
       /* ===== the TOUR: the nav asks, the camera travels, the door opens ===== */
       window.__space.tour = function (name, href) {
         lastTouch = performance.now(); userMoved = true; glide.onDone = null;
+        soloBody = (name === "sun" || name === "moon") ? name : null;
         if (name === "footprint") {
           glide.axis = null; glide.step = 0; glide.frames = 110; glide.distTarget = 9;
           glide.targetTo = new THREE.Vector3(0, 0, 0);
@@ -794,6 +795,7 @@
       });
 
       var _stir = new THREE.Vector3();
+      canvas.addEventListener("pointerdown", function () { soloBody = null; }, { passive: true });
       canvas.addEventListener("pointermove", function (e) {
         updateCta(e);
         // the visitor's hand stirs the breath-dust: cursor ray → a point in the volume
