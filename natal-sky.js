@@ -228,6 +228,73 @@ export function buildNatalSky(THREE, scene, data, opts) {
     belt.add(mk); planetSprites.push(mk);
   });
 
+  /* ---------------- the giant witnesses ----------------
+     Jupiter and Saturn as real bodies at their true birth-night stations
+     (ephemeris-verified: Jupiter at opposition in Cancer, Saturn in Gemini).
+     The scene has no THREE lights — a small limb-darkening shader carries the
+     roundness; at opposition the face the Earth sees is the lit face. */
+  var bodyGroup = new T.Group(); bodyGroup.name = "NatalBodies"; belt.add(bodyGroup);
+  function giantTexture(kind) {
+    var cv = document.createElement("canvas"); cv.width = 64; cv.height = 256;
+    var ctx = cv.getContext("2d");
+    var g = ctx.createLinearGradient(0, 0, 0, 256);
+    var stops = (kind === "jupiter")
+      ? [[0, "#c9a97e"], [.12, "#e2c79a"], [.2, "#b98f66"], [.28, "#e8d3ab"], [.36, "#c19a70"], [.44, "#ecd9b4"], [.5, "#a67f5c"], [.56, "#e5cda4"], [.66, "#c4a077"], [.74, "#ead6ae"], [.84, "#bd9269"], [1, "#cfae83"]]
+      : [[0, "#cbb383"], [.18, "#e3d2a6"], [.34, "#c7ab7b"], [.5, "#ead9ae"], [.62, "#c9b083"], [.78, "#e6d4a8"], [1, "#c3a878"]];
+    for (var i = 0; i < stops.length; i++) g.addColorStop(stops[i][0], stops[i][1]);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 256);
+    var tex = new T.CanvasTexture(cv);
+    if ("colorSpace" in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
+    return tex;
+  }
+  function giantMaterial(tex) {
+    return new T.ShaderMaterial({
+      uniforms: { uMap: { value: tex } },
+      vertexShader: "varying vec3 vN; varying vec3 vV; varying vec2 vUv;\n" +
+        "void main(){ vUv=uv; vec4 mv=modelViewMatrix*vec4(position,1.0); vN=normalize(normalMatrix*normal); vV=normalize(-mv.xyz); gl_Position=projectionMatrix*mv; }",
+      fragmentShader: "uniform sampler2D uMap; varying vec3 vN; varying vec3 vV; varying vec2 vUv;\n" +
+        "void main(){ vec3 c=texture2D(uMap, vUv).rgb; float limb=pow(max(dot(normalize(vN),normalize(vV)),0.0),0.6); gl_FragColor=vec4(c*(0.22+0.78*limb),1.0); }"
+    });
+  }
+  function ringTexture() {
+    var cv = document.createElement("canvas"); cv.width = 256; cv.height = 8;
+    var ctx = cv.getContext("2d");
+    var g = ctx.createLinearGradient(0, 0, 256, 0);
+    g.addColorStop(0, "rgba(214,190,140,0)"); g.addColorStop(.12, "rgba(222,199,150,.5)");
+    g.addColorStop(.38, "rgba(201,175,124,.26)"); g.addColorStop(.47, "rgba(160,138,96,.05)");
+    g.addColorStop(.56, "rgba(226,205,158,.46)"); g.addColorStop(.85, "rgba(210,186,136,.3)"); g.addColorStop(1, "rgba(210,186,136,0)");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 256, 8);
+    var tex = new T.CanvasTexture(cv);
+    if ("colorSpace" in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
+    return tex;
+  }
+  (data.planets || []).forEach(function (p) {
+    if (!p.body) return;
+    var lon2 = p.eclLonDeg * Math.PI / 180, lat2 = (p.eclLatDeg || 0) * Math.PI / 180;
+    var grp = new T.Group();
+    grp.name = "Natal" + p.id.charAt(0).toUpperCase() + p.id.slice(1);
+    grp.position.copy(eclVec(lon2, lat2, p.body.dist));
+    var mesh = new T.Mesh(new T.SphereGeometry(p.body.radius, 48, 32), giantMaterial(giantTexture(p.body.kind)));
+    mesh.name = grp.name + "Mesh";
+    mesh.userData.nyePick = p.id;
+    grp.add(mesh);
+    if (p.body.ringInner) {
+      var rIn = p.body.radius * p.body.ringInner, rOut = p.body.radius * p.body.ringOuter;
+      var rg = new T.RingGeometry(rIn, rOut, 96, 1);
+      var pos2 = rg.getAttribute("position"), uv2 = rg.getAttribute("uv");
+      for (var vi = 0; vi < pos2.count; vi++) {                       // radial uv → the gradient reads as ring bands
+        var rr = Math.sqrt(pos2.getX(vi) * pos2.getX(vi) + pos2.getY(vi) * pos2.getY(vi));
+        uv2.setXY(vi, (rr - rIn) / (rOut - rIn), 0.5);
+      }
+      var ring = new T.Mesh(rg, new T.MeshBasicMaterial({ map: ringTexture(), transparent: true, side: T.DoubleSide, depthWrite: false, fog: false }));
+      ring.name = grp.name + "Ring";
+      ring.rotation.x = (p.body.ringTiltDeg || 26.7) * Math.PI / 180;  // the belt's ecliptic is the XY plane; tilt off it
+      ring.userData.nyePick = p.id;
+      grp.add(ring);
+    }
+    bodyGroup.add(grp);
+  });
+
   // orient the whole sky so the Sun-sign (Capricornus) greets the camera (+z) at rest, then drift slowly
   (function () {
     var sunP = (data.planets || []).filter(function (p) { return p.id === "sun"; })[0];
@@ -404,6 +471,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var ci = lineByCon[id];
       if (on && conCentroid[ci]) bloom(conCentroid[ci]);
     },
+    group: group,
+    bodyGroup: bodyGroup,
     setVisible: function (v) {
       group.visible = !!v;
       if (!v) { hoverCon = -1; if (tip) { tip.style.opacity = "0"; hovered = -1; document.body.style.cursor = ""; } }

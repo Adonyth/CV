@@ -590,7 +590,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=8").then(function (mod) {
+    import("./nye-armature.js?v=9").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -649,8 +649,8 @@
     // the natal sphere holds STILL around the world (the chart is a fact, not weather);
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
-    fetch("data/natal-sky.json?v=3").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=14").then(function (mod) {
+    fetch("data/natal-sky.json?v=4").then(function (r) { return r.json(); }).then(function (natalData) {
+      return import("./natal-sky.js?v=15").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 205 : 372,
@@ -766,7 +766,7 @@
       /* ===== the TOUR: the nav asks, the camera travels, the door opens ===== */
       window.__space.tour = function (name, href) {
         lastTouch = performance.now(); userMoved = true; glide.onDone = null;
-        soloBody = (name === "sun" || name === "moon") ? name : null;
+        soloBody = (name === "sun" || name === "moon" || name === "jupiter" || name === "saturn") ? name : null;
         if (name === "footprint") {
           glide.axis = null; glide.step = 0; glide.frames = 110; glide.distTarget = 9;
           glide.targetTo = new THREE.Vector3(0, 0, 0);
@@ -777,6 +777,12 @@
         } else if (name === "moon") {
           glideToBody("NyeMoon", 9, 110);
           if (natalSky) { natalSky.highlight("leo", true); setTimeout(function () { natalSky.highlight("leo", false); }, 4200); }
+        } else if (name === "jupiter") {
+          glideToBody("NatalJupiter", 13, 110);
+          if (natalSky) { natalSky.highlight("cancer", true); setTimeout(function () { natalSky.highlight("cancer", false); }, 4200); }
+        } else if (name === "saturn") {
+          glideToBody("NatalSaturn", 16, 110);
+          if (natalSky) { natalSky.highlight("gemini", true); setTimeout(function () { natalSky.highlight("gemini", false); }, 4200); }
         } else if (name === "pillars" || name === "zodiac") {
           /* return to the canonical framing: keep the current azimuth (the sky keeps
              turning) but restore the entrance elevation — never arrive edge-on */
@@ -853,7 +859,9 @@
       // clean-click routing: a drag is never a click
       var pickRay = new THREE.Raycaster(), pickNdc = new THREE.Vector2();
       function glideToBody(objName, viewDist, nFrames) {
-        var obj = nyeArmature.group.getObjectByName(objName); if (!obj) return;
+        var obj = nyeArmature.group.getObjectByName(objName);
+        if (!obj && natalSky && natalSky.group) obj = natalSky.group.getObjectByName(objName);
+        if (!obj) return;
         var w = obj.getWorldPosition(new THREE.Vector3());
         /* stand OUTSIDE the body along the Earth→body line, swung aside within the
            gear-ring plane AND lifted above it — the sightline can never pass through
@@ -888,17 +896,23 @@
         pickNdc.x = (e.clientX / innerWidth) * 2 - 1; pickNdc.y = -(e.clientY / innerHeight) * 2 + 1;
         pickRay.setFromCamera(pickNdc, camera);
         var hits = pickRay.intersectObject(nyeArmature.group, true);
+        if (natalSky && natalSky.bodyGroup) {
+          hits = hits.concat(pickRay.intersectObject(natalSky.bodyGroup, true));
+          hits.sort(function (h1, h2) { return h1.distance - h2.distance; });
+        }
         for (var i = 0; i < hits.length; i++) {
           if (hits[i].object.name === "NyeEarthPickShell") continue;   // the oversized shell is not the globe
           var pick = null, o = hits[i].object;
           while (o && !pick) { pick = o.userData && o.userData.nyePick; o = o.parent; }
-          if (pick !== "sun" && pick !== "moon" && pick !== "earth") continue;   // glyphs never swallow a click
+          if (pick !== "sun" && pick !== "moon" && pick !== "earth" && pick !== "jupiter" && pick !== "saturn") continue;   // glyphs never swallow a click
           if (pick === "sun") {
             if (natalSky) { natalSky.highlight("capricorn", true); setTimeout(function () { natalSky.highlight("capricorn", false); }, 2800); }
             glideToBody("NyeSun", 34);
           } else if (pick === "moon") {
             if (natalSky) { natalSky.highlight("leo", true); setTimeout(function () { natalSky.highlight("leo", false); }, 2800); }
             glideToBody("NyeMoon", 9);
+          } else if (pick === "jupiter" || pick === "saturn") {
+            window.__space.tour(pick);                        // same journey as the nav would give
           } else if (pick === "earth") {
             glide.axis = null; glide.step = 0; glide.frames = 30; glide.distTarget = 7;
             glide.targetTo = new THREE.Vector3(0, 0, 0);      // orbit the Earth itself

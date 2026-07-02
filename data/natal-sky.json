@@ -84,7 +84,17 @@
         "zh": "木星"
       },
       "sign": "cancer",
-      "eclLonDeg": 100.5
+      "eclLonDeg": 100.48,
+      "eclLatDeg": 0.0,
+      "role": {
+        "en": "the publisher's star, at opposition that night",
+        "zh": "出版之星·出生当夜正值冲日"
+      },
+      "body": {
+        "kind": "jupiter",
+        "radius": 2.6,
+        "dist": 118
+      }
     },
     {
       "id": "saturn",
@@ -93,7 +103,20 @@
         "zh": "土星"
       },
       "sign": "gemini",
-      "eclLonDeg": 69.2
+      "eclLonDeg": 69.24,
+      "eclLatDeg": -1.8,
+      "role": {
+        "en": "structure and discipline, in the sign of words",
+        "zh": "结构与纪律·居文字之座"
+      },
+      "body": {
+        "kind": "saturn",
+        "radius": 2.2,
+        "dist": 156,
+        "ringInner": 1.4,
+        "ringOuter": 2.25,
+        "ringTiltDeg": 26.7
+      }
     }
   ],
   "constellations": [
