@@ -197,6 +197,7 @@ def page(title, body, depth=0, pager=False, desc=""):
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#0b0a09" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <title>{html.escape(full_title)}</title>
   <meta name="description" content="{d}" />
   <meta name="author" content="Jiaxuan Chen (陈嘉轩)" />
