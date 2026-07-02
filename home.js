@@ -138,27 +138,37 @@
   }
   function flow(x, y) { return (Math.sin(x * 0.0017 + t * 0.18) + Math.cos(y * 0.0021 - t * 0.14) + Math.sin((x + y) * 0.0012 + t * 0.10)) * 1.7; }
   var mx = -9999, my = -9999, pmx = -9999, pmy = -9999, mAct = false, mSpeed = 0, mDir = 0;
+  var lastJetTs = 0;
   function emitJet() {
+    lastJetTs = performance.now();
     var p = jets[jh++]; if (jh >= jets.length) jh = 0; p.x = mx + R(-4, 4); p.y = my + R(-4, 4);
     var a = mDir + R(-0.5, 0.5), s = R(1.8, 4.8) + Math.min(8, mSpeed) * 0.55;
     p.vx = Math.cos(a) * s + R(-0.4, 0.4); p.vy = Math.sin(a) * s + R(-0.4, 0.4);
     p.life = p.max = R(0.5, 1.05); p.size = R(1.4, 3.0); p.hue = Math.random(); p.spark = Math.random() < 0.18; p.ember = true;
   }
   function emitBurst(x, y) {
+    lastJetTs = performance.now();
     for (var i = 0; i < 48; i++) { var p = jets[jh++]; if (jh >= jets.length) jh = 0;
       var a = (i / 48) * 6.283 + R(-0.05, 0.05), s = R(2.4, 7.8); p.x = x + R(-3, 3); p.y = y + R(-3, 3);
       p.vx = Math.cos(a) * s; p.vy = Math.sin(a) * s; p.life = p.max = R(0.55, 1.3); p.size = R(1.5, 3.5);
       p.hue = Math.random(); p.spark = Math.random() < 0.32; p.ember = true; }
     rings.push({ x: x, y: y, r: 5, life: 1 });
   }
+  var __fc = 0;
   function frame(ts) {
     if (!running) return; t = ts / 1000; if (t0 < 0) t0 = ts;
     var el = ts - t0, BURST = 700, STREAM = 520, EDGE = 240, introOn = el < 730;
+    if (STARMODE) {
+      __fc++;
+      var busy2 = mAct || mSpeed > 0.4 || (performance.now() - lastJetTs < 1600) || el < 1400 ||
+                  (window.__viewDelta && (Math.abs(window.__viewDelta.x) + Math.abs(window.__viewDelta.y) > 0.2));
+      if (!busy2 && (__fc & 1)) { requestAnimationFrame(frame); return; }
+    }
     var cx = W / 2, cy = H / 2, maxR = Math.sqrt(W * W + H * H) / 2;
     if (mAct) { var dx = mx - pmx, dy = my - pmy; mSpeed = Math.hypot(dx, dy); if (mSpeed > 0.02) mDir = Math.atan2(dy, dx); pmx = mx; pmy = my; } else mSpeed *= 0.9;
     var dark = isDark(); ctx.clearRect(0, 0, W, H); ctx.globalCompositeOperation = dark ? "lighter" : "source-over";
     if (mAct && mSpeed > 1.0) { var burst = Math.min(22, Math.floor(mSpeed * 0.7) + 1); for (var k = 0; k < burst; k++) emitJet(); }
-    var _vd = (STARMODE && window.__viewDelta) ? window.__viewDelta : null;
+    var _vd = (STARMODE && window.__viewDelta && (window.__viewDelta.x || window.__viewDelta.y)) ? window.__viewDelta : null;
     if (_vd) {
       // TRUE torus wrap — keep each star's overflow distance, so the whole sky
       // slides as one sheet (the old pin-to-edge wrap stacked crossers onto a
@@ -170,6 +180,7 @@
         pv.y = (((pv.y + _vd.y + 6) % HH) + HH) % HH - 6;
       }
       for (var vj = 0; vj < jets.length; vj++) { if (jets[vj].life > 0) { jets[vj].x += _vd.x; jets[vj].y += _vd.y; } }
+      _vd.x = 0; _vd.y = 0;                            // consumed — accumulator resets
     }
     for (var i = 0; i < amb.length; i++) { var p = amb[i]; var fa = flow(p.x, p.y);
       var surge = !introOn ? 0 : Math.max(0, 1 - el / STREAM); var sp = p.spd * (1 + 7.0 * surge * surge);

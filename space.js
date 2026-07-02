@@ -678,8 +678,44 @@
         panOn = (e.button === 2 || e.button === 1 || e.shiftKey);
         plx = e.clientX; ply = e.clientY;
       }, true);
+      /* hovering the Earth summons the doorway to the footprint map */
+      var earthCta = document.getElementById("earth-cta"), ctaOn = false, ctaTick = 0;
+      var _ctaRay = new THREE.Raycaster(), _ctaNdc = new THREE.Vector2(), _ctaV = new THREE.Vector3();
+      function setCta(on) {
+        if (!earthCta || on === ctaOn) return;
+        ctaOn = on;
+        earthCta.classList.toggle("is-on", on);
+      }
+      function updateCta(e) {
+        if (!earthCta || !nyeArmature) return;
+        if ((ctaTick = (ctaTick + 1) % 3) !== 0) return;
+        _ctaNdc.x = (e.clientX / innerWidth) * 2 - 1; _ctaNdc.y = -(e.clientY / innerHeight) * 2 + 1;
+        _ctaRay.setFromCamera(_ctaNdc, camera);
+        var hits = _ctaRay.intersectObject(nyeArmature.group, true);
+        var onEarth = false;
+        for (var hI = 0; hI < hits.length; hI++) {
+          var oo = hits[hI].object, pk = null;
+          while (oo && !pk) { pk = oo.userData && oo.userData.nyePick; oo = oo.parent; }
+          if (pk === "earth") { onEarth = true; break; }   // ring glyphs may sit in front — scan on
+        }
+        if (onEarth) {
+          var ew = nyeArmature.group.getObjectByName("NyeEarthMesh").getWorldPosition(_ctaV).project(camera);
+          earthCta.style.left = ((ew.x * 0.5 + 0.5) * innerWidth) + "px";
+          earthCta.style.top = ((-ew.y * 0.5 + 0.5) * innerHeight - 46) + "px";
+        }
+        setCta(onEarth);
+      }
+      if (earthCta) {
+        earthCta.addEventListener("mouseenter", function () { setCta(true); earthCta.classList.add("is-on"); });
+        earthCta.addEventListener("click", function () {
+          document.body.classList.add("to-map");
+          setTimeout(function () { location.href = "footprint.html"; }, 380);
+        });
+      }
+
       var _stir = new THREE.Vector3();
       canvas.addEventListener("pointermove", function (e) {
+        updateCta(e);
         // the visitor's hand stirs the breath-dust: cursor ray → a point in the volume
         _stir.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1, 0.5).unproject(camera)
           .sub(camera.position).normalize().multiplyScalar(Math.min(70, controls.getRadius() * 0.9)).add(camera.position);
@@ -719,6 +755,7 @@
         glide.distTarget = distCap ? Math.min(controls.getRadius(), distCap) : 0;
       }
       addEventListener("click", function (e) {
+        if (e.target !== canvas) return;              // DOM buttons/links are none of our business
         if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 6) {
           e.stopImmediatePropagation(); e.preventDefault(); return;
         }
@@ -729,7 +766,7 @@
         for (var i = 0; i < hits.length; i++) {
           var pick = null, o = hits[i].object;
           while (o && !pick) { pick = o.userData && o.userData.nyePick; o = o.parent; }
-          if (!pick) continue;
+          if (pick !== "sun" && pick !== "moon" && pick !== "earth") continue;   // glyphs never swallow a click
           if (pick === "sun") {
             if (natalSky) { natalSky.highlight("capricorn", true); setTimeout(function () { natalSky.highlight("capricorn", false); }, 2800); }
             glideToBody("NyeSun", 96);
@@ -754,11 +791,21 @@
     }
 
     var running = true;
+    var frameNo = 0, prevSec = 0;
     function frame(t) {
       if (!running) return;
       var sec = (t || 0) * 0.001;
+      var dt = Math.min(0.1, Math.max(0.001, sec - prevSec)); prevSec = sec;
+      frameNo++;
       if (COSMOS && controls) {
         var nowMs = performance.now();
+        /* thermal guard: when the visitor rests, render at half rate — the slow
+           drift is indistinguishable at 30fps, the GPU cools. Any touch, glide,
+           entrance or stirred dust restores 60fps instantly. */
+        var busy = (nowMs - lastTouch < 2500) || glide.frames > 0 ||
+                   (!userMoved && nowMs < entranceUntil) ||
+                   deepFusion.uniforms.uPointerAmt.value > 0.05;
+        if (!busy && (frameNo & 1)) { requestAnimationFrame(frame); return; }
         // cinematic approach: ease the radius home until the visitor takes over
         if (!userMoved && nowMs < entranceUntil) {
           var r0 = controls.getRadius();
@@ -772,9 +819,9 @@
           glide.frames--;
           if (glide.frames === 0) glide.targetTo = null;
         }
-        // after 12s of stillness the world turns slowly on its own; manual always wins
-        if (userMoved && nowMs - lastTouch > 20000 && glide.frames === 0) controls.rotateWorld(camera.up, 0.00018);
-        if (!userMoved && nowMs >= entranceUntil) controls.rotateWorld(camera.up, 0.00018);
+        // after 20s of stillness the world turns slowly on its own; manual always wins (dt-based: same speed at any frame rate)
+        if (userMoved && nowMs - lastTouch > 20000 && glide.frames === 0) controls.rotateWorld(camera.up, 0.0108 * dt);
+        if (!userMoved && nowMs >= entranceUntil) controls.rotateWorld(camera.up, 0.0108 * dt);
         controls.update();
         if (!_refFar) _refFar = new THREE.Vector3();
         _refFar.set(0, 0, -800).project(camera);
@@ -782,11 +829,13 @@
           var rsx = (_refFar.x * 0.5 + 0.5) * innerWidth, rsy = (-_refFar.y * 0.5 + 0.5) * innerHeight;
           if (_refPrev.ok) {
             var pdx = rsx - _refPrev.x, pdy = rsy - _refPrev.y;
-            if (Math.abs(pdx) < 140 && Math.abs(pdy) < 140) window.__viewDelta = { x: pdx, y: pdy };
-            else window.__viewDelta = null;
+            if (Math.abs(pdx) < 140 && Math.abs(pdy) < 140) {
+              if (!window.__viewDelta) window.__viewDelta = { x: 0, y: 0 };
+              window.__viewDelta.x += pdx; window.__viewDelta.y += pdy;   // consumer resets
+            }
           }
           _refPrev.x = rsx; _refPrev.y = rsy; _refPrev.ok = true;
-        } else { _refPrev.ok = false; window.__viewDelta = null; }
+        } else { _refPrev.ok = false; }
         if (fieldEl2 && (fmT2 = (fmT2 + 1) % 12) === 0) {
           var rr2 = controls.getRadius();
           fieldEl2.style.opacity = (0.5 + 0.28 * Math.max(0, Math.min(1, (rr2 - 90) / 320))).toFixed(2);

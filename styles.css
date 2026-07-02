@@ -460,3 +460,13 @@ body.cosmos #field{opacity:.42; -webkit-mask-image:none; mask-image:none;}
 /* build 16 — the 2D field IS the far cosmos: it moves BELOW the 3D stage, so the
    Sun, Earth, Moon and gears naturally occlude the star-dust behind them */
 body.cosmos #field{z-index:-1; opacity:.62;}
+/* build 26 — the Earth's doorway + the leave-for-the-map fade */
+.earth-cta{position:fixed; z-index:6; transform:translate(-50%,-100%); display:none;
+  font-family:var(--mono); font-size:12.5px; letter-spacing:.06em; color:var(--ink); cursor:pointer;
+  background:rgba(11,10,9,.78); border:1px solid rgba(224,135,106,.45); border-radius:999px; padding:10px 18px;
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+  box-shadow:0 6px 24px rgba(0,0,0,.5), 0 0 18px rgba(224,135,106,.12);}
+.earth-cta.is-on{display:block;}
+.earth-cta:hover{color:var(--accent); border-color:var(--accent);}
+body.to-map #deep, body.to-map #field, body.to-map .cosmos-id, body.to-map .cosmos-ui,
+body.to-map .cosmos-legend, body.to-map .cosmos-hint{opacity:0 !important; transition:opacity .38s ease;}
