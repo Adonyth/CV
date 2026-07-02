@@ -1,95 +1,116 @@
-# 站点内容图谱 · The Content Atlas (build 29 起为准, 2026-07-02)
+# 站点内容图谱 v3 · The Content Atlas (build 30 起, 2026-07-02)
 
-> **硬规矩**:全站除"完整履历 ↗"按钮外,任何按钮/星点/CTA 严禁跳转 cv.html。
-> 个人网站的每一类内容都有**自己的独立页面**(footprint.html 模式:懒加载、暖黑、⟵ 星盘返回),
-> 页面入口 = 天体中的**具体位置**上的按钮/星点。
-> **原则**:场景位置表达"心性"(☉主外 / ☾主内 / ⊕行迹 / ◎时间),页面归属表达"类别"。
+> **硬规矩**:全站除「完整履历 ↗」按钮外,任何入口严禁指向 cv.html。
+> **分类命名规矩**:研究按**课题本身**命名,不出现仓库名/品牌名(ACAEXPL、Boltzmann、WMDB、Omytea 等不得作为研究名)。
+> **映射原则(v3 修正)**:出版发表 = 对外行为,一律不放主内侧。主内侧只放非发表之物
+> (自造产品、内心自述)。场所取自**真实星盘**——2002-01-02 出生时刻的真实天象。
 
-## 一、内容普查与分类(先分对类,再谈位置)
+## 〇、真实天象扩展(v3 的关键新事实)
 
-### A. 学术研究 · 论文与预印本(对外的公开主张)
-| 内容 | 状态 |
+出生时刻(2002-01-02 申时,UTC 08:00)的真实天象,pyephem 历表核实(2026-07-02):
+- 太阳 黄经 281.75° = 摩羯座 11.8° ✓(与场景现有对准一致)
+- 月亮 黄经 140.54° = 狮子座 20.5° ✓
+- **木星 黄经 100.48° = 巨蟹座 10.5°,距日 178.7°——出生当夜正值冲日,mag −2.6,整夜全天最亮行星**
+- **土星 黄经 69.24° = 双子座 9.2°**,mag −0.3,一个月前刚冲日
+
+两颗巨行星那一夜真实地悬在与太阳相对的夜空。传统占星中**木星主出版**,**土星主结构与纪律**;
+双子座主**语言与文字**,巨蟹座主**家宅与记忆**。这给了发表类内容两个诚实的对外场所。
+(场景落位直接用上表黄经;星等、木星条纹、土星环按真实观感建模。)
+
+## 一、内容普查(全量,课题名,无品牌)
+
+### A. 科学研究(自然科学,~14 题)→ 摩羯座(日座·主外之言)
+| # | 课题 | 出处/状态 |
+|---|---|---|
+| 1 | 密度矩阵信念态世界模型(量子计算×世界模型理论;Lindblad 开系统扩展) | 纲领进行中,2 稿撰写中 |
+| 2 | 算法理想主义的模块化识别之界定(paper A) | FoP 备稿 |
+| 3 | 通用先验不选分解:有界字母表局域性 no-go(paper B) | FoP→ |
+| 4 | 同一跨语境缺口在玻恩规则推导中的复现(paper B2) | SciPost Phys. Core 备稿 |
+| 5 | 玻尔兹曼大脑(paper C1) | Synthese 方向 |
+| 6 | 他心问题(paper C2) | Synthese 方向 |
+| 7 | 半直线自由费米子的局域模流标度与类型强制障碍(paper D) | AHP 投稿包就绪 |
+| 8 | 玻恩规则与自然性 | 代表作课题,进行中 |
+| 9 | 铃宕泛音显著性的协方差依赖与真实噪声标定标准 | RASTI 备稿 |
+| 10 | 快子相边界分类(有限窗口证书) | 理论线进行中 |
+| 11 | 引力波族群特征显著性证书(GWTC-4) | 撰写中 |
+| 12 | CMS 喷流物理(PYTHIA 喷流模拟/部分子级联/BSM 拓扑) | Brown Roloff 组 2024–26 |
+| 13 | 单壁碳纳米管 3ω 热学表征与统一有限加热丝阻抗理论 | Brown Kuehne 组,合著撰写中 |
+| 14 | 耀变体喷流形成机制(BP/BZ 拟合) | UCL 项目;CONF-CIAP 2023 已录用 |
+| 15 | 在束 γ 能谱学:能量矩阵开窗鉴别剩余核素 | 山大 2022 |
+| 16 | 类轴子暗物质:光子生存概率约束参数空间 | 北师大 2022 |
+| 17 | MAXI J1348-630 黑洞 X 射线双星(NICER/NuSTAR) | 山大 2023–24,本科论文 |
+| 18 | TOI 恒星耀发光谱与系外行星宜居性 | 山大 2022–23 |
+
+### B. 人文社科研究(3 题)→ 双子座(土星所在·文字之座)
+| 课题 | 状态 |
 |---|---|
-| Ringdown Overtone Significance(引力波方法) | RASTI 在审 |
-| A Universal Prior Selects No Preferred Factorization(locality no-go) | SciPost Phys. Core 在审 |
-| Random Sequence Scintillation(基础物理) | FoP 投稿 |
-| Calibrated Belief-State Probing in LLMs(预注册诚实阴性) | 预印本 |
-| Formation Mechanism of Blazar Jets | CONF-CIAP 2023 |
-| MAXI J1348-630 Outburst(本科论文) | 已完成 |
+| 技术垄断租金:新质生产力政治经济学的一个范畴 | SSRN 6950759 公开 |
+| 栈权力:前沿 AI 与市场不矫正 | 再投轮(B&P/C&C 方向) |
+| 相机·棋手·引擎(认识论方法) | SocArXiv 方向 |
 
-### B. 研究课题 · 研究纲领与经历(进行中的火)
-| 内容 | 性质 |
+### C. 书籍著作(2 本)→ 巨蟹座(木星所在·出版之星)
+| 著作 | 状态 |
 |---|---|
-| ACAEXPL — 证书纪律物理(score-agnostic 风险证书 + 预注册证伪) | 纲领 |
-| Born+naturalness capstone | 课题(进行中) |
-| tackyon — 快子相边界分类 | 课题 |
-| DTC 时间晶体证书移植 | 课题 |
-| Omytea — Grand Unified World Model(终极物理纲领) | 纲领(心性主内,类别属此) |
-| Omytea Personal Future Console | 纲领的活演示 |
+| An Invitation After Abundance(~1,164 页) | publish-ready |
+| Sovereign Scintillation Over Grand Fluctuation: An Observer-State Theory of Physics | 成稿中(未出版) |
 
-### C. 著作与政经写作(内心的文字)
-| 内容 | 状态 |
+### D. 产品(直接给官方链接,主内自造之物)→ 狮子座(月座·主内之火)
+| 产品 | 链接 |
 |---|---|
-| An Invitation After Abundance(~1,164 页专著) | publish-ready |
-| Technological Monopoly Rent | SSRN |
-| Stack Power: Frontier AI & Market Non-Correction | IO(CUP)在审 |
-| Camera, Player, Engine(相机·棋手·引擎,认识论) | 成文 |
-
-### D. 造物(内心锻成的器物)
-| 内容 | 形态 |
-|---|---|
-| omytea-quantum-substrate | PyPI 包 |
-| GolfCal-1k | 基准数据集 |
-| 弐时仪 Nye Clock | 独立站(外链,允许) |
+| Omytea | omyteaai.com · omytea-console.pages.dev · GitHub · PyPI(quantum-substrate)· GolfCal-1k |
+| 弐时仪 Nye Clock | nyeclock.pages.dev |
 | 本站(活星盘) | 你正在其中 |
 
-### E. 履历 · 求学与研究经历(时间中的路)
-山东大学物理学学士 → Brown University ScM(物理) → 独立研究者;各段研究经历。
+### E. 履历(求学与工作)→ 太阳本体 ☉(用户指定)
+山东大学(威海)空间科学与技术理学学士 2020–2024 → Brown University 物理学理学硕士 2024–2026。
+研究经历时间轴:γ 能谱(2022)→ ALP(2022)→ TOI(2022–23)→ 耀变体/UCL(2022–23)→ MAXI(2023–24)→ CMS+CNT(2024–26)。
+**不写"独立研究者";清华 PhD 未入学不公开。**
 
-### F. 足迹(空间中的路)✓ 已建成
-602,733 原始 GPS 点 → footprint.html。
+### F. 足迹 → 地球 ⊕ ✓ 已建成(footprint.html)
 
-## 二、场所分配(类别 → 天体位置 → 独立页面)
+### G. 内心自述(非发表,真正主内)→ 月亮本体 ☾
+命盘自述/为何是星盘/关于本站——about.html(唯一真正"主内"的文字)。
 
-| 场所 | 心性 | 承载类别 | 入口形式 | 独立页面 |
-|---|---|---|---|---|
-| **太阳本体 ☉** | 主外之源(火炉) | B 研究纲领与课题 | hover 出 CTA「研究纲领 ↗」 | `research.html` |
-| **摩羯座星** | 主外之言(太阳星座) | A 论文与预印本(一星一文) | hover 出题名,click 开对应锚点 | `papers.html#<id>` |
-| **月亮本体 ☾** | 主内之器 | D 造物 | hover 出 CTA「造物 ↗」 | `works.html` |
-| **狮子座星** | 主内之言(月亮星座) | C 著作与政经(一星一作) | hover 出题名,click 开对应锚点 | `writings.html#<id>` |
-| **干支四柱环 ◎** | 时间本身 | E 履历时间轴 | hover 环/玉牌出 CTA「履历 ↗」 | `journey.html` |
-| **地球 ⊕** | 空间之迹 | F 足迹 | hover 出 CTA「足迹地图 ↗」✓ | `footprint.html` ✓ |
+## 二、场所总表
 
-星→页锚点映射(natal-sky.json 的 `page` 字段,页面建成后转正为 `href`):
-- 摩羯(A 类):ringdown / localityNoGo / rss / beliefprobe / blazar / maxi → `papers.html#<id>`;acaexpl 星 → `research.html#acaexpl`
-- 狮子(C 类):invitation / monopolyRent / stackPower / cpe → `writings.html#<id>`
-- 狮子 Regulus:omytea → `research.html#omytea`(位置尊重心性,类别归纲领)
-- 造物星(D 类):omyteaSub / golfcal / console → `works.html#<id>`
+| 场所 | 真实天象 | 内容 | 页面 |
+|---|---|---|---|
+| 太阳本体 ☉ | 日在摩羯 | E 履历 | journey.html |
+| 摩羯座星 | 日座·主外 | A 科学研究(一星一题,18 题) | research/<id>.html(逐题独立页) |
+| 土星 ♄ + 双子座星 | 土星真实在双子 | B 人文社科研究(一星一题) | humanities/<id>.html |
+| 木星 ♃ + 巨蟹座星 | 木星真实在巨蟹·冲日 | C 书籍著作(一星一书) | books/<id>.html |
+| 狮子座星 | 月座·主内 | D 产品(星=产品,click 直接外链官方站) | 直接外链 |
+| 月亮本体 ☾ | 月在狮子 | G 内心自述 | about.html |
+| 地球 ⊕ | — | F 足迹 ✓ | footprint.html ✓ |
 
-## 三、导览栏 = 本图谱的投影(侧向弹出,不推挤)
+每题/每书/每文一个独立页(详细介绍+preprint/SSRN/书/期刊直链),footprint.html 模式。
+
+## 三、导览栏(顶部横栏,手风琴;叶随页面建成回填)
 
 ```
-命盘        → 生辰四柱 · 星座全图
-☉ 研究      → 太阳与摩羯(巡航) · [研究纲领 → research.html] · [论文与预印本 → papers.html]
-☾ 写作      → 月亮与狮子(巡航) · [著作与政经 → writings.html]
-造物        → [造物 → works.html] · 弐时仪 ↗(外链)
-◎ 履历      → [求学与研究之路 → journey.html]
-⊕ 足迹      → 足迹地图 ✓
-完整履历 ↗  → cv.html(全站唯一 cv 入口)
+命盘 [生辰四柱|星座全图|太阳与摩羯|月亮与狮子]
+研究 [→ 摩羯 18 题,建成后逐题回填]
+人文社科 [→ 双子 3 题]
+书籍 [→ 巨蟹 2 本]
+产品 [Omytea ↗ | 弐时仪 ↗](已上线,直接外链)
+履历 [→ journey.html]
+⊕ 足迹地图 ✓
+完整履历 ↗(唯一 cv 入口)
 ```
-方括号 = 页面建成后回填的叶;未建成前不上栏(不许挂空按钮)。
 
-## 四、建造顺序(一步一步,每页独立设计)
+## 四、建造顺序
 
-1. `journey.html` 履历时间轴(内容最确定)
-2. `papers.html` 论文(一文一节:题名/状态/摘要/主链接 arXiv/SSRN/期刊)
-3. `research.html` 纲领与课题(ACAEXPL/Omytea/进行中课题)
-4. `writings.html` 著作与政经(书占首屏)
-5. `works.html` 造物
-6. 每页建成 → natal-sky.json `page`→`href` 转正 → 导览栏回填叶 → 场景 CTA 接线
+1. **木星+土星入盘**(历表精确黄经;木星条纹/土星环;巡航目的地)
+2. **摩羯座重排**:18 颗研究星(natal-sky.json 重写,titles 按课题命名)
+3. **journey.html**(太阳→履历;内容已定)
+4. **research/<id>.html** 逐题(先 ringdown/玻恩自然性/世界模型等活跃题)
+5. **humanities/**、**books/**(双子/巨蟹星接线)
+6. **狮子座产品星**直接外链接线 + about.html(月亮)
+7. 每步:星点 href 转正 → 导览回填 → 场景 CTA(hover 行星出对应 CTA)
 
-## 五、当前状态(build 29)
+## 五、当前状态(build 30)
 
-- 导览栏侧向弹出 ✓;太阳/月亮独显时干支环整体隐去 ✓
-- 星点 click 暂不跳转(hover 有题名+辉光响应),等页面逐个建成
-- cv.html 全站仅存两处入口:左上名片「完整履历 ↗」+ 降级页链接(同为 CV 按钮)
+- 导览栏:顶部横栏 ✓ 手风琴(一次一组/再点即收/点外即收/叶发射即收)✓ 中屏右上降档 ✓
+- 太阳/月亮独显隐环 ✓(build 29)
+- cv.html 唯一入口规矩 ✓(build 29)
+- 星点 hover 有题名,click 暂不导航,待逐页建成

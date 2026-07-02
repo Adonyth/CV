@@ -787,11 +787,22 @@
         if (href) glide.onDone = function () { setTimeout(function () { location.href = href; }, 600); };
       };
       document.querySelectorAll("[data-tour]").forEach(function (el) {
-        el.addEventListener("click", function (ev) { ev.preventDefault(); window.__space.tour(el.getAttribute("data-tour"), el.getAttribute("data-href")); });
+        el.addEventListener("click", function (ev) { ev.preventDefault(); closeNavGroups(); window.__space.tour(el.getAttribute("data-tour"), el.getAttribute("data-href")); });
       });
-      // tree heads unfold their leaves (hover already opens via CSS; click pins open for touch/keyboard)
+      // accordion tour bar: click pins one group open (closing every other), click
+      // again releases it, and clicking anywhere else — or firing any leaf — closes all
+      var navGroups = document.querySelectorAll(".cosmos-nav__group");
+      function closeNavGroups() { navGroups.forEach(function (o) { o.classList.remove("open"); }); }
       document.querySelectorAll(".cosmos-nav__head").forEach(function (el) {
-        el.addEventListener("click", function () { el.parentElement.classList.toggle("open"); });
+        el.addEventListener("click", function (ev) {
+          ev.stopPropagation();
+          var g = el.parentElement, was = g.classList.contains("open");
+          closeNavGroups();
+          if (!was) g.classList.add("open");
+        });
+      });
+      document.addEventListener("click", function (e) {
+        if (!(e.target.closest && e.target.closest(".cosmos-nav"))) closeNavGroups();
       });
 
       var _stir = new THREE.Vector3();
