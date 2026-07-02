@@ -89,6 +89,16 @@
       var angVel = new T3.Vector3();
       var tmpPull = new T3.Vector3(0, 0.22, 1);
       var rotateSpeed = 0.00032, maxEventDelta = 0.008, dampingFactor = 0.036, zoomStep = 0.031, pinchGamma = 0.79;
+      // ---- silky log-space zoom (geometric glide) ----
+      // the wheel accumulates a TARGET radius in ln-space (so N notches in then N out return to
+      // the exact start radius); update() eases the live radius toward it every frame — scale-
+      // invariant (same feel near the Earth and far out), magnitude-aware, damped, clip-proof.
+      var zoomTarget = -1;        // desired radius; -1 = unseeded → adopt the live radius on first use
+      var externalDrive = false;  // true while an entrance/glide owns the radius this frame (don't ease)
+      var zoomStepLn = 0.40;      // ln(r) shift per one firm scroll unit (≈ one mouse-wheel notch)
+      var zoomRef = 100;          // px-equivalent that counts as 1.0 firm unit
+      var zoomHi = 2.2;           // per-EVENT upper clamp on units (anti-fling); no lower floor
+      var zoomEase = 0.18;        // per-frame log-space easing coefficient (critically-damped feel)
       function safeLookAtTarget() {
         var dx = target.x - cam.position.x, dy = target.y - cam.position.y, dz = target.z - cam.position.z;
         var d = Math.sqrt(dx * dx + dy * dy + dz * dz);
@@ -132,9 +142,14 @@
           if (o2.maxEventDelta != null) maxEventDelta = o2.maxEventDelta;
           if (o2.dampingFactor != null) dampingFactor = o2.dampingFactor;
           if (o2.zoomStep != null) zoomStep = o2.zoomStep;
+          if (o2.zoomStepLn != null) zoomStepLn = o2.zoomStepLn;
+          if (o2.zoomRef != null) zoomRef = o2.zoomRef;
+          if (o2.zoomHi != null) zoomHi = o2.zoomHi;
+          if (o2.zoomEase != null) zoomEase = o2.zoomEase;
           if (o2.pinchGamma != null) pinchGamma = o2.pinchGamma;
         },
         clearDelta: function () { angVel.set(0, 0, 0); },
+        setExternalDrive: function (v) { externalDrive = !!v; },
         rotateWorld: function (axis, ang) {                 // idle turn / glides ride the same math
           var q = new T3.Quaternion().setFromAxisAngle(axis, ang);
           var off = cam.position.clone().sub(target).applyQuaternion(q);
@@ -142,7 +157,9 @@
         },
         setRadius: function (r) {
           var off = safeOrbitOffset(); var r0 = off.length(); if (!isFinite(r0) || r0 < 1e-8) return;
-          off.normalize(); cam.position.copy(target).add(off.multiplyScalar(Math.max(minDistance, Math.min(maxDistance, r))));
+          var rc = Math.max(minDistance, Math.min(maxDistance, r));
+          off.normalize(); cam.position.copy(target).add(off.multiplyScalar(rc));
+          zoomTarget = rc;                 // keep the zoom accumulator glued to the driven radius
           safeLookAtTarget();
         },
         getRadius: function () { return cam.position.distanceTo(target); },
@@ -152,9 +169,27 @@
           if (angVel.lengthSq() < 1e-14) angVel.set(0, 0, 0);
           var off = safeOrbitOffset(); var r = off.length();
           if (!isFinite(r) || r < 1e-8) return;
-          if (r < minDistance || r > maxDistance) {
-            r = Math.max(minDistance, Math.min(maxDistance, r));
-            off.normalize(); cam.position.copy(target).add(off.multiplyScalar(r)); safeLookAtTarget();
+          if (externalDrive) {
+            // an entrance/glide owns the radius this frame — don't ease; keep the target glued to
+            // the driven radius so the wheel resumes cleanly the instant control returns.
+            zoomTarget = Math.max(minDistance, Math.min(maxDistance, r));
+            if (r < minDistance || r > maxDistance) {
+              r = zoomTarget; off.normalize();
+              cam.position.copy(target).add(off.multiplyScalar(r)); safeLookAtTarget();
+            }
+          } else {
+            if (zoomTarget < 0) zoomTarget = r;                         // first frame: adopt live radius
+            zoomTarget = Math.max(minDistance, Math.min(maxDistance, zoomTarget));
+            // critically-damped ease in LOG space → scale-invariant, geometry-exact, no overshoot
+            var lnR = Math.log(r), lnT = Math.log(zoomTarget), d = lnT - lnR, lnNext;
+            if (Math.abs(d) < 1e-4) { lnNext = lnT; zoomTarget = Math.exp(lnT); }  // snap: kill float creep
+            else { lnNext = lnR + zoomEase * d; }
+            var rNext = Math.exp(lnNext);
+            if (rNext < minDistance) rNext = minDistance;
+            else if (rNext > maxDistance) rNext = maxDistance;         // re-clamp the eased radius every frame
+            if (Math.abs(rNext - r) > 1e-7) {
+              off.normalize(); cam.position.copy(target).add(off.multiplyScalar(rNext)); safeLookAtTarget();
+            }
           }
         }
       };
@@ -207,10 +242,20 @@
       domElement.addEventListener("pointercancel", onUp, true);
       domElement.addEventListener("wheel", function (e) {
         e.preventDefault();
-        var off = safeOrbitOffset(); var r0 = off.length(); if (!isFinite(r0) || r0 < 1e-8) return;
+        // normalize delta across deltaMode (0=px, 1=lines, 2=pages) to px-equivalents
         var norm = e.deltaMode === 1 ? e.deltaY * 18 : e.deltaMode === 2 ? e.deltaY * 300 : e.deltaY;
-        var r = Math.max(minDistance, Math.min(maxDistance, r0 * (1 + Math.sign(norm) * zoomStep)));
-        off.normalize(); cam.position.copy(target).add(off.multiplyScalar(r));
+        if (!isFinite(norm) || norm === 0) { e.stopPropagation(); return; }
+        // magnitude-aware unit, UPPER-clamped only (anti-fling); NO lower floor so tiny trackpad
+        // events stay tiny and sum smoothly. ~zoomRef px == one firm mouse notch == 1.0 unit.
+        var unit = Math.min(zoomHi, Math.abs(norm) / zoomRef);
+        // preserve the original direction: this is the log-space form of r*=(1+sign(norm)*s),
+        // i.e. scroll forward (deltaY<0) → smaller r → zoom IN; scroll back (deltaY>0) → zoom OUT
+        var dLn = Math.sign(norm) * zoomStepLn * unit;
+        // seed the target from the LIVE radius on first use, or right after an external drive ends
+        var r0 = cam.position.distanceTo(target);
+        if (zoomTarget < 0 || externalDrive) zoomTarget = r0;
+        // accumulate in log space; clamp the TARGET (not the camera) so it can never slam/clip
+        zoomTarget = Math.exp(Math.max(Math.log(minDistance), Math.min(Math.log(maxDistance), Math.log(zoomTarget) + dLn)));
         e.stopPropagation();
       }, { passive: false, capture: true });
       return scope;
@@ -230,8 +275,8 @@
       camera.lookAt(HOME);
       controls = createPremiumOrbitControls(camera, canvas, THREE);
       controls.target.copy(HOME);
-      controls.setDistanceLimits(3.2, 430);
-      controls.setInteractionTuning({ rotateSpeed: 0.00050, dampingFactor: 0.042, zoomStep: 0.045, maxEventDelta: 0.014 });
+      controls.setDistanceLimits(5.0, 430);   // 5.0 floor clears the Moon (2.99) + inner rings — no more near-Earth clip
+      controls.setInteractionTuning({ rotateSpeed: 0.00050, dampingFactor: 0.042, zoomStepLn: 0.40, zoomRef: 100, zoomHi: 2.2, zoomEase: 0.18, maxEventDelta: 0.014 });
       entranceUntil = performance.now() + 4600;
     } else { camera.position.set(0, 0, 60); }
 
@@ -1070,6 +1115,9 @@
         // after 20s of stillness the world turns slowly on its own; manual always wins (dt-based: same speed at any frame rate)
         if (userMoved && nowMs - lastTouch > 20000 && glide.frames === 0) controls.rotateWorld(camera.up, 0.0108 * dt);
         if (!userMoved && nowMs >= entranceUntil) controls.rotateWorld(camera.up, 0.0108 * dt);
+        // the entrance/glide owns the radius this frame → update() must NOT ease against it;
+        // otherwise the wheel's log-target owns it. Recomputed every frame, so it clears cleanly.
+        controls.setExternalDrive((glide.frames > 0) || (!userMoved && nowMs < entranceUntil));
         controls.update();
         if (!beltCentered && natalSky && nyeArmature) {   // one-shot: the WHOLE planetary system (planets + belt) orbits the SUN, not the Earth
           var _bodies = natalSky.group.getObjectByName("NatalBodies");
