@@ -99,6 +99,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   var pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
   var aSize = new Float32Array(N), aAlpha = new Float32Array(N), aSeed = new Float32Array(N), aSpark = new Float32Array(N);
   var nodeIndex = [];  // point-index -> data node (for raycast)
+  var starConIdx = [];  // point-index -> constellation index (for hover reveal)
   stars.forEach(function (st, i) {
     var k = i * 3; pos[k] = st.pos.x; pos[k + 1] = st.pos.y; pos[k + 2] = st.pos.z;
     var magF = Math.max(0.06, Math.min(1, (6.5 - st.mag) / 6.0));
@@ -108,8 +109,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var c = coreCol(h, spark);
     col[k] = c[0]; col[k + 1] = c[1]; col[k + 2] = c[2];
     var keyCon = cons[st.conIdx].loadBearing;
-    aSize[i] = lerp(1.8, 6.6, w) + (st.importance === 1.0 ? 2.4 : 0) + (keyCon && st.importance >= 0.7 ? 1.4 : 0);
-    aAlpha[i] = Math.min(0.98, lerp(0.34, 0.88, w) * (st.importance === 1.0 ? 1.15 : 1.0) * (keyCon ? 1.12 : 1.0));
+    aSize[i] = lerp(2.4, 8.0, w) + (st.importance === 1.0 ? 3.0 : 0) + (keyCon && st.importance >= 0.7 ? 2.0 : 0);
+    aAlpha[i] = Math.min(1.0, lerp(0.52, 0.98, w) * (st.importance === 1.0 ? 1.15 : 1.0) * (keyCon ? 1.12 : 1.0));
+    starConIdx[i] = st.conIdx;
     aSeed[i] = hash(i * 13 + 1);
     aSpark[i] = spark;
     if (st.node) nodeIndex[i] = { node: st.node, base: aAlpha[i], pos: st.pos };
@@ -126,7 +128,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   var uniforms = {
     uMap: { value: o.tex }, uTime: { value: 0 }, uFusion: { value: 0.52 },
     uPixelRatio: { value: Math.min((typeof devicePixelRatio !== "undefined" ? devicePixelRatio : 1) || 1, mobile ? 1.5 : 2) },
-    uMaxPointSize: { value: mobile ? 8.0 : 10.0 }, uRefDepth: { value: 560.0 }, // lift far-hemisphere stars into visibility
+    uMaxPointSize: { value: mobile ? 11.0 : 16.0 }, uRefDepth: { value: 640.0 }, // lift constellation stars above the drifting field
     uAmplitude: { value: 6.0 },              // near-frozen: figures hold their shape
     uLayerKind: { value: 0.0 }, uClearInner: { value: -2.0 }, uClearOuter: { value: -1.0 }
   };
@@ -145,7 +147,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   var lineEntries = [];  // { mat, base }  indexed by constellation
   var lineByCon = {};
   var totalSegs = 0;
-  var isDark = true, hlSet = {};
+  var isDark = true, hlSet = {}, hoverCon = -1;
   cons.forEach(function (c, ci) {
     var segs = [];
     c.figureLines.forEach(function (seg) {
@@ -174,9 +176,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
     totalSegs += segs.length;
     var lgeo = new T.BufferGeometry();
     lgeo.setAttribute("position", new T.BufferAttribute(new Float32Array(pts), 3));
-    var base = c.loadBearing ? 0.95 : 0.56;
+    var base = c.loadBearing ? 1.0 : 0.72;
     var mat = new T.PointsMaterial({
-      map: o.tex, color: c.loadBearing ? 0xf7b183 : 0xf0a071, size: c.loadBearing ? 3.4 : 2.3, sizeAttenuation: true,
+      map: o.tex, color: c.loadBearing ? 0xffc79a : 0xf3ac83, size: c.loadBearing ? 5.0 : 3.6, sizeAttenuation: true,
       transparent: true, opacity: base, depthWrite: false, depthTest: true, blending: T.AdditiveBlending
     });
     mat.fog = false;
@@ -263,12 +265,12 @@ export function buildNatalSky(THREE, scene, data, opts) {
   }
   function makeNameSprite(zh, en, key, loc) {
     var zhTex = nameTexture(zh, en, key, "zh"), enTex = nameTexture(zh, en, key, "en");
-    var m = new T.SpriteMaterial({ map: loc === "zh" ? zhTex : enTex, transparent: true, opacity: key ? 1.0 : 0.72, depthWrite: false, depthTest: false, blending: T.NormalBlending, fog: false });
+    var m = new T.SpriteMaterial({ map: loc === "zh" ? zhTex : enTex, transparent: true, opacity: 0, depthWrite: false, depthTest: false, blending: T.NormalBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     var sp = new T.Sprite(m);
     var sc = key ? 48 : 31;
     sp.scale.set(sc, sc * 224 / 512, 1);
-    sp.userData.baseOpacity = m.opacity;
+    sp.userData.shownOpacity = key ? 1.0 : 0.85;
     sp.userData.zhTex = zhTex; sp.userData.enTex = enTex;
     return sp;
   }
@@ -289,7 +291,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     stars.forEach(function (st) {
       var key = cons[st.conIdx].loadBearing;
       if (!st.node && !(key && st.importance >= 0.7)) return;
-      var m = new T.SpriteMaterial({ map: o.tex, transparent: true, opacity: st.node ? 0.58 : 0.4, depthWrite: false, depthTest: true, blending: T.AdditiveBlending, fog: false });
+      var m = new T.SpriteMaterial({ map: o.tex, transparent: true, opacity: st.node ? 0.62 : 0.44, depthWrite: false, depthTest: true, blending: T.AdditiveBlending, fog: false });
       if ("toneMapped" in m) m.toneMapped = false;
       var h = new T.Sprite(m);
       var sc = st.node ? 11 : 6.5;
@@ -301,35 +303,42 @@ export function buildNatalSky(THREE, scene, data, opts) {
   /* ---------------- interaction: window raycaster (never touches #deep) ---------------- */
   var tip = null, raycaster = null, ndc = null, hovered = -1, onMove = null, onClick = null;
   if (interactive) {
-    raycaster = new T.Raycaster(); raycaster.params.Points.threshold = mobile ? 10 : 7;
+    raycaster = new T.Raycaster(); raycaster.params.Points.threshold = mobile ? 14 : 11;
     ndc = new T.Vector2();
     tip = document.createElement("div"); tip.className = "natal-tip"; tip.setAttribute("role", "status");
     tip.style.cssText = "position:fixed;pointer-events:none;z-index:5;opacity:0;transition:opacity .18s ease;transform:translate(12px,12px);max-width:280px;";
     (document.querySelector(".content") || document.body).appendChild(tip);
 
-    function pickAt(cx, cy) {
+    function pick(cx, cy) {
       ndc.x = (cx / innerWidth) * 2 - 1; ndc.y = -(cy / innerHeight) * 2 + 1;
       raycaster.setFromCamera(ndc, o.camera);
       var hits = raycaster.intersectObject(starPoints, false);
-      for (var i = 0; i < hits.length; i++) { if (nodeIndex[hits[i].index]) return hits[i].index; }
-      return -1;
+      var nodeIdx = -1, con = -1;
+      if (hits.length) {
+        con = (starConIdx[hits[0].index] != null) ? starConIdx[hits[0].index] : -1;
+        for (var i = 0; i < hits.length; i++) { if (nodeIndex[hits[i].index]) { nodeIdx = hits[i].index; break; } }
+      }
+      return { node: nodeIdx, con: con };
     }
     onMove = function (e) {
-      if (!group.visible) return;
-      var idx = pickAt(e.clientX, e.clientY);
-      if (idx === hovered) { if (idx >= 0) { tip.style.left = e.clientX + "px"; tip.style.top = e.clientY + "px"; } return; }
-      hovered = idx;
-      if (idx >= 0) {
-        var nd = nodeIndex[idx].node;
-        tip.innerHTML = '<div class="natal-tip__t"><span class="i18n-en">' + nd.title.en + '</span><span class="i18n-zh">' + nd.title.zh + '</span></div>' +
-          (nd.role ? '<div class="natal-tip__r">' + nd.role + '</div>' : "");
-        tip.style.left = e.clientX + "px"; tip.style.top = e.clientY + "px"; tip.style.opacity = "1";
-        document.body.style.cursor = "pointer";
-        bloom(nodeIndex[idx].pos);
-      } else { tip.style.opacity = "0"; document.body.style.cursor = ""; }
+      if (!group.visible) { hoverCon = -1; return; }
+      var pk = pick(e.clientX, e.clientY);
+      hoverCon = pk.con;                                  // hovering a constellation reveals ONLY its name
+      var idx = pk.node;
+      if (idx !== hovered) {
+        hovered = idx;
+        if (idx >= 0) {
+          var nd = nodeIndex[idx].node;
+          tip.innerHTML = '<div class="natal-tip__t"><span class="i18n-en">' + nd.title.en + '</span><span class="i18n-zh">' + nd.title.zh + '</span></div>' +
+            (nd.role ? '<div class="natal-tip__r">' + nd.role + '</div>' : "");
+          tip.style.opacity = "1"; document.body.style.cursor = "pointer";
+          bloom(nodeIndex[idx].pos);
+        } else { tip.style.opacity = "0"; document.body.style.cursor = ""; }
+      }
+      if (idx >= 0) { tip.style.left = e.clientX + "px"; tip.style.top = e.clientY + "px"; }
     };
     onClick = function (e) {
-      var idx = pickAt(e.clientX, e.clientY);
+      var idx = pick(e.clientX, e.clientY).node;
       if (idx < 0) return;
       var href = nodeIndex[idx].node.href;
       if (href && href.charAt(0) === "#") { var t = document.querySelector(href); if (t) { t.scrollIntoView({ behavior: "smooth", block: "start" }); } }
@@ -351,11 +360,12 @@ export function buildNatalSky(THREE, scene, data, opts) {
   function bloom(p) { if (!bloomSprite) return; bloomSprite.position.copy(p); bloomSprite.visible = true; bloomT = 1.0; }
 
   /* ---------------- labels projection + housekeeping per frame ---------------- */
+  function isLit(ci) { return !!hlSet[cons[ci].id] || hoverCon === ci; }
   function updateLabels() {
     for (var ci = 0; ci < nameSprites.length; ci++) {
       var sp = nameSprites[ci]; if (!sp) continue;
-      var want = hlSet[cons[ci].id] ? 1.0 : sp.userData.baseOpacity;
-      sp.material.opacity += (want - sp.material.opacity) * 0.12;
+      var want = isLit(ci) ? sp.userData.shownOpacity : 0;
+      sp.material.opacity += (want - sp.material.opacity) * 0.16;
     }
   }
 
@@ -368,8 +378,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var pulse = age < 9 ? 1 + 0.8 * Math.max(0, 1 - age / 9) : 1;
     for (var ci = 0; ci < lineEntries.length; ci++) {
       var e = lineEntries[ci]; if (!e) continue;
-      var hl = hlSet[cons[ci].id] ? 1.7 : 1;
-      e.mat.opacity = Math.min(0.95, e.base * (isDark ? 1 : 1.18) * pulse * hl);
+      var hl = isLit(ci) ? 1.9 : 1;
+      e.mat.opacity = Math.min(1.0, e.base * (isDark ? 1 : 1.18) * pulse * hl);
     }
   }
   var api = {
@@ -395,7 +405,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     },
     setVisible: function (v) {
       group.visible = !!v;
-      if (!v && tip) { tip.style.opacity = "0"; hovered = -1; document.body.style.cursor = ""; }
+      if (!v) { hoverCon = -1; if (tip) { tip.style.opacity = "0"; hovered = -1; document.body.style.cursor = ""; } }
     },
     // language of the in-scene nameplates follows the page locale (EN mode shows no Chinese)
     setLocale: function (loc) {
@@ -418,7 +428,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     },
     // live tuning levers (for judging on the real machine)
     setLineOpacity: function (v) { for (var i = 0; i < lineEntries.length; i++) { var e = lineEntries[i]; if (e) e.base = cons[i].loadBearing ? v : v * 0.48; } },
-    setStarScale: function (v) { uniforms.uRefDepth.value = 560 * v; },
+    setStarScale: function (v) { uniforms.uRefDepth.value = 640 * v; },
     stats: { stars: N, segments: totalSegs, dataNodes: nodeIndex.filter(Boolean).length, planets: planetSprites.length, constellations: cons.length },
     dispose: function () {
       if (onMove) removeEventListener("pointermove", onMove);

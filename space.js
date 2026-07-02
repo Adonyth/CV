@@ -229,7 +229,7 @@
       camera.lookAt(HOME);
       controls = createPremiumOrbitControls(camera, canvas, THREE);
       controls.target.copy(HOME);
-      controls.setDistanceLimits(6.5, 430);
+      controls.setDistanceLimits(3.2, 430);
       controls.setInteractionTuning({ rotateSpeed: 0.00050, dampingFactor: 0.042, zoomStep: 0.045, maxEventDelta: 0.014 });
       entranceUntil = performance.now() + 4600;
     } else { camera.position.set(0, 0, 60); }
@@ -558,7 +558,7 @@
       function bakeTrace() {
         fetch("data/footprint-points.f32").then(function (r) { return r.arrayBuffer(); }).then(function (buf) {
           var raw = new Float32Array(buf);
-          var W = MOBILE ? 2048 : 4096, H = W / 2;
+          var W = MOBILE ? 2048 : 6144, H = W / 2;   // finer: the smaller globe is viewed closer
           var cv = document.createElement("canvas"); cv.width = W; cv.height = H;
           var ctx = cv.getContext("2d");
           // two passes: a soft warm bed, then a bright core — the roads must READ
@@ -590,7 +590,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=7").then(function (mod) {
+    import("./nye-armature.js?v=8").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -650,7 +650,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=2").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=11").then(function (mod) {
+      return import("./natal-sky.js?v=12").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 205 : 372,
@@ -737,7 +737,7 @@
             if (natalSky) { natalSky.highlight("leo", true); setTimeout(function () { natalSky.highlight("leo", false); }, 2800); }
             glideToBody("NyeMoon", 70);
           } else if (pick === "earth") {
-            glide.axis = null; glide.step = 0; glide.frames = 30; glide.distTarget = 17;
+            glide.axis = null; glide.step = 0; glide.frames = 30; glide.distTarget = 7;
             glide.targetTo = new THREE.Vector3(0, 0, 0);      // orbit the Earth itself
           }
           e.stopImmediatePropagation();

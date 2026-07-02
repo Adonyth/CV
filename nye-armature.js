@@ -80,7 +80,7 @@ export function mountNyeArmature(THREE, scene, opts) {
   let moonUniformsRef = null;
 
   const ephem = computeFrozenEphemeris(instant);
-  const earthRadiusVis = 1.8;
+  const earthRadiusVis = 0.95;   // shrunk: the Sun (SUN_BASE_R 2.05) now clearly dwarfs the Earth; day/hour rings + footprint scale with it
   const earthToMoon = ephem.moon.clone().sub(ephem.earth);
   const emLen = earthToMoon.length();
   if (emLen < 1e-9) earthToMoon.set(1, 0, 0);
@@ -168,9 +168,9 @@ export function mountNyeArmature(THREE, scene, opts) {
     pillar: PILLARS.day,
     stemRadius: earthRadiusVis * 2.05,
     branchRadius: earthRadiusVis * 2.58,
-    toothScale: 0.34,
-    glyphStemScale: 0.4,
-    glyphBranchScale: 0.48,
+    toothScale: 0.18,
+    glyphStemScale: 0.21,
+    glyphBranchScale: 0.26,
     couplingOpacity: 0.2
   });
   dayClockOrbitPlaneGroup.add(dayGear.group);
@@ -194,9 +194,9 @@ export function mountNyeArmature(THREE, scene, opts) {
     pillar: PILLARS.hour,
     stemRadius: earthRadiusVis * 1.18,
     branchRadius: earthRadiusVis * 1.38,
-    toothScale: 0.23,
-    glyphStemScale: 0.26,
-    glyphBranchScale: 0.34,
+    toothScale: 0.12,
+    glyphStemScale: 0.14,
+    glyphBranchScale: 0.18,
     couplingOpacity: 0.22
   });
   hourGear.group.rotation.x = Math.PI / 2;
@@ -205,7 +205,7 @@ export function mountNyeArmature(THREE, scene, opts) {
   hourGear.branchSwivel.rotation.z = hourAnchor - PILLARS.hour.branchIndex * (TAU / 12);
   hourGear.stemSwivel.rotation.z = hourAnchor - (PILLARS.hour.stemIndex + 0.5) * (TAU / 10);
   hourGear.label.visible = false;
-  const hourFloatingLabel = makeTextSprite("时 · 甲申", "#f4ead2", 1.0, {
+  const hourFloatingLabel = makeTextSprite("时 · 甲申", "#f4ead2", 0.55, {
     sub: "10×12 / 60"
   });
   hourFloatingLabel.name = "HourPillarReadout";
