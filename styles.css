@@ -489,6 +489,16 @@ body.cosmos #field{z-index:-1; opacity:.62;}
   box-shadow:0 6px 24px rgba(0,0,0,.5), 0 0 18px rgba(224,135,106,.12);}
 .earth-cta.is-on{display:block;}
 .earth-cta:hover{color:var(--accent); border-color:var(--accent);}
+/* return-to-overview: bottom-center, appears only when you've left the whole-sky view */
+.cosmos-home{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(8px); z-index:6;
+  font-family:var(--mono); font-size:12px; letter-spacing:.1em; color:var(--ink);
+  background:rgba(11,10,9,.62); border:1px solid rgba(255,255,255,.14); border-radius:999px; padding:9px 18px;
+  cursor:pointer; opacity:0; pointer-events:none; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+  transition:opacity .3s ease, transform .3s ease, color .2s, border-color .2s;}
+.cosmos-home.is-on{opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto;}
+.cosmos-home:hover{color:var(--accent); border-color:var(--accent);}
+body.is-flat .cosmos-home{display:none !important;}
+@media(max-width:700px){ .cosmos-home{bottom:16px;} }
 body.to-map #deep, body.to-map #field, body.to-map .cosmos-id, body.to-map .cosmos-ui,
 body.to-map .cosmos-legend, body.to-map .cosmos-hint{opacity:0 !important; transition:opacity .38s ease;}
 /* build 30 — the tour bar sits at the TOP CENTER; each group drops its leaves

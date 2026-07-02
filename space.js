@@ -933,6 +933,19 @@
       }
       window.__space.focusGiant = focusGiant;
       var _selV = new THREE.Vector3();
+      /* return to the whole-sky overview — a smooth glide to the canonical home frame */
+      var homeBtn = document.getElementById("cosmos-home");
+      function goHome() {
+        clearSel(); soloBody = null;             // the whole chart returns — rings and all
+        var az = (function () { var o = camera.position.clone().sub(controls.target); return (o.x * o.x + o.z * o.z > 1e-6) ? Math.atan2(o.x, o.z) : 0.8; })();
+        var el = 0.26, dir = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
+        glide.targetTo = HOME.clone();
+        glide.camTo = HOME.clone().add(dir.multiplyScalar(128));
+        glide.axis = null; glide.step = 0; glide.distTarget = 0; glide.frames = 90;
+      }
+      window.__space.goHome = goHome;
+      if (homeBtn) homeBtn.addEventListener("click", goHome);
+
       window.__space.uiTick = function () {
         if (soloBody && glide.frames === 0 && controls.getRadius() > 130) soloBody = null;   // zoomed back out BY HAND — the chart reassembles (never mid-flight)
         if (selStar && starCta) {
@@ -943,6 +956,11 @@
             starCta.style.top = ((-_selV.y * 0.5 + 0.5) * innerHeight - 40) + "px";
             starCta.classList.add("is-on");
           }
+        }
+        // the "full view" affordance appears only once the visitor has left the overview
+        if (homeBtn) {
+          var away = soloBody || selStar || controls.getRadius() < 104 || controls.target.lengthSq() > 36;
+          homeBtn.classList.toggle("is-on", !!away && glide.frames === 0);
         }
       };
 
@@ -982,13 +1000,7 @@
           return;
         }
       }, true);
-      canvas.addEventListener("dblclick", function () {
-        controls.target.copy(HOME);
-        camera.up.set(0, 1, 0);
-        camera.position.set(HOME.x, HOME.y + 128 * Math.sin(0.26), HOME.z + 128 * Math.cos(0.26));
-        camera.lookAt(HOME);
-        controls.clearDelta(); glide.frames = 0;
-      });
+      canvas.addEventListener("dblclick", goHome);   // double-click also returns to the whole sky (now a smooth glide)
     }
 
     var running = true;
