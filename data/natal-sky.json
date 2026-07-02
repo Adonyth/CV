@@ -61,7 +61,7 @@
    "body": {
     "kind": "mercury",
     "radius": 0.38,
-    "dist": 60
+    "dist": 104
    }
   },
   {
@@ -75,7 +75,7 @@
    "body": {
     "kind": "venus",
     "radius": 0.9,
-    "dist": 78
+    "dist": 126
    }
   },
   {
@@ -1508,9 +1508,9 @@
   }
  ],
  "asteroidBelt": {
-  "rInner": 118,
-  "rOuter": 138,
-  "count": 900,
-  "latSpread": 6.0
+  "rInner": 122,
+  "rOuter": 135,
+  "count": 760,
+  "latSpread": 4.0
  }
 }

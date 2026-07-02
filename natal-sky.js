@@ -434,13 +434,13 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var dist3 = ab.rInner + arng() * (ab.rOuter - ab.rInner);
       var vpos = eclVec(lon3, lat3, dist3);
       pos[ai * 3] = vpos.x; pos[ai * 3 + 1] = vpos.y; pos[ai * 3 + 2] = vpos.z;
-      var g = 0.42 + 0.4 * arng();
-      col[ai * 3] = g * 0.82; col[ai * 3 + 1] = g * 0.72; col[ai * 3 + 2] = g * 0.56;
+      var g = 0.30 + 0.34 * arng();                 // dimmer, so the belt reads as dust not sparks
+      col[ai * 3] = g * 0.72; col[ai * 3 + 1] = g * 0.58; col[ai * 3 + 2] = g * 0.42;
     }
     var abGeo = new T.BufferGeometry();
     abGeo.setAttribute("position", new T.BufferAttribute(pos, 3));
     abGeo.setAttribute("color", new T.BufferAttribute(col, 3));
-    var abMat = new T.PointsMaterial({ size: 1.1, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.72, depthWrite: false, fog: false });
+    var abMat = new T.PointsMaterial({ size: 0.9, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false, blending: T.NormalBlending, fog: false });   // rocky specks, not additive glow
     if ("toneMapped" in abMat) abMat.toneMapped = false;
     var abPts = new T.Points(abGeo, abMat);
     abPts.name = "AsteroidBelt";
