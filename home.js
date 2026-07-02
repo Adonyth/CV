@@ -159,8 +159,18 @@
     var dark = isDark(); ctx.clearRect(0, 0, W, H); ctx.globalCompositeOperation = dark ? "lighter" : "source-over";
     if (mAct && mSpeed > 1.0) { var burst = Math.min(22, Math.floor(mSpeed * 0.7) + 1); for (var k = 0; k < burst; k++) emitJet(); }
     var _vd = (STARMODE && window.__viewDelta) ? window.__viewDelta : null;
-    if (_vd) { for (var vi = 0; vi < amb.length; vi++) { amb[vi].x += _vd.x; amb[vi].y += _vd.y; }
-               for (var vj = 0; vj < jets.length; vj++) { if (jets[vj].life > 0) { jets[vj].x += _vd.x; jets[vj].y += _vd.y; } } }
+    if (_vd) {
+      // TRUE torus wrap — keep each star's overflow distance, so the whole sky
+      // slides as one sheet (the old pin-to-edge wrap stacked crossers onto a
+      // single line and read as a grid)
+      var WW = W + 12, HH = H + 12;
+      for (var vi = 0; vi < amb.length; vi++) {
+        var pv = amb[vi];
+        pv.x = (((pv.x + _vd.x + 6) % WW) + WW) % WW - 6;
+        pv.y = (((pv.y + _vd.y + 6) % HH) + HH) % HH - 6;
+      }
+      for (var vj = 0; vj < jets.length; vj++) { if (jets[vj].life > 0) { jets[vj].x += _vd.x; jets[vj].y += _vd.y; } }
+    }
     for (var i = 0; i < amb.length; i++) { var p = amb[i]; var fa = flow(p.x, p.y);
       var surge = !introOn ? 0 : Math.max(0, 1 - el / STREAM); var sp = p.spd * (1 + 7.0 * surge * surge);
       p.x += Math.cos(fa) * sp + 0.18; p.y += Math.sin(fa) * sp;
