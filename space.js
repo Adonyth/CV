@@ -678,13 +678,18 @@
         panOn = (e.button === 2 || e.button === 1 || e.shiftKey);
         plx = e.clientX; ply = e.clientY;
       }, true);
-      /* hovering the Earth summons the doorway to the footprint map */
-      var earthCta = document.getElementById("earth-cta"), ctaOn = false, ctaTick = 0;
+      /* hovering the Earth summons the footprint doorway; hovering the Sun, the journey doorway */
+      var earthCta = document.getElementById("earth-cta"), sunCta = document.getElementById("sun-cta"), ctaOn = false, sunCtaOn = false, ctaTick = 0;
       var _ctaRay = new THREE.Raycaster(), _ctaNdc = new THREE.Vector2(), _ctaV = new THREE.Vector3();
       function setCta(on) {
         if (!earthCta || on === ctaOn) return;
         ctaOn = on;
         earthCta.classList.toggle("is-on", on);
+      }
+      function setSunCta(on) {
+        if (!sunCta || on === sunCtaOn) return;
+        sunCtaOn = on;
+        sunCta.classList.toggle("is-on", on);
       }
       function updateCta(e) {
         if (!earthCta || !nyeArmature) return;
@@ -692,19 +697,25 @@
         _ctaNdc.x = (e.clientX / innerWidth) * 2 - 1; _ctaNdc.y = -(e.clientY / innerHeight) * 2 + 1;
         _ctaRay.setFromCamera(_ctaNdc, camera);
         var hits = _ctaRay.intersectObject(nyeArmature.group, true);
-        var onEarth = false;
+        var onEarth = false, onSun = false;
         for (var hI = 0; hI < hits.length; hI++) {
           if (hits[hI].object.name === "NyeEarthPickShell") continue;   // the oversized shell is not the globe
           var oo = hits[hI].object, pk = null;
           while (oo && !pk) { pk = oo.userData && oo.userData.nyePick; oo = oo.parent; }
           if (pk === "earth") { onEarth = true; break; }   // ring glyphs may sit in front — scan on
+          if (pk === "sun") { onSun = true; break; }
         }
         if (onEarth) {
           var ew = nyeArmature.group.getObjectByName("NyeEarthMesh").getWorldPosition(_ctaV).project(camera);
           earthCta.style.left = ((ew.x * 0.5 + 0.5) * innerWidth) + "px";
           earthCta.style.top = ((-ew.y * 0.5 + 0.5) * innerHeight - 46) + "px";
         }
-        setCta(onEarth);
+        if (onSun && sunCta) {
+          var sw = nyeArmature.group.getObjectByName("NyeSunCore").getWorldPosition(_ctaV).project(camera);
+          sunCta.style.left = ((sw.x * 0.5 + 0.5) * innerWidth) + "px";
+          sunCta.style.top = ((-sw.y * 0.5 + 0.5) * innerHeight - 58) + "px";
+        }
+        setCta(onEarth); setSunCta(onSun);
       }
       function openFootprintMap() {
         document.body.classList.add("to-map");
@@ -713,6 +724,14 @@
       if (earthCta) {
         earthCta.addEventListener("mouseenter", function () { setCta(true); earthCta.classList.add("is-on"); });
         earthCta.addEventListener("click", openFootprintMap);
+      }
+      function openJourney() {
+        document.body.classList.add("to-map");
+        setTimeout(function () { location.href = "journey.html"; }, 380);
+      }
+      if (sunCta) {
+        sunCta.addEventListener("mouseenter", function () { setSunCta(true); sunCta.classList.add("is-on"); });
+        sunCta.addEventListener("click", openJourney);
       }
 
       /* when the Earth owns the page (close zoom) and the hand hovers it, the
@@ -754,6 +773,7 @@
           glide.onDone = openFootprintMap;
         } else if (name === "sun") {
           glideToBody("NyeSun", 34, 110);   /* the sun = the journey (履历) anchor */
+          glide.onDone = openJourney;
         } else if (name === "moon") {
           glideToBody("NyeMoon", 9, 110);
           if (natalSky) { natalSky.highlight("leo", true); setTimeout(function () { natalSky.highlight("leo", false); }, 4200); }
