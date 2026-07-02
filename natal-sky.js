@@ -176,9 +176,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
     totalSegs += segs.length;
     var lgeo = new T.BufferGeometry();
     lgeo.setAttribute("position", new T.BufferAttribute(new Float32Array(pts), 3));
-    var base = c.loadBearing ? 1.0 : 0.85;
+    var base = c.loadBearing ? 1.0 : 0.92;
+    var prx = Math.min((typeof devicePixelRatio !== "undefined" ? devicePixelRatio : 1) || 1, mobile ? 1.5 : 2);
     var mat = new T.PointsMaterial({
-      map: o.tex, color: c.loadBearing ? 0xffc79a : 0xf6b088, size: c.loadBearing ? 6.0 : 4.4, sizeAttenuation: true,
+      map: o.tex, color: c.loadBearing ? 0xffc79a : 0xf6b088, size: (c.loadBearing ? 7.0 : 5.4) * prx, sizeAttenuation: false,
       transparent: true, opacity: base, depthWrite: false, depthTest: true, blending: T.AdditiveBlending
     });
     mat.fog = false;
@@ -189,8 +190,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
     /* wide soft under-glow beneath the crisp chain — the figure reads as a
        LUMINOUS BRUSHSTROKE, unmistakable against the loose star sea */
     var glowMat = new T.PointsMaterial({
-      map: o.tex, color: c.loadBearing ? 0xf7a877 : 0xe8946c, size: (c.loadBearing ? 6.0 : 4.4) * 2.1, sizeAttenuation: true,
-      transparent: true, opacity: base * 0.34, depthWrite: false, depthTest: true, blending: T.AdditiveBlending
+      map: o.tex, color: c.loadBearing ? 0xf7a877 : 0xe8946c, size: (c.loadBearing ? 15.5 : 12.0) * prx, sizeAttenuation: false,
+      transparent: true, opacity: base * 0.42, depthWrite: false, depthTest: true, blending: T.AdditiveBlending
     });
     glowMat.fog = false;
     if ("toneMapped" in glowMat) glowMat.toneMapped = false;
@@ -218,21 +219,13 @@ export function buildNatalSky(THREE, scene, data, opts) {
   }
   var planetSprites = [];
   (data.planets || []).forEach(function (p) {
-    var ch = GLYPH[p.id]; if (!ch || typeof document === "undefined") return;
+    // NO planet symbols anywhere (founder: the sky carries no labels at all);
+    // invisible markers keep the chart-alignment math alive
     var lon = p.eclLonDeg * Math.PI / 180, lat = (p.eclLatDeg || 0) * Math.PI / 180;
-    if (p.id === "sun" || p.id === "moon") {
-      // the REAL Sun and Moon models carry these — no symbols; an invisible
-      // marker keeps the chart-alignment math alive
-      var mk = new T.Object3D();
-      mk.position.copy(eclVec(lon, lat, R * 0.965));
-      mk.userData.planet = p.id;
-      belt.add(mk); planetSprites.push(mk);
-      return;
-    }
-    var sp = glyphSprite(ch, 1.1, false);
-    sp.position.copy(eclVec(lon, lat, R * 0.965));
-    sp.userData.planet = p.id;
-    belt.add(sp); planetSprites.push(sp);
+    var mk = new T.Object3D();
+    mk.position.copy(eclVec(lon, lat, R * 0.965));
+    mk.userData.planet = p.id;
+    belt.add(mk); planetSprites.push(mk);
   });
 
   // orient the whole sky so the Sun-sign (Capricornus) greets the camera (+z) at rest, then drift slowly
@@ -248,10 +241,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
      can count across the sky at any distance; the two NATAL signs burn warmest */
   cons.forEach(function (c, ci) {
     var key3 = c.loadBearing;
-    var bm2 = new T.SpriteMaterial({ map: o.tex, transparent: true, opacity: key3 ? 0.17 : 0.10, depthWrite: false, depthTest: true, blending: T.AdditiveBlending, fog: false, color: key3 ? 0xe8916c : 0xd9855f });
+    var bm2 = new T.SpriteMaterial({ map: o.tex, transparent: true, opacity: key3 ? 0.22 : 0.14, depthWrite: false, depthTest: true, blending: T.AdditiveBlending, fog: false, color: key3 ? 0xe8916c : 0xd9855f });
     if ("toneMapped" in bm2) bm2.toneMapped = false;
     var aura = new T.Sprite(bm2);
-    var asc = key3 ? 70 : 52;
+    var asc = key3 ? 78 : 58;
     aura.scale.set(asc, asc, 1);
     aura.position.copy(conCentroid[ci]);
     aura.name = (key3 ? "natalAura_" : "conAura_") + c.id;
@@ -387,7 +380,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var e = lineEntries[ci]; if (!e) continue;
       var hl = isLit(ci) ? 1.9 : 1;
       e.mat.opacity = Math.min(1.0, e.base * (isDark ? 1 : 1.18) * pulse * hl);
-      if (e.glowMat) e.glowMat.opacity = Math.min(0.6, e.base * 0.34 * pulse * hl);
+      if (e.glowMat) e.glowMat.opacity = Math.min(0.68, e.base * 0.42 * pulse * hl);
     }
   }
   var api = {
