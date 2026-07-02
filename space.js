@@ -225,7 +225,7 @@
     var glide = { frames: 0, axis: null, step: 0, distTarget: 0 };
     if (COSMOS) {
       // entrance: arrive from deep space; the frame loop eases the radius home
-      camera.position.set(HOME.x - 116, HOME.y + 88, HOME.z + 102);
+      camera.position.set(HOME.x - 150, HOME.y + 116, HOME.z + 132);
       camera.lookAt(HOME);
       controls = createPremiumOrbitControls(camera, canvas, THREE);
       controls.target.copy(HOME);
@@ -984,7 +984,7 @@
       canvas.addEventListener("dblclick", function () {
         controls.target.copy(HOME);
         camera.up.set(0, 1, 0);
-        camera.position.set(HOME.x, HOME.y + 80 * Math.sin(0.18), HOME.z + 80 * Math.cos(0.18));
+        camera.position.set(HOME.x, HOME.y + 128 * Math.sin(0.26), HOME.z + 128 * Math.cos(0.26));
         camera.lookAt(HOME);
         controls.clearDelta(); glide.frames = 0;
       });
@@ -1009,7 +1009,7 @@
         // cinematic approach: ease the radius home until the visitor takes over
         if (!userMoved && nowMs < entranceUntil) {
           var r0 = controls.getRadius();
-          controls.setRadius(r0 + (80 - r0) * 0.045);
+          controls.setRadius(r0 + (128 - r0) * 0.045);   // balanced cosmic framing, not cramped
         }
         // guided glide after clicking a body (any touch cancels)
         if (glide.frames > 0) {
