@@ -631,6 +631,9 @@ export function mountNyeArmature(THREE, scene, opts) {
       "    nightSurf=mix(nightSurf,vec3(0.0),cv*0.4);",
       "  }",
       "  vec3 surface=mix(nightSurf,daySurf,terminator);",
+      // soft camera-side fill so the real continents (and the footprint riding on them) read
+      // from any angle — even the night side the entrance lands on — without killing day/night.
+      "  surface+=alb*pow(max(dot(N,V),0.0),1.25)*0.20;",
       "  float fres=pow(1.0-max(dot(N,V),0.0),3.2);",
       "  float atGate=smoothstep(0.12,0.55,terminator);",
       "  vec3 atmoDayC=vec3(0.16,0.48,0.98)*fres*0.52*atGate;",
@@ -652,6 +655,15 @@ export function mountNyeArmature(THREE, scene, opts) {
     };
     const mat = new T.ShaderMaterial({ uniforms, vertexShader: earthVert, fragmentShader: earthFrag });
     disableToneMapping(mat);
+
+    /* real equirectangular Earth, so the baked GPS footprint lands on the ACTUAL continents.
+       Stays procedural until the map arrives, then switches in — no black flash on load. */
+    new T.TextureLoader().load("data/earth-map.jpg", function (etex) {
+      if ("SRGBColorSpace" in T) etex.colorSpace = T.SRGBColorSpace;
+      etex.wrapS = T.RepeatWrapping; etex.anisotropy = 4;
+      uniforms.uAlbedoMap.value = etex;
+      uniforms.uUseAlbedoMap.value = 1;
+    });
 
     const earthGroup = new T.Group();
     earthGroup.name = "NyeEarth";
@@ -715,7 +727,7 @@ export function mountNyeArmature(THREE, scene, opts) {
       })
     );
     footprint.name = "NyeEarthFootprint";
-    footprint.rotation.y = -1.15;   // bring the dense US-Northeast cluster toward the entrance view
+    footprint.rotation.y = 0;       // MUST match the earth-map albedo (rotation 0) so the trace sits on real continents
     footprint.renderOrder = 2;
     earthGroup.add(footprint);
 

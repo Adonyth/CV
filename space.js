@@ -271,7 +271,7 @@
     var glide = { frames: 0, axis: null, step: 0, distTarget: 0 };
     if (COSMOS) {
       // entrance: arrive from deep space; the frame loop eases the radius home
-      camera.position.set(HOME.x - 150, HOME.y + 116, HOME.z + 132);
+      camera.position.set(HOME.x - 150, HOME.y + 116, HOME.z - 132);   // arrive on the SUN-lit side — you land looking at the real continents (the Americas) with the footprint on them
       camera.lookAt(HOME);
       controls = createPremiumOrbitControls(camera, canvas, THREE);
       controls.target.copy(HOME);
@@ -636,7 +636,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=15").then(function (mod) {
+    import("./nye-armature.js?v=17").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -824,7 +824,13 @@
       function applyRingFade() {
         if (!nyeArmature) return;
         collectRingMats(); if (!ringFadeMats) return;
-        var want = (soloBody || (ctaOn && controls.getRadius() < 16)) ? 0 : 1;
+        var r = controls.getRadius();
+        // the birth-chart rings/glyphs melt away as you close in on the Earth (the landing is a
+        // clean world + its footprint, nothing blocking it) and reassemble as you pull back out
+        // to the natal-chart overview. Only near the Earth — a constellation is handled by soloBody.
+        var nearEarth = controls.target.lengthSq() < 1.0;
+        var proximity = nearEarth ? Math.max(0, Math.min(1, (r - 8.5) / 8.0)) : 1;   // 0 at r≤8.5 → 1 at r≥16.5
+        var want = (soloBody || (ctaOn && r < 16)) ? 0 : proximity;
         if (Math.abs(ringFade - want) < 0.004) { ringFade = want; return; }
         ringFade += (want - ringFade) * 0.1;
         for (var rf = 0; rf < ringFadeMats.length; rf++) {
