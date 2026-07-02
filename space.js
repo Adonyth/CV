@@ -590,7 +590,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=9").then(function (mod) {
+    import("./nye-armature.js?v=11").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -650,7 +650,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=5").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=17").then(function (mod) {
+      return import("./natal-sky.js?v=18").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 205 : 372,
@@ -778,8 +778,7 @@
           glide.targetTo = new THREE.Vector3(0, 0, 0);
           glide.onDone = openFootprintMap;
         } else if (name === "sun") {
-          glideToBody("NyeSun", 34, 110);   /* the sun = the journey (履历) anchor */
-          glide.onDone = openJourney;
+          glideToBody("NyeSun", 34, 110);   /* the sun = the journey anchor; its hover door opens the page */
         } else if (name === "moon") {
           glideToBody("NyeMoon", 9, 110);
           if (natalSky) { natalSky.highlight("leo", true); setTimeout(function () { natalSky.highlight("leo", false); }, 4200); }

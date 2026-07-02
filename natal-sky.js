@@ -234,17 +234,83 @@ export function buildNatalSky(THREE, scene, data, opts) {
      The scene has no THREE lights — a small limb-darkening shader carries the
      roundness; at opposition the face the Earth sees is the lit face. */
   var bodyGroup = new T.Group(); bodyGroup.name = "NatalBodies"; belt.add(bodyGroup);
+  /* baked once at load — per-frame cost stays one texture sample per pixel */
+  function gRng(seed) { var a = seed >>> 0; return function () { a |= 0; a = (a + 0x6d2b79f5) | 0; var t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  function gNoise(seed, px) {          // x-periodic value noise
+    var rng = gRng(seed), lat = [], y, x;
+    for (y = 0; y < 48; y++) { lat[y] = []; for (x = 0; x < px; x++) lat[y][x] = rng(); }
+    return function (xx, yy) {
+      var xi = Math.floor(xx), yi = Math.floor(yy), xf = xx - xi, yf = yy - yi;
+      var ux = xf * xf * (3 - 2 * xf), uy = yf * yf * (3 - 2 * yf);
+      var X0 = ((xi % px) + px) % px, X1 = (X0 + 1) % px;
+      var Y0 = Math.min(47, Math.max(0, yi)), Y1 = Math.min(47, Y0 + 1);
+      return (lat[Y0][X0] * (1 - ux) + lat[Y0][X1] * ux) * (1 - uy) + (lat[Y1][X0] * (1 - ux) + lat[Y1][X1] * ux) * uy;
+    };
+  }
+  function gFbm(seed, px) {
+    var o = [gNoise(seed, px), gNoise(seed + 3, px * 2), gNoise(seed + 11, px * 4)];
+    return function (x, y) { return 0.5 * o[0](x, y) + 0.32 * o[1](x * 2, y * 2) + 0.18 * o[2](x * 4, y * 4); };
+  }
+  function hexRGB(h) { return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]; }
+  function rampAt(stops, v) {          // stops: [pos, "#hex"] sorted
+    var i; for (i = 1; i < stops.length; i++) if (v <= stops[i][0]) break;
+    if (i >= stops.length) i = stops.length - 1;
+    var a = stops[i - 1], b = stops[i];
+    var t = (v - a[0]) / Math.max(1e-6, b[0] - a[0]); t = Math.max(0, Math.min(1, t));
+    var ca = hexRGB(a[1]), cb = hexRGB(b[1]);
+    return [ca[0] + (cb[0] - ca[0]) * t, ca[1] + (cb[1] - ca[1]) * t, ca[2] + (cb[2] - ca[2]) * t];
+  }
+  var JUPITER_RAMP = [ // v: 0 = north pole … 1 = south pole (true belt/zone rhythm)
+    [0.00, "#a58a66"], [0.10, "#ab8f6d"], [0.16, "#d9c49a"], [0.22, "#a5794f"], [0.28, "#e4d4ae"],
+    [0.34, "#b08453"], [0.40, "#96562f"], [0.46, "#a86636"], [0.485, "#f0e3c0"], [0.535, "#eee0ba"],
+    [0.56, "#9c5c33"], [0.63, "#aa6a3d"], [0.68, "#e0d0a8"], [0.74, "#b3895c"], [0.80, "#d6c298"],
+    [0.88, "#a98d68"], [1.00, "#9d8261"]
+  ];
+  var SATURN_RAMP = [
+    [0.00, "#a98f68"], [0.12, "#bda87e"], [0.24, "#d3bd8e"], [0.36, "#c8ae7e"], [0.46, "#e2cfa0"],
+    [0.54, "#e6d3a8"], [0.64, "#cdb384"], [0.76, "#d8c193"], [0.90, "#b89e73"], [1.00, "#a3895f"]
+  ];
   function giantTexture(kind) {
-    var cv = document.createElement("canvas"); cv.width = 64; cv.height = 256;
-    var ctx = cv.getContext("2d");
-    var g = ctx.createLinearGradient(0, 0, 0, 256);
-    var stops = (kind === "jupiter")
-      ? [[0, "#c9a97e"], [.12, "#e2c79a"], [.2, "#b98f66"], [.28, "#e8d3ab"], [.36, "#c19a70"], [.44, "#ecd9b4"], [.5, "#a67f5c"], [.56, "#e5cda4"], [.66, "#c4a077"], [.74, "#ead6ae"], [.84, "#bd9269"], [1, "#cfae83"]]
-      : [[0, "#cbb383"], [.18, "#e3d2a6"], [.34, "#c7ab7b"], [.5, "#ead9ae"], [.62, "#c9b083"], [.78, "#e6d4a8"], [1, "#c3a878"]];
-    for (var i = 0; i < stops.length; i++) g.addColorStop(stops[i][0], stops[i][1]);
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 256);
+    var W = 1024, H = 512, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    var ctx = cv.getContext("2d"), img = ctx.createImageData(W, H);
+    var jup = kind === "jupiter";
+    var ramp = jup ? JUPITER_RAMP : SATURN_RAMP;
+    var warp = gFbm(jup ? 5 : 71, 6), swirl = gFbm(jup ? 29 : 83, 12);
+    var wAmp = jup ? 0.030 : 0.008;
+    var y, x;
+    for (y = 0; y < H; y++) {
+      for (x = 0; x < W; x++) {
+        var u = x / W, v = y / H;
+        var vv = v + (warp(u * 6, v * 3) - 0.5) * wAmp * (1 + 1.6 * Math.abs(Math.sin(v * Math.PI * 7)));
+        var c = rampAt(ramp, Math.max(0, Math.min(1, vv)));
+        var tone = 0.94 + 0.12 * (swirl(u * 12, v * 6) - 0.5) * (jup ? 1.0 : 0.45);
+        var i4 = (y * W + x) * 4;
+        img.data[i4] = Math.min(255, c[0] * tone);
+        img.data[i4 + 1] = Math.min(255, c[1] * tone);
+        img.data[i4 + 2] = Math.min(255, c[2] * tone);
+        img.data[i4 + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    if (jup) {
+      // the Great Red Spot (~22°S) with its pale collar, plus a string of white ovals
+      var gx = 0.31 * W, gy = 0.625 * H;
+      var halo = ctx.createRadialGradient(gx, gy, 2, gx, gy, 0.075 * W);
+      halo.addColorStop(0, "rgba(240,226,196,0.9)"); halo.addColorStop(1, "rgba(240,226,196,0)");
+      ctx.fillStyle = halo; ctx.beginPath(); ctx.ellipse(gx, gy, 0.075 * W, 0.045 * H, 0, 0, Math.PI * 2); ctx.fill();
+      var spot = ctx.createRadialGradient(gx, gy, 1, gx, gy, 0.052 * W);
+      spot.addColorStop(0, "rgba(201,96,60,0.98)"); spot.addColorStop(0.7, "rgba(180,84,52,0.9)"); spot.addColorStop(1, "rgba(180,84,52,0)");
+      ctx.fillStyle = spot; ctx.beginPath(); ctx.ellipse(gx, gy, 0.052 * W, 0.030 * H, 0, 0, Math.PI * 2); ctx.fill();
+      var ovr = gRng(3);
+      ctx.fillStyle = "rgba(238,230,208,0.75)";
+      for (var k = 0; k < 4; k++) {
+        var ox = (0.52 + 0.11 * k + 0.03 * ovr()) * W, oy = (0.70 + 0.012 * ovr()) * H;
+        ctx.beginPath(); ctx.ellipse(ox, oy, 0.011 * W, 0.007 * H, 0, 0, Math.PI * 2); ctx.fill();
+      }
+    }
     var tex = new T.CanvasTexture(cv);
     if ("colorSpace" in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
+    tex.wrapS = T.RepeatWrapping; tex.anisotropy = 4;
     return tex;
   }
   function giantMaterial(tex) {
@@ -257,15 +323,39 @@ export function buildNatalSky(THREE, scene, data, opts) {
     });
   }
   function ringTexture() {
-    var cv = document.createElement("canvas"); cv.width = 256; cv.height = 8;
-    var ctx = cv.getContext("2d");
-    var g = ctx.createLinearGradient(0, 0, 256, 0);
-    g.addColorStop(0, "rgba(214,190,140,0)"); g.addColorStop(.12, "rgba(222,199,150,.5)");
-    g.addColorStop(.38, "rgba(201,175,124,.26)"); g.addColorStop(.47, "rgba(160,138,96,.05)");
-    g.addColorStop(.56, "rgba(226,205,158,.46)"); g.addColorStop(.85, "rgba(210,186,136,.3)"); g.addColorStop(1, "rgba(210,186,136,0)");
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 256, 8);
+    var W = 1024, H = 16, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    var ctx = cv.getContext("2d"), img = ctx.createImageData(W, H);
+    var streak = gNoise(57, 128);
+    function profile(t) {            // [alpha, brightness] across C → B → Cassini → A
+      var a = 0, b = 1;
+      if (t < 0.16) { a = 0.10 + 0.10 * (t / 0.16); b = 0.72; }                       // C ring — translucent
+      else if (t < 0.50) { a = 0.62 + 0.14 * Math.sin((t - 0.16) * 22.0); b = 1.0; }  // B ring — dense, banded
+      else if (t < 0.585) { a = 0.045; b = 0.62; }                                    // Cassini division
+      else if (t < 0.93) {                                                            // A ring
+        a = 0.40; b = 0.9;
+        if (Math.abs(t - 0.865) < 0.007) a = 0.05;                                    // Encke gap
+      } else { a = 0.40 * Math.max(0, 1 - (t - 0.93) / 0.07); b = 0.85; }             // outer fade
+      if (t < 0.02) a *= t / 0.02;                                                    // inner fade
+      return [a, b];
+    }
+    var base = hexRGB("#dcc79c");
+    for (var x = 0; x < W; x++) {
+      var t = x / W;
+      var pr = profile(t);
+      var fine = 0.86 + 0.28 * streak(t * 128, 0.5);                                  // fine radial banding
+      var al = Math.max(0, Math.min(1, pr[0] * fine));
+      for (var y = 0; y < H; y++) {
+        var i4 = (y * W + x) * 4;
+        img.data[i4] = Math.min(255, base[0] * pr[1]);
+        img.data[i4 + 1] = Math.min(255, base[1] * pr[1]);
+        img.data[i4 + 2] = Math.min(255, base[2] * pr[1]);
+        img.data[i4 + 3] = Math.round(al * 255);
+      }
+    }
+    ctx.putImageData(img, 0, 0);
     var tex = new T.CanvasTexture(cv);
     if ("colorSpace" in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
+    tex.anisotropy = 4;
     return tex;
   }
   (data.planets || []).forEach(function (p) {

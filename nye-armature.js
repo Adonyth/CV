@@ -274,6 +274,134 @@ export function mountNyeArmature(THREE, scene, opts) {
     });
   }
 
+  /* ---------- baked-texture kitchen: all surface detail is painted ONCE at load.
+     Per-frame cost afterwards = one texture sample per pixel (the fbm-per-pixel
+     shaders this replaces cost 20-30 noise evaluations per pixel per frame). ---------- */
+  function bakeRng(seed) { let a = seed >>> 0; return function () { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  function bakeNoise(seed, px) {   // x-periodic value-noise field, period px lattice cells
+    const rng = bakeRng(seed), lat = [];
+    for (let y = 0; y < 64; y++) { lat[y] = []; for (let x = 0; x < px; x++) lat[y][x] = rng(); }
+    return function (x, y) {       // x in cells (wraps at px), y in cells
+      const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+      const sm = (v) => v * v * (3 - 2 * v);
+      const ux = sm(xf), uy = sm(yf);
+      const X0 = ((xi % px) + px) % px, X1 = (X0 + 1) % px;
+      const Y0 = Math.min(63, Math.max(0, yi)), Y1 = Math.min(63, Y0 + 1);
+      return (lat[Y0][X0] * (1 - ux) + lat[Y0][X1] * ux) * (1 - uy) + (lat[Y1][X0] * (1 - ux) + lat[Y1][X1] * ux) * uy;
+    };
+  }
+  function bakeFbm(seed, px) {
+    const oct = [bakeNoise(seed, px), bakeNoise(seed + 7, px * 2), bakeNoise(seed + 19, px * 4), bakeNoise(seed + 41, px * 8), bakeNoise(seed + 97, px * 16)];
+    return function (x, y) {
+      return 0.42 * oct[0](x, y) + 0.26 * oct[1](x * 2, y * 2) + 0.16 * oct[2](x * 4, y * 4) + 0.10 * oct[3](x * 8, y * 8) + 0.06 * oct[4](x * 16, y * 16);
+    };
+  }
+  function canvasTexture(cv) {
+    const tex = new T.CanvasTexture(cv);
+    if ("colorSpace" in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
+    tex.wrapS = T.RepeatWrapping; tex.anisotropy = 4;
+    return tex;
+  }
+
+  /* the photosphere: supergranulation lanes, granules, faculae — real solar palette */
+  function bakeSunSurface() {
+    const W = 1024, H = 512, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const ctx = cv.getContext("2d"), img = ctx.createImageData(W, H);
+    const gran = bakeFbm(11, 12), lane = bakeFbm(23, 5), fac = bakeFbm(57, 8);
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const u = x / W, v = y / H;
+        const g = gran(u * 12, v * 6.4);                       // granulation
+        const l = lane(u * 5, v * 2.6);                        // supergranulation lanes
+        const f = fac(u * 8, v * 4.2);                         // faculae patches
+        let heat = 0.56 + 0.44 * g;                            // 0..1
+        heat -= 0.20 * Math.pow(Math.max(0, 0.62 - l) / 0.62, 1.6);   // cooler lanes
+        heat += 0.24 * Math.max(0, f - 0.66) * 3.0;            // bright faculae
+        heat = Math.max(0, Math.min(1.35, heat));
+        // color ramp: deep orange -> gold -> cream-white
+        const r = Math.min(255, 236 * Math.pow(heat, 0.42) + 30);
+        const gg = Math.min(255, 214 * Math.pow(heat, 0.85));
+        const b = Math.min(255, 178 * Math.pow(heat, 1.85));
+        const i4 = (y * W + x) * 4;
+        img.data[i4] = r; img.data[i4 + 1] = gg; img.data[i4 + 2] = b; img.data[i4 + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    return canvasTexture(cv);
+  }
+
+  /* corona / prominence wisps, baked once — the shells still slowly rotate as rigid bodies */
+  function bakeWisps(seed, scale, contrast) {
+    const W = 512, H = 256, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const ctx = cv.getContext("2d"), img = ctx.createImageData(W, H);
+    const f1 = bakeFbm(seed, 8), f2 = bakeFbm(seed + 5, 16);
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const u = x / W, v = y / H;
+        let w = 0.62 * f1(u * 8 * scale, v * 4 * scale) + 0.38 * f2(u * 16 * scale, v * 8 * scale);
+        w = Math.max(0, Math.min(1, (w - 0.34) * contrast + 0.5));
+        const i4 = (y * W + x) * 4;
+        img.data[i4] = img.data[i4 + 1] = img.data[i4 + 2] = Math.round(w * 255); img.data[i4 + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    return canvasTexture(cv);
+  }
+
+  /* the Moon: warm-grey highlands, the near-side maria, craters with bright rims, Tycho rays */
+  function bakeMoonAlbedo() {
+    const W = 1024, H = 512, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const ctx = cv.getContext("2d");
+    const rng = bakeRng(2002), fb = bakeFbm(77, 8);
+    // highlands base with mottling
+    const img = ctx.createImageData(W, H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const m = fb((x / W) * 8, (y / H) * 4);
+      const g = Math.round(158 + 46 * (m - 0.5) * 2);
+      const i4 = (y * W + x) * 4;
+      img.data[i4] = g; img.data[i4 + 1] = g - 3; img.data[i4 + 2] = g - 8; img.data[i4 + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    // maria — the near-side seas, rough true layout (u: 0.28-0.55 cluster)
+    const MARIA = [ // u, v, rx, ry (fractions)
+      [0.36, 0.34, 0.075, 0.060], [0.44, 0.33, 0.055, 0.048], [0.50, 0.38, 0.052, 0.050],
+      [0.56, 0.36, 0.034, 0.030], [0.30, 0.42, 0.095, 0.075], [0.42, 0.45, 0.040, 0.034],
+      [0.48, 0.47, 0.030, 0.026], [0.38, 0.25, 0.030, 0.024],
+    ];
+    ctx.globalAlpha = 0.55;
+    for (const [mu2, mv, rx, ry] of MARIA) {
+      const grd = ctx.createRadialGradient(mu2 * W, mv * H, 2, mu2 * W, mv * H, rx * W);
+      grd.addColorStop(0, "rgba(94,92,94,0.95)"); grd.addColorStop(0.75, "rgba(104,101,102,0.8)"); grd.addColorStop(1, "rgba(120,117,115,0)");
+      ctx.fillStyle = grd;
+      ctx.beginPath(); ctx.ellipse(mu2 * W, mv * H, rx * W, ry * H, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    // craters: power-law sizes, dark floor + bright rim
+    function crater(cx, cy, r) {
+      for (const ox of [-W, 0, W]) {                       // x-wrap
+        const X = cx + ox;
+        let grd = ctx.createRadialGradient(X, cy, r * 0.1, X, cy, r);
+        grd.addColorStop(0, "rgba(70,68,70,0.42)"); grd.addColorStop(0.62, "rgba(96,94,95,0.30)"); grd.addColorStop(0.86, "rgba(230,226,218,0.34)"); grd.addColorStop(1, "rgba(160,157,152,0)");
+        ctx.fillStyle = grd;
+        ctx.beginPath(); ctx.arc(X, cy, r, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    for (let i = 0; i < 240; i++) {
+      const r = 2 + 26 * Math.pow(rng(), 2.6);
+      crater(rng() * W, (0.06 + 0.88 * rng()) * H, r);
+    }
+    // Tycho: bright southern crater with rays
+    const tx = 0.40 * W, ty = 0.82 * H;
+    ctx.strokeStyle = "rgba(232,229,222,0.16)"; ctx.lineWidth = 2.2;
+    const rr = bakeRng(9);
+    for (let i = 0; i < 26; i++) {
+      const a2 = rr() * Math.PI * 2, len = (0.10 + 0.24 * rr()) * W;
+      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx + Math.cos(a2) * len, ty + Math.sin(a2) * len * 0.5); ctx.stroke();
+    }
+    crater(tx, ty, 13);
+    return canvasTexture(cv);
+  }
+
   function buildSun() {
     const sunGroup = new T.Group();
     sunGroup.name = "NyeSun";
@@ -292,56 +420,22 @@ export function mountNyeArmature(THREE, scene, opts) {
       "}"
     ].join("\n");
 
-    const sunNoiseGLSL = [
-      "float sh(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}",
-      "float sn(vec2 p){",
-      "  vec2 i=floor(p),f=fract(p);",
-      "  vec2 u=f*f*(3.0-2.0*f);",
-      "  return mix(mix(sh(i),sh(i+vec2(1.0,0.0)),u.x),mix(sh(i+vec2(0.0,1.0)),sh(i+vec2(1.0,1.0)),u.x),u.y);",
-      "}",
-      "float sfbm(vec2 p,float t){",
-      "  float v=0.0,a=0.52;",
-      "  p+=vec2(t*0.009,t*0.013);",
-      "  for(int i=0;i<5;i++){v+=a*sn(p);p=p*2.07+vec2(3.1,5.7);a*=0.47;}",
-      "  return v;",
-      "}",
-      "vec3 acesApprox(vec3 x){",
-      "  return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14),0.0,1.0);",
-      "}"
-    ].join("\n");
 
-    const sunCoreFrag = sunNoiseGLSL + [
+    const sunCoreFrag = [
       "varying vec2 vUv; varying vec3 vWn; varying vec3 vWp;",
-      "uniform float uTime;",
+      "uniform sampler2D uMap;",
       "uniform float uExposure;",
       "uniform vec3 uWarmTint;",
+      "vec3 acesApprox(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14),0.0,1.0); }",
       "void main(){",
       "  vec3 N=normalize(vWn);",
       "  vec3 V=normalize(cameraPosition-vWp);",
       "  float mu=max(dot(N,V),0.0);",
-      "  float ld=0.22+0.78*mu;",
-      "  float p0=sfbm(vUv*2.15+vec2(0.5,0.2),uTime*0.06);",
-      "  float p1=sfbm(vUv*5.0,uTime);",
-      "  float p2=sfbm(vUv*11.0+vec2(1.7,3.3),-uTime*0.6);",
-      "  float p3=sfbm(vUv*19.0+vec2(4.2,1.1),uTime*0.35);",
-      "  float p4=sfbm(vUv*31.0+vec2(2.1,8.3),uTime*0.42);",
-      "  float plasma=0.18*p0+0.40*p1+0.28*p2+0.14*p3;",
-      "  float gran=smoothstep(0.32,0.72,plasma);",
-      "  vec3 cLane=vec3(1.00,0.33,0.03);",
-      "  vec3 cGran=vec3(1.00,0.76,0.28);",
-      "  vec3 cPhot=vec3(1.10,0.88,0.58);",
-      "  vec3 col=mix(cLane,cGran,gran);",
-      "  col=mix(col,cPhot,pow(mu,0.95)*0.55);",
-      "  float fac=smoothstep(0.74,0.97,p1)*smoothstep(0.36,0.80,p2)*mu;",
-      "  col+=vec3(0.48,0.42,0.28)*fac*0.62;",
-      "  float tw=smoothstep(0.88,0.995,p2*p4)*pow(mu,0.35);",
-      "  col+=vec3(1.55,1.35,1.05)*tw*0.26;",
-      "  col*=(1.14+0.82*gran)*ld;",
-      "  float limbE=pow(max(1.0-mu,0.0),3.2);",
-      "  col+=vec3(1.0,0.36,0.10)*limbE*0.72;",
-      "  float hotCore=pow(mu,2.4)*0.16;",
-      "  col+=vec3(1.22,1.10,1.0)*hotCore;",
-      "  col*=0.91+0.09*sin(uTime*0.21+plasma*6.8);",
+      "  vec3 col=texture2D(uMap,vUv).rgb*1.18;",
+      "  float ld=0.34+0.66*pow(mu,0.62);",                   // photospheric limb darkening
+      "  col*=ld;",
+      "  col=mix(col,vec3(0.98,0.34,0.08),pow(1.0-mu,2.9)*0.55);",  // limb reddening
+      "  col+=vec3(0.30,0.26,0.22)*pow(mu,2.6);",             // hot core lift
       "  col=mix(col,col*uWarmTint,0.18);",
       "  col=acesApprox(col*uExposure);",
       "  gl_FragColor=vec4(col,1.0);",
@@ -349,8 +443,8 @@ export function mountNyeArmature(THREE, scene, opts) {
     ].join("\n");
 
     const sunCoreUni = {
-      uTime: { value: 0 },
-      uExposure: { value: warm ? 0.72 : 1.0 },
+      uMap: { value: bakeSunSurface() },
+      uExposure: { value: warm ? 0.86 : 1.05 },
       uWarmTint: { value: warm ? new T.Vector3(1.0, 0.86, 0.72) : new T.Vector3(1.0, 1.0, 1.0) }
     };
     const sunCoreMat = new T.ShaderMaterial({
@@ -362,24 +456,23 @@ export function mountNyeArmature(THREE, scene, opts) {
     const sunCoreMesh = new T.Mesh(new T.SphereGeometry(SUN_BASE_R, 120, 120), sunCoreMat);
     sunCoreMesh.name = "NyeSunCore";
     sunGroup.add(sunCoreMesh);
-    animatedUniforms.push(sunCoreUni);
 
-    const solarRimFrag = sunNoiseGLSL + [
+    const solarRimFrag = [
       "varying vec2 vUv; varying vec3 vWn; varying vec3 vWp;",
-      "uniform float uTime;",
+      "uniform sampler2D uWisp;",
+      "vec3 acesApprox(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14),0.0,1.0); }",
       "void main(){",
       "  vec3 N=normalize(vWn);",
       "  vec3 V=normalize(cameraPosition-vWp);",
       "  float mu=max(dot(N,V),0.0);",
       "  float f=pow(1.0-mu,3.4);",
-      "  float g=sfbm(vUv*14.0,uTime*0.55);",
-      "  float pulse=0.86+0.14*sin(uTime*0.42);",
-      "  vec3 c=vec3(2.05,0.70,0.30)*f*pulse*(0.82+0.18*g);",
+      "  float g=texture2D(uWisp,vUv*vec2(3.0,2.0)).r;",
+      "  vec3 c=vec3(2.05,0.70,0.30)*f*(0.80+0.20*g);",
       "  c=acesApprox(c*0.86);",
       "  gl_FragColor=vec4(c,clamp(f*0.92,0.0,1.0));",
       "}"
     ].join("\n");
-    const solarRimUni = { uTime: { value: 0 } };
+    const solarRimUni = { uWisp: { value: bakeWisps(31, 1.6, 2.0) } };
     const solarRimMat = new T.ShaderMaterial({
       uniforms: solarRimUni,
       vertexShader: sunVert,
@@ -393,11 +486,10 @@ export function mountNyeArmature(THREE, scene, opts) {
     const solarRimMesh = new T.Mesh(new T.SphereGeometry(SUN_BASE_R * 1.022, 96, 96), solarRimMat);
     solarRimMesh.name = "NyeSunRim";
     sunGroup.add(solarRimMesh);
-    animatedUniforms.push(solarRimUni);
 
-    const coronaFrag = sunNoiseGLSL + [
+    const coronaFrag = [
       "varying vec2 vUv; varying vec3 vWn; varying vec3 vWp;",
-      "uniform float uTime;",
+      "uniform sampler2D uWisp;",
       "uniform float uOpacity;",
       "uniform vec3 uColor;",
       "uniform float uStreamAmt;",
@@ -407,15 +499,10 @@ export function mountNyeArmature(THREE, scene, opts) {
       "  vec3 V=normalize(cameraPosition-vWp);",
       "  float mu=max(dot(N,V),0.0);",
       "  float limbW=pow(1.0-mu,uLimbPow);",
-      "  float w1=sfbm(vUv*2.5+vec2(uTime*0.007,0.0),uTime*0.34);",
-      "  float w2=sfbm(vUv*5.0+vec2(0.0,uTime*0.011),uTime*0.52);",
-      "  float w3=sfbm(vUv*9.0+vec2(uTime*0.0045,-uTime*0.0035),uTime*0.24);",
-      "  float w4=sfbm(vUv*16.0+vec2(-uTime*0.003,uTime*0.005),uTime*0.31);",
-      "  float wisps=0.34*w1+0.30*w2+0.22*w3+0.14*w4;",
-      "  wisps=smoothstep(0.18,0.82,wisps);",
+      "  float wisps=texture2D(uWisp,vUv*vec2(2.0,1.0)).r;",
+      "  wisps=0.62+0.55*wisps;",                          // gentle modulation, never torn
       "  float phi=atan(vWn.y,vWn.x);",
-      "  float wv=sin(vWn.z*5.5+uTime*0.055);",
-      "  float stream=0.68+0.32*sin(phi*14.0+uTime*0.19)*sin(phi*8.0-uTime*0.15+wv);",
+      "  float stream=0.80+0.20*sin(phi*14.0)*sin(phi*8.0+vWn.z*5.5);",
       "  stream=mix(1.0,stream,uStreamAmt);",
       "  float alpha=limbW*wisps*uOpacity*stream;",
       "  gl_FragColor=vec4(uColor,clamp(alpha,0.0,1.0));",
@@ -431,7 +518,7 @@ export function mountNyeArmature(THREE, scene, opts) {
     for (let i = 0; i < coronaDef.length; i++) {
       const cd = coronaDef[i];
       const uni = {
-        uTime: { value: 0 },
+        uWisp: { value: bakeWisps(101 + i * 13, 1.0 + i * 0.35, 1.05) },
         uOpacity: { value: cd[1] },
         uColor: { value: new T.Vector3(cd[2], cd[3], cd[4]) },
         uStreamAmt: { value: cd[5] },
@@ -451,7 +538,6 @@ export function mountNyeArmature(THREE, scene, opts) {
       mesh.name = "NyeSunCorona" + (i + 1);
       sunGroup.add(mesh);
       coronaLayers.push({ mesh, uni });
-      animatedUniforms.push(uni);
     }
 
     const pickShell = new T.Mesh(
@@ -673,8 +759,8 @@ export function mountNyeArmature(THREE, scene, opts) {
     ].join("\n");
     const uniforms = {
       uSunDirWorld: { value: new T.Vector3(0, 0, 1) },
-      uAlbedoMap: { value: moonTexPlaceholder },
-      uUseAlbedoMap: { value: 0 }
+      uAlbedoMap: { value: bakeMoonAlbedo() },
+      uUseAlbedoMap: { value: 1 }
     };
     const mat = new T.ShaderMaterial({ uniforms, vertexShader: moonVert, fragmentShader: moonFrag });
     disableToneMapping(mat);
