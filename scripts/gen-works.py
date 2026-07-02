@@ -9,7 +9,7 @@ import json, pathlib, html
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DATA = json.load(open(ROOT / "data" / "works.json", encoding="utf-8"))["works"]
-BUILD = "build 42 · 07-02"
+BUILD = "build 43 · 07-02"
 
 CLS = {
     "research":   {"dir": "research",   "index": "research.html",
@@ -82,6 +82,7 @@ CSS = """
     .toc .t{font-size:19px; color:var(--ink); line-height:1.35; transition:color .2s;}
     .toc .m{font-family:var(--mono); font-size:11.5px; color:var(--muted); letter-spacing:.06em; margin-top:6px;}
     .toc .d{font-size:14.5px; color:var(--body); margin-top:6px; line-height:1.6; max-width:60ch;}
+    @media(max-width:640px){ .stamp{display:none;} main{padding:104px 20px 64px;} .pager{flex-direction:column; gap:22px;} .pager a{max-width:100%;} .pager a.next{text-align:left;} }
 """
 
 LANG_JS = """
