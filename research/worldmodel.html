@@ -16,7 +16,10 @@
            --serif:"Newsreader",Georgia,"Songti SC",serif; }
     *{margin:0;padding:0;box-sizing:border-box;}
     body{background:var(--page); color:var(--body); font-family:var(--serif);
-         -webkit-font-smoothing:antialiased; overflow-x:hidden; min-height:100vh;}
+         -webkit-font-smoothing:antialiased; overflow-x:hidden; min-height:100vh;
+         animation:pageIn .5s ease both;}
+    @keyframes pageIn{from{opacity:0; transform:translateY(7px);} to{opacity:1; transform:none;}}
+    @media(prefers-reduced-motion:reduce){ body{animation:none;} }
     .locale-en .i18n-zh{display:none!important;} .locale-zh .i18n-en{display:none!important;}
     a{color:inherit;text-decoration:none;}
     .chrome{position:fixed; top:18px; left:18px; right:18px; z-index:10; display:flex; justify-content:space-between; pointer-events:none;}
@@ -93,7 +96,7 @@
     <div class="skyline">✦ <span class="i18n-en">Capricornus — the outward word</span><span class="i18n-zh">摩羯座 · 主外之言</span></div>
     <nav class="pager" aria-label="Within Sciences"><a class="empty" aria-hidden="true"></a><a class="next" data-magnet href="paperA.html"><span class="dir"><span class="i18n-en">Next ⟶</span><span class="i18n-zh">下一篇 ⟶</span></span><span class="nm"><span class="i18n-en">What an Algorithmic-Idealism Modular Identification Requires: A Foundational Delimitation</span><span class="i18n-zh">算法理想主义的模块化识别需要什么:一个基础性界定</span></span></a></nav>
   </main>
-  <div class="stamp">build 44 · 07-02</div>
+  <div class="stamp">build 45 · 07-02</div>
   <script src="../magnet.js?v=1"></script>
   <script>
     (function () {

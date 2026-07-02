@@ -9,7 +9,7 @@ import json, pathlib, html
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DATA = json.load(open(ROOT / "data" / "works.json", encoding="utf-8"))["works"]
-BUILD = "build 44 · 07-02"
+BUILD = "build 45 · 07-02"
 
 CLS = {
     "research":   {"dir": "research",   "index": "research.html",
@@ -33,7 +33,10 @@ CSS = """
            --serif:"Newsreader",Georgia,"Songti SC",serif; }
     *{margin:0;padding:0;box-sizing:border-box;}
     body{background:var(--page); color:var(--body); font-family:var(--serif);
-         -webkit-font-smoothing:antialiased; overflow-x:hidden; min-height:100vh;}
+         -webkit-font-smoothing:antialiased; overflow-x:hidden; min-height:100vh;
+         animation:pageIn .5s ease both;}
+    @keyframes pageIn{from{opacity:0; transform:translateY(7px);} to{opacity:1; transform:none;}}
+    @media(prefers-reduced-motion:reduce){ body{animation:none;} }
     .locale-en .i18n-zh{display:none!important;} .locale-zh .i18n-en{display:none!important;}
     a{color:inherit;text-decoration:none;}
     .chrome{position:fixed; top:18px; left:18px; right:18px; z-index:10; display:flex; justify-content:space-between; pointer-events:none;}
