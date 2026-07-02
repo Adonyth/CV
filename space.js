@@ -52,8 +52,9 @@
     var flatBB = document.getElementById("cosmos-flat"); if (flatBB) flatBB.hidden = true;
   }
   if (TIER === "flat") {
-    // one-world page has no scroll content — show the graceful flat fallback
+    // no 3D — the flat fallback on the home page IS a full, usable mobile menu
     if (COSMOS) {
+      document.body.classList.add("is-flat");   // CSS hook: retire floating orrery chrome, reveal the menu
       var flatEl = document.getElementById("cosmos-flat"); if (flatEl) flatEl.hidden = false;
       var hintEl = document.getElementById("cosmos-hint"); if (hintEl) hintEl.style.display = "none";
     }

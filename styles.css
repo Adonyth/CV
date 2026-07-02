@@ -428,8 +428,29 @@ body.cosmos .natal-tip{z-index:6;}
 .cosmos-hint{position:fixed; right:22px; bottom:20px; z-index:4; font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); pointer-events:none; text-align:right; opacity:.85; transition:opacity 1s ease;}
 .cosmos-hint.is-faded{opacity:0;}
 
-.cosmos-flat{position:fixed; inset:0; z-index:3; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; text-align:center; padding:24px; color:var(--body); font-family:var(--serif); font-size:1.05rem;}
-.cosmos-flat a{color:var(--accent-deep); text-decoration:none; border-bottom:1.5px solid var(--accent); padding-bottom:2px;}
+/* flat fallback = a full mobile home. Scrollable, top-aligned, reaches every page. */
+.cosmos-flat{position:fixed; inset:0; z-index:8; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  display:flex; flex-direction:column; gap:26px; padding:78px 26px 56px;
+  color:var(--body); font-family:var(--serif); background:var(--page);}
+/* when the flat menu is up, the floating orrery chrome would only clutter — retire it
+   (the field toggle is meaningless with no particle field to toggle) */
+body.is-flat .cosmos-id, body.is-flat .cosmos-legend, body.is-flat .cosmos-hint, body.is-flat .cosmos-build,
+body.is-flat #earth-cta, body.is-flat #sun-cta, body.is-flat #star-cta, body.is-flat #fieldbtn{display:none !important;}
+body.is-flat .cosmos-ui{top:18px; right:18px; z-index:9;}
+.flat-id{margin-top:8px;}
+.flat-eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-deep);}
+.flat-name{font-family:var(--serif); font-size:clamp(30px,9vw,42px); font-weight:600; color:var(--ink); letter-spacing:-.01em; margin:8px 0 14px; line-height:1.05;}
+.flat-name span[lang="zh"]{font-family:var(--cjk-strong); font-weight:700; font-size:.62em; margin-left:.3em;}
+.flat-contact{display:flex; flex-wrap:wrap; gap:16px;}
+.flat-contact a{font-family:var(--mono); font-size:13px; color:var(--body); text-decoration:none; border-bottom:1px solid var(--hairline); padding-bottom:2px;}
+.flat-contact a:active{color:var(--accent);}
+.flat-menu{display:flex; flex-direction:column; border-top:1px solid var(--hairline);}
+.flat-group{font-family:var(--mono); font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); margin:26px 0 4px;}
+.flat-menu a{display:block; font-family:var(--serif); font-size:20px; color:var(--ink); text-decoration:none;
+  padding:15px 2px; border-bottom:1px solid rgba(255,255,255,.07);}
+.flat-menu a:active{color:var(--accent);}
+.flat-menu a.flat-cv{color:var(--accent-deep); margin-top:8px; border-bottom:none;}
+.flat-note{font-family:var(--mono); font-size:11px; letter-spacing:.05em; color:var(--muted); line-height:1.7; opacity:.8;}
 @media(max-width:700px){
   .cosmos-id{top:14px; left:14px; padding:13px 16px 11px;}
   .cosmos-ui{top:14px; right:14px;}
