@@ -9,7 +9,7 @@ import json, pathlib, html
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DATA = json.load(open(ROOT / "data" / "works.json", encoding="utf-8"))["works"]
-BUILD = "build 34 · 07-02"
+BUILD = "build 42 · 07-02"
 
 CLS = {
     "research":   {"dir": "research",   "index": "research.html",
@@ -63,6 +63,17 @@ CSS = """
       border:1px solid rgba(255,255,255,.16); border-radius:999px; padding:9px 16px;}
     .links a:hover{color:var(--accent); border-color:var(--accent);}
     .skyline{margin-top:44px; font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:.14em; opacity:.75;}
+    /* prev / next within the constellation */
+    .pager{margin-top:52px; padding-top:24px; border-top:1px solid rgba(255,255,255,.08);
+      display:flex; justify-content:space-between; gap:16px;}
+    .pager a{flex:1 1 0; max-width:48%; text-decoration:none; color:var(--muted);
+      font-family:var(--mono); font-size:11px; letter-spacing:.06em; transition:color .2s;}
+    .pager a:hover{color:var(--accent);}
+    .pager a.next{text-align:right;}
+    .pager a .dir{opacity:.6; display:block; margin-bottom:6px;}
+    .pager a .nm{font-family:var(--serif); font-size:15px; color:var(--body); line-height:1.3;}
+    .pager a:hover .nm{color:var(--ink);}
+    .pager a.empty{visibility:hidden;}
     /* index list */
     .lede{font-size:16px; line-height:1.75; margin:14px 0 8px; max-width:62ch;}
     .toc{margin-top:34px; display:flex; flex-direction:column;}
@@ -92,8 +103,18 @@ LANG_JS = """
 def bi(en, zh):
     return f'<span class="i18n-en">{en}</span><span class="i18n-zh">{zh}</span>'
 
-def page(title, body, depth=0):
+KEYNAV_JS = """
+    /* ← / → arrow keys walk the constellation (prev / next within the category) */
+    document.addEventListener("keydown", function (e) {
+      if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+      if (e.key === "ArrowLeft") { var p = document.querySelector(".pager a.prev"); if (p) location.href = p.href; }
+      else if (e.key === "ArrowRight") { var n = document.querySelector(".pager a.next"); if (n) location.href = n.href; }
+    });
+"""
+
+def page(title, body, depth=0, pager=False):
     pre = "../" * depth
+    keynav = KEYNAV_JS if pager else ""
     return f"""<!DOCTYPE html>
 <html lang="zh" class="locale-zh">
 <head>
@@ -111,7 +132,7 @@ def page(title, body, depth=0):
 {body}
   <div class="stamp">{BUILD}</div>
   <script src="{pre}magnet.js?v=1"></script>
-  <script>{LANG_JS}</script>
+  <script>{LANG_JS}{keynav}</script>
 </body>
 </html>
 """
@@ -128,18 +149,34 @@ def chrome(backs, depth=0):
     </div>
   </div>"""
 
-# ---------------- item pages ----------------
+# ---------------- item pages (with prev/next within the constellation) ----------------
+BY_CLS = {}
 for w in DATA:
-    c = CLS[w["cls"]]
-    paras = "".join(
-        f'<p>{bi(html.escape(e), html.escape(z))}</p>'
-        for e, z in zip(w["desc"]["en"], w["desc"]["zh"]))
-    links = ""
-    if w["links"]:
-        links = '<div class="links">' + "".join(
-            f'<a href="{l["href"]}" target="_blank" rel="noopener" data-magnet>{html.escape(l["label"])}</a>'
-            for l in w["links"]) + "</div>"
-    body = chrome([("index.html", "星盘 · Orrery"), (c["index"], bi(c["en"], c["zh"]))], depth=1) + f"""
+    BY_CLS.setdefault(w["cls"], []).append(w)
+
+for cls, items in BY_CLS.items():
+    c = CLS[cls]
+    for i, w in enumerate(items):
+        paras = "".join(
+            f'<p>{bi(html.escape(e), html.escape(z))}</p>'
+            for e, z in zip(w["desc"]["en"], w["desc"]["zh"]))
+        links = ""
+        if w["links"]:
+            links = '<div class="links">' + "".join(
+                f'<a href="{l["href"]}" target="_blank" rel="noopener" data-magnet>{html.escape(l["label"])}</a>'
+                for l in w["links"]) + "</div>"
+        prev_w = items[i - 1] if i > 0 else None
+        next_w = items[i + 1] if i < len(items) - 1 else None
+        def pager_link(pw, cls_name, arrow_en, arrow_zh):
+            if not pw:
+                return '<a class="empty" aria-hidden="true"></a>'
+            return (f'<a class="{cls_name}" data-magnet href="{pw["id"]}.html">'
+                    f'<span class="dir">{bi(arrow_en, arrow_zh)}</span>'
+                    f'<span class="nm">{bi(html.escape(pw["title"]["en"]), html.escape(pw["title"]["zh"]))}</span></a>')
+        pager = (f'<nav class="pager" aria-label="Within {c["en"]}">'
+                 f'{pager_link(prev_w, "prev", "⟵ Previous", "⟵ 上一篇")}'
+                 f'{pager_link(next_w, "next", "Next ⟶", "下一篇 ⟶")}</nav>')
+        body = chrome([("index.html", "星盘 · Orrery"), (c["index"], bi(c["en"], c["zh"]))], depth=1) + f"""
   <main>
     <div class="eyebrow">{bi(c["eyebrow_en"], c["eyebrow_zh"])}</div>
     <h1>{bi(html.escape(w["title"]["en"]), html.escape(w["title"]["zh"]))}</h1>
@@ -148,9 +185,10 @@ for w in DATA:
     <div class="desc">{paras}</div>
     {links}
     <div class="skyline">✦ {bi(c["sky_en"], c["sky_zh"])}</div>
+    {pager}
   </main>"""
-    out = ROOT / c["dir"] / f'{w["id"]}.html'
-    out.write_text(page(w["title"]["en"], body, depth=1), encoding="utf-8")
+        out = ROOT / c["dir"] / f'{w["id"]}.html'
+        out.write_text(page(w["title"]["en"], body, depth=1, pager=True), encoding="utf-8")
 
 # ---------------- index pages ----------------
 LEDE = {

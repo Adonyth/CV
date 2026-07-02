@@ -46,6 +46,17 @@
       border:1px solid rgba(255,255,255,.16); border-radius:999px; padding:9px 16px;}
     .links a:hover{color:var(--accent); border-color:var(--accent);}
     .skyline{margin-top:44px; font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:.14em; opacity:.75;}
+    /* prev / next within the constellation */
+    .pager{margin-top:52px; padding-top:24px; border-top:1px solid rgba(255,255,255,.08);
+      display:flex; justify-content:space-between; gap:16px;}
+    .pager a{flex:1 1 0; max-width:48%; text-decoration:none; color:var(--muted);
+      font-family:var(--mono); font-size:11px; letter-spacing:.06em; transition:color .2s;}
+    .pager a:hover{color:var(--accent);}
+    .pager a.next{text-align:right;}
+    .pager a .dir{opacity:.6; display:block; margin-bottom:6px;}
+    .pager a .nm{font-family:var(--serif); font-size:15px; color:var(--body); line-height:1.3;}
+    .pager a:hover .nm{color:var(--ink);}
+    .pager a.empty{visibility:hidden;}
     /* index list */
     .lede{font-size:16px; line-height:1.75; margin:14px 0 8px; max-width:62ch;}
     .toc{margin-top:34px; display:flex; flex-direction:column;}
@@ -72,8 +83,9 @@
     <div class="desc"><p><span class="i18n-en">Separates the assumptions an algorithmic-idealism reading must pay for a modular identification, and proves a foundational delimitation: which identifications come free, and which demand structural cost.</span><span class="i18n-zh">逐项分离&quot;算法理想主义&quot;作出模块化识别所需付出的假设,并给出基础性界定:哪些识别是免费的,哪些必须付出结构性代价。</span></p></div>
     
     <div class="skyline">✦ <span class="i18n-en">Capricornus — the outward word</span><span class="i18n-zh">摩羯座 · 主外之言</span></div>
+    <nav class="pager" aria-label="Within Sciences"><a class="prev" data-magnet href="worldmodel.html"><span class="dir"><span class="i18n-en">⟵ Previous</span><span class="i18n-zh">⟵ 上一篇</span></span><span class="nm"><span class="i18n-en">A Density-Matrix Belief-State World Model</span><span class="i18n-zh">密度矩阵信念态世界模型</span></span></a><a class="next" data-magnet href="paperB.html"><span class="dir"><span class="i18n-en">Next ⟶</span><span class="i18n-zh">下一篇 ⟶</span></span><span class="nm"><span class="i18n-en">The Universal Prior Does Not Select a Factorization</span><span class="i18n-zh">通用先验不选出分解</span></span></a></nav>
   </main>
-  <div class="stamp">build 34 · 07-02</div>
+  <div class="stamp">build 42 · 07-02</div>
   <script src="../magnet.js?v=1"></script>
   <script>
     (function () {
@@ -89,6 +101,13 @@
       document.getElementById("btn-en").addEventListener("click", function () { apply("en"); });
       document.getElementById("btn-zh").addEventListener("click", function () { apply("zh"); });
     })();
+
+    /* ← / → arrow keys walk the constellation (prev / next within the category) */
+    document.addEventListener("keydown", function (e) {
+      if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+      if (e.key === "ArrowLeft") { var p = document.querySelector(".pager a.prev"); if (p) location.href = p.href; }
+      else if (e.key === "ArrowRight") { var n = document.querySelector(".pager a.next"); if (n) location.href = n.href; }
+    });
 </script>
 </body>
 </html>
