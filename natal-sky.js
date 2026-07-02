@@ -520,7 +520,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   })();
 
   /* ---------------- interaction: window raycaster (never touches #deep) ---------------- */
-  var tip = null, raycaster = null, ndc = null, hovered = -1, onMove = null, onClick = null;
+  var tip = null, raycaster = null, ndc = null, hovered = -1, onMove = null, onClick = null, pickFn = null;
   if (interactive) {
     raycaster = new T.Raycaster(); raycaster.params.Points.threshold = mobile ? 14 : 11;
     ndc = new T.Vector2();
@@ -528,6 +528,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     tip.style.cssText = "position:fixed;pointer-events:none;z-index:5;opacity:0;transition:opacity .18s ease;transform:translate(12px,12px);max-width:280px;";
     (document.querySelector(".content") || document.body).appendChild(tip);
 
+    pickFn = pick;
     function pick(cx, cy) {
       ndc.x = (cx / innerWidth) * 2 - 1; ndc.y = -(cy / innerHeight) * 2 + 1;
       raycaster.setFromCamera(ndc, o.camera);
@@ -550,9 +551,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
           var nd = nodeIndex[idx].node;
           tip.innerHTML = '<div class="natal-tip__t"><span class="i18n-en">' + nd.title.en + '</span><span class="i18n-zh">' + nd.title.zh + '</span></div>' +
             (nd.role ? '<div class="natal-tip__r">' + nd.role + '</div>' : "");
-          tip.style.opacity = "1"; document.body.style.cursor = "pointer";
+          tip.style.opacity = "1";   /* the canvas owns the cursor (space.js) */
           bloom(nodeIndex[idx].pos);
-        } else { tip.style.opacity = "0"; document.body.style.cursor = ""; }
+        } else { tip.style.opacity = "0"; }
       }
       if (idx >= 0) { tip.style.left = e.clientX + "px"; tip.style.top = e.clientY + "px"; }
     };
@@ -644,8 +645,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
     onNodeClick: function (cb) { nodeClickCb = cb; },
     setVisible: function (v) {
       group.visible = !!v;
-      if (!v) { hoverCon = -1; if (tip) { tip.style.opacity = "0"; hovered = -1; document.body.style.cursor = ""; } }
+      if (!v) { hoverCon = -1; if (tip) { tip.style.opacity = "0"; hovered = -1; } }
     },
+    // does the pointer sit over a clickable star or constellation? (for the host's cursor)
+    isOverInteractive: function (x, y) { if (!group.visible || !pickFn) return false; var p = pickFn(x, y); return p.node >= 0 || p.con >= 0; },
     // language of the in-scene nameplates follows the page locale (EN mode shows no Chinese)
     setLocale: function (loc) {
       for (var i = 0; i < nameSprites.length; i++) {

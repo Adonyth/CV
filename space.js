@@ -651,7 +651,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=5").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=24").then(function (mod) {
+      return import("./natal-sky.js?v=26").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 205 : 372,
@@ -671,13 +671,13 @@
     /* ===== the hand on the world: trackball rotate (controls), right/shift-drag PAN,
        wheel zoom (controls), clean-click routing, double-click home ===== */
     if (COSMOS) {
-      var downX = 0, downY = 0, panOn = false, plx = 0, ply = 0, hintFaded = false, movedAcc = 0;
+      var downX = 0, downY = 0, panOn = false, plx = 0, ply = 0, hintFaded = false, movedAcc = 0, ptrDown = false;
       var _pr = new THREE.Vector3(), _pu = new THREE.Vector3(), _pm = new THREE.Vector3();
       canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
-      addEventListener("pointerup", function () { canvas.style.cursor = "grab"; }, { passive: true });
+      addEventListener("pointerup", function () { ptrDown = false; canvas.style.cursor = "grab"; }, { passive: true });
       canvas.style.cursor = "grab";
       canvas.addEventListener("pointerdown", function (e) {
-        canvas.style.cursor = "grabbing";
+        ptrDown = true; canvas.style.cursor = "grabbing";
         lastTouch = performance.now(); userMoved = true;
         downX = e.clientX; downY = e.clientY; movedAcc = 0;
         glide.frames = 0;                                   // a touch cancels any glide
@@ -723,6 +723,27 @@
           sunCta.style.top = ((-sw.y * 0.5 + 0.5) * innerHeight - 58) + "px";
         }
         setCta(onEarth); setSunCta(onSun);
+        /* the canvas owns the cursor: pointer over ANY clickable body/star, grab otherwise */
+        var overClickable = onSun || onEarth;
+        if (!overClickable) {
+          for (var mI = 0; mI < hits.length; mI++) {
+            var mo = hits[mI].object, mp = null;
+            while (mo && !mp) { mp = mo.userData && mo.userData.nyePick; mo = mo.parent; }
+            if (mp === "moon") { overClickable = true; break; }
+          }
+        }
+        if (!overClickable && natalSky) {
+          if (natalSky.bodyGroup) {
+            var gh = _ctaRay.intersectObject(natalSky.bodyGroup, true);
+            for (var gI = 0; gI < gh.length; gI++) {
+              var go = gh[gI].object, gp = null;
+              while (go && !gp) { gp = go.userData && go.userData.nyePick; go = go.parent; }
+              if (gp === "jupiter" || gp === "saturn") { overClickable = true; break; }
+            }
+          }
+          if (!overClickable && natalSky.isOverInteractive && natalSky.isOverInteractive(e.clientX, e.clientY)) overClickable = true;
+        }
+        if (!ptrDown) canvas.style.cursor = overClickable ? "pointer" : "grab";   // never fight the grabbing cursor mid-drag
       }
       function openFootprintMap() {
         document.body.classList.add("to-map");
