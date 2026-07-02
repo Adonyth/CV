@@ -591,7 +591,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=14").then(function (mod) {
+    import("./nye-armature.js?v=15").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -824,7 +824,9 @@
         } else if (name && name.indexOf("star:") === 0) {
           focusConstellation(name.slice(5), 110);
         }
-        if (href) glide.onDone = function () { setTimeout(function () { location.href = href; }, 600); };
+        // the nav asks → the camera flies to that place in the chart → it HOVERS a
+        // beat so you register where the content lives → then the door opens
+        if (href) glide.onDone = function () { setTimeout(function () { location.href = href; }, 850); };
       };
       document.querySelectorAll("[data-tour]").forEach(function (el) {
         el.addEventListener("click", function (ev) { ev.preventDefault(); closeNavGroups(); window.__space.tour(el.getAttribute("data-tour"), el.getAttribute("data-href")); });
@@ -912,7 +914,7 @@
         glide.targetTo = c.clone();
         glide.camTo = c.clone().sub(dir.multiplyScalar(85));
         glide.axis = null; glide.step = 0; glide.distTarget = 0;
-        glide.frames = nFrames || 110;
+        glide.frames = nFrames || 110; glide.onDone = null;   // never inherit a prior nav callback
         soloBody = "sky"; clearSel();
         natalSky.highlight(id, true); setTimeout(function () { natalSky.highlight(id, false); }, 4200);
       }
@@ -942,7 +944,7 @@
         var dir = info.world.clone().normalize();
         glide.targetTo = info.world.clone();                     // the star takes the pivot
         glide.camTo = info.world.clone().sub(dir.multiplyScalar(38));
-        glide.axis = null; glide.step = 0; glide.distTarget = 0; glide.frames = 90;
+        glide.axis = null; glide.step = 0; glide.distTarget = 0; glide.frames = 90; glide.onDone = null;
         soloBody = "sky";
       }
       if (starCta) starCta.addEventListener("click", openStarDoor);
@@ -962,7 +964,7 @@
         var el = 0.26, dir = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
         glide.targetTo = HOME.clone();
         glide.camTo = HOME.clone().add(dir.multiplyScalar(128));
-        glide.axis = null; glide.step = 0; glide.distTarget = 0; glide.frames = 90;
+        glide.axis = null; glide.step = 0; glide.distTarget = 0; glide.frames = 90; glide.onDone = null;   // home never navigates away
       }
       window.__space.goHome = goHome;
       if (homeBtn) homeBtn.addEventListener("click", goHome);
@@ -1040,10 +1042,12 @@
                    (!userMoved && nowMs < entranceUntil) ||
                    deepFusion.uniforms.uPointerAmt.value > 0.05;
         if (!busy && (frameNo % 3)) { requestAnimationFrame(frame); return; }   // idle → ~20fps (was 30): the slow drift is smooth, the GPU cools further
-        // cinematic approach: ease the radius home until the visitor takes over
+        // cinematic arrival: dive from deep space and LAND on the Earth — the visitor
+        // meets the home world first (its real footprint glowing on it), then rotates to
+        // the starfield and pulls out to the whole orrery ("✦ Whole sky" invites it).
         if (!userMoved && nowMs < entranceUntil) {
           var r0 = controls.getRadius();
-          controls.setRadius(r0 + (128 - r0) * 0.045);   // balanced cosmic framing, not cramped
+          controls.setRadius(r0 + (7.6 - r0) * 0.045);   // land close on the Earth, not the wide overview
         }
         // guided glide after clicking a body (any touch cancels)
         if (glide.frames > 0) {

@@ -700,7 +700,26 @@ export function mountNyeArmature(THREE, scene, opts) {
     atmo2.name = "NyeEarthOuterHaze";
     earthGroup.add(atmo2);
 
-    return { group: earthGroup, mesh: earthMesh, uniforms, vertexShader: earthVert };
+    /* the real 602,733-point GPS footprint, baked once to a glowing overlay
+       (data/footprint-earth.png, ~75KB) — the actual places, lit on the globe so
+       the trace is legible from the orbital view. Static: one texture sample, no
+       per-frame cost. Additive so it glows on the night side and warms the day. */
+    const fpTex = new T.TextureLoader().load("data/footprint-earth.png");
+    if ("SRGBColorSpace" in T) fpTex.colorSpace = T.SRGBColorSpace;
+    fpTex.anisotropy = 4;
+    const footprint = new T.Mesh(
+      new T.SphereGeometry(radius * 1.006, 128, 128),
+      new T.MeshBasicMaterial({
+        map: fpTex, transparent: true, opacity: 1.0,
+        blending: T.AdditiveBlending, depthWrite: false
+      })
+    );
+    footprint.name = "NyeEarthFootprint";
+    footprint.rotation.y = -1.15;   // bring the dense US-Northeast cluster toward the entrance view
+    footprint.renderOrder = 2;
+    earthGroup.add(footprint);
+
+    return { group: earthGroup, mesh: earthMesh, uniforms, vertexShader: earthVert, footprint: footprint };
   }
 
   function buildMoon(radius) {
