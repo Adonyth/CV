@@ -119,6 +119,9 @@ export function mountNyeArmature(THREE, scene, opts) {
 
   setLightDirections();
   earth.mesh.rotation.y = siderealOrFallbackRotationY(instant);
+  // the footprint shell is a SIBLING of the mesh, so it must be given the SAME sidereal
+  // orientation — otherwise the trace sits ~311° off the real continents (over open ocean).
+  if (earth.footprint) earth.footprint.rotation.y = earth.mesh.rotation.y;
 
   solarSystem.updateMatrixWorld(true);
   const earthInEcliptic = ephem.earth.clone();
@@ -727,7 +730,7 @@ export function mountNyeArmature(THREE, scene, opts) {
       })
     );
     footprint.name = "NyeEarthFootprint";
-    footprint.rotation.y = 0;       // MUST match the earth-map albedo (rotation 0) so the trace sits on real continents
+    footprint.rotation.y = 0;       // base orientation; the caller re-sets this to the mesh's sidereal rotation.y so the trace matches the real continents
     footprint.renderOrder = 2;
     earthGroup.add(footprint);
 
