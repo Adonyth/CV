@@ -590,7 +590,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=11").then(function (mod) {
+    import("./nye-armature.js?v=12").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -650,7 +650,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=5").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=18").then(function (mod) {
+      return import("./natal-sky.js?v=19").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 205 : 372,
@@ -997,7 +997,7 @@
         var busy = (nowMs - lastTouch < 2500) || glide.frames > 0 ||
                    (!userMoved && nowMs < entranceUntil) ||
                    deepFusion.uniforms.uPointerAmt.value > 0.05;
-        if (!busy && (frameNo & 1)) { requestAnimationFrame(frame); return; }
+        if (!busy && (frameNo % 3)) { requestAnimationFrame(frame); return; }   // idle → ~20fps (was 30): the slow drift is smooth, the GPU cools further
         // cinematic approach: ease the radius home until the visitor takes over
         if (!userMoved && nowMs < entranceUntil) {
           var r0 = controls.getRadius();

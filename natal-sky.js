@@ -313,6 +313,42 @@ export function buildNatalSky(THREE, scene, data, opts) {
     tex.wrapS = T.RepeatWrapping; tex.anisotropy = 4;
     return tex;
   }
+  function terrestrialTexture(kind) {
+    var W = 512, H = 256, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    var ctx = cv.getContext("2d"), img = ctx.createImageData(W, H);
+    var spec = {
+      mercury: { base: "#8f8a86", lo: "#5c5854", hi: "#b4afa8", seed: 12, spots: 60, mottle: 0.5 },
+      venus:   { base: "#d8c48c", lo: "#c2a86a", hi: "#efe4bd", seed: 34, spots: 0,  mottle: 0.35 },
+      mars:    { base: "#b25a35", lo: "#7f3b22", hi: "#d59a6a", seed: 56, spots: 26, mottle: 0.55 }
+    }[kind] || { base: "#999", lo: "#666", hi: "#ccc", seed: 1, spots: 20, mottle: 0.4 };
+    var fb = gFbm(spec.seed, 8);
+    var cB = hexRGB(spec.base), cL = hexRGB(spec.lo), cH = hexRGB(spec.hi);
+    for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
+      var u = x / W, v = y / H;
+      var m = fb(u * 8, v * 4);                       // 0..1 mottle
+      var t = (m - 0.5) * 2 * spec.mottle;            // -mottle..+mottle
+      var c = t < 0 ? [cB[0] + (cL[0] - cB[0]) * -t, cB[1] + (cL[1] - cB[1]) * -t, cB[2] + (cL[2] - cB[2]) * -t]
+                    : [cB[0] + (cH[0] - cB[0]) * t, cB[1] + (cH[1] - cB[1]) * t, cB[2] + (cH[2] - cB[2]) * t];
+      var i4 = (y * W + x) * 4;
+      img.data[i4] = c[0]; img.data[i4 + 1] = c[1]; img.data[i4 + 2] = c[2]; img.data[i4 + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    if (spec.spots) {                                 // craters (Mercury/Mars): dark floor, bright rim
+      var rng = gRng(spec.seed + 100);
+      for (var k = 0; k < spec.spots; k++) {
+        var cx = rng() * W, cy = (0.08 + 0.84 * rng()) * H, r = 3 + 14 * Math.pow(rng(), 2.2);
+        for (var ox = -W; ox <= W; ox += W) {
+          var grd = ctx.createRadialGradient(cx + ox, cy, r * 0.1, cx + ox, cy, r);
+          grd.addColorStop(0, "rgba(40,34,30,0.34)"); grd.addColorStop(0.8, "rgba(210,196,176,0.20)"); grd.addColorStop(1, "rgba(180,170,150,0)");
+          ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(cx + ox, cy, r, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    }
+    var tex = new T.CanvasTexture(cv);
+    if ("colorSpace" in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
+    tex.wrapS = T.RepeatWrapping; tex.anisotropy = 4;
+    return tex;
+  }
   function giantMaterial(tex) {
     return new T.ShaderMaterial({
       uniforms: { uMap: { value: tex } },
@@ -364,7 +400,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var grp = new T.Group();
     grp.name = "Natal" + p.id.charAt(0).toUpperCase() + p.id.slice(1);
     grp.position.copy(eclVec(lon2, lat2, p.body.dist));
-    var mesh = new T.Mesh(new T.SphereGeometry(p.body.radius, 48, 32), giantMaterial(giantTexture(p.body.kind)));
+    var terra = (p.body.kind === "mercury" || p.body.kind === "venus" || p.body.kind === "mars");
+    var mesh = new T.Mesh(new T.SphereGeometry(p.body.radius, 48, 32), giantMaterial(terra ? terrestrialTexture(p.body.kind) : giantTexture(p.body.kind)));
     mesh.name = grp.name + "Mesh";
     mesh.userData.nyePick = p.id;
     grp.add(mesh);
@@ -384,6 +421,31 @@ export function buildNatalSky(THREE, scene, data, opts) {
     }
     bodyGroup.add(grp);
   });
+
+  /* the asteroid belt: a static cloud of faint points between Mars and Jupiter.
+     One BufferGeometry, one draw call, zero per-frame cost. */
+  if (data.asteroidBelt) {
+    var ab = data.asteroidBelt, an = ab.count | 0;
+    var pos = new Float32Array(an * 3), col = new Float32Array(an * 3);
+    var arng = gRng(4242);
+    for (var ai = 0; ai < an; ai++) {
+      var lon3 = arng() * Math.PI * 2;
+      var lat3 = (arng() - 0.5) * (ab.latSpread || 5) * Math.PI / 180;
+      var dist3 = ab.rInner + arng() * (ab.rOuter - ab.rInner);
+      var vpos = eclVec(lon3, lat3, dist3);
+      pos[ai * 3] = vpos.x; pos[ai * 3 + 1] = vpos.y; pos[ai * 3 + 2] = vpos.z;
+      var g = 0.42 + 0.4 * arng();
+      col[ai * 3] = g * 0.82; col[ai * 3 + 1] = g * 0.72; col[ai * 3 + 2] = g * 0.56;
+    }
+    var abGeo = new T.BufferGeometry();
+    abGeo.setAttribute("position", new T.BufferAttribute(pos, 3));
+    abGeo.setAttribute("color", new T.BufferAttribute(col, 3));
+    var abMat = new T.PointsMaterial({ size: 1.1, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.72, depthWrite: false, fog: false });
+    if ("toneMapped" in abMat) abMat.toneMapped = false;
+    var abPts = new T.Points(abGeo, abMat);
+    abPts.name = "AsteroidBelt";
+    bodyGroup.add(abPts);
+  }
 
   // orient the whole sky so the Sun-sign (Capricornus) greets the camera (+z) at rest, then drift slowly
   (function () {

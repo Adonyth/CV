@@ -57,7 +57,12 @@
     "zh": "水星"
    },
    "sign": "capricorn",
-   "eclLonDeg": 297.6
+   "eclLonDeg": 297.6,
+   "body": {
+    "kind": "mercury",
+    "radius": 0.38,
+    "dist": 60
+   }
   },
   {
    "id": "venus",
@@ -66,7 +71,12 @@
     "zh": "金星"
    },
    "sign": "capricorn",
-   "eclLonDeg": 278.8
+   "eclLonDeg": 278.8,
+   "body": {
+    "kind": "venus",
+    "radius": 0.9,
+    "dist": 78
+   }
   },
   {
    "id": "mars",
@@ -75,7 +85,12 @@
     "zh": "火星"
    },
    "sign": "pisces",
-   "eclLonDeg": 347.8
+   "eclLonDeg": 347.8,
+   "body": {
+    "kind": "mars",
+    "radius": 0.5,
+    "dist": 100
+   }
   },
   {
    "id": "jupiter",
@@ -92,8 +107,8 @@
    },
    "body": {
     "kind": "jupiter",
-    "radius": 2.6,
-    "dist": 118
+    "radius": 3.3,
+    "dist": 150
    }
   },
   {
@@ -111,10 +126,10 @@
    },
    "body": {
     "kind": "saturn",
-    "radius": 2.2,
-    "dist": 156,
+    "radius": 2.75,
+    "dist": 188,
     "ringInner": 1.4,
-    "ringOuter": 2.25,
+    "ringOuter": 2.28,
     "ringTiltDeg": 26.7
    }
   }
@@ -1491,5 +1506,11 @@
    "to": "ringdown",
    "spine": "bridge"
   }
- ]
+ ],
+ "asteroidBelt": {
+  "rInner": 118,
+  "rOuter": 138,
+  "count": 900,
+  "latSpread": 6.0
+ }
 }

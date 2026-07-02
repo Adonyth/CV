@@ -252,16 +252,9 @@ export function mountNyeArmature(THREE, scene, opts) {
     for (let i = 0; i < animatedUniforms.length; i++) {
       animatedUniforms[i].uTime.value = t;
     }
-    sun.group.rotation.y = t * 0.010;
-    sun.core.rotation.y = t * 0.018;
-    sun.rim.rotation.y = -t * 0.013;
-    for (let i = 0; i < coronaLayers.length; i++) {
-      const layer = coronaLayers[i];
-      layer.mesh.rotation.y = t * (0.004 + i * 0.0016);
-      layer.mesh.rotation.z = t * (i % 2 ? -0.0022 : 0.0018);
-    }
-    /* the rings are STATIC by decree: stem and branch never turn relative to each
-       other — 辛巳 / 庚子 / 庚午 / 甲申 stay aligned forever */
+    /* the Sun and its corona no longer spin every frame — a near-symmetric star
+       shows no visible rotation, so that was pure redraw pressure for nothing.
+       The rings are STATIC by decree (四柱 stay aligned forever). */
     earth.uniforms.uTime.value = t;
   }
 
@@ -541,7 +534,7 @@ export function mountNyeArmature(THREE, scene, opts) {
     }
 
     const pickShell = new T.Mesh(
-      new T.SphereGeometry(SUN_BASE_R * 5.2, 32, 32),
+      new T.SphereGeometry(SUN_BASE_R * 1.06, 24, 24),   // only the visible solid core is clickable — the corona is not
       new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, side: T.DoubleSide })
     );
     pickShell.name = "NyeSunPickShell";
