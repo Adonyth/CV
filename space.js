@@ -650,7 +650,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=5").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=16").then(function (mod) {
+      return import("./natal-sky.js?v=17").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 205 : 372,
@@ -660,6 +660,7 @@
         natalSky.applyTheme(root.getAttribute("data-theme") === "dark");
         window.__space.natal = natalSky;
         if (natalSky.onConstellationClick) natalSky.onConstellationClick(function (cid) { window.__space.focusCon(cid); });
+        if (natalSky.onNodeClick) natalSky.onNodeClick(function (info) { window.__space.focusStar(info); });
         window.__space.natalStats = natalSky.stats;
         tryAlignChart();
         applySceneLocale();
@@ -672,7 +673,10 @@
       var downX = 0, downY = 0, panOn = false, plx = 0, ply = 0, hintFaded = false, movedAcc = 0;
       var _pr = new THREE.Vector3(), _pu = new THREE.Vector3(), _pm = new THREE.Vector3();
       canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+      addEventListener("pointerup", function () { canvas.style.cursor = "grab"; }, { passive: true });
+      canvas.style.cursor = "grab";
       canvas.addEventListener("pointerdown", function (e) {
+        canvas.style.cursor = "grabbing";
         lastTouch = performance.now(); userMoved = true;
         downX = e.clientX; downY = e.clientY; movedAcc = 0;
         glide.frames = 0;                                   // a touch cancels any glide
@@ -682,15 +686,16 @@
       /* hovering the Earth summons the footprint doorway; hovering the Sun, the journey doorway */
       var earthCta = document.getElementById("earth-cta"), sunCta = document.getElementById("sun-cta"), ctaOn = false, sunCtaOn = false, ctaTick = 0;
       var _ctaRay = new THREE.Raycaster(), _ctaNdc = new THREE.Vector2(), _ctaV = new THREE.Vector3();
+      var ctaOffT = null, sunCtaOffT = null;   // hysteresis: doors linger briefly, no flicker
       function setCta(on) {
-        if (!earthCta || on === ctaOn) return;
-        ctaOn = on;
-        earthCta.classList.toggle("is-on", on);
+        if (!earthCta) return;
+        if (on) { if (ctaOffT) { clearTimeout(ctaOffT); ctaOffT = null; } if (!ctaOn) { ctaOn = true; earthCta.classList.add("is-on"); } }
+        else if (ctaOn && !ctaOffT) ctaOffT = setTimeout(function () { ctaOffT = null; ctaOn = false; earthCta.classList.remove("is-on"); }, 240);
       }
       function setSunCta(on) {
-        if (!sunCta || on === sunCtaOn) return;
-        sunCtaOn = on;
-        sunCta.classList.toggle("is-on", on);
+        if (!sunCta) return;
+        if (on) { if (sunCtaOffT) { clearTimeout(sunCtaOffT); sunCtaOffT = null; } if (!sunCtaOn) { sunCtaOn = true; sunCta.classList.add("is-on"); } }
+        else if (sunCtaOn && !sunCtaOffT) sunCtaOffT = setTimeout(function () { sunCtaOffT = null; sunCtaOn = false; sunCta.classList.remove("is-on"); }, 240);
       }
       function updateCta(e) {
         if (!earthCta || !nyeArmature) return;
@@ -767,7 +772,7 @@
       /* ===== the TOUR: the nav asks, the camera travels, the door opens ===== */
       window.__space.tour = function (name, href) {
         lastTouch = performance.now(); userMoved = true; glide.onDone = null;
-        soloBody = (name === "sun" || name === "moon" || name === "jupiter" || name === "saturn") ? name : null;
+        if (name === "pillars" || name === "zodiac" || name === "footprint") { soloBody = null; clearSel(); }
         if (name === "footprint") {
           glide.axis = null; glide.step = 0; glide.frames = 110; glide.distTarget = 9;
           glide.targetTo = new THREE.Vector3(0, 0, 0);
@@ -820,7 +825,6 @@
       });
 
       var _stir = new THREE.Vector3();
-      canvas.addEventListener("pointerdown", function () { soloBody = null; }, { passive: true });
       canvas.addEventListener("pointermove", function (e) {
         updateCta(e);
         // the visitor's hand stirs the breath-dust: cursor ray → a point in the volume
@@ -851,6 +855,8 @@
         var obj = nyeArmature.group.getObjectByName(objName);
         if (!obj && natalSky && natalSky.group) obj = natalSky.group.getObjectByName(objName);
         if (!obj) return;
+        soloBody = ({ NyeSun: "sun", NyeMoon: "moon", NatalJupiter: "jupiter", NatalSaturn: "saturn" })[objName] || soloBody;
+        clearSel();
         var w = obj.getWorldPosition(new THREE.Vector3());
         /* stand OUTSIDE the body along the Earth→body line, swung aside within the
            gear-ring plane AND lifted above it — the sightline can never pass through
@@ -886,10 +892,53 @@
         glide.camTo = c.clone().sub(dir.multiplyScalar(85));
         glide.axis = null; glide.step = 0; glide.distTarget = 0;
         glide.frames = nFrames || 110;
-        soloBody = null;
+        soloBody = "sky"; clearSel();
         natalSky.highlight(id, true); setTimeout(function () { natalSky.highlight(id, false); }, 4200);
       }
       window.__space.focusCon = focusConstellation;
+
+      /* the star protocol: first click gives the star the pivot and summons its door;
+         the second click (or the door itself) opens it. Nothing navigates by surprise. */
+      var selStar = null, starCta = document.getElementById("star-cta");
+      function clearSel() { selStar = null; if (starCta) starCta.classList.remove("is-on"); }
+      window.__space.clearSel = clearSel;
+      function openStarDoor() {
+        if (!selStar || !selStar.href) return;
+        if (/^https?:/.test(selStar.href)) { window.open(selStar.href, "_blank", "noopener"); return; }
+        document.body.classList.add("to-map");
+        var h = selStar.href;
+        setTimeout(function () { location.href = h; }, 380);
+      }
+      function focusStar(info) {
+        if (!info) { clearSel(); return; }                       // a click into the void lets go
+        if (selStar && selStar.id === info.id) { openStarDoor(); return; }
+        selStar = info;
+        if (starCta) {
+          var te = info.titleEn.length > 34 ? info.titleEn.slice(0, 33) + "…" : info.titleEn;
+          var tz = info.titleZh.length > 17 ? info.titleZh.slice(0, 16) + "…" : info.titleZh;
+          starCta.innerHTML = '<span class="i18n-en">Open · ' + te + ' ↗</span><span class="i18n-zh">打开 · ' + tz + ' ↗</span>';
+        }
+        var dir = info.world.clone().normalize();
+        glide.targetTo = info.world.clone();                     // the star takes the pivot
+        glide.camTo = info.world.clone().sub(dir.multiplyScalar(38));
+        glide.axis = null; glide.step = 0; glide.distTarget = 0; glide.frames = 90;
+        soloBody = "sky";
+      }
+      if (starCta) starCta.addEventListener("click", openStarDoor);
+      window.__space.focusStar = focusStar;
+      var _selV = new THREE.Vector3();
+      window.__space.uiTick = function () {
+        if (soloBody && glide.frames === 0 && controls.getRadius() > 130) soloBody = null;   // zoomed back out BY HAND — the chart reassembles (never mid-flight)
+        if (selStar && starCta) {
+          _selV.copy(selStar.world).project(camera);
+          if (_selV.z > 1 || Math.abs(_selV.x) > 1.05 || Math.abs(_selV.y) > 1.05) { starCta.classList.remove("is-on"); }
+          else {
+            starCta.style.left = ((_selV.x * 0.5 + 0.5) * innerWidth) + "px";
+            starCta.style.top = ((-_selV.y * 0.5 + 0.5) * innerHeight - 40) + "px";
+            starCta.classList.add("is-on");
+          }
+        }
+      };
 
       addEventListener("click", function (e) {
         if (e.target !== canvas) return;              // DOM buttons/links are none of our business
@@ -978,6 +1027,7 @@
         if (!userMoved && nowMs >= entranceUntil) controls.rotateWorld(camera.up, 0.0108 * dt);
         controls.update();
         if (window.__space.applyRingFade) window.__space.applyRingFade();
+      if (window.__space.uiTick) window.__space.uiTick();
         if (!_refFar) _refFar = new THREE.Vector3();
         _refFar.set(0, 0, -800).project(camera);
         if (_refFar.z < 1 && isFinite(_refFar.x)) {

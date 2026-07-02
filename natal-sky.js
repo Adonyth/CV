@@ -147,7 +147,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   var lineEntries = [];  // { mat, base }  indexed by constellation
   var lineByCon = {};
   var totalSegs = 0;
-  var isDark = true, hlSet = {}, hoverCon = -1, conClickCb = null;
+  var isDark = true, hlSet = {}, hoverCon = -1, conClickCb = null, nodeClickCb = null;
   cons.forEach(function (c, ci) {
     var segs = [];
     c.figureLines.forEach(function (seg) {
@@ -408,14 +408,19 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var pk2 = pick(e.clientX, e.clientY);
       var idx = pk2.node;
       if (idx < 0) {
-        // a click on the constellation itself (not a work-star): hand it to the host —
-        // every element has the right to become the pivot
+        // constellation body (not a work-star) → the sign takes the pivot;
+        // true void → the host may clear any selection
         if (pk2.con >= 0 && conClickCb) conClickCb(cons[pk2.con].id);
+        else if (nodeClickCb) nodeClickCb(null);
         return;
       }
-      var href = nodeIndex[idx].node.href;
-      if (href && href.charAt(0) === "#") { var t = document.querySelector(href); if (t) { t.scrollIntoView({ behavior: "smooth", block: "start" }); } }
-      else if (href) { location.href = href; }
+      var nd = nodeIndex[idx].node;
+      if (nodeClickCb) {
+        // FIRST CLICK NEVER NAVIGATES — the host focuses the star and offers the door
+        nodeClickCb({ id: nd.id, href: nd.href || "",
+          titleEn: nd.title && nd.title.en || "", titleZh: nd.title && nd.title.zh || "",
+          world: belt.localToWorld(nodeIndex[idx].pos.clone()) });
+      } else if (nd.href) { location.href = nd.href; }
     };
     addEventListener("pointermove", onMove, { passive: true });
     addEventListener("click", onClick, { passive: true });
@@ -484,6 +489,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
       return belt.localToWorld(conCentroid[ci].clone());
     },
     onConstellationClick: function (cb) { conClickCb = cb; },
+    onNodeClick: function (cb) { nodeClickCb = cb; },
     setVisible: function (v) {
       group.visible = !!v;
       if (!v) { hoverCon = -1; if (tip) { tip.style.opacity = "0"; hovered = -1; document.body.style.cursor = ""; } }
