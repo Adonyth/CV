@@ -150,9 +150,11 @@ KEYNAV_JS = """
     });
 """
 
-def page(title, body, depth=0, pager=False):
+def page(title, body, depth=0, pager=False, desc=""):
     pre = "../" * depth
     keynav = KEYNAV_JS if pager else ""
+    d = html.escape((desc or "Jiaxuan Chen (陈嘉轩) — physicist and independent researcher.")[:180])
+    full_title = f"{title} · Jiaxuan Chen"
     return f"""<!DOCTYPE html>
 <html lang="zh" class="locale-zh">
 <head>
@@ -160,7 +162,14 @@ def page(title, body, depth=0, pager=False):
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#0b0a09" />
-  <title>{html.escape(title)}</title>
+  <title>{html.escape(full_title)}</title>
+  <meta name="description" content="{d}" />
+  <meta name="author" content="Jiaxuan Chen (陈嘉轩)" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Jiaxuan Chen · 陈嘉轩" />
+  <meta property="og:title" content="{html.escape(full_title)}" />
+  <meta property="og:description" content="{d}" />
+  <meta name="twitter:card" content="summary" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -226,7 +235,7 @@ for cls, items in BY_CLS.items():
     {pager}
   </main>"""
         out = ROOT / c["dir"] / f'{w["id"]}.html'
-        out.write_text(page(w["title"]["en"], body, depth=1, pager=True), encoding="utf-8")
+        out.write_text(page(w["title"]["en"], body, depth=1, pager=True, desc=w["desc"]["en"][0]), encoding="utf-8")
 
 # ---------------- index pages ----------------
 LEDE = {
@@ -255,6 +264,6 @@ for cls, c in CLS.items():
 {rows}    </div>
     <div class="skyline">✦ {bi(c["sky_en"], c["sky_zh"])}</div>
   </main>"""
-    (ROOT / c["index"]).write_text(page(c["en"], body, depth=0), encoding="utf-8")
+    (ROOT / c["index"]).write_text(page(c["en"], body, depth=0, desc=LEDE[cls][0]), encoding="utf-8")
 
 print("generated:", len(DATA), "item pages + 3 index pages")
