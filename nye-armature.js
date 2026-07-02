@@ -502,11 +502,13 @@ export function mountNyeArmature(THREE, scene, opts) {
       "}"
     ].join("\n");
 
+    /* a luminous warm halo, not murky brown bubbles: bright warm-white colour so the
+       ADDITIVE blend reads as glow, low opacity, high limb-power so each shell hugs the
+       limb and fades toward its interior — a soft corona that thins smoothly outward */
     const coronaDef = [
-      [1.04, 1.00, 1.28, 0.86, 0.48, 1.00, 0.42, 100],
-      [1.72, 0.95, 1.18, 0.58, 0.28, 0.95, 0.50, 68],
-      [3.25, 0.78, 1.02, 0.42, 0.24, 0.68, 0.58, 56],
-      [5.85, 0.52, 0.90, 0.30, 0.18, 0.35, 0.72, 44]
+      [1.10, 0.62, 1.55, 1.16, 0.74, 0.55, 1.6, 96],
+      [1.66, 0.30, 1.40, 0.94, 0.56, 0.48, 2.0, 64],
+      [2.90, 0.13, 1.18, 0.74, 0.42, 0.34, 2.6, 48]
     ];
     for (let i = 0; i < coronaDef.length; i++) {
       const cd = coronaDef[i];

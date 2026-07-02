@@ -591,7 +591,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=13").then(function (mod) {
+    import("./nye-armature.js?v=14").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
