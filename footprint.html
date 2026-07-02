@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh" class="locale-zh">
+<html lang="en" class="locale-en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -16,14 +16,15 @@
   <meta name="twitter:card" content="summary" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" />
   <style>
-    :root{ --page:#0b0a09; --ink:#f4f0e8; --muted:#8a8276; --accent:#e0876a;
+    :root{ --page:#0b0a09; --ink:#f4f0e8; --muted:#8a8276; --accent:#e0876a; --hairline:rgba(255,255,255,.10);
            --mono:"JetBrains Mono",ui-monospace,Menlo,monospace; --serif:"Newsreader",Georgia,"Songti SC",serif; }
     *{margin:0;padding:0;box-sizing:border-box;}
     html,body{height:100%;}
     body{background:var(--page); color:var(--ink); font-family:var(--serif); overflow:hidden;}
+    .locale-en .i18n-zh{display:none!important;} .locale-zh .i18n-en{display:none!important;}
+    :focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:6px;}
     /* the map is the page */
     #map{position:fixed; inset:0; z-index:0; background:var(--page);}
-    /* CARTO dark tiles arrive already dark; a warm breath on top */
     .leaflet-tile-pane{filter:sepia(.14) saturate(1.05);}
     .leaflet-control-attribution{background:rgba(11,10,9,.72)!important; color:var(--muted)!important; font-family:var(--mono); font-size:10px!important;}
     .leaflet-control-attribution a{color:var(--accent)!important;}
@@ -31,34 +32,83 @@
     /* the unfolding globe intro sits above until it hands over */
     #unfold{position:fixed; inset:0; z-index:5; background:var(--page); transition:opacity .7s ease;}
     #unfold.done{opacity:0; pointer-events:none;}
-    .map-back{position:fixed; top:18px; left:18px; z-index:10; display:inline-flex; align-items:center; gap:8px;
+    @media(prefers-reduced-motion:reduce){ #unfold{transition:none;} }
+    /* top-left cluster: back + language */
+    .chrome{position:fixed; top:18px; left:18px; z-index:10; display:flex; gap:8px; align-items:center;}
+    .map-back{display:inline-flex; align-items:center; gap:8px;
       font-family:var(--mono); font-size:13px; letter-spacing:.06em; color:var(--ink); text-decoration:none;
-      background:rgba(11,10,9,.72); border:1px solid rgba(255,255,255,.14); border-radius:999px; padding:10px 18px;
+      background:rgba(11,10,9,.72); border:1px solid rgba(255,255,255,.14); border-radius:999px; padding:11px 18px;
       -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);}
     .map-back:hover{color:var(--accent); border-color:var(--accent);}
+    .lang{display:inline-flex; padding:3px; border-radius:999px; border:1px solid var(--hairline);
+      background:rgba(11,10,9,.72); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);}
+    .lang button{border:none; background:transparent; color:var(--ink); font-family:var(--mono);
+      font-size:12px; padding:9px 13px; border-radius:999px; cursor:pointer; line-height:1;}
+    .lang button[aria-pressed="true"]{background:var(--accent); color:#1a1109;}
     .map-title{position:fixed; top:20px; right:20px; z-index:10; text-align:right; pointer-events:none;}
     .map-title b{display:block; font-size:17px; font-weight:600; letter-spacing:.04em;}
     .map-title span{font-family:var(--mono); font-size:10.5px; color:var(--muted); letter-spacing:.1em;}
     .map-hint{position:fixed; bottom:26px; left:50%; transform:translateX(-50%); z-index:10; pointer-events:none;
-      font-family:var(--mono); font-size:11px; letter-spacing:.12em; color:var(--muted); opacity:.9; transition:opacity 1s ease;}
+      font-family:var(--mono); font-size:11px; letter-spacing:.12em; color:var(--muted); opacity:.9; transition:opacity 1s ease; text-align:center;}
     .map-hint.gone{opacity:0;}
-    #skip{position:fixed; bottom:24px; right:24px; z-index:11; font-family:var(--mono); font-size:11.5px; letter-spacing:.1em;
-      color:var(--muted); background:transparent; border:1px solid rgba(255,255,255,.16); border-radius:999px; padding:8px 16px; cursor:pointer;}
+    #skip{position:fixed; bottom:22px; right:22px; z-index:11; font-family:var(--mono); font-size:11.5px; letter-spacing:.1em;
+      color:var(--muted); background:rgba(11,10,9,.5); border:1px solid rgba(255,255,255,.16); border-radius:999px; padding:10px 16px; cursor:pointer;}
     #skip:hover{color:var(--ink); border-color:var(--ink);}
-    @media(max-width:640px){ .stamp{display:none!important;} }
-    .stamp{position:fixed; right:20px; bottom:8px; z-index:10; font-family:var(--mono); font-size:10px; color:var(--muted); opacity:.55; pointer-events:none;}
+    /* fallback shown only if the map never initializes */
+    #fallback{position:fixed; inset:0; z-index:6; display:none; flex-direction:column; align-items:center; justify-content:center;
+      gap:14px; text-align:center; padding:28px; background:var(--page); color:var(--muted); font-family:var(--serif);}
+    #fallback.on{display:flex;}
+    #fallback a{color:var(--accent); font-family:var(--mono); font-size:13px; border-bottom:1px solid var(--accent); padding-bottom:2px;}
+    @media(max-width:640px){ .stamp{display:none!important;} .map-title b{font-size:15px;} }
+    .stamp{position:fixed; right:20px; bottom:8px; z-index:10; font-family:var(--mono); font-size:10px; color:var(--muted); opacity:.7; pointer-events:none;}
   </style>
 </head>
 <body>
-  <div id="map" aria-label="Footprint map — 602,733 raw GPS points"></div>
-  <div id="unfold"></div>
+  <div id="map" role="img" aria-label="Footprint map — 602,733 raw GPS points across 2023–2026"></div>
+  <div id="unfold" aria-hidden="true"></div>
 
-  <a class="map-back" data-magnet href="index.html">⟵ <span>星盘 · Orrery</span></a>
+  <div class="chrome">
+    <a class="map-back" data-magnet href="index.html">⟵ <span class="i18n-en">Orrery</span><span class="i18n-zh">星盘</span></a>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" id="btn-en" aria-pressed="true">EN</button>
+      <button type="button" id="btn-zh" aria-pressed="false">中文</button>
+    </div>
+  </div>
   <div class="map-title"><b>足迹 · Footprint</b><span>602,733 RAW GPS POINTS · 2023–2026</span></div>
-  <div class="map-hint" id="map-hint">拖动 · 滚轮缩放到街道 — drag · zoom to the streets</div>
-  <button id="skip" type="button" data-magnet>跳过 · skip</button>
-  <div class="stamp">build 45 · 07-02</div>
+  <div class="map-hint" id="map-hint"><span class="i18n-en">drag · scroll to zoom to the streets</span><span class="i18n-zh">拖动 · 滚轮缩放到街道</span></div>
+  <button id="skip" type="button" data-magnet><span class="i18n-en">skip</span><span class="i18n-zh">跳过</span></button>
 
+  <div id="fallback">
+    <p><span class="i18n-en">The interactive map didn't load. It plots 602,733 raw GPS points from 2023–2026.</span><span class="i18n-zh">交互地图未能加载。它绘制了 2023–2026 年间 602,733 个原始 GPS 点。</span></p>
+    <a href="index.html"><span class="i18n-en">⟵ Back to the orrery</span><span class="i18n-zh">⟵ 返回星盘</span></a>
+  </div>
+
+  <div class="stamp">footprint · build 50 · 07-02</div>
+
+  <script>
+    (function () {
+      var root = document.documentElement;
+      function apply(loc) {
+        root.className = "locale-" + loc; root.lang = loc === "zh" ? "zh" : "en";
+        document.getElementById("btn-en").setAttribute("aria-pressed", loc === "en" ? "true" : "false");
+        document.getElementById("btn-zh").setAttribute("aria-pressed", loc === "zh" ? "true" : "false");
+        try { localStorage.setItem("cv-locale", loc); } catch (e) {}
+      }
+      var saved = null; try { saved = localStorage.getItem("cv-locale"); } catch (e) {}
+      apply(saved === "zh" ? "zh" : "en");
+      document.getElementById("btn-en").addEventListener("click", function () { apply("en"); });
+      document.getElementById("btn-zh").addEventListener("click", function () { apply("zh"); });
+      /* robustness: if the map module never marks itself ready, lift the intro and
+         reveal the text fallback so the page is never a blank black wall */
+      window.__fpReady = false;
+      setTimeout(function () {
+        if (!window.__fpReady) {
+          var u = document.getElementById("unfold"); if (u) u.classList.add("done");
+          if (!window.__fp || !window.__fp.n) document.getElementById("fallback").classList.add("on");
+        }
+      }, 9000);
+    })();
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
   <script src="magnet.js?v=1"></script>
   <script type="module" src="footprint-map.js?v=2"></script>

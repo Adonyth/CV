@@ -39,20 +39,21 @@ CSS = """
     @media(prefers-reduced-motion:reduce){ body{animation:none;} }
     .locale-en .i18n-zh{display:none!important;} .locale-zh .i18n-en{display:none!important;}
     a{color:inherit;text-decoration:none;}
-    .chrome{position:fixed; top:18px; left:18px; right:18px; z-index:10; display:flex; justify-content:space-between; pointer-events:none;}
+    :focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:4px;}
+    .chrome{position:fixed; top:18px; left:18px; right:18px; z-index:10; display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; pointer-events:none;}
     .chrome > *{pointer-events:auto;}
-    .backs{display:flex; gap:8px;}
+    .backs{display:flex; gap:8px; flex-wrap:wrap;}
     .map-back{display:inline-flex; align-items:center; gap:8px; font-family:var(--mono); font-size:12.5px;
       letter-spacing:.06em; color:var(--ink); background:rgba(11,10,9,.72); border:1px solid rgba(255,255,255,.14);
-      border-radius:999px; padding:9px 16px; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);}
+      border-radius:999px; padding:11px 16px; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);}
     .map-back:hover{color:var(--accent); border-color:var(--accent);}
     .lang{display:inline-flex; padding:3px; border-radius:999px; border:1px solid var(--hairline);
       background:rgba(11,10,9,.72); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); height:fit-content;}
-    .lang button{border:none; background:transparent; color:var(--muted); font-family:var(--mono);
-      font-size:12px; padding:6px 11px; border-radius:999px; cursor:pointer; line-height:1;}
-    .lang button[aria-pressed="true"]{background:var(--accent); color:#fff;}
+    .lang button{border:none; background:transparent; color:var(--body); font-family:var(--mono);
+      font-size:12px; padding:9px 13px; border-radius:999px; cursor:pointer; line-height:1;}
+    .lang button[aria-pressed="true"]{background:var(--accent); color:#1a1109;}
     .stamp{position:fixed; right:20px; bottom:8px; z-index:10; font-family:var(--mono); font-size:10px;
-      color:var(--muted); opacity:.55; pointer-events:none;}
+      color:var(--muted); opacity:.7; pointer-events:none;}
     main{max-width:760px; margin:0 auto; padding:120px 24px 90px;}
     .eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.22em; color:var(--gold); text-transform:uppercase;}
     h1{font-size:clamp(26px,4.4vw,40px); font-weight:500; color:var(--ink); line-height:1.22; margin:14px 0 16px; letter-spacing:.005em;}
@@ -82,7 +83,7 @@ CSS = """
     .toc{margin-top:34px; display:flex; flex-direction:column;}
     .toc a{display:block; padding:20px 2px; border-bottom:1px solid rgba(255,255,255,.07);}
     .toc a:hover .t{color:var(--accent);}
-    .toc .t{font-size:19px; color:var(--ink); line-height:1.35; transition:color .2s;}
+    .toc .t{font-size:19px; font-weight:500; color:var(--ink); line-height:1.35; transition:color .2s;}
     .toc .m{font-family:var(--mono); font-size:11.5px; color:var(--muted); letter-spacing:.06em; margin-top:6px;}
     .toc .d{font-size:14.5px; color:var(--body); margin-top:6px; line-height:1.6; max-width:60ch;}
     /* the category's own constellation, faint behind the index */
@@ -91,8 +92,17 @@ CSS = """
     .config .cf-l line{stroke:var(--gold); stroke-width:.25; opacity:.22;}
     .config .cf-d circle{fill:var(--gold); opacity:.5;}
     main{position:relative; z-index:1;}
-    @media(max-width:900px){ .config{opacity:.28; right:-6%; width:70vw; height:70vw;} }
-    @media(max-width:640px){ .stamp{display:none;} main{padding:104px 20px 64px;} .pager{flex-direction:column; gap:22px;} .pager a{max-width:100%;} .pager a.next{text-align:left;} .config{display:none;} }
+    @media(max-width:760px){ .config{display:none;} }
+    @media(max-width:640px){ .stamp{display:none;} main{padding:104px 20px 64px;} .pager{flex-direction:column; gap:22px;} .pager a{max-width:100%;} .pager a.next{text-align:left;} }
+    /* a slim footer that connects every category — no page is an island */
+    .foot{max-width:760px; margin:0 auto; padding:0 24px 72px; position:relative; z-index:1;}
+    .foot__rule{height:1px; background:rgba(255,255,255,.08); margin-bottom:22px;}
+    .foot__nav{display:flex; flex-wrap:wrap; gap:8px 20px; align-items:baseline;}
+    .foot__nav a, .foot__nav span.lbl{font-family:var(--mono); font-size:11.5px; letter-spacing:.06em; color:var(--muted);}
+    .foot__nav a:hover{color:var(--accent);}
+    .foot__nav .lbl{color:var(--gold); text-transform:uppercase; letter-spacing:.14em; margin-right:2px;}
+    .foot__nav a.cur{color:var(--ink);}
+    @media(max-width:640px){ .foot{padding:0 20px 56px;} }
 """
 
 LANG_JS = """
@@ -105,7 +115,7 @@ LANG_JS = """
         try { localStorage.setItem("cv-locale", loc); } catch (e) {}
       }
       var saved = null; try { saved = localStorage.getItem("cv-locale"); } catch (e) {}
-      apply(saved === "en" ? "en" : "zh");
+      apply(saved === "zh" ? "zh" : "en");   /* default EN, matching the home — no jarring flip */
       document.getElementById("btn-en").addEventListener("click", function () { apply("en"); });
       document.getElementById("btn-zh").addEventListener("click", function () { apply("zh"); });
     })();
@@ -141,6 +151,31 @@ def constellation_svg(cls):
     return (f'<svg class="config" viewBox="0 0 100 100" aria-hidden="true" '
             f'preserveAspectRatio="xMidYMid meet"><g class="cf-l">{lines}</g><g class="cf-d">{dots}</g></svg>')
 
+# --- a slim cross-category footer so no page is a dead-end (products live here too) ---
+def footer_nav(depth=0, current=None):
+    pre = "../" * depth
+    def a(href, en, zh, key=None, ext=False):
+        cur = ' cur' if key and key == current else ''
+        tgt = ' target="_blank" rel="noopener"' if ext else ''
+        h = href if ext else pre + href
+        return f'<a class="{cur.strip()}" href="{h}"{tgt}>{bi(en, zh)}</a>'
+    return (
+        '<footer class="foot"><div class="foot__rule"></div><nav class="foot__nav" aria-label="More">'
+        + f'<span class="lbl">{bi("Research", "研究")}</span>'
+        + a("research.html", "Sciences", "科学研究", "research")
+        + a("humanities.html", "Humanities", "人文社科", "humanities")
+        + f'<span class="lbl">{bi("Creation", "创造")}</span>'
+        + a("books.html", "Books", "著作", "books")
+        + a("music.html", "Music", "音乐", "music")
+        + a("https://omyteaai.com", "Omytea ↗", "Omytea ↗", ext=True)
+        + a("https://nyeclock.pages.dev", "Nye Clock ↗", "弐时仪 ↗", ext=True)
+        + a("journey.html", "Journey", "履历", "journey")
+        + a("footprint.html", "Footprint", "足迹", "footprint")
+        + a("index.html", "Orrery ↗", "星盘 ↗")
+        + a("cv.html", "CV ↗", "完整履历 ↗")
+        + '</nav></footer>'
+    )
+
 KEYNAV_JS = """
     /* ← / → arrow keys walk the constellation (prev / next within the category) */
     document.addEventListener("keydown", function (e) {
@@ -156,7 +191,7 @@ def page(title, body, depth=0, pager=False, desc=""):
     d = html.escape((desc or "Jiaxuan Chen (陈嘉轩) — physicist and independent researcher.")[:180])
     full_title = f"{title} · Jiaxuan Chen"
     return f"""<!DOCTYPE html>
-<html lang="zh" class="locale-zh">
+<html lang="en" class="locale-en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -191,8 +226,8 @@ def chrome(backs, depth=0):
     return f"""  <div class="chrome">
     <div class="backs">{links}</div>
     <div class="lang" role="group" aria-label="Language">
-      <button type="button" id="btn-en">EN</button>
-      <button type="button" id="btn-zh">中文</button>
+      <button type="button" id="btn-en" aria-pressed="true">EN</button>
+      <button type="button" id="btn-zh" aria-pressed="false">中文</button>
     </div>
   </div>"""
 
@@ -233,7 +268,8 @@ for cls, items in BY_CLS.items():
     {links}
     <div class="skyline">✦ {bi(c["sky_en"], c["sky_zh"])}</div>
     {pager}
-  </main>"""
+  </main>
+  {footer_nav(depth=1, current=cls)}"""
         out = ROOT / c["dir"] / f'{w["id"]}.html'
         out.write_text(page(w["title"]["en"], body, depth=1, pager=True, desc=w["desc"]["en"][0]), encoding="utf-8")
 
@@ -241,7 +277,7 @@ for cls, items in BY_CLS.items():
 LEDE = {
     "research": ("Every topic below is a star in Capricornus — the sun-sign, the outward word. Each opens its own page.",
                  "以下每一个课题都是摩羯座中的一颗星——日座,主外之言。每一题各有其页。"),
-    "humanities": ("Three studies in the sign of words, where Saturn — structure and discipline — truly stood that night.",
+    "humanities": ("Three studies in the sign of words, where Saturn — structure and discipline — truly stood in Gemini that night.",
                    "文字之座中的三项研究。出生当夜,主结构与纪律的土星真实驻于双子。"),
     "books": ("Two volumes under the publisher's star: Jupiter stood at opposition in Cancer the night of birth.",
               "出版之星下的两部书:出生当夜,木星在巨蟹座正值冲日。"),
@@ -251,7 +287,7 @@ for cls, c in CLS.items():
     rows = ""
     for w in items:
         rows += f"""      <a href="{c["dir"]}/{w["id"]}.html" data-magnet>
-        <div class="t">{bi(html.escape(w["title"]["en"]), html.escape(w["title"]["zh"]))}</div>
+        <h2 class="t">{bi(html.escape(w["title"]["en"]), html.escape(w["title"]["zh"]))}</h2>
         <div class="m">{html.escape(w["period"])} · {bi(html.escape(w["status"]["en"]), html.escape(w["status"]["zh"]))}</div>
         <div class="d">{bi(html.escape(w["desc"]["en"][0]), html.escape(w["desc"]["zh"][0]))}</div>
       </a>\n"""
@@ -263,7 +299,8 @@ for cls, c in CLS.items():
     <div class="toc">
 {rows}    </div>
     <div class="skyline">✦ {bi(c["sky_en"], c["sky_zh"])}</div>
-  </main>"""
+  </main>
+  {footer_nav(depth=0, current=cls)}"""
     (ROOT / c["index"]).write_text(page(c["en"], body, depth=0, desc=LEDE[cls][0]), encoding="utf-8")
 
 print("generated:", len(DATA), "item pages + 3 index pages")
