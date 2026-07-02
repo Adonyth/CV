@@ -650,7 +650,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=5").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=20").then(function (mod) {
+      return import("./natal-sky.js?v=23").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 205 : 372,
@@ -983,7 +983,7 @@
     }
 
     var running = true;
-    var frameNo = 0, prevSec = 0;
+    var frameNo = 0, prevSec = 0, beltCentered = false;
     function frame(t) {
       if (!running) return;
       var sec = (t || 0) * 0.001;
@@ -1025,6 +1025,15 @@
         if (userMoved && nowMs - lastTouch > 20000 && glide.frames === 0) controls.rotateWorld(camera.up, 0.0108 * dt);
         if (!userMoved && nowMs >= entranceUntil) controls.rotateWorld(camera.up, 0.0108 * dt);
         controls.update();
+        if (!beltCentered && natalSky && nyeArmature) {   // one-shot: seat the asteroid belt on the SUN (not the Earth)
+          var _beltO = natalSky.group.getObjectByName("AsteroidBelt");
+          var _sunM = nyeArmature.group.getObjectByName("NyeSunCore");
+          if (_beltO && _sunM) {
+            nyeArmature.group.updateMatrixWorld(true); _beltO.parent.updateMatrixWorld(true);
+            _beltO.position.copy(_beltO.parent.worldToLocal(_sunM.getWorldPosition(new THREE.Vector3())));
+            beltCentered = true;
+          }
+        }
         if (window.__space.applyRingFade) window.__space.applyRingFade();
       if (window.__space.uiTick) window.__space.uiTick();
         if (!_refFar) _refFar = new THREE.Vector3();
