@@ -9,7 +9,7 @@ import json, pathlib, html
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DATA = json.load(open(ROOT / "data" / "works.json", encoding="utf-8"))["works"]
-BUILD = "build 43 · 07-02"
+BUILD = "build 44 · 07-02"
 
 CLS = {
     "research":   {"dir": "research",   "index": "research.html",
@@ -82,7 +82,14 @@ CSS = """
     .toc .t{font-size:19px; color:var(--ink); line-height:1.35; transition:color .2s;}
     .toc .m{font-family:var(--mono); font-size:11.5px; color:var(--muted); letter-spacing:.06em; margin-top:6px;}
     .toc .d{font-size:14.5px; color:var(--body); margin-top:6px; line-height:1.6; max-width:60ch;}
-    @media(max-width:640px){ .stamp{display:none;} main{padding:104px 20px 64px;} .pager{flex-direction:column; gap:22px;} .pager a{max-width:100%;} .pager a.next{text-align:left;} }
+    /* the category's own constellation, faint behind the index */
+    .config{position:fixed; top:50%; right:4%; transform:translateY(-50%);
+      width:min(46vw,540px); height:min(46vw,540px); z-index:0; pointer-events:none; opacity:.5;}
+    .config .cf-l line{stroke:var(--gold); stroke-width:.25; opacity:.22;}
+    .config .cf-d circle{fill:var(--gold); opacity:.5;}
+    main{position:relative; z-index:1;}
+    @media(max-width:900px){ .config{opacity:.28; right:-6%; width:70vw; height:70vw;} }
+    @media(max-width:640px){ .stamp{display:none;} main{padding:104px 20px 64px;} .pager{flex-direction:column; gap:22px;} .pager a{max-width:100%;} .pager a.next{text-align:left;} .config{display:none;} }
 """
 
 LANG_JS = """
@@ -103,6 +110,33 @@ LANG_JS = """
 
 def bi(en, zh):
     return f'<span class="i18n-en">{en}</span><span class="i18n-zh">{zh}</span>'
+
+# --- the category's own constellation, drawn faint behind its index (RA/Dec → SVG) ---
+FIGS = {
+    "research": {  # Capricornus
+        "stars": [(20.3,-12.5),(20.35,-14.8),(20.77,-25.3),(20.86,-26.9),(21.44,-22.4),(21.67,-16.7),(21.78,-16.1),(21.1,-17.2),(21.37,-16.8)],
+        "lines": [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,8],[8,7],[7,0]]},
+    "humanities": {  # Gemini
+        "stars": [(7.75,28.0),(7.58,31.9),(6.63,16.4),(6.38,22.5),(6.73,25.1),(6.75,12.9)],
+        "lines": [[1,4],[4,0],[4,3],[3,5],[0,2]]},
+    "books": {  # Cancer
+        "stars": [(8.28,9.2),(8.74,18.1),(8.72,21.5),(8.78,28.8),(8.97,11.9)],
+        "lines": [[0,1],[1,2],[2,3],[1,4]]},
+}
+def constellation_svg(cls):
+    f = FIGS[cls]; pts = f["stars"]
+    xs = [p[0] for p in pts]; ys = [p[1] for p in pts]
+    x0, x1 = min(xs), max(xs); y0, y1 = min(ys), max(ys)
+    w = max(0.5, x1 - x0); h = max(0.5, y1 - y0)
+    def proj(p):                                   # RA increases eastward → flip x; fit a 100-box
+        px = (1 - (p[0] - x0) / w) * 90 + 5
+        py = ((p[1] - y0) / h) * 90 + 5
+        return px, py
+    P = [proj(p) for p in pts]
+    lines = "".join(f'<line x1="{P[a][0]:.1f}" y1="{P[a][1]:.1f}" x2="{P[b][0]:.1f}" y2="{P[b][1]:.1f}"/>' for a, b in f["lines"])
+    dots = "".join(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{1.2 if i == 0 else 0.8}"/>' for i, (x, y) in enumerate(P))
+    return (f'<svg class="config" viewBox="0 0 100 100" aria-hidden="true" '
+            f'preserveAspectRatio="xMidYMid meet"><g class="cf-l">{lines}</g><g class="cf-d">{dots}</g></svg>')
 
 KEYNAV_JS = """
     /* ← / → arrow keys walk the constellation (prev / next within the category) */
@@ -209,7 +243,7 @@ for cls, c in CLS.items():
         <div class="m">{html.escape(w["period"])} · {bi(html.escape(w["status"]["en"]), html.escape(w["status"]["zh"]))}</div>
         <div class="d">{bi(html.escape(w["desc"]["en"][0]), html.escape(w["desc"]["zh"][0]))}</div>
       </a>\n"""
-    body = chrome([("index.html", "星盘 · Orrery")], depth=0) + f"""
+    body = chrome([("index.html", "星盘 · Orrery")], depth=0) + constellation_svg(cls) + f"""
   <main>
     <div class="eyebrow">{bi(c["eyebrow_en"], c["eyebrow_zh"])}</div>
     <h1>{bi(c["en"], c["zh"])} <span style="font-family:var(--mono);font-size:15px;color:var(--muted);vertical-align:middle;">· {len(items)}</span></h1>
