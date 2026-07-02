@@ -716,7 +716,7 @@ export function mountNyeArmature(THREE, scene, opts) {
        (data/footprint-earth.png, ~75KB) — the actual places, lit on the globe so
        the trace is legible from the orbital view. Static: one texture sample, no
        per-frame cost. Additive so it glows on the night side and warms the day. */
-    const fpTex = new T.TextureLoader().load("data/footprint-earth.png");
+    const fpTex = new T.TextureLoader().load("data/footprint-earth.png?v=2");
     if ("SRGBColorSpace" in T) fpTex.colorSpace = T.SRGBColorSpace;
     fpTex.anisotropy = 4;
     const footprint = new T.Mesh(
