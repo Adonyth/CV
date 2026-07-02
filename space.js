@@ -925,6 +925,12 @@
       }
       if (starCta) starCta.addEventListener("click", openStarDoor);
       window.__space.focusStar = focusStar;
+      function focusGiant(objName, id, titleEn, titleZh, href, con) {
+        var o = natalSky && natalSky.group.getObjectByName(objName); if (!o) return;
+        if (con && natalSky) { natalSky.highlight(con, true); setTimeout(function () { natalSky.highlight(con, false); }, 4200); }
+        focusStar({ id: id, href: href, titleEn: titleEn, titleZh: titleZh, world: o.getWorldPosition(new THREE.Vector3()) });
+      }
+      window.__space.focusGiant = focusGiant;
       var _selV = new THREE.Vector3();
       window.__space.uiTick = function () {
         if (soloBody && glide.frames === 0 && controls.getRadius() > 130) soloBody = null;   // zoomed back out BY HAND — the chart reassembles (never mid-flight)
@@ -963,8 +969,10 @@
           } else if (pick === "moon") {
             if (natalSky) { natalSky.highlight("leo", true); setTimeout(function () { natalSky.highlight("leo", false); }, 2800); }
             glideToBody("NyeMoon", 9);
-          } else if (pick === "jupiter" || pick === "saturn") {
-            window.__space.tour(pick);                        // same journey as the nav would give
+          } else if (pick === "jupiter") {
+            focusGiant("NatalJupiter", "jupiter", "Books · 2", "著作 · 2 本", "books.html", "cancer");
+          } else if (pick === "saturn") {
+            focusGiant("NatalSaturn", "saturn", "Humanities & Social · 3", "人文社科 · 3 题", "humanities.html", "gemini");
           } else if (pick === "earth") {
             glide.axis = null; glide.step = 0; glide.frames = 30; glide.distTarget = 7;
             glide.targetTo = new THREE.Vector3(0, 0, 0);      // orbit the Earth itself
