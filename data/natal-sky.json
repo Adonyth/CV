@@ -61,7 +61,7 @@
    "body": {
     "kind": "mercury",
     "radius": 0.38,
-    "dist": 104
+    "dist": 22
    }
   },
   {
@@ -75,7 +75,7 @@
    "body": {
     "kind": "venus",
     "radius": 0.9,
-    "dist": 126
+    "dist": 40
    }
   },
   {
@@ -89,7 +89,7 @@
    "body": {
     "kind": "mars",
     "radius": 0.5,
-    "dist": 100
+    "dist": 82
    }
   },
   {
@@ -108,7 +108,7 @@
    "body": {
     "kind": "jupiter",
     "radius": 3.3,
-    "dist": 150
+    "dist": 175
    }
   },
   {
@@ -127,7 +127,7 @@
    "body": {
     "kind": "saturn",
     "radius": 2.75,
-    "dist": 188,
+    "dist": 230,
     "ringInner": 1.4,
     "ringOuter": 2.28,
     "ringTiltDeg": 26.7

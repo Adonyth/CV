@@ -209,10 +209,10 @@ export function mountNyeArmature(THREE, scene, opts) {
     sub: "10×12 / 60"
   });
   hourFloatingLabel.name = "HourPillarReadout";
-  hourFloatingLabel.visible = false;              // readout plates retired — the ring glyphs already say it
+  hourFloatingLabel.visible = false;
   hourFloatingLabel.position.set(0, earthRadiusVis * 2.68, 0);
   hourFloatingLabel.userData.nyePart = "hour-label";
-  earth.group.add(hourFloatingLabel);
+  /* NOT added to the scene — permanently un-rendered (see createPillarGear note). */
   gearMotions.push({ target: hourGear.stemSwivel, base: hourGear.stemSwivel.rotation.z, speed: 0.0015 });
   gearMotions.push({ target: hourGear.branchSwivel, base: hourGear.branchSwivel.rotation.z, speed: -0.00125 });
 
@@ -867,7 +867,8 @@ export function mountNyeArmature(THREE, scene, opts) {
     label.visible = false;                        // readout plates retired — the ring glyphs already say it
     label.userData.nyePart = pillar.slot + "-label";
     label.userData.nyePick = pillar.slot;
-    gear.add(label);
+    /* NOT added to the gear: the label object exists for reference safety, but it is
+       never in the render graph, so no code path or cached module can ever show it. */
 
     return { group: gear, stemSwivel, branchSwivel, label };
   }

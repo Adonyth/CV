@@ -590,7 +590,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=12").then(function (mod) {
+    import("./nye-armature.js?v=13").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -650,7 +650,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=5").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=23").then(function (mod) {
+      return import("./natal-sky.js?v=24").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 205 : 372,
@@ -1025,12 +1025,12 @@
         if (userMoved && nowMs - lastTouch > 20000 && glide.frames === 0) controls.rotateWorld(camera.up, 0.0108 * dt);
         if (!userMoved && nowMs >= entranceUntil) controls.rotateWorld(camera.up, 0.0108 * dt);
         controls.update();
-        if (!beltCentered && natalSky && nyeArmature) {   // one-shot: seat the asteroid belt on the SUN (not the Earth)
-          var _beltO = natalSky.group.getObjectByName("AsteroidBelt");
+        if (!beltCentered && natalSky && nyeArmature) {   // one-shot: the WHOLE planetary system (planets + belt) orbits the SUN, not the Earth
+          var _bodies = natalSky.group.getObjectByName("NatalBodies");
           var _sunM = nyeArmature.group.getObjectByName("NyeSunCore");
-          if (_beltO && _sunM) {
-            nyeArmature.group.updateMatrixWorld(true); _beltO.parent.updateMatrixWorld(true);
-            _beltO.position.copy(_beltO.parent.worldToLocal(_sunM.getWorldPosition(new THREE.Vector3())));
+          if (_bodies && _sunM) {
+            nyeArmature.group.updateMatrixWorld(true); _bodies.parent.updateMatrixWorld(true);
+            _bodies.position.copy(_bodies.parent.worldToLocal(_sunM.getWorldPosition(new THREE.Vector3())));
             beltCentered = true;
           }
         }
