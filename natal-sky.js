@@ -107,8 +107,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var h = hash(i * 7 + 3);
     var c = coreCol(h, spark);
     col[k] = c[0]; col[k + 1] = c[1]; col[k + 2] = c[2];
-    aSize[i] = lerp(1.5, 6.0, w) + (st.importance === 1.0 ? 2.2 : 0);   // data-nodes read as the bright stars
-    aAlpha[i] = Math.min(0.98, lerp(0.30, 0.86, w) * (st.importance === 1.0 ? 1.15 : 1.0));
+    var keyCon = cons[st.conIdx].loadBearing;
+    aSize[i] = lerp(1.8, 6.6, w) + (st.importance === 1.0 ? 2.4 : 0) + (keyCon && st.importance >= 0.7 ? 1.4 : 0);
+    aAlpha[i] = Math.min(0.98, lerp(0.34, 0.88, w) * (st.importance === 1.0 ? 1.15 : 1.0) * (keyCon ? 1.12 : 1.0));
     aSeed[i] = hash(i * 13 + 1);
     aSpark[i] = spark;
     if (st.node) nodeIndex[i] = { node: st.node, base: aAlpha[i], pos: st.pos };
@@ -160,7 +161,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var pts = [];
     segs.forEach(function (sg) {
       var L = sg.a.distanceTo(sg.b);
-      var n = Math.max(4, Math.round(L / 2.1));
+      var n = Math.max(4, Math.round(L / (c.loadBearing ? 1.55 : 1.95)));
       for (var ii = 0; ii <= n; ii++) {
         var t = ii / n;
         pts.push(
@@ -173,9 +174,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
     totalSegs += segs.length;
     var lgeo = new T.BufferGeometry();
     lgeo.setAttribute("position", new T.BufferAttribute(new Float32Array(pts), 3));
-    var base = c.loadBearing ? 0.85 : 0.42;
+    var base = c.loadBearing ? 0.95 : 0.56;
     var mat = new T.PointsMaterial({
-      map: o.tex, color: 0xf0a071, size: c.loadBearing ? 2.8 : 2.0, sizeAttenuation: true,
+      map: o.tex, color: c.loadBearing ? 0xf7b183 : 0xf0a071, size: c.loadBearing ? 3.4 : 2.3, sizeAttenuation: true,
       transparent: true, opacity: base, depthWrite: false, depthTest: true, blending: T.AdditiveBlending
     });
     mat.fog = false;
@@ -230,6 +231,18 @@ export function buildNatalSky(THREE, scene, data, opts) {
     group.rotation.y = Math.PI - Math.atan2(v.x, v.z);
   })();
 
+  /* a quiet nebula blush cradles the two NATAL signs — you find yours at a glance */
+  cons.forEach(function (c, ci) {
+    if (!c.loadBearing) return;
+    var bm2 = new T.SpriteMaterial({ map: o.tex, transparent: true, opacity: 0.13, depthWrite: false, depthTest: true, blending: T.AdditiveBlending, fog: false, color: 0xe8916c });
+    if ("toneMapped" in bm2) bm2.toneMapped = false;
+    var aura = new T.Sprite(bm2);
+    aura.scale.set(64, 64, 1);
+    aura.position.copy(conCentroid[ci]);
+    aura.name = "natalAura_" + c.id;
+    belt.add(aura);
+  });
+
   /* ---------------- constellation names: IN-SCENE Songti sprites (same craft as the 干支 glyphs) ---------------- */
   function nameTexture(zh, en, key, loc) {
     var cv = document.createElement("canvas"); cv.width = 512; cv.height = 224;
@@ -250,10 +263,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
   }
   function makeNameSprite(zh, en, key, loc) {
     var zhTex = nameTexture(zh, en, key, "zh"), enTex = nameTexture(zh, en, key, "en");
-    var m = new T.SpriteMaterial({ map: loc === "zh" ? zhTex : enTex, transparent: true, opacity: key ? 0.96 : 0.62, depthWrite: false, depthTest: false, blending: T.NormalBlending, fog: false });
+    var m = new T.SpriteMaterial({ map: loc === "zh" ? zhTex : enTex, transparent: true, opacity: key ? 1.0 : 0.72, depthWrite: false, depthTest: false, blending: T.NormalBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     var sp = new T.Sprite(m);
-    var sc = key ? 40 : 27;
+    var sc = key ? 48 : 31;
     sp.scale.set(sc, sc * 224 / 512, 1);
     sp.userData.baseOpacity = m.opacity;
     sp.userData.zhTex = zhTex; sp.userData.enTex = enTex;
@@ -276,7 +289,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     stars.forEach(function (st) {
       var key = cons[st.conIdx].loadBearing;
       if (!st.node && !(key && st.importance >= 0.7)) return;
-      var m = new T.SpriteMaterial({ map: o.tex, transparent: true, opacity: st.node ? 0.5 : 0.28, depthWrite: false, depthTest: true, blending: T.AdditiveBlending, fog: false });
+      var m = new T.SpriteMaterial({ map: o.tex, transparent: true, opacity: st.node ? 0.58 : 0.4, depthWrite: false, depthTest: true, blending: T.AdditiveBlending, fog: false });
       if ("toneMapped" in m) m.toneMapped = false;
       var h = new T.Sprite(m);
       var sc = st.node ? 11 : 6.5;
