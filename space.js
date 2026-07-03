@@ -366,6 +366,59 @@
       lastTouch = performance.now(); userMoved = true;
     }
 
+    /* ===== the FLIGHT DIRECTOR — first-person voyages, the grammar of flying games =====
+       A cubic Bézier through space: depart TANGENTIALLY (along the current gaze — or
+       straight up off the ground), arc through the cruise, and brake in ALONG THE FINAL
+       SIGHTLINE so the destination grows dead ahead. The gaze leads the velocity early
+       (you look where you fly) and locks onto the body late; the camera BANKS into
+       turns; the lens breathes with the burn. This is what replaces "zooming". */
+    var groundHintHook = null;   // the interaction closure installs groundHint here (flyTo lives at module scope)
+    function flyTo(o) {
+      var P0 = camera.position.clone();
+      var P3 = o.camTo.clone();
+      var body = o.lookAt ? o.lookAt.clone() : o.targetTo.clone();
+      var dist = P0.distanceTo(P3);
+      var fromGround = controls.isGround();
+      var depart;
+      if (fromGround) {
+        controls.exitGroundMode();
+        if (groundHintHook) groundHintHook(false);
+        depart = P0.clone().normalize();                    // off the pad: straight up
+      } else {
+        depart = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);   // along the gaze
+        // if the destination is behind us, soften the tangent so the arc stays graceful
+        var toDest = P3.clone().sub(P0).normalize();
+        if (depart.dot(toDest) < -0.2) depart.lerp(toDest, 0.65).normalize();
+      }
+      var P1 = P0.clone().addScaledVector(depart, Math.max(2.5, dist * (fromGround ? 0.42 : 0.30)));
+      var arriveDir = P3.clone().sub(body).normalize();     // brake in along the final sightline
+      if (!isFinite(arriveDir.x) || arriveDir.lengthSq() < 1e-6) arriveDir = P3.clone().sub(P0).normalize().negate();
+      var P2 = P3.clone().addScaledVector(arriveDir, Math.max(2.0, dist * 0.28));
+      glide.frames = 0; glide.camTo = null; glide.targetTo = null; glide.axis = null; glide.distTarget = 0;
+      glide.param = {
+        flight: true, t: 0,
+        n: o.frames || Math.round(Math.max(150, Math.min(430, 90 + dist * 2.1))),
+        ease: easeInOutCubic,
+        P0: P0, P1: P1, P2: P2, P3: P3,
+        body: body, t0: controls.target.clone(),
+        bank: 0, prevV: null,
+        fovK: (o.fovKick != null ? o.fovKick : 6), fov0: camera.fov
+      };
+      glide.onDone = o.onDone || null;
+      lastTouch = performance.now(); userMoved = true;
+    }
+    function bez(P, e, out) {   // cubic Bézier point
+      var u = 1 - e;
+      out.set(0, 0, 0)
+        .addScaledVector(P.P0, u * u * u)
+        .addScaledVector(P.P1, 3 * u * u * e)
+        .addScaledVector(P.P2, 3 * u * e * e)
+        .addScaledVector(P.P3, e * e * e);
+      return out;
+    }
+    var _fPos = new THREE.Vector3(), _fAhead = new THREE.Vector3(), _fLook = new THREE.Vector3(),
+        _fVel = new THREE.Vector3(), _fRight = new THREE.Vector3(), _fUp = new THREE.Vector3();
+
     /* ===== THE BASE (根据地): where the visitor actually is =====
        On load we resolve the visitor's place from their IP (client-side, city-level,
        cached) and the site OPENS lying on the ground at that spot, looking up at the
@@ -1122,6 +1175,7 @@
         }
         groundDimTarget = on ? 1 : 0;   // the local world darkens to night underfoot, blooms back on launch
       }
+      groundHintHook = groundHint;   // flyTo (module scope) launches from the ground through this hook
       function enterGroundView(opts) {
         if (!nyeArmature || !nyeArmature.earthSurfacePoint || !controls || !baseGeo) return;
         var sp = nyeArmature.earthSurfacePoint(baseGeo.lat, baseGeo.lon, 0.004);   // LOW: the horizon reads level, like a body on the ground
@@ -1235,7 +1289,11 @@
       /* ===== the TOUR: the nav asks, the camera travels, the door opens ===== */
       window.__space.tour = function (name, href) {
         lastTouch = performance.now(); userMoved = true; glide.onDone = null;
-        if (controls.isGround()) { ascendThen(function () { window.__space.tour(name, href); }); return; }
+        // (body/star/constellation destinations fly via flyTo, which departs vertically
+        // from the ground on its own; the classic radial glides below must exit manually)
+        if (controls.isGround() && (name === "footprint" || name === "pillars" || name === "zodiac")) {
+          controls.exitGroundMode(); groundHint(false);
+        }
         if (name === "pillars" || name === "zodiac" || name === "footprint") { soloBody = null; clearSel(); }
         if (name === "footprint") {
           glide.axis = null; glide.step = 0; glide.frames = 110; glide.distTarget = 9;
@@ -1318,7 +1376,6 @@
       var pickRay = new THREE.Raycaster(), pickNdc = new THREE.Vector2();
       var FOCUS_MIN = { NyeSun: 9.5, NyeMoon: 2.2, NatalJupiter: 4.5, NatalSaturn: 4.5, NatalMercury: 0.9, NatalVenus: 1.6, NatalMars: 1.1 };   // closest approach per body (must clear each surface + the near-plane)
       function glideToBody(objName, viewDist, nFrames) {
-        if (controls.isGround()) { ascendThen(function () { glideToBody(objName, viewDist, nFrames); }); return; }
         var obj = nyeArmature.group.getObjectByName(objName);
         if (!obj && natalSky && natalSky.group) obj = natalSky.group.getObjectByName(objName);
         if (!obj) return;
@@ -1345,24 +1402,24 @@
           outward.applyAxisAngle(ringN, -0.5);   /* this side keeps the year-seal beside, not before, the body */
           outward.multiplyScalar(Math.cos(0.42)).addScaledVector(ringN, Math.sin(0.42)).normalize();
         }
-        glide.targetTo = w.clone();
-        glide.camTo = w.clone().add(outward.multiplyScalar(viewDist || 40));
-        glide.axis = null; glide.step = 0; glide.distTarget = 0;
-        // a voyage takes voyage time: frames scale with the distance to be crossed
-        var vDist = camera.position.distanceTo(w);
-        glide.frames = nFrames || Math.round(Math.max(70, Math.min(210, 60 + vDist * 1.15)));
+        // the FLIGHT: tangential departure, banked arc, braking in along the sightline
+        flyTo({
+          camTo: w.clone().add(outward.multiplyScalar(viewDist || 40)),
+          targetTo: w.clone(), lookAt: w.clone(),
+          frames: nFrames || null, fovKick: 6
+        });
       }
       /* any constellation becomes the pivot: stand INSIDE the belt looking outward,
          so the Earth, the Sun and the rings are all BEHIND the camera — nothing can veil it */
       function focusConstellation(id, nFrames) {
         if (!natalSky || !natalSky.getConCentroid) return;
-        if (controls.isGround()) { ascendThen(function () { focusConstellation(id, nFrames); }); return; }
         var c = natalSky.getConCentroid(id); if (!c) return;
         var dir = c.clone().normalize();
-        glide.targetTo = c.clone();
-        glide.camTo = c.clone().sub(dir.multiplyScalar(85));
-        glide.axis = null; glide.step = 0; glide.distTarget = 0;
-        glide.frames = nFrames || 110; glide.onDone = null;   // never inherit a prior nav callback
+        flyTo({
+          camTo: c.clone().sub(dir.multiplyScalar(85)),
+          targetTo: c.clone(), lookAt: c.clone(),
+          frames: nFrames ? Math.round(nFrames * 2.2) : null, fovKick: 5, onDone: null
+        });
         soloBody = "sky"; clearSel();
         natalSky.highlight(id, true); setTimeout(function () { natalSky.highlight(id, false); }, 4200);
       }
@@ -1385,7 +1442,7 @@
       }
       function focusStar(info) {
         if (!info) { clearSel(); return; }                       // a click into the void lets go
-        if (controls.isGround()) { ascendThen(function () { focusStar(info); }); return; }   // launch first, then approach the star
+        // (flyTo departs vertically when starting from the ground — no chain needed)
         if (selStar && selStar.id === info.id) { openStarDoor(); return; }
         selStar = info;
         if (starCta) {
@@ -1394,9 +1451,11 @@
           starCta.innerHTML = '<span class="i18n-en">Open · ' + te + ' ↗</span><span class="i18n-zh">打开 · ' + tz + ' ↗</span>';
         }
         var dir = info.world.clone().normalize();
-        glide.targetTo = info.world.clone();                     // the star takes the pivot
-        glide.camTo = info.world.clone().sub(dir.multiplyScalar(38));
-        glide.axis = null; glide.step = 0; glide.distTarget = 0; glide.frames = 90; glide.onDone = null;
+        flyTo({
+          camTo: info.world.clone().sub(dir.multiplyScalar(38)),
+          targetTo: info.world.clone(), lookAt: info.world.clone(),
+          fovKick: 5, onDone: null
+        });
         soloBody = "sky";
       }
       if (starCta) starCta.addEventListener("click", openStarDoor);
@@ -1468,10 +1527,12 @@
           while (o && !pick) { pick = o.userData && o.userData.nyePick; o = o.parent; }
           if (pick !== "sun" && pick !== "moon" && pick !== "earth" && pick !== "jupiter" && pick !== "saturn" && pick !== "beacon" && pick !== "mercury" && pick !== "venus" && pick !== "mars") continue;   // glyphs never swallow a click
           if (pick === "beacon") {                       // the beacon is the door home
-            if (!controls.isGround()) glideToBase();
-            e.stopImmediatePropagation(); return;
+            // on the ground the camera sits INSIDE the beacon's pick bubble (and the
+            // raycaster ignores visible=false) — look PAST it to the real target
+            if (controls.isGround()) continue;
+            glideToBase(); e.stopImmediatePropagation(); return;
           }
-          if (pick === "earth" && controls.isGround()) { e.stopImmediatePropagation(); return; }   // you're standing on it
+          if (pick === "earth" && controls.isGround()) continue;   // you're standing on it (hour-ring ticks etc. walk to 'earth' at d≈0) — look PAST it to the sky
           if (pick === "sun") {
             if (natalSky) { natalSky.highlight("capricorn", true); setTimeout(function () { natalSky.highlight("capricorn", false); }, 2800); }
             glideToBody("NyeSun", 21);
@@ -1524,7 +1585,43 @@
         }
         // choreographed flight (launch / landing) — a standard glide starting takes precedence
         if (glide.param && glide.frames > 0) glide.param = null;
-        if (glide.param) {
+        if (glide.param && glide.param.flight) {
+          var F = glide.param;
+          F.t = Math.min(1, F.t + 1 / F.n);
+          var fe = F.ease(F.t);
+          bez(F, fe, _fPos);
+          _fVel.copy(_fPos).sub(camera.position);           // this frame's velocity
+          camera.position.copy(_fPos);
+          // the gaze: lead along the path early, lock the body late
+          bez(F, Math.min(1, fe + 0.06), _fAhead);
+          var lockAmt = F.t < 0.25 ? 0 : F.t > 0.72 ? 1 : (F.t - 0.25) / 0.47;
+          lockAmt = lockAmt * lockAmt * (3 - 2 * lockAmt);
+          _fLook.copy(_fAhead).lerp(F.body, lockAmt);
+          controls.target.copy(F.t0).lerp(_fLook, Math.min(1, F.t * 3));   // hand the pivot over quickly, smoothly
+          // BANKING: roll into the turn (lateral velocity change), settle level for arrival
+          if (F.prevV && _fVel.lengthSq() > 1e-10) {
+            _fRight.crossVectors(_fVel, UP_Y).normalize();
+            var lat = (_fVel.x - F.prevV.x) * _fRight.x + (_fVel.y - F.prevV.y) * _fRight.y + (_fVel.z - F.prevV.z) * _fRight.z;
+            var bankTarget = Math.max(-0.30, Math.min(0.30, -lat * 55));
+            bankTarget *= 1 - Math.max(0, (F.t - 0.82) / 0.18);            // wings level before the dock
+            F.bank += (bankTarget - F.bank) * 0.07;
+          }
+          F.prevV = F.prevV || new THREE.Vector3(); F.prevV.copy(_fVel);
+          _fUp.copy(UP_Y);
+          if (Math.abs(F.bank) > 0.002 && _fVel.lengthSq() > 1e-10) {
+            _fUp.applyAxisAngle(_fVel.clone().normalize(), F.bank);
+          }
+          camera.up.lerp(_fUp, 0.14).normalize();
+          camera.lookAt(controls.target);
+          if (F.fovK) { camera.fov = F.fov0 + Math.sin(Math.PI * F.t) * F.fovK; camera.updateProjectionMatrix(); }
+          if (F.t >= 1) {
+            if (F.fovK) { camera.fov = F.fov0; camera.updateProjectionMatrix(); }
+            controls.target.copy(F.body);                    // the pivot IS the body now
+            camera.up.copy(UP_Y); camera.lookAt(F.body);
+            glide.param = null;
+            if (glide.onDone) { var fF = glide.onDone; glide.onDone = null; fF(); }
+          }
+        } else if (glide.param) {
           var P = glide.param;
           P.t = Math.min(1, P.t + 1 / P.n);
           var pe = P.ease(P.t);
