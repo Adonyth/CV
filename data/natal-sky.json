@@ -1510,17 +1510,13 @@
    "raH": 18.313,
    "decDeg": -13.82,
    "dist": 880,
-   "type": "columns",
-   "pillars": 3,
-   "size": 42,
-   "count": 1500,
-   "psize": 10,
+   "tex": "dso-pillars.jpg",
+   "size": 95,
+   "depth": 0.5,
+   "psize": 5,
+   "boost": 1.6,
    "seed": 16,
-   "palette": [
-    "#7a5230",
-    "#c98a48",
-    "#f0d8a0"
-   ]
+   "threshold": 0.14
   },
   {
    "id": "orion",
@@ -1531,17 +1527,13 @@
    "raH": 5.588,
    "decDeg": -5.39,
    "dist": 820,
-   "type": "cloud",
-   "flatten": 0.8,
-   "size": 60,
-   "count": 2000,
-   "psize": 15,
+   "tex": "dso-orion.jpg",
+   "size": 155,
+   "depth": 0.45,
+   "psize": 5.5,
+   "threshold": 0.13,
    "seed": 42,
-   "palette": [
-    "#7fd0c8",
-    "#e88fa8",
-    "#c0a0e0"
-   ]
+   "boost": 1.55
   },
   {
    "id": "rosette",
@@ -1552,16 +1544,13 @@
    "raH": 6.5625,
    "decDeg": 4.95,
    "dist": 860,
-   "type": "ring",
-   "size": 62,
-   "count": 1800,
-   "psize": 14,
+   "tex": "dso-rosette.jpg",
+   "size": 150,
+   "depth": 0.4,
+   "psize": 5.5,
    "seed": 23,
-   "palette": [
-    "#e05a6a",
-    "#f0a0b0",
-    "#b84a8a"
-   ]
+   "threshold": 0.14,
+   "boost": 1.6
   },
   {
    "id": "andromeda",
@@ -1572,21 +1561,14 @@
    "raH": 0.712,
    "decDeg": 41.27,
    "dist": 1000,
-   "type": "spiral",
-   "size": 95,
-   "count": 3200,
-   "psize": 9,
-   "seed": 31,
-   "tilt": [
-    72,
-    0,
-    25
-   ],
-   "palette": [
-    "#f0e2b0",
-    "#a8c8ec",
-    "#e89ab0"
-   ]
+   "tex": "dso-andromeda.jpg",
+   "size": 250,
+   "depth": 0.2,
+   "psize": 4,
+   "boost": 1.7,
+   "threshold": 0.1,
+   "density": 0.4,
+   "seed": 31
   },
   {
    "id": "crab",
@@ -1597,17 +1579,13 @@
    "raH": 5.575,
    "decDeg": 22.01,
    "dist": 840,
-   "type": "cloud",
-   "flatten": 0.85,
-   "size": 34,
-   "count": 1100,
-   "psize": 11,
+   "tex": "dso-crab.jpg",
+   "size": 85,
+   "depth": 0.45,
+   "psize": 5,
    "seed": 51,
-   "palette": [
-    "#e8a050",
-    "#7fd0c8",
-    "#f0e0a0"
-   ]
+   "threshold": 0.14,
+   "boost": 1.6
   },
   {
    "id": "horsehead",
@@ -1618,17 +1596,13 @@
    "raH": 5.68,
    "decDeg": -2.46,
    "dist": 830,
-   "type": "cloud",
-   "flatten": 0.9,
-   "size": 44,
-   "count": 1300,
-   "psize": 13,
+   "tex": "dso-horsehead.jpg",
+   "size": 120,
+   "depth": 0.4,
+   "psize": 5.5,
+   "threshold": 0.13,
    "seed": 63,
-   "palette": [
-    "#c83a4a",
-    "#e07a6a",
-    "#f0b0a0"
-   ]
+   "boost": 1.6
   },
   {
    "id": "lagoon",
@@ -1639,16 +1613,13 @@
    "raH": 18.063,
    "decDeg": -24.38,
    "dist": 870,
-   "type": "cloud",
-   "size": 58,
-   "count": 1800,
-   "psize": 15,
+   "tex": "dso-lagoon.jpg",
+   "size": 150,
+   "depth": 0.45,
+   "psize": 5.5,
    "seed": 77,
-   "palette": [
-    "#e06a8a",
-    "#f0a0b0",
-    "#c85a6a"
-   ]
+   "threshold": 0.14,
+   "boost": 1.6
   },
   {
    "id": "ring",
@@ -1659,16 +1630,13 @@
    "raH": 18.893,
    "decDeg": 33.03,
    "dist": 810,
-   "type": "ring",
-   "size": 26,
-   "count": 900,
-   "psize": 10,
+   "tex": "dso-ring.jpg",
+   "size": 75,
+   "depth": 0.3,
+   "psize": 5,
    "seed": 88,
-   "palette": [
-    "#e07050",
-    "#8fd0c0",
-    "#88a8d8"
-   ]
+   "threshold": 0.14,
+   "boost": 1.6
   },
   {
    "id": "pleiades",
@@ -1679,17 +1647,13 @@
    "raH": 3.792,
    "decDeg": 24.12,
    "dist": 780,
-   "type": "cluster",
-   "size": 52,
-   "count": 720,
-   "psize": 9,
-   "bright": 9,
-   "seed": 45,
-   "palette": [
-    "#a8c8f8",
-    "#d0e0f8",
-    "#8098e0"
-   ]
+   "tex": "dso-pleiades.jpg",
+   "size": 175,
+   "depth": 0.35,
+   "psize": 4.5,
+   "boost": 1.5,
+   "threshold": 0.1,
+   "seed": 45
   },
   {
    "id": "carina",
@@ -1700,16 +1664,13 @@
    "raH": 10.75,
    "decDeg": -59.87,
    "dist": 900,
-   "type": "cloud",
-   "size": 78,
-   "count": 2400,
-   "psize": 15,
+   "tex": "dso-carina.jpg",
+   "size": 200,
+   "depth": 0.4,
+   "psize": 5.5,
    "seed": 37,
-   "palette": [
-    "#e07a4a",
-    "#f0c878",
-    "#c85a5a"
-   ]
+   "threshold": 0.15,
+   "boost": 1.6
   },
   {
    "id": "helix",
@@ -1720,16 +1681,13 @@
    "raH": 22.494,
    "decDeg": -20.84,
    "dist": 850,
-   "type": "ring",
-   "size": 40,
-   "count": 1100,
-   "psize": 12,
+   "tex": "dso-helix.jpg",
+   "size": 110,
+   "depth": 0.3,
+   "psize": 5,
    "seed": 92,
-   "palette": [
-    "#5ac0b0",
-    "#e08060",
-    "#a0d0e8"
-   ]
+   "threshold": 0.14,
+   "boost": 1.6
   },
   {
    "id": "milkyway",
@@ -1740,22 +1698,15 @@
    "raH": 17.76,
    "decDeg": -28.94,
    "dist": 1150,
-   "type": "band",
-   "size": 820,
-   "count": 4000,
-   "psize": 7,
-   "opacity": 0.7,
-   "tilt": [
-    0,
-    0,
-    28
-   ],
-   "seed": 5,
-   "palette": [
-    "#e8dcc0",
-    "#c8b088",
-    "#9a8258"
-   ]
+   "tex": "dso-milkyway.jpg",
+   "size": 900,
+   "depth": 0.12,
+   "psize": 3,
+   "boost": 1.8,
+   "threshold": 0.06,
+   "density": 0.5,
+   "opacity": 0.75,
+   "seed": 5
   }
  ]
 }

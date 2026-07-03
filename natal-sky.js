@@ -534,55 +534,57 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var t = new T.CanvasTexture(cv); if ("colorSpace" in t && T.SRGBColorSpace) t.colorSpace = T.SRGBColorSpace;
     return t;
   })();
-  function dsoPal(arr) { return (arr || ["#e07a6a", "#8fd0d8", "#f0e0c0"]).map(function (h) { var c = hexRGB(h); return [c[0] / 255, c[1] / 255, c[2] / 255]; }); }
-  function buildDSO(d) {
-    var rng = gRng(((d.seed || 7) * 97 + 13) >>> 0);
-    var N = d.count || 1400, R = d.size || 60, type = d.type || "cloud";
-    var pal = dsoPal(d.palette), np = pal.length, fb = gFbm((d.seed || 7) + 11, 8);
-    var pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
-    function tint(t, b) {                        // colour by t∈[0,1] across the palette, scaled by brightness b
-      var f = Math.max(0, Math.min(1, t)) * (np - 1), i = Math.min(np - 2, Math.floor(f)), k = f - i, a = pal[i], c = pal[i + 1];
-      return [Math.min(1, (a[0] + (c[0] - a[0]) * k) * b), Math.min(1, (a[1] + (c[1] - a[1]) * k) * b), Math.min(1, (a[2] + (c[2] - a[2]) * k) * b)];
+  function dsoFromImage(d, img) {
+    // Sample the real astrophoto into a 3-D point cloud shaped LIKE the object: x,y from the
+    // image (so it reads as the true nebula/galaxy), colour from the real pixels, and a
+    // z-DEPTH so it is a genuine volume — not a flat billboard. Built once, on the image.
+    var W = img.naturalWidth || img.width, H = img.naturalHeight || img.height;
+    var cap = d.sample || 240, sc = Math.min(1, cap / Math.max(W, H));
+    var sw = Math.max(2, Math.round(W * sc)), sh = Math.max(2, Math.round(H * sc));
+    var cv = document.createElement("canvas"); cv.width = sw; cv.height = sh;
+    var cx = cv.getContext("2d"); cx.drawImage(img, 0, 0, sw, sh);
+    var px = cx.getImageData(0, 0, sw, sh).data;
+    var rng = gRng(((d.seed || 7) * 131 + 7) >>> 0);
+    var thr = d.threshold != null ? d.threshold : 0.09;      // drop the near-black background
+    var dens = d.density != null ? d.density : 0.5;          // keep this fraction of the lit pixels
+    var boost = d.boost != null ? d.boost : 1.6;             // lift the colours out of the dark
+    var Wu = d.size || 150, Hu = Wu * (sh / sw);             // world width/height (image aspect preserved)
+    var depth = (d.depth != null ? d.depth : 0.42) * Wu;     // z half-thickness → the volume
+    var P = [], C = [];
+    for (var yy = 0; yy < sh; yy++) for (var xx = 0; xx < sw; xx++) {
+      var i4 = (yy * sw + xx) * 4, r = px[i4] / 255, g = px[i4 + 1] / 255, b = px[i4 + 2] / 255;
+      var lum = 0.30 * r + 0.59 * g + 0.11 * b;
+      if (lum < thr || rng() > dens) continue;
+      var wx = (xx / (sw - 1) - 0.5) * Wu, wy = (0.5 - yy / (sh - 1)) * Hu;   // image y is top-down → flip
+      var wz = ((lum - 0.5) * 0.6 + (rng() - 0.5)) * depth;                   // bright cores bulge; jitter gives real volume
+      P.push(wx, wy, wz);
+      C.push(Math.min(1, r * boost), Math.min(1, g * boost), Math.min(1, b * boost));
     }
-    for (var i = 0; i < N; i++) {
-      var x = 0, y = 0, z = 0, t = rng(), b = 1;
-      if (type === "spiral") {                   // galaxy: bulge + two logarithmic arms in a thin disk
-        if (rng() < 0.30) { var br = Math.pow(rng(), 2) * 0.30 * R, u = rng() * 6.283, ca = rng() * 2 - 1, sa = Math.sqrt(1 - ca * ca); x = sa * Math.cos(u) * br; y = ca * br * 0.55; z = sa * Math.sin(u) * br; t = 0.05 * rng(); b = 1.25 + 0.6 * rng(); }
-        else { var a = Math.pow(rng(), 0.85), ang = a * 5.6 + (rng() < 0.5 ? 0 : Math.PI) + (rng() - 0.5) * 0.6, rr = (0.14 + a * 0.9) * R, sp = (rng() - 0.5) * 0.16 * (0.4 + a) * R; x = Math.cos(ang) * rr - Math.sin(ang) * sp; z = Math.sin(ang) * rr + Math.cos(ang) * sp; y = (rng() - 0.5) * 0.05 * R; t = 0.5 + 0.5 * rng(); b = 0.7 + 0.5 * rng(); }
-      } else if (type === "ring") {               // planetary nebula / rosette: a torus with a hollow core
-        var ea = rng() * 6.283, tr = R * (0.66 + 0.34 * Math.pow(rng(), 0.7)); x = Math.cos(ea) * tr; z = Math.sin(ea) * tr; y = (rng() - 0.5) * R * 0.17; t = (tr / R - 0.66) / 0.34; b = 0.6 + 0.7 * rng();
-      } else if (type === "cluster") {            // open cluster: a few bright members + faint halo
-        var cr = Math.pow(rng(), 1.7) * R, u2 = rng() * 6.283, c2 = rng() * 2 - 1, s2 = Math.sqrt(1 - c2 * c2); x = s2 * Math.cos(u2) * cr; y = c2 * cr * 0.85; z = s2 * Math.sin(u2) * cr; t = 0.4 + 0.6 * rng(); b = (i < (d.bright || 9)) ? 2.4 : 0.4 + 0.5 * rng();
-      } else if (type === "band") {               // Milky Way: a long thin star band, bright bulge, dark dust lanes
-        var uu = rng() * 2 - 1; x = uu * R; y = (rng() - 0.5) * R * 0.06; z = (rng() - 0.5) * R * 0.12 + (fb(uu * 5 + 3, 1.5) - 0.5) * R * 0.09; b = 0.30 + Math.exp(-uu * uu * 3.2) * 1.0; t = 0.25 + 0.6 * rng(); if (fb(uu * 9 + 21, 4) < 0.34) b *= 0.25;
-      } else if (type === "columns") {            // Pillars of Creation: a few tall dense fingers, lit at the tips
-        var nc = d.pillars || 3, ci2 = Math.floor(rng() * nc), cxp = (ci2 - (nc - 1) / 2) * R * 0.42 + (rng() - 0.5) * R * 0.1, h = Math.pow(rng(), 0.7), tp = (1 - h * 0.7) * R * 0.22; y = (h - 0.35) * R * 1.7; x = cxp + (rng() - 0.5) * tp; z = (rng() - 0.5) * tp; t = 0.2 + 0.6 * (1 - h); b = 0.5 + 0.95 * Math.pow(1 - h, 0.6);
-      } else {                                    // "cloud": turbulent emission blob (default), optional hollow / flatten
-        var u3 = rng() * 6.283, c3 = rng() * 2 - 1, s3 = Math.sqrt(1 - c3 * c3), rr3 = d.hollow ? (0.5 + Math.pow(rng(), 0.6) * 0.5) : Math.pow(rng(), 1.7), rad = rr3 * R; x = s3 * Math.cos(u3) * rad; y = c3 * rad * (d.flatten != null ? d.flatten : 0.72); z = s3 * Math.sin(u3) * rad; var w = fb(x * 0.06 + 9, z * 0.06 + 3); b = 0.35 + 1.15 * Math.pow(w, 1.4) * (1 - rr3 * 0.4); t = w;
-      }
-      pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z;
-      var c = tint(t, b); col[i * 3] = c[0]; col[i * 3 + 1] = c[1]; col[i * 3 + 2] = c[2];
-    }
-    var g2 = new T.BufferGeometry();
-    g2.setAttribute("position", new T.BufferAttribute(pos, 3));
-    g2.setAttribute("color", new T.BufferAttribute(col, 3));
-    var m = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 14, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: (d.opacity != null ? d.opacity : 0.92), depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var geo = new T.BufferGeometry();
+    geo.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
+    geo.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 5, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: d.opacity != null ? d.opacity : 0.96, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
-    return new T.Points(g2, m);
+    return new T.Points(geo, m);
   }
   (data.deepSky || []).forEach(function (d) {
-    var ecl = raDecToEcl(d.raH, d.decDeg);
-    var pts = buildDSO(d);
-    pts.position.copy(eclVec(ecl.lon, ecl.lat, d.dist || 900));
-    // flat forms (rings, galaxy disks) turn their face toward the viewer at origin so they
-    // never read as an edge-on streak; the optional tilt then angles them a touch off head-on.
-    if (d.type === "ring" || d.type === "spiral") {
-      pts.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), pts.position.clone().negate().normalize());
-    }
-    if (d.tilt) { pts.rotateX((d.tilt[0] || 0) * Math.PI / 180); pts.rotateY((d.tilt[1] || 0) * Math.PI / 180); pts.rotateZ((d.tilt[2] || 0) * Math.PI / 180); }
-    pts.name = "DSO_" + d.id;
-    pts.renderOrder = -2;                         // the farthest backdrop, painted before the near sky
-    belt.add(pts);
+    if (!d.tex) return;
+    var ecl = raDecToEcl(d.raH, d.decDeg), world = eclVec(ecl.lon, ecl.lat, d.dist || 900);
+    var img = new Image();
+    img.onload = function () {
+      try {
+        var pts = dsoFromImage(d, img);
+        pts.position.copy(world);
+        // the image plane (its +z depth axis) turns to face the viewer at origin, so the photo
+        // reads true head-on; flying to the side then reveals the real 3-D depth of the cloud.
+        pts.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), world.clone().negate().normalize());
+        if (d.tilt) { pts.rotateX((d.tilt[0] || 0) * Math.PI / 180); pts.rotateY((d.tilt[1] || 0) * Math.PI / 180); pts.rotateZ((d.tilt[2] || 0) * Math.PI / 180); }
+        pts.name = "DSO_" + d.id;
+        pts.renderOrder = -2;                       // the farthest backdrop, painted before the near sky
+        belt.add(pts);
+      } catch (e) { if (typeof window !== "undefined" && window.__space) window.__space.dsoError = String(e); }
+    };
+    img.src = "data/" + d.tex;
   });
 
   /* ---------------- constellation names: IN-SCENE Songti sprites (same craft as the 干支 glyphs) ---------------- */
