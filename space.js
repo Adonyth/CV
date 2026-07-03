@@ -874,7 +874,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=31").then(function (mod) {
+    import("./nye-armature.js?v=32").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -1231,7 +1231,7 @@
         } else if (name === "sun") {
           glideToBody("NyeSun", 6, 175);   /* the sun = the journey anchor; a 48-unit voyage to a true-scale star */
         } else if (name === "moon") {
-          glideToBody("NyeMoon", 0.45, 150);   /* an 8° close-up of the real lunar face, a real ride away */
+          glideToBody("NyeMoon", 2.6, 150);   /* a ~24° close-up of the real lunar face, a real ride away */
           if (natalSky) { natalSky.highlight("leo", true); setTimeout(function () { natalSky.highlight("leo", false); }, 4200); }
         } else if (name === "jupiter") {
           glideToBody("NatalJupiter", 13, 190);
@@ -1303,7 +1303,7 @@
 
       // clean-click routing: a drag is never a click
       var pickRay = new THREE.Raycaster(), pickNdc = new THREE.Vector2();
-      var FOCUS_MIN = { NyeSun: 1.2, NyeMoon: 0.3, NatalJupiter: 2.5, NatalSaturn: 2.5 };   // closest approach per body (true-scale bodies allow near passes; near-plane 0.2 stays clear)
+      var FOCUS_MIN = { NyeSun: 1.6, NyeMoon: 0.85, NatalJupiter: 2.5, NatalSaturn: 2.5 };   // closest approach per body (must clear each body's surface + the 0.2 near-plane)
       function glideToBody(objName, viewDist, nFrames) {
         if (controls.isGround()) { ascendThen(function () { glideToBody(objName, viewDist, nFrames); }); return; }
         controls.setDistanceLimits(FOCUS_MIN[objName] || 5.0, 430);
@@ -1464,7 +1464,7 @@
             glideToBody("NyeSun", 6);
           } else if (pick === "moon") {
             if (natalSky) { natalSky.highlight("leo", true); setTimeout(function () { natalSky.highlight("leo", false); }, 2800); }
-            glideToBody("NyeMoon", 0.45);
+            glideToBody("NyeMoon", 2.6);
           } else if (pick === "jupiter") {
             focusGiant("NatalJupiter", "jupiter", "Books · 2", "著作 · 2 本", "books.html", "cancer");
           } else if (pick === "saturn") {

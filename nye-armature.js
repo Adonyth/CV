@@ -23,11 +23,11 @@ export function mountNyeArmature(THREE, scene, opts) {
   const options = opts || {};
   const TAU = Math.PI * 2;
   const AU_SCALE = 18;
-  /* TRUE-SCALE SUN (build 63): the sun-earth distance is LOCKED at AU_SCALE (the 干支
-     rings depend on it), so the sun's radius follows the real ratio — AU / 214.9.
-     From the ground it now subtends the REAL 0.53°; from space it reads as a brilliant
-     point (which is the truth) — a screen-space spark keeps it findable. */
-  const SUN_BASE_R = AU_SCALE / 214.9;   // ≈ 0.0838 at AU_SCALE 18 (was 2.05 — 24× oversize)
+  /* PERCEPTUAL-SCALE SUN (build 64): the mathematically true 0.53° reads as a mere DOT
+     on a screen (real skies win through luminance, glare and the moon illusion — a
+     display has none of them). Films and games draw the luminaries at 3-5× their true
+     angular size to look real. Here: ~2.2° from the ground — the sun you remember. */
+  const SUN_BASE_R = AU_SCALE * 0.01923;   // ≈ 0.346 local: 2.2° apparent from the earth (4× true, the cinematic real)
   const DEFAULT_INSTANT = new Date(2002, 0, 2, 15, 45, 0, 0);
   const instant =
     options.instant && typeof options.instant.getTime === "function" && isFinite(options.instant.getTime())
@@ -117,10 +117,9 @@ export function mountNyeArmature(THREE, scene, opts) {
   earth.group.position.copy(ephem.earth);
   solarSystem.add(earth.group);
 
-  /* moon radius = true 0.5° apparent size at its visible distance (7.4 earthR): the moon
-     you see from the base is the SIZE of the real moon in a real sky. (Its literal orbit,
-     AU/389, would sit inside the anchor earth — the one place the metaphor must bend.) */
-  const moon = buildMoon(earthRadiusVis * 11.0 * 0.00452);   // 0.5° apparent at its distance — the moon of a real sky
+  /* moon: ~2.0° apparent from the ground (4× the mathematical 0.5°, same perceptual law
+     as the sun) — the size the moon FEELS when you look up on a clear night. */
+  const moon = buildMoon(earthRadiusVis * 11.0 * 0.0175);
   moon.mesh.position.copy(moonVisiblePosition);
   solarSystem.add(moon.mesh);
 
