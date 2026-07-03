@@ -1499,5 +1499,152 @@
   "count": 820,
   "latSpread": 4.0,
   "aroundSun": true
- }
+ },
+ "deepSky": [
+  {
+   "id": "pillars",
+   "name": {
+    "en": "Pillars of Creation",
+    "zh": "创生之柱"
+   },
+   "raH": 18.313,
+   "decDeg": -13.82,
+   "dist": 880,
+   "size": 95,
+   "tex": "dso-pillars.jpg"
+  },
+  {
+   "id": "orion",
+   "name": {
+    "en": "Orion Nebula",
+    "zh": "猎户座大星云"
+   },
+   "raH": 5.588,
+   "decDeg": -5.39,
+   "dist": 820,
+   "size": 150,
+   "tex": "dso-orion.jpg"
+  },
+  {
+   "id": "rosette",
+   "name": {
+    "en": "Rosette Nebula",
+    "zh": "玫瑰星云"
+   },
+   "raH": 6.5625,
+   "decDeg": 4.95,
+   "dist": 860,
+   "size": 170,
+   "tex": "dso-rosette.jpg"
+  },
+  {
+   "id": "andromeda",
+   "name": {
+    "en": "Andromeda Galaxy",
+    "zh": "仙女座星系"
+   },
+   "raH": 0.712,
+   "decDeg": 41.27,
+   "dist": 1000,
+   "size": 250,
+   "tex": "dso-andromeda.jpg"
+  },
+  {
+   "id": "crab",
+   "name": {
+    "en": "Crab Nebula",
+    "zh": "蟹状星云"
+   },
+   "raH": 5.575,
+   "decDeg": 22.01,
+   "dist": 840,
+   "size": 85,
+   "tex": "dso-crab.jpg"
+  },
+  {
+   "id": "horsehead",
+   "name": {
+    "en": "Horsehead Nebula",
+    "zh": "马头星云"
+   },
+   "raH": 5.68,
+   "decDeg": -2.46,
+   "dist": 830,
+   "size": 100,
+   "tex": "dso-horsehead.jpg"
+  },
+  {
+   "id": "lagoon",
+   "name": {
+    "en": "Lagoon Nebula",
+    "zh": "礁湖星云"
+   },
+   "raH": 18.063,
+   "decDeg": -24.38,
+   "dist": 870,
+   "size": 160,
+   "tex": "dso-lagoon.jpg"
+  },
+  {
+   "id": "ring",
+   "name": {
+    "en": "Ring Nebula",
+    "zh": "环状星云"
+   },
+   "raH": 18.893,
+   "decDeg": 33.03,
+   "dist": 810,
+   "size": 70,
+   "tex": "dso-ring.jpg"
+  },
+  {
+   "id": "pleiades",
+   "name": {
+    "en": "Pleiades",
+    "zh": "昴星团"
+   },
+   "raH": 3.792,
+   "decDeg": 24.12,
+   "dist": 780,
+   "size": 190,
+   "tex": "dso-pleiades.jpg"
+  },
+  {
+   "id": "carina",
+   "name": {
+    "en": "Carina Nebula",
+    "zh": "船底座星云"
+   },
+   "raH": 10.75,
+   "decDeg": -59.87,
+   "dist": 900,
+   "size": 200,
+   "tex": "dso-carina.jpg"
+  },
+  {
+   "id": "helix",
+   "name": {
+    "en": "Helix Nebula",
+    "zh": "螺旋星云"
+   },
+   "raH": 22.494,
+   "decDeg": -20.84,
+   "dist": 850,
+   "size": 120,
+   "tex": "dso-helix.jpg"
+  },
+  {
+   "id": "milkyway",
+   "name": {
+    "en": "Milky Way core",
+    "zh": "银河核心"
+   },
+   "raH": 17.76,
+   "decDeg": -28.94,
+   "dist": 1150,
+   "size": 640,
+   "opacity": 0.55,
+   "tex": "dso-milkyway.jpg"
+  }
+ ]
 }

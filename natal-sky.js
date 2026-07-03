@@ -519,6 +519,32 @@ export function buildNatalSky(THREE, scene, data, opts) {
     belt.add(aura);
   });
 
+  /* ---------------- famous deep-sky objects: STATIC additive sprites at their TRUE
+     RA/Dec, out beyond the zodiac shell. Each is added ONCE — the only per-frame work
+     is the sprite's own billboarding (identical cost to the twelve auras above), so this
+     adds no measurable frame load. A black-background astrophoto under additive blending
+     shows only its glow; the black falls away, so no cut-out mask is needed. The sprite
+     is created INSIDE the texture callback, so a slow/failed download never flashes a
+     white quad and simply yields no object. ---------------- */
+  (data.deepSky || []).forEach(function (d) {
+    var ecl = raDecToEcl(d.raH, d.decDeg);
+    var world = eclVec(ecl.lon, ecl.lat, d.dist || 900);
+    new T.TextureLoader().load("data/" + d.tex, function (tx) {
+      if ("colorSpace" in tx && T.SRGBColorSpace) tx.colorSpace = T.SRGBColorSpace;
+      tx.anisotropy = 4;
+      var mat = new T.SpriteMaterial({ map: tx, transparent: true, opacity: (d.opacity != null ? d.opacity : 0.9),
+        depthWrite: false, depthTest: true, blending: T.AdditiveBlending, fog: false });
+      if ("toneMapped" in mat) mat.toneMapped = false;
+      var spr = new T.Sprite(mat);
+      var iw = (tx.image && tx.image.width) || 1, ih = (tx.image && tx.image.height) || 1;
+      spr.scale.set(d.size, d.size * (ih / iw), 1);     // width = d.size; height keeps the photo's true aspect
+      spr.position.copy(world);
+      spr.name = "DSO_" + d.id;
+      spr.renderOrder = -2;                             // the farthest backdrop, painted before the near sky
+      belt.add(spr);
+    });
+  });
+
   /* ---------------- constellation names: IN-SCENE Songti sprites (same craft as the 干支 glyphs) ---------------- */
   function nameTexture(zh, en, key, loc) {
     var cv = document.createElement("canvas"); cv.width = 512; cv.height = 224;
