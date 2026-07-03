@@ -1,0 +1,212 @@
+/* ============================================================
+   craft.css — the ONE shared motion / interaction / depth layer.
+   Link on EVERY page AFTER its own stylesheet:
+     home  : <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="craft.css">
+     cv    : <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="craft.css">
+   Reading pages have inline <style> + no <head> edit budget, so they get the
+   SAME rules by pasting the "READING-PAGE PORTABLE BLOCK" (below, delimited)
+   into gen-works.py CSS and each handwritten page's inline <style>.
+
+   Locked palette only. Dark-first. GPU-only (transform/opacity). RM-safe.
+   Touches NO z-index / position / pointer-events / display on cosmos chrome.
+   Grain + vignette are scoped so they can NEVER sit over the 3D canvas.
+   ============================================================ */
+
+/* ---- easing family + motion tokens (ADD; --ease already exists everywhere) ---- */
+:root{
+  --ease-out:  cubic-bezier(0.22,0.61,0.30,1);   /* entrances / settle: fast in, long glide, NO overshoot */
+  --ease-io:   cubic-bezier(0.62,0.02,0.22,1);   /* symmetric — page-to-page crossfade */
+  --ease-spring:cubic-bezier(0.34,1.12,0.42,1);  /* arrows/pager ONLY — a hair of tactile overshoot */
+  --dur-1:.20s;  --dur-2:.34s;  --dur-3:.62s;  --dur-4:.9s;
+  /* one canonical grain — every surface references this string, never its own copy */
+  --grain:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='0.55'/></svg>");
+}
+
+/* ---- promote --gold to a real token so structure-gold is ONE colour everywhere.
+   (styles.css uses --gold bare in .flat-group but never declares it — this fixes
+   that latent bug; value unchanged. Reading-page CSS already declares it.) ---- */
+:root{ --gold:#e8c37a; }
+
+/* ============================================================
+   SILKY CROSS-DOCUMENT CROSSFADE (progressive; hard-cuts where unsupported)
+   Plain opacity only — no translate, no scale (a zoom crossfade reveals the
+   page edge and reads as an effect; the brief wants "turning plates").
+   ============================================================ */
+@view-transition{ navigation:auto; }
+::view-transition-old(root),
+::view-transition-new(root){ animation-duration:var(--dur-2); animation-timing-function:var(--ease-io); }
+::view-transition-old(root){ animation-name:cx-vt-out; }
+::view-transition-new(root){ animation-name:cx-vt-in; }
+@keyframes cx-vt-out{ to{ opacity:0; } }
+@keyframes cx-vt-in { from{ opacity:0; } }
+
+/* ============================================================
+   REFINED SELECTION + FOCUS (coral = interaction, one grammar site-wide)
+   ============================================================ */
+::selection{ background:rgba(224,135,106,.20); color:var(--ink); text-shadow:none; }
+::-moz-selection{ background:rgba(224,135,106,.20); color:var(--ink); text-shadow:none; }
+:where(a,button,[data-magnet]):focus-visible{
+  outline:1.5px solid var(--accent); outline-offset:3px; border-radius:999px;
+  transition:outline-offset var(--dur-1) var(--ease-out);
+}
+
+/* ============================================================
+   LINK UNDERLINE DRAW-ON-HOVER (prose + footer-nav + home/cosmos links)
+   A coral rule wipes in left->right; background-size only, GPU-cheap.
+   Deliberately EXCLUDES .map-back and .links pills (those lift instead).
+   ============================================================ */
+.desc a:not(.map-back), .lede a, .foot__nav a, .home-links a, .cosmos-links a, .nav__links a{
+  background-image:linear-gradient(var(--accent),var(--accent));
+  background-repeat:no-repeat; background-position:0 100%;
+  background-size:0% 1px;
+  transition:background-size var(--dur-2) var(--ease-out), color var(--dur-1) var(--ease-out);
+}
+.desc a:not(.map-back):hover, .lede a:hover, .foot__nav a:hover,
+.home-links a:hover, .cosmos-links a:hover, .nav__links a:hover{
+  background-size:100% 1px; color:var(--ink);
+}
+/* the CV sticky-nav wash was a filled background swap — retire it for the draw */
+.nav__links a:hover{ background:transparent; }
+
+/* ============================================================
+   PILL MICRO-INTERACTION: lift 1px + soft WARM halo (no generic drop shadow)
+   magnet.js already translates [data-magnet] pills toward the cursor; we add
+   Z-lift + glow on hover only, so JS position and CSS lift compose cleanly.
+   ============================================================ */
+.links a, .map-back, .lang, .pill, .hero__contact a, .contact-row a,
+.cosmos-nav button, .cosmos-nav a{
+  transition:color var(--dur-1) var(--ease-out),
+             border-color var(--dur-1) var(--ease-out),
+             background var(--dur-1) var(--ease-out),
+             transform var(--dur-2) var(--ease-out),
+             box-shadow var(--dur-2) var(--ease-out);
+}
+.links a:hover, .map-back:hover, .pill:hover, .hero__contact a:hover,
+.contact-row a:hover, .cosmos-nav button:hover, .cosmos-nav a:hover{
+  transform:translateY(-1px);
+  box-shadow:0 6px 20px -13px rgba(0,0,0,.8),
+             0 0 0 1px rgba(224,135,106,.07),
+             0 0 18px -7px rgba(224,135,106,.16);
+}
+.links a:active, .map-back:active, .pill:active{ transform:translateY(0); transition-duration:.06s; }
+
+/* ============================================================
+   ARROW / PAGER NUDGE toward travel direction (gentle spring — tactile, not bouncy)
+   ============================================================ */
+.pager a .nm{ display:inline-block; transition:transform var(--dur-2) var(--ease-spring), color var(--dur-1) var(--ease-out); }
+.pager a.next:hover .nm{ transform:translateX(3px); }
+.pager a.prev:hover .nm{ transform:translateX(-3px); }
+.portal__go{ transition:opacity var(--dur-1) var(--ease-out), transform var(--dur-2) var(--ease-spring); }
+.portal:hover .portal__go{ transform:translateX(5px); }
+.map-back span{ display:inline-block; transition:transform var(--dur-2) var(--ease-spring); }
+.map-back:hover span{ transform:translateX(2px); }
+
+/* ============================================================
+   AMBIENT WARMTH — a warm radial anchored top-centre, cool stone floor.
+   FLAT SURFACES ONLY. Scoped by body.reading / body.craft-flat which craft.js
+   sets on cv + reading pages and NEVER on body.cosmos / body.home. z-index:0,
+   pointer-events:none — it sits behind content (main is z-index:1) and can
+   never eat a click or veil the 3D scene.
+   ============================================================ */
+body.craft-flat::before{
+  content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(122% 82% at 50% -8%,
+      rgba(232,195,122,.05) 0%, rgba(224,135,106,.026) 26%, transparent 58%),
+    radial-gradient(150% 128% at 50% 122%, rgba(4,3,3,.55) 0%, transparent 56%);
+}
+/* the still film grain — the emulsion. ONE static layer, no drift animation. */
+body.craft-flat::after{
+  content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+  opacity:.026; mix-blend-mode:soft-light;
+  background-image:var(--grain); background-size:140px 140px;
+}
+
+/* ============================================================
+   GLASS / STRUCTURE REFINEMENT (dark theme only — leaves day theme untouched)
+   Warm the frosted-plate rim + deepen the cast; gold hairlines that FADE.
+   ============================================================ */
+:root[data-theme="dark"] .glass{
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.13),
+    inset 0 0 60px -34px rgba(232,195,122,.10),
+    0 18px 44px -22px rgba(0,0,0,.78);
+}
+/* a gold top-edge key hairline on the CV frosted plates + featured book (structure=gold, fading) */
+:root[data-theme="dark"] section:not(.hero) > .rail::before,
+:root[data-theme="dark"] .featured::before{
+  content:""; position:absolute; left:24px; right:24px; top:0; height:1px; pointer-events:none;
+  background:linear-gradient(to right, transparent,
+    rgba(232,195,122,.30) 22%, rgba(232,195,122,.30) 78%, transparent);
+}
+.featured{ position:relative; }
+
+/* ============================================================
+   SCROLL-REVEAL for pages WITHOUT GSAP (reading pages only; craft.js drives it).
+   Staggered rise — NO blur (blur over backdrop-filter plates double-composites).
+   cv.html keeps its GSAP .reveal; this uses a DIFFERENT class so they can't collide.
+   ============================================================ */
+.cx-rise{ opacity:0; transform:translateY(13px); }
+.cx-rise.cx-in{
+  opacity:1; transform:none;
+  transition:opacity var(--dur-3) var(--ease-out), transform var(--dur-3) var(--ease-out);
+}
+
+/* ============================================================
+   COSMOS HOME CHROME ENTRANCE — pure luminance fade over the live canvas.
+   VISUAL ONLY: opacity is the only animated property. No translate (a moving
+   overlay could sweep across the canvas mid-anim). NO change to z-index /
+   pointer-events / position / display — the interactive stage stays clickable.
+   craft.js adds body.cosmos-ready one rAF after load to trigger this.
+   ============================================================ */
+/* html.js gate: this initial-hidden state applies ONLY when JS is on (the inline
+   head script adds .js to <html> before first paint). No-JS or a craft-load
+   failure -> chrome keeps styles.css's visible default and can never stick hidden. */
+html.js body.cosmos .cosmos-id, html.js body.cosmos .cosmos-nav, html.js body.cosmos .cosmos-ui,
+html.js body.cosmos .cosmos-legend, html.js body.cosmos .cosmos-hint, html.js body.cosmos .cosmos-build,
+html.js body.cosmos .cosmos-dock{
+  opacity:0; transition:opacity var(--dur-4) var(--ease-out);
+}
+body.cosmos.cosmos-ready .cosmos-id{ opacity:1; transition-delay:.10s; }
+body.cosmos.cosmos-ready .cosmos-nav{ opacity:1; transition-delay:.22s; }
+body.cosmos.cosmos-ready .cosmos-ui{ opacity:1; transition-delay:.32s; }
+body.cosmos.cosmos-ready .cosmos-legend{ opacity:1; transition-delay:.42s; }
+body.cosmos.cosmos-ready .cosmos-hint{ opacity:.85; transition-delay:.42s; }  /* respects its resting .85 */
+body.cosmos.cosmos-ready .cosmos-build{ opacity:.55; transition-delay:.5s; }  /* respects its resting .55 */
+body.cosmos.cosmos-ready .cosmos-dock{ opacity:1; transition-delay:.5s; }
+/* NEVER hide chrome the state-machine toggles by opacity (flat / mobile-3d / to-map
+   set their own opacity/display) — only run this cascade on the desktop cosmos. */
+body.cosmos.is-flat .cosmos-id, body.cosmos.is-flat .cosmos-legend,
+body.cosmos.is-flat .cosmos-hint, body.cosmos.is-flat .cosmos-build,
+body.cosmos.is-flat .cosmos-dock{ opacity:0 !important; transition:none; } /* let existing display:none win */
+
+/* ============================================================
+   REDUCED MOTION — collapse everything to instant, keep colour-only feedback.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce){
+  @view-transition{ navigation:none; }
+  ::view-transition-old(root),::view-transition-new(root){ animation:none !important; }
+  .cx-rise{ opacity:1 !important; transform:none !important; transition:none !important; }
+  .links a,.map-back,.pill,.hero__contact a,.contact-row a,
+  .cosmos-nav button,.cosmos-nav a,.pager a .nm,.map-back span,.portal__go{
+    transition:color var(--dur-1) linear, border-color var(--dur-1) linear !important;
+    transform:none !important; box-shadow:none !important;
+  }
+  .links a:hover,.map-back:hover,.pill:hover,.hero__contact a:hover,.contact-row a:hover,
+  .cosmos-nav button:hover,.cosmos-nav a:hover{ transform:none !important; box-shadow:none !important; }
+  .pager a:hover .nm,.map-back:hover span,.portal:hover .portal__go{ transform:none !important; }
+  .desc a,.lede a,.foot__nav a,.home-links a,.cosmos-links a,.nav__links a{ transition:color var(--dur-1) linear; }
+  body.cosmos .cosmos-id,body.cosmos .cosmos-nav,body.cosmos .cosmos-ui,
+  body.cosmos .cosmos-legend,body.cosmos .cosmos-hint,body.cosmos .cosmos-build,
+  body.cosmos .cosmos-dock{ opacity:1 !important; transition:none !important; }
+}
+
+/* ============================================================
+   PRINT — kill all atmosphere / grain / transitions / structure hairlines.
+   (styles.css @media print already remaps the palette; this only removes craft.)
+   ============================================================ */
+@media print{
+  body.craft-flat::before, body.craft-flat::after{ display:none !important; }
+  section:not(.hero) > .rail::before, .featured::before{ display:none !important; }
+  *{ view-transition-name:none !important; }
+}

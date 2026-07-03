@@ -120,14 +120,14 @@
     g.registerPlugin(window.ScrollTrigger);
     // hero: gentle intro
     g.from(".hero .eyebrow, .hero h1, .hero .lead, .hero__contact", {
-      opacity: 0, y: 22, duration: 0.9, ease: "power3.out", stagger: 0.09
+      opacity: 0, y: 16, duration: 0.62, ease: "power2.out", stagger: 0.07
     });
     // sections: reveal on scroll
     g.utils.toArray(".reveal").forEach(function (el) {
-      g.set(el, { opacity: 0, y: 20 });
+      g.set(el, { opacity: 0, y: 16 });
       window.ScrollTrigger.create({
         trigger: el, start: "top 88%", once: true,
-        onEnter: function () { g.to(el, { opacity: 1, y: 0, duration: 0.85, ease: "power3.out" }); }
+        onEnter: function () { g.to(el, { opacity: 1, y: 0, duration: 0.72, ease: "power2.out" }); }
       });
     });
   })(); } catch (e) {

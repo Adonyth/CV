@@ -51,7 +51,7 @@
     .eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.24em; color:var(--gold); text-transform:uppercase; display:flex; align-items:center; gap:.85em;}
     .eyebrow::before{content:""; width:1.6em; height:1px; background:var(--gold); opacity:.55;}
     .locale-zh .eyebrow{letter-spacing:.14em;}
-    h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"opsz" 40; font-size:clamp(30px,3.8vw,44px); font-weight:500; color:var(--ink); line-height:1.14; letter-spacing:-.011em; margin:var(--s3) 0 var(--s2); text-wrap:balance;}
+    h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"opsz" 44; font-size:clamp(31px,2.2rem + 1.1vw,46px); font-weight:500; color:var(--ink); line-height:1.14; letter-spacing:-.011em; margin:var(--s3) 0 var(--s2); text-wrap:balance;}
     .locale-zh h1{font-variation-settings:"opsz" 40; line-height:1.26; letter-spacing:.01em; text-wrap:normal;}
     .lede{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"opsz" 24; font-size:19px; line-height:1.6; color:var(--read); max-width:62ch; text-wrap:pretty;}
     .locale-zh .lede{line-height:1.9;}
@@ -73,6 +73,7 @@
     .foot__nav a.cur{color:var(--ink);}
     @media(max-width:640px){ .foot{padding:24px 20px 56px;} }
   </style>
+  <link rel="stylesheet" href="../craft.css?v=1" />
 </head>
 <body>
   <a class="map-back" href="../index.html">⟵ <span>星盘 · Orrery</span></a>
@@ -141,5 +142,6 @@
       document.getElementById("btn-zh").addEventListener("click", function () { apply("zh"); });
     })();
   </script>
+  <script src="../craft.js?v=1" defer></script>
 </body>
 </html>

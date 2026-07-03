@@ -65,7 +65,7 @@
       box-shadow:0 0 42px 10px rgba(232,164,94,.34), 0 0 140px 40px rgba(232,164,94,.12);
       animation:breath 5.2s ease-in-out infinite;}
     @keyframes breath{50%{box-shadow:0 0 52px 14px rgba(232,164,94,.42), 0 0 170px 52px rgba(232,164,94,.16);}}
-    .dawn h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"opsz" 40; font-size:clamp(30px,4.4vw,46px); font-weight:500; color:var(--ink); line-height:1.16; letter-spacing:-.008em; text-wrap:balance;}
+    .dawn h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"opsz" 44; font-size:clamp(30px,4.4vw,46px); font-weight:500; color:var(--ink); line-height:1.16; letter-spacing:-.008em; text-wrap:balance;}
     .locale-zh .dawn h1{letter-spacing:.02em; line-height:1.28; text-wrap:normal;}
     .dawn p{font-family:var(--mono); font-size:12px; letter-spacing:.16em; color:var(--muted); margin-top:12px; text-transform:uppercase;}
 
@@ -83,17 +83,18 @@
     .stn::before{content:""; position:absolute; left:0; top:29px; width:11px; height:11px; border-radius:50%;
       background:#181512; border:1.5px solid var(--gold); box-shadow:0 0 10px rgba(232,195,122,.4);}
     .stn--edu::before{background:var(--gold); box-shadow:0 0 16px rgba(232,195,122,.65);}
-    .stn__when{font-family:var(--mono); font-size:11.5px; letter-spacing:.12em; color:var(--accent);}
+    .stn__when{font-family:var(--mono); font-size:11.5px; letter-spacing:.12em; color:var(--gold); font-variant-numeric:tabular-nums lining-nums;}
     .stn__t{font-size:21px; color:var(--ink); font-weight:500; margin:6px 0 2px; line-height:1.3;}
     .stn__where{font-family:var(--mono); font-size:11.5px; color:var(--muted); letter-spacing:.06em; margin-bottom:8px;}
-    .stn__d{font-size:15.5px; line-height:1.72; max-width:60ch;}
-    .locale-zh .stn__d{line-height:1.85;}
+    .stn__d{font-size:15.5px; line-height:1.72; max-width:60ch; font-variant-numeric:proportional-nums oldstyle-nums; text-wrap:pretty;}
+    .locale-zh .stn__d{line-height:1.85; font-variant-numeric:normal;}
 
     /* soft reveal on scroll */
     .stn{opacity:0; transform:translateY(14px); transition:opacity .7s ease, transform .7s ease;}
     .stn.lit{opacity:1; transform:none;}
     @media (prefers-reduced-motion: reduce){ body{animation:none;} .stn{opacity:1; transform:none; transition:none;} .dawn__sun{animation:none;} }
   </style>
+  <link rel="stylesheet" href="craft.css?v=1" />
 </head>
 <body>
   <a class="map-back" data-magnet href="index.html">⟵ <span>星盘 · Orrery</span></a>
@@ -179,5 +180,6 @@
       }, 400);
     })();
   </script>
+  <script src="craft.js?v=1" defer></script>
 </body>
 </html>

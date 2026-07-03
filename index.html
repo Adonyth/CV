@@ -25,13 +25,25 @@
       href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=32" />
+    <link rel="stylesheet" href="styles.css?v=33" />
+    <link rel="stylesheet" href="craft.css?v=1" />
     <script>
       (function () {
+        var d = document.documentElement;
         try {
           var t = localStorage.getItem("cv-theme");
-          if (t !== "light") document.documentElement.setAttribute("data-theme", "dark");
-        } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+          if (t !== "light") d.setAttribute("data-theme", "dark");
+        } catch (e) { d.setAttribute("data-theme", "dark"); }
+        d.classList.add("js");   /* craft.css gates the cosmos-chrome entrance on html.js — no-JS shows chrome instantly */
+        /* fire the chrome luminance-entrance independently of craft.js so it can never stick hidden */
+        addEventListener("DOMContentLoaded", function () {
+          var b = document.body; if (!b) return;
+          if (b.classList.contains("cosmos") || b.classList.contains("home")) {
+            var ready = function () { b.classList.add("cosmos-ready"); };
+            requestAnimationFrame(function () { requestAnimationFrame(ready); });
+            setTimeout(ready, 320);   /* fallback: rAF is paused in hidden/headless tabs — never leave chrome hidden */
+          }
+        });
       })();
     </script>
     <script type="application/ld+json">
@@ -224,6 +236,7 @@
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
     <script src="home.js?v=5" defer></script>
     <script src="magnet.js?v=1" defer></script>
+    <script src="craft.js?v=1" defer></script>
     <script type="module" src="space.js?v=85"></script>
   </body>
 </html>
