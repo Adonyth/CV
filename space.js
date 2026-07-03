@@ -372,6 +372,7 @@
        natal sky. Everything else — lift-off, tours, the whole orrery — starts from there. */
     var DEFAULT_BASE = { lat: 41.824, lon: -71.4128, city: "Providence" };   // the author's home, if the visitor can't be placed
     var baseGeo = null, groundEntered = false, tryGroundEntrance = null, groundDome = null;
+    var groundDimTarget = 0, _earthUni = null;   // eased toward the target every frame in the frame loop
     /* the ground-view ATMOSPHERE: a warm band of light hugging the horizon all around
        the base — additive, baked once per landing, zero per-frame cost */
     function makeGroundDome(pos, normal) {
@@ -873,7 +874,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=26").then(function (mod) {
+    import("./nye-armature.js?v=31").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -934,7 +935,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=5").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=26").then(function (mod) {
+      return import("./natal-sky.js?v=27").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 205 : 372,
@@ -1106,6 +1107,7 @@
           var bk = nyeArmature.group.getObjectByName("BaseBeacon");
           if (bk) bk.visible = !on;
         }
+        groundDimTarget = on ? 1 : 0;   // the local world darkens to night underfoot, blooms back on launch
       }
       function enterGroundView(opts) {
         if (!nyeArmature || !nyeArmature.earthSurfacePoint || !controls || !baseGeo) return;
@@ -1227,15 +1229,15 @@
           glide.targetTo = new THREE.Vector3(0, 0, 0);
           glide.onDone = openFootprintMap;
         } else if (name === "sun") {
-          glideToBody("NyeSun", 34, 110);   /* the sun = the journey anchor; its hover door opens the page */
+          glideToBody("NyeSun", 6, 175);   /* the sun = the journey anchor; a 48-unit voyage to a true-scale star */
         } else if (name === "moon") {
-          glideToBody("NyeMoon", 9, 110);
+          glideToBody("NyeMoon", 0.45, 150);   /* an 8° close-up of the real lunar face, a real ride away */
           if (natalSky) { natalSky.highlight("leo", true); setTimeout(function () { natalSky.highlight("leo", false); }, 4200); }
         } else if (name === "jupiter") {
-          glideToBody("NatalJupiter", 13, 110);
+          glideToBody("NatalJupiter", 13, 190);
           if (natalSky) { natalSky.highlight("cancer", true); setTimeout(function () { natalSky.highlight("cancer", false); }, 4200); }
         } else if (name === "saturn") {
-          glideToBody("NatalSaturn", 16, 110);
+          glideToBody("NatalSaturn", 16, 200);
           if (natalSky) { natalSky.highlight("gemini", true); setTimeout(function () { natalSky.highlight("gemini", false); }, 4200); }
         } else if (name === "pillars" || name === "zodiac") {
           /* return to the canonical framing: keep the current azimuth (the sky keeps
@@ -1301,8 +1303,10 @@
 
       // clean-click routing: a drag is never a click
       var pickRay = new THREE.Raycaster(), pickNdc = new THREE.Vector2();
+      var FOCUS_MIN = { NyeSun: 1.2, NyeMoon: 0.3, NatalJupiter: 2.5, NatalSaturn: 2.5 };   // closest approach per body (true-scale bodies allow near passes; near-plane 0.2 stays clear)
       function glideToBody(objName, viewDist, nFrames) {
         if (controls.isGround()) { ascendThen(function () { glideToBody(objName, viewDist, nFrames); }); return; }
+        controls.setDistanceLimits(FOCUS_MIN[objName] || 5.0, 430);
         var obj = nyeArmature.group.getObjectByName(objName);
         if (!obj && natalSky && natalSky.group) obj = natalSky.group.getObjectByName(objName);
         if (!obj) return;
@@ -1331,7 +1335,9 @@
         glide.targetTo = w.clone();
         glide.camTo = w.clone().add(outward.multiplyScalar(viewDist || 40));
         glide.axis = null; glide.step = 0; glide.distTarget = 0;
-        glide.frames = nFrames || 42;
+        // a voyage takes voyage time: frames scale with the distance to be crossed
+        var vDist = camera.position.distanceTo(w);
+        glide.frames = nFrames || Math.round(Math.max(70, Math.min(210, 60 + vDist * 1.15)));
       }
       /* any constellation becomes the pivot: stand INSIDE the belt looking outward,
          so the Earth, the Sun and the rings are all BEHIND the camera — nothing can veil it */
@@ -1352,7 +1358,10 @@
       /* the star protocol: first click gives the star the pivot and summons its door;
          the second click (or the door itself) opens it. Nothing navigates by surprise. */
       var selStar = null, starCta = document.getElementById("star-cta");
-      function clearSel() { selStar = null; if (starCta) starCta.classList.remove("is-on"); }
+      function clearSel() {
+        selStar = null; if (starCta) starCta.classList.remove("is-on");
+        if (controls) controls.setDistanceLimits(5.0, 430);   // leaving any body-focus: the earth-anchored floor returns
+      }
       window.__space.clearSel = clearSel;
       function openStarDoor() {
         if (!selStar || !selStar.href) return;
@@ -1452,10 +1461,10 @@
           if (pick === "earth" && controls.isGround()) { e.stopImmediatePropagation(); return; }   // you're standing on it
           if (pick === "sun") {
             if (natalSky) { natalSky.highlight("capricorn", true); setTimeout(function () { natalSky.highlight("capricorn", false); }, 2800); }
-            glideToBody("NyeSun", 34);
+            glideToBody("NyeSun", 6);
           } else if (pick === "moon") {
             if (natalSky) { natalSky.highlight("leo", true); setTimeout(function () { natalSky.highlight("leo", false); }, 2800); }
-            glideToBody("NyeMoon", 9);
+            glideToBody("NyeMoon", 0.45);
           } else if (pick === "jupiter") {
             focusGiant("NatalJupiter", "jupiter", "Books · 2", "著作 · 2 本", "books.html", "cancer");
           } else if (pick === "saturn") {
@@ -1548,6 +1557,12 @@
           groundDome.material.opacity *= 0.94;
           if (groundDome.material.opacity < 0.02) removeGroundDome();
         }
+        // the ground-night dimmer: eases the earth shader toward its target (ground=night)
+        if (!_earthUni && nyeArmature) {
+          var _em = nyeArmature.group.getObjectByName("NyeEarthMesh");
+          if (_em && _em.material.uniforms && _em.material.uniforms.uGroundDim) _earthUni = _em.material.uniforms;
+        }
+        if (_earthUni) _earthUni.uGroundDim.value += (groundDimTarget - _earthUni.uGroundDim.value) * 0.035;
         // the entrance/glide owns the radius this frame → update() must NOT ease against it;
         // otherwise the wheel's log-target owns it. Recomputed every frame, so it clears cleanly.
         controls.setExternalDrive(glideActive() || (!userMoved && nowMs < entranceUntil));

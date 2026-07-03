@@ -405,6 +405,15 @@ export function buildNatalSky(THREE, scene, data, opts) {
     mesh.name = grp.name + "Mesh";
     mesh.userData.nyePick = p.id;
     grp.add(mesh);
+    // the REAL planet (solarsystemscope photographs, CC BY 4.0) replaces the painted
+    // placeholder the moment it loads — AAA close-ups cannot ride on procedural stripes
+    (function (kind, mm) {
+      new T.TextureLoader().load("data/planet-" + kind + ".jpg", function (ptex) {
+        if ("colorSpace" in ptex && T.SRGBColorSpace) ptex.colorSpace = T.SRGBColorSpace;
+        ptex.wrapS = T.RepeatWrapping; ptex.anisotropy = 4;
+        mm.material.uniforms.uMap.value = ptex;
+      });
+    })(p.body.kind, mesh);
     if (p.body.ringInner) {
       var rIn = p.body.radius * p.body.ringInner, rOut = p.body.radius * p.body.ringOuter;
       var rg = new T.RingGeometry(rIn, rOut, 96, 1);
@@ -413,7 +422,13 @@ export function buildNatalSky(THREE, scene, data, opts) {
         var rr = Math.sqrt(pos2.getX(vi) * pos2.getX(vi) + pos2.getY(vi) * pos2.getY(vi));
         uv2.setXY(vi, (rr - rIn) / (rOut - rIn), 0.5);
       }
-      var ring = new T.Mesh(rg, new T.MeshBasicMaterial({ map: ringTexture(), transparent: true, side: T.DoubleSide, depthWrite: false, fog: false }));
+      var ringMat = new T.MeshBasicMaterial({ map: ringTexture(), transparent: true, side: T.DoubleSide, depthWrite: false, fog: false });
+      new T.TextureLoader().load("data/saturn-ring.png", function (rtex) {
+        if ("colorSpace" in rtex && T.SRGBColorSpace) rtex.colorSpace = T.SRGBColorSpace;
+        rtex.anisotropy = 4;
+        ringMat.map = rtex; ringMat.needsUpdate = true;   // Cassini's real shadows and gaps
+      });
+      var ring = new T.Mesh(rg, ringMat);
       ring.name = grp.name + "Ring";
       ring.rotation.x = (p.body.ringTiltDeg || 26.7) * Math.PI / 180;  // the belt's ecliptic is the XY plane; tilt off it
       ring.userData.nyePick = p.id;

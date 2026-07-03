@@ -23,7 +23,11 @@ export function mountNyeArmature(THREE, scene, opts) {
   const options = opts || {};
   const TAU = Math.PI * 2;
   const AU_SCALE = 18;
-  const SUN_BASE_R = 2.05;
+  /* TRUE-SCALE SUN (build 63): the sun-earth distance is LOCKED at AU_SCALE (the 干支
+     rings depend on it), so the sun's radius follows the real ratio — AU / 214.9.
+     From the ground it now subtends the REAL 0.53°; from space it reads as a brilliant
+     point (which is the truth) — a screen-space spark keeps it findable. */
+  const SUN_BASE_R = AU_SCALE / 214.9;   // ≈ 0.0838 at AU_SCALE 18 (was 2.05 — 24× oversize)
   const DEFAULT_INSTANT = new Date(2002, 0, 2, 15, 45, 0, 0);
   const instant =
     options.instant && typeof options.instant.getTime === "function" && isFinite(options.instant.getTime())
@@ -85,7 +89,7 @@ export function mountNyeArmature(THREE, scene, opts) {
   const emLen = earthToMoon.length();
   if (emLen < 1e-9) earthToMoon.set(1, 0, 0);
   else earthToMoon.multiplyScalar(1 / emLen);
-  const visibleMoonDistance = Math.max(emLen, earthRadiusVis * 7.4);   // was 3.15: a 5° monster moon loomed over the ground view
+  const visibleMoonDistance = Math.max(emLen, earthRadiusVis * 11.0);   // a real journey away (真实为 60 地球半径 — 11 保住星盘构图), apparent size stays the true 0.5°
   const moonVisiblePosition = ephem.earth.clone().add(earthToMoon.clone().multiplyScalar(visibleMoonDistance));
 
   const sun = buildSun();
@@ -113,7 +117,10 @@ export function mountNyeArmature(THREE, scene, opts) {
   earth.group.position.copy(ephem.earth);
   solarSystem.add(earth.group);
 
-  const moon = buildMoon(earthRadiusVis * 0.272);
+  /* moon radius = true 0.5° apparent size at its visible distance (7.4 earthR): the moon
+     you see from the base is the SIZE of the real moon in a real sky. (Its literal orbit,
+     AU/389, would sit inside the anchor earth — the one place the metaphor must bend.) */
+  const moon = buildMoon(earthRadiusVis * 11.0 * 0.00452);   // 0.5° apparent at its distance — the moon of a real sky
   moon.mesh.position.copy(moonVisiblePosition);
   solarSystem.add(moon.mesh);
 
@@ -585,13 +592,48 @@ export function mountNyeArmature(THREE, scene, opts) {
     }
 
     const pickShell = new T.Mesh(
-      new T.SphereGeometry(SUN_BASE_R * 1.06, 24, 24),   // only the visible solid core is clickable — the corona is not
+      new T.SphereGeometry(Math.max(SUN_BASE_R * 1.06, 1.9), 24, 24),   // the true-scale sun is small — the DOOR to it stays fat and clickable
       new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, side: T.DoubleSide })
     );
     pickShell.name = "NyeSunPickShell";
     pickShell.userData.nyePick = "sun";
     pickShell.userData.nyePart = "sun";
     sunGroup.add(pickShell);
+    // the photographic bloom: from far away a star is a POINT of glare, not a disc.
+    // One screen-space point (size constant in px) — cheap, always findable, depth-tested
+    // so the planet still occludes it.
+    (function () {
+      const c2 = document.createElement("canvas"); c2.width = c2.height = 64;
+      const g3 = c2.getContext("2d");
+      const gr3 = g3.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gr3.addColorStop(0, "rgba(255,248,230,1)"); gr3.addColorStop(0.2, "rgba(255,226,170,0.85)");
+      gr3.addColorStop(0.55, "rgba(255,190,120,0.22)"); gr3.addColorStop(1, "rgba(255,190,120,0)");
+      g3.fillStyle = gr3; g3.fillRect(0, 0, 64, 64);
+      const sparkGeo = new T.BufferGeometry();
+      sparkGeo.setAttribute("position", new T.BufferAttribute(new Float32Array([0, 0, 0]), 3));
+      const spark = new T.Points(sparkGeo, new T.PointsMaterial({
+        size: 34 * Math.min((typeof devicePixelRatio !== "undefined" ? devicePixelRatio : 1) || 1, 2),
+        map: new T.CanvasTexture(c2), transparent: true, blending: T.AdditiveBlending,
+        depthWrite: false, sizeAttenuation: false
+      }));
+      spark.name = "NyeSunSpark";
+      spark.frustumCulled = false;
+      sunGroup.add(spark);
+      // anamorphic streak — the photographic language of a blinding star
+      const sc2 = document.createElement("canvas"); sc2.width = 256; sc2.height = 16;
+      const sg2 = sc2.getContext("2d");
+      const grS = sg2.createLinearGradient(0, 0, 256, 0);
+      grS.addColorStop(0, "rgba(255,214,160,0)"); grS.addColorStop(0.5, "rgba(255,240,214,0.85)"); grS.addColorStop(1, "rgba(255,214,160,0)");
+      sg2.fillStyle = grS; sg2.fillRect(0, 0, 256, 16);
+      const streakTex = new T.CanvasTexture(sc2);
+      const streak = new T.Sprite(new T.SpriteMaterial({
+        map: streakTex, transparent: true, opacity: 0.38,
+        blending: T.AdditiveBlending, depthWrite: false
+      }));
+      streak.scale.set(7.5, 0.34, 1);
+      streak.name = "NyeSunStreak";
+      sunGroup.add(streak);
+    })();
 
     return { group: sunGroup, core: sunCoreMesh, rim: solarRimMesh };
   }
@@ -617,6 +659,7 @@ export function mountNyeArmature(THREE, scene, opts) {
       "uniform sampler2D uAlbedoMap; uniform float uUseAlbedoMap;",
       "uniform sampler2D uCloudMap; uniform float uUseCloudMap;",
       "uniform sampler2D uNightMap; uniform float uUseNightMap;",
+      "uniform float uGroundDim;",   // 1 while lying at the base: the LOCAL ground is always night (the sky above says so)
       "float eh(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}",
       "float en(vec2 p){",
       "  vec2 i=floor(p),f=fract(p);",
@@ -682,13 +725,14 @@ export function mountNyeArmature(THREE, scene, opts) {
       "  vec3 surface=mix(nightSurf,daySurf,terminator);",
       // soft camera-side fill so the real continents (and the footprint riding on them) read
       // from any angle — even the night side the entrance lands on — without killing day/night.
-      "  surface+=alb*pow(max(dot(N,V),0.0),1.25)*0.20;",
+      "  surface+=alb*pow(max(dot(N,V),0.0),1.25)*(0.05+0.15*terminator);",   // night ground stays NIGHT (faint moonlit fill); the day side keeps its readable lift
+      "  surface*=mix(1.0,0.12,uGroundDim);",   // on the ground the world sleeps — and blooms back as you climb into the light
       "  float fres=pow(1.0-max(dot(N,V),0.0),3.2);",
       "  float atGate=smoothstep(0.12,0.55,terminator);",
       "  vec3 atmoDayC=vec3(0.16,0.48,0.98)*fres*0.52*atGate;",
       "  vec3 atmoNightC=vec3(0.03,0.08,0.28)*fres*0.14;",
       "  vec3 atmo=atmoDayC+atmoNightC;",
-      "  gl_FragColor=vec4(surface+atmo,1.0);",
+      "  gl_FragColor=vec4(surface+atmo*mix(1.0,0.05,uGroundDim),1.0);",   // the fresnel rim IS the 'blue plastic film' at grazing ground angles — the horizon dome takes over down there
       "}"
     ].join("\n");
 
@@ -700,7 +744,8 @@ export function mountNyeArmature(THREE, scene, opts) {
       uCloudMap: { value: earthTexPlaceholder },
       uUseCloudMap: { value: 0 },
       uNightMap: { value: earthTexPlaceholder },
-      uUseNightMap: { value: 0 }
+      uUseNightMap: { value: 0 },
+      uGroundDim: { value: 0 }
     };
     const mat = new T.ShaderMaterial({ uniforms, vertexShader: earthVert, fragmentShader: earthFrag });
     disableToneMapping(mat);
@@ -840,6 +885,33 @@ export function mountNyeArmature(THREE, scene, opts) {
     mesh.name = "NyeMoon";
     mesh.userData.nyePart = "moon";
     mesh.userData.nyePick = "moon";
+    // the true-apparent moon is a 0.03-radius pearl — keep it findable and clickable:
+    // a fat invisible target + one faint silver screen-space spark
+    const moonPick = new T.Mesh(
+      new T.SphereGeometry(0.6, 12, 12),
+      new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+    );
+    moonPick.userData.nyePick = "moon";
+    moonPick.userData.nyePart = "moon";
+    mesh.add(moonPick);
+    (function () {
+      const c4 = document.createElement("canvas"); c4.width = c4.height = 64;
+      const g4 = c4.getContext("2d");
+      const gr4 = g4.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gr4.addColorStop(0, "rgba(235,238,245,0.95)"); gr4.addColorStop(0.3, "rgba(210,215,228,0.4)");
+      gr4.addColorStop(1, "rgba(210,215,228,0)");
+      g4.fillStyle = gr4; g4.fillRect(0, 0, 64, 64);
+      const sg = new T.BufferGeometry();
+      sg.setAttribute("position", new T.BufferAttribute(new Float32Array([0, 0, 0]), 3));
+      const sp2 = new T.Points(sg, new T.PointsMaterial({
+        size: 11 * Math.min((typeof devicePixelRatio !== "undefined" ? devicePixelRatio : 1) || 1, 2),
+        map: new T.CanvasTexture(c4), transparent: true, blending: T.AdditiveBlending,
+        depthWrite: false, sizeAttenuation: false
+      }));
+      sp2.name = "NyeMoonSpark";
+      sp2.frustumCulled = false;
+      mesh.add(sp2);
+    })();
 
     const rim = new T.Mesh(
       new T.SphereGeometry(radius * 1.038, 64, 64),
