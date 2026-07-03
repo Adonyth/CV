@@ -1511,12 +1511,7 @@
    "decDeg": -13.82,
    "dist": 880,
    "tex": "dso-pillars.jpg",
-   "size": 95,
-   "depth": 0.5,
-   "psize": 5,
-   "boost": 1.6,
-   "seed": 16,
-   "threshold": 0.14
+   "size": 130
   },
   {
    "id": "orion",
@@ -1528,12 +1523,7 @@
    "decDeg": -5.39,
    "dist": 820,
    "tex": "dso-orion.jpg",
-   "size": 155,
-   "depth": 0.45,
-   "psize": 5.5,
-   "threshold": 0.13,
-   "seed": 42,
-   "boost": 1.55
+   "size": 200
   },
   {
    "id": "rosette",
@@ -1545,12 +1535,7 @@
    "decDeg": 4.95,
    "dist": 860,
    "tex": "dso-rosette.jpg",
-   "size": 150,
-   "depth": 0.4,
-   "psize": 5.5,
-   "seed": 23,
-   "threshold": 0.14,
-   "boost": 1.6
+   "size": 190
   },
   {
    "id": "andromeda",
@@ -1562,13 +1547,7 @@
    "decDeg": 41.27,
    "dist": 1000,
    "tex": "dso-andromeda.jpg",
-   "size": 250,
-   "depth": 0.2,
-   "psize": 4,
-   "boost": 1.7,
-   "threshold": 0.1,
-   "density": 0.4,
-   "seed": 31
+   "size": 300
   },
   {
    "id": "crab",
@@ -1580,12 +1559,7 @@
    "decDeg": 22.01,
    "dist": 840,
    "tex": "dso-crab.jpg",
-   "size": 85,
-   "depth": 0.45,
-   "psize": 5,
-   "seed": 51,
-   "threshold": 0.14,
-   "boost": 1.6
+   "size": 120
   },
   {
    "id": "horsehead",
@@ -1597,12 +1571,7 @@
    "decDeg": -2.46,
    "dist": 830,
    "tex": "dso-horsehead.jpg",
-   "size": 120,
-   "depth": 0.4,
-   "psize": 5.5,
-   "threshold": 0.13,
-   "seed": 63,
-   "boost": 1.6
+   "size": 150
   },
   {
    "id": "lagoon",
@@ -1614,12 +1583,7 @@
    "decDeg": -24.38,
    "dist": 870,
    "tex": "dso-lagoon.jpg",
-   "size": 150,
-   "depth": 0.45,
-   "psize": 5.5,
-   "seed": 77,
-   "threshold": 0.14,
-   "boost": 1.6
+   "size": 190
   },
   {
    "id": "ring",
@@ -1631,12 +1595,7 @@
    "decDeg": 33.03,
    "dist": 810,
    "tex": "dso-ring.jpg",
-   "size": 75,
-   "depth": 0.3,
-   "psize": 5,
-   "seed": 88,
-   "threshold": 0.14,
-   "boost": 1.6
+   "size": 100
   },
   {
    "id": "pleiades",
@@ -1648,12 +1607,7 @@
    "decDeg": 24.12,
    "dist": 780,
    "tex": "dso-pleiades.jpg",
-   "size": 175,
-   "depth": 0.35,
-   "psize": 4.5,
-   "boost": 1.5,
-   "threshold": 0.1,
-   "seed": 45
+   "size": 210
   },
   {
    "id": "carina",
@@ -1665,12 +1619,7 @@
    "decDeg": -59.87,
    "dist": 900,
    "tex": "dso-carina.jpg",
-   "size": 200,
-   "depth": 0.4,
-   "psize": 5.5,
-   "seed": 37,
-   "threshold": 0.15,
-   "boost": 1.6
+   "size": 230
   },
   {
    "id": "helix",
@@ -1682,12 +1631,7 @@
    "decDeg": -20.84,
    "dist": 850,
    "tex": "dso-helix.jpg",
-   "size": 110,
-   "depth": 0.3,
-   "psize": 5,
-   "seed": 92,
-   "threshold": 0.14,
-   "boost": 1.6
+   "size": 130
   },
   {
    "id": "milkyway",
@@ -1699,14 +1643,8 @@
    "decDeg": -28.94,
    "dist": 1150,
    "tex": "dso-milkyway.jpg",
-   "size": 900,
-   "depth": 0.12,
-   "psize": 3,
-   "boost": 1.8,
-   "threshold": 0.06,
-   "density": 0.5,
-   "opacity": 0.75,
-   "seed": 5
+   "size": 760,
+   "opacity": 0.8
   }
  ]
 }

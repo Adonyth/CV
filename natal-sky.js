@@ -519,72 +519,42 @@ export function buildNatalSky(THREE, scene, data, opts) {
     belt.add(aura);
   });
 
-  /* ---------------- famous deep-sky objects: STATIC PROCEDURAL PARTICLE MODELS.
-     No photos, no billboards — each object is a genuine 3D cloud of soft additive points
-     (the same primitive as the asteroid belt and the star field), procedurally shaped and
-     coloured per object, placed at its TRUE RA/Dec beyond the zodiac. One BufferGeometry +
-     one draw call each, built ONCE at load: zero per-frame work, no textures to fetch, and
-     real volume — you can fly INTO a nebula and around a galaxy and the depth holds. ---- */
-  var DSO_SOFT = (function () {                 // one soft round point → the specks melt into gas, not hard squares
-    var s = 64, cv = document.createElement("canvas"); cv.width = cv.height = s;
-    var cx = cv.getContext("2d"), rg = cx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
-    rg.addColorStop(0, "rgba(255,255,255,1)"); rg.addColorStop(0.35, "rgba(255,255,255,0.55)");
-    rg.addColorStop(0.7, "rgba(255,255,255,0.12)"); rg.addColorStop(1, "rgba(255,255,255,0)");
-    cx.fillStyle = rg; cx.fillRect(0, 0, s, s);
-    var t = new T.CanvasTexture(cv); if ("colorSpace" in t && T.SRGBColorSpace) t.colorSpace = T.SRGBColorSpace;
-    return t;
+  /* ---------------- famous deep-sky objects: the REAL astrophotos, rendered as soft-edged
+     glowing panels that FLOAT at each object's true RA/Dec beyond the zodiac. A radial alpha
+     mask dissolves the frame so there is no "sticker" rectangle — only the nebula glows;
+     additive blending drops the black sky and the real colours read true. Static: one
+     textured plane each, built once from the image and facing the viewer's home — zero
+     per-frame cost. (Point-cloud versions were tried and rejected: additive-summed points
+     wash to white, normal-blended points scatter to sparse dots; only the photograph
+     itself, edge-dissolved and glowing, actually looks like the object.) ---------------- */
+  var DSO_EDGE = (function () {                  // soft radial alpha → the photo's rectangle melts into space
+    var s = 256, cv = document.createElement("canvas"); cv.width = cv.height = s;
+    var cx = cv.getContext("2d"), g = cx.createRadialGradient(s / 2, s / 2, s * 0.16, s / 2, s / 2, s * 0.52);
+    g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(0.7, "rgba(255,255,255,0.82)"); g.addColorStop(1, "rgba(255,255,255,0)");
+    cx.fillStyle = g; cx.fillRect(0, 0, s, s);
+    return new T.CanvasTexture(cv);
   })();
-  function dsoFromImage(d, img) {
-    // Sample the real astrophoto into a 3-D point cloud shaped LIKE the object: x,y from the
-    // image (so it reads as the true nebula/galaxy), colour from the real pixels, and a
-    // z-DEPTH so it is a genuine volume — not a flat billboard. Built once, on the image.
-    var W = img.naturalWidth || img.width, H = img.naturalHeight || img.height;
-    var cap = d.sample || 240, sc = Math.min(1, cap / Math.max(W, H));
-    var sw = Math.max(2, Math.round(W * sc)), sh = Math.max(2, Math.round(H * sc));
-    var cv = document.createElement("canvas"); cv.width = sw; cv.height = sh;
-    var cx = cv.getContext("2d"); cx.drawImage(img, 0, 0, sw, sh);
-    var px = cx.getImageData(0, 0, sw, sh).data;
-    var rng = gRng(((d.seed || 7) * 131 + 7) >>> 0);
-    var thr = d.threshold != null ? d.threshold : 0.09;      // drop the near-black background
-    var dens = d.density != null ? d.density : 0.5;          // keep this fraction of the lit pixels
-    var boost = d.boost != null ? d.boost : 1.6;             // lift the colours out of the dark
-    var Wu = d.size || 150, Hu = Wu * (sh / sw);             // world width/height (image aspect preserved)
-    var depth = (d.depth != null ? d.depth : 0.42) * Wu;     // z half-thickness → the volume
-    var P = [], C = [];
-    for (var yy = 0; yy < sh; yy++) for (var xx = 0; xx < sw; xx++) {
-      var i4 = (yy * sw + xx) * 4, r = px[i4] / 255, g = px[i4 + 1] / 255, b = px[i4 + 2] / 255;
-      var lum = 0.30 * r + 0.59 * g + 0.11 * b;
-      if (lum < thr || rng() > dens) continue;
-      var wx = (xx / (sw - 1) - 0.5) * Wu, wy = (0.5 - yy / (sh - 1)) * Hu;   // image y is top-down → flip
-      var wz = ((lum - 0.5) * 0.6 + (rng() - 0.5)) * depth;                   // bright cores bulge; jitter gives real volume
-      P.push(wx, wy, wz);
-      C.push(Math.min(1, r * boost), Math.min(1, g * boost), Math.min(1, b * boost));
-    }
-    var geo = new T.BufferGeometry();
-    geo.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
-    geo.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
-    var m = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 5, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: d.opacity != null ? d.opacity : 0.96, depthWrite: false, blending: T.AdditiveBlending, fog: false });
-    if ("toneMapped" in m) m.toneMapped = false;
-    return new T.Points(geo, m);
-  }
   (data.deepSky || []).forEach(function (d) {
     if (!d.tex) return;
     var ecl = raDecToEcl(d.raH, d.decDeg), world = eclVec(ecl.lon, ecl.lat, d.dist || 900);
-    var img = new Image();
-    img.onload = function () {
-      try {
-        var pts = dsoFromImage(d, img);
-        pts.position.copy(world);
-        // the image plane (its +z depth axis) turns to face the viewer at origin, so the photo
-        // reads true head-on; flying to the side then reveals the real 3-D depth of the cloud.
-        pts.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), world.clone().negate().normalize());
-        if (d.tilt) { pts.rotateX((d.tilt[0] || 0) * Math.PI / 180); pts.rotateY((d.tilt[1] || 0) * Math.PI / 180); pts.rotateZ((d.tilt[2] || 0) * Math.PI / 180); }
-        pts.name = "DSO_" + d.id;
-        pts.renderOrder = -2;                       // the farthest backdrop, painted before the near sky
-        belt.add(pts);
-      } catch (e) { if (typeof window !== "undefined" && window.__space) window.__space.dsoError = String(e); }
-    };
-    img.src = "data/" + d.tex;
+    new T.TextureLoader().load("data/" + d.tex, function (tex) {
+      if ("colorSpace" in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
+      tex.anisotropy = 4;
+      var iw = (tex.image && tex.image.width) || 1, ih = (tex.image && tex.image.height) || 1;
+      var W = d.size || 180, H = W * (ih / iw);   // plane keeps the photo's aspect
+      var mat = new T.MeshBasicMaterial({ map: tex, alphaMap: DSO_EDGE, transparent: true,
+        blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide,
+        opacity: d.opacity != null ? d.opacity : 1, fog: false });
+      if ("toneMapped" in mat) mat.toneMapped = false;
+      var mesh = new T.Mesh(new T.PlaneGeometry(W, H), mat);
+      belt.add(mesh);
+      mesh.position.copy(world);
+      mesh.updateWorldMatrix(true, false);        // so lookAt reads the true world position (incl. belt tilt)
+      mesh.lookAt(0, 0, 0);                        // turn the photo to face the viewer's home at world origin
+      if (d.roll) mesh.rotateZ(d.roll * Math.PI / 180);
+      mesh.name = "DSO_" + d.id;
+      mesh.renderOrder = -2;                       // the farthest backdrop, painted before the near sky
+    });
   });
 
   /* ---------------- constellation names: IN-SCENE Songti sprites (same craft as the 干支 glyphs) ---------------- */
