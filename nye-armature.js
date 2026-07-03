@@ -559,7 +559,8 @@ export function mountNyeArmature(THREE, scene, opts) {
     const coronaDef = [
       [1.10, 0.62, 1.55, 1.16, 0.74, 0.55, 1.6, 96],
       [1.66, 0.30, 1.40, 0.94, 0.56, 0.48, 2.0, 64],
-      [2.90, 0.13, 1.18, 0.74, 0.42, 0.34, 2.6, 48]
+      [2.90, 0.13, 1.18, 0.74, 0.42, 0.34, 2.6, 48],
+      [4.60, 0.055, 1.12, 0.80, 0.50, 0.20, 1.05, 32]   // vast soft halo: the sun GLOWS from any distance (depth-correct, unlike a sprite)
     ];
     for (let i = 0; i < coronaDef.length; i++) {
       const cd = coronaDef[i];

@@ -117,6 +117,7 @@
          The orbit model is suspended: update() leaves the camera alone entirely. */
       var groundMode = false, gEast = null, gNorth = null, gNormal = null;
       var gYaw = 0, gPitch = 1.15, gLiftoff = null, gLiftFired = false;
+      var gVelYaw = 0, gVelPitch = 0;   // flick inertia: release a drag and the gaze glides to rest
       function applyGroundLook() {
         var ch = Math.cos(gPitch), sh = Math.sin(gPitch), cy2 = Math.cos(gYaw), sy2 = Math.sin(gYaw);
         var d = new T3.Vector3()
@@ -177,7 +178,7 @@
         clearDelta: function () { angVel.set(0, 0, 0); },
         setExternalDrive: function (v) { externalDrive = !!v; },
         setGroundMode: function (o) {
-          groundMode = true; gLiftFired = false;
+          groundMode = true; gLiftFired = false; gVelYaw = 0; gVelPitch = 0;
           gNormal = o.normal.clone().normalize();
           var upW = new T3.Vector3(0, 1, 0);
           gEast = new T3.Vector3().crossVectors(upW, gNormal);
@@ -207,7 +208,15 @@
         },
         getRadius: function () { return cam.position.distanceTo(target); },
         update: function () {
-          if (groundMode) return;   // on the ground the orbit model is suspended entirely
+          if (groundMode) {   // the orbit model is suspended — only the flick inertia glides out
+            if (!dragging && (Math.abs(gVelYaw) > 4e-5 || Math.abs(gVelPitch) > 4e-5)) {
+              gYaw += gVelYaw;
+              gPitch = Math.max(-0.14, Math.min(1.52, gPitch + gVelPitch));
+              gVelYaw *= 0.90; gVelPitch *= 0.90;
+              applyGroundLook();
+            }
+            return;
+          }
           applyAngVel(angVel);
           angVel.multiplyScalar(1 - dampingFactor);
           if (angVel.lengthSq() < 1e-14) angVel.set(0, 0, 0);
@@ -273,9 +282,12 @@
         if (!dragging) return;
         if (groundMode) {
           // first-person look-around: grab the SKY — drag right pans the gaze left,
-          // drag down pulls the sky down (gaze rises). Pitch stays above the horizon.
-          gYaw -= (e.clientX - lastX) * 0.0028;
-          gPitch = Math.max(-0.14, Math.min(1.52, gPitch + (e.clientY - lastY) * 0.0028));   // -0.14: down to the visible limb (it dips below level at this height)
+          // drag down pulls the sky down (gaze rises). Pitch may dip to the visible limb.
+          var gdx = e.clientX - lastX, gdy = e.clientY - lastY;
+          gYaw -= gdx * 0.0028;
+          gPitch = Math.max(-0.14, Math.min(1.52, gPitch + gdy * 0.0028));
+          gVelYaw = -gdx * 0.0028 * 0.42;                 // remember the flick — it glides on after release
+          gVelPitch = gdy * 0.0028 * 0.42;
           applyGroundLook();
           lastX = e.clientX; lastY = e.clientY;
           e.stopPropagation(); return;
@@ -346,7 +358,8 @@
         d0: camFrom.clone().normalize(), d1: camTo.clone().normalize(),
         lnR0: Math.log(Math.max(0.001, camFrom.length())), lnR1: Math.log(Math.max(0.001, camTo.length())),
         t0: controls.target.clone(), t1: o.targetTo.clone(),
-        up1: o.up ? o.up.clone() : UP_Y
+        up1: o.up ? o.up.clone() : UP_Y,
+        fovK: o.fovKick || 0, fov0: camera.fov
       };
       glide.onDone = o.onDone || null;
       lastTouch = performance.now(); userMoved = true;
@@ -368,10 +381,11 @@
       // the band hugs the VISIBLE limb, not the level plane: at this eye height the
       // horizon dips ~14 deg (sqrt(2h/R)), so the glow sits where the planet's edge is
       gr.addColorStop(0.0, "rgba(0,0,0,0)");                    // zenith: pure night
-      gr.addColorStop(0.46, "rgba(90,70,120,0.05)");            // high sky: the faintest violet
-      gr.addColorStop(0.545, "rgba(224,135,106,0.20)");         // approach: warmth gathers
-      gr.addColorStop(0.578, "rgba(240,186,130,0.42)");         // the limb itself
-      gr.addColorStop(0.63, "rgba(120,70,50,0.12)");            // below: the dark of the land
+      gr.addColorStop(0.40, "rgba(24,38,84,0.07)");             // high sky: night blue arrives
+      gr.addColorStop(0.50, "rgba(38,58,120,0.14)");            // the blue hour band
+      gr.addColorStop(0.545, "rgba(224,135,106,0.26)");         // warmth gathers at the edge
+      gr.addColorStop(0.578, "rgba(255,204,148,0.60)");         // the limb itself burns
+      gr.addColorStop(0.615, "rgba(140,82,56,0.18)");           // just below: embered land
       gr.addColorStop(1.0, "rgba(0,0,0,0)");
       g2.fillStyle = gr; g2.fillRect(0, 0, 4, 256);
       var tex = new THREE.CanvasTexture(c);
@@ -680,6 +694,71 @@
     }
 
     var deepFusion = createDeepEmberFusion({ mobile: MOBILE, tier: TIER });
+
+    /* ===== the NIGHT SKY: ~10k stars + the Milky Way on the celestial sphere =====
+       The single biggest realism layer: a magnitude-distributed starfield with color
+       temperatures and a tilted galactic band. Fully static — four draw calls, baked
+       once, zero per-frame cost. Sits at R=700, outside every camera path. */
+    function buildNightSky() {
+      var R = 700, seed = 20020102 >>> 0;
+      var DPR = Math.min(devicePixelRatio || 1, 2);   // PointsMaterial sizes are DEVICE px — scale or the stars shrink on retina
+      // a dedicated star sprite: hard WHITE core + tight falloff. The shared ember-glow
+      // texture has a translucent warm core — fine for dust, too dim for a star.
+      var sc = document.createElement("canvas"); sc.width = sc.height = 64;
+      var sg = sc.getContext("2d");
+      var sgrd = sg.createRadialGradient(32, 32, 0, 32, 32, 32);
+      sgrd.addColorStop(0.0, "rgba(255,255,255,1)");
+      sgrd.addColorStop(0.16, "rgba(255,255,255,0.92)");
+      sgrd.addColorStop(0.38, "rgba(255,236,210,0.38)");
+      sgrd.addColorStop(0.70, "rgba(255,220,180,0.07)");
+      sgrd.addColorStop(1.0, "rgba(255,220,180,0)");
+      sg.fillStyle = sgrd; sg.fillRect(0, 0, 64, 64);
+      var starTex = new THREE.CanvasTexture(sc);
+      function rand() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+      var bN = new THREE.Vector3(0.42, 0.82, 0.39).normalize();          // the galactic plane's normal
+      var bU = new THREE.Vector3().crossVectors(bN, new THREE.Vector3(1, 0, 0)).normalize();
+      var bV = new THREE.Vector3().crossVectors(bN, bU).normalize();
+      function makeLayer(count, sizePx, opacity, bandFrac, bandSpread) {
+        var pos = new Float32Array(count * 3), col = new Float32Array(count * 3);
+        for (var i = 0; i < count; i++) {
+          var v;
+          if (rand() < bandFrac) {                                        // a Milky Way star
+            var th = rand() * Math.PI * 2;
+            var gs = (rand() + rand() + rand() - 1.5) / 1.5;              // ~gaussian across the band
+            v = bU.clone().multiplyScalar(Math.cos(th))
+                 .add(bV.clone().multiplyScalar(Math.sin(th)))
+                 .add(bN.clone().multiplyScalar(gs * bandSpread)).normalize();
+          } else {                                                        // a field star
+            var z = rand() * 2 - 1, ph = rand() * Math.PI * 2, rr = Math.sqrt(1 - z * z);
+            v = new THREE.Vector3(rr * Math.cos(ph), z, rr * Math.sin(ph));
+          }
+          pos[i * 3] = v.x * R; pos[i * 3 + 1] = v.y * R; pos[i * 3 + 2] = v.z * R;
+          var t = rand(), r_, g_, b_;                                     // color temperature
+          if (t < 0.70) { r_ = 1; g_ = 0.96; b_ = 0.88; }                 // warm white (most)
+          else if (t < 0.92) { r_ = 0.80; g_ = 0.87; b_ = 1; }            // blue-white
+          else { r_ = 1; g_ = 0.76; b_ = 0.52; }                          // amber giants
+          var lum = 0.58 + rand() * 0.42;
+          col[i * 3] = r_ * lum; col[i * 3 + 1] = g_ * lum; col[i * 3 + 2] = b_ * lum;
+        }
+        var geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+        geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+        var pm = new THREE.PointsMaterial({
+          size: sizePx * DPR, map: starTex, transparent: true, opacity: opacity, vertexColors: true,
+          blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: false
+        });
+        var pts = new THREE.Points(geo, pm);
+        pts.frustumCulled = false;
+        return pts;
+      }
+      var sky = new THREE.Group(); sky.name = "NightSky";
+      sky.add(makeLayer(2600, 3.4, 1.0, 0.26, 0.24));    // the main field
+      sky.add(makeLayer(4200, 2.2, 0.75, 0.60, 0.20));   // faint field, band-weighted
+      sky.add(makeLayer(3200, 1.7, 0.45, 0.88, 0.14));   // the Milky Way haze itself
+      sky.add(makeLayer(750, 5.8, 1.0, 0.22, 0.26));     // the bright named-feeling stars
+      scene.add(sky);
+    }
+    if (COSMOS) buildNightSky();
     resize(); addEventListener("resize", resize);
 
     // theme sync + Codex's light-mode insight: in light theme lower the fusion so it reads luminous, not dusty
@@ -797,7 +876,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=21").then(function (mod) {
+    import("./nye-armature.js?v=22").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -1078,7 +1157,7 @@
         var up = camera.position.clone().normalize();
         var east = new THREE.Vector3().crossVectors(UP_Y, up); if (east.lengthSq() < 1e-6) east.set(1, 0, 0); east.normalize();
         var camTo = up.clone().multiplyScalar(highR || 12).addScaledVector(east, 2.2);
-        paramGlide({ camTo: camTo, targetTo: HOME.clone(), frames: 92, ease: easeInOutCubic, onDone: fn || null });
+        paramGlide({ camTo: camTo, targetTo: HOME.clone(), frames: 92, ease: easeInOutCubic, fovKick: 7, onDone: fn || null });
         return true;
       }
       /* the homecoming: from anywhere in space, descend onto the base and lie back down */
@@ -1306,7 +1385,7 @@
           controls.exitGroundMode(); groundHint(false);
           clearSel(); soloBody = null;
           var gdir = camera.position.clone().normalize();
-          paramGlide({ camTo: gdir.multiplyScalar(128), targetTo: HOME.clone(), frames: 135, ease: easeInOutCubic, onDone: null });
+          paramGlide({ camTo: gdir.multiplyScalar(128), targetTo: HOME.clone(), frames: 135, ease: easeInOutCubic, fovKick: 5, onDone: null });
           return;
         }
         clearSel(); soloBody = null;             // the whole chart returns — rings and all
@@ -1418,7 +1497,12 @@
           controls.target.copy(P.t0).lerp(P.t1, pe);
           camera.up.lerp(P.up1, 0.08).normalize();
           camera.lookAt(controls.target);
+          if (P.fovK) {   // the lens breathes with the burn — speed you can feel
+            camera.fov = P.fov0 + Math.sin(Math.PI * P.t) * P.fovK;
+            camera.updateProjectionMatrix();
+          }
           if (P.t >= 1) {
+            if (P.fovK) { camera.fov = P.fov0; camera.updateProjectionMatrix(); }
             glide.param = null;
             if (glide.onDone) { var fP = glide.onDone; glide.onDone = null; fP(); }
           }
@@ -1445,7 +1529,7 @@
         if (userMoved && nowMs - lastTouch > 20000 && !glideActive() && !controls.isGround()) controls.rotateWorld(camera.up, 0.0108 * dt);
         if (!userMoved && nowMs >= entranceUntil && !controls.isGround()) controls.rotateWorld(camera.up, 0.0108 * dt);
         // lying on the ground, the sky itself turns slowly overhead — the world breathing
-        if (controls.isGround() && !glideActive() && nowMs - lastTouch > 6000) controls.groundDrift(0.008 * dt);
+        if (controls.isGround() && !glideActive() && nowMs - lastTouch > 2500) controls.groundDrift(0.008 * dt);
         // once truly back in space, restore the normal near-plane (ground views need 0.008)
         if (camera.near < 0.1 && !controls.isGround() && !glideActive() && camera.position.length() > 9) {
           camera.near = 0.2; camera.updateProjectionMatrix();
