@@ -244,9 +244,49 @@ export function mountNyeArmature(THREE, scene, opts) {
 
   markSubtree(group, { nyeArmature: true });
 
+  /* ---- the BASE (根据地): a point on the real Earth ---- */
+  /* lat/lon → WORLD position on the globe. Same equirectangular convention the albedo and
+     footprint textures use (u=(lon+180)/360, v top=north), routed through the earth mesh's
+     matrixWorld so the sidereal birth-instant rotation is honored — the one transform the
+     footprint alignment bug taught us never to skip. */
+  function earthSurfacePoint(lat, lon, altitude) {
+    const r = earthRadiusVis + (altitude || 0);
+    const th = (90 - lat) * Math.PI / 180, ph = (lon + 180) * Math.PI / 180;
+    const local = new T.Vector3(-r * Math.sin(th) * Math.cos(ph), r * Math.cos(th), r * Math.sin(th) * Math.sin(ph));
+    earth.mesh.updateWorldMatrix(true, false);
+    const world = local.clone().applyMatrix4(earth.mesh.matrixWorld);
+    const center = new T.Vector3().setFromMatrixPosition(earth.mesh.matrixWorld);
+    const normal = world.clone().sub(center).normalize();
+    return { position: world, normal: normal };
+  }
+
+  let baseMarker = null;
+  function setBaseMarker(lat, lon) {
+    if (baseMarker) { earth.mesh.remove(baseMarker); baseMarker = null; }
+    // a small warm beacon at the visitor's place — attached INSIDE the earth mesh so it
+    // inherits the sidereal rotation exactly like the surface it stands on
+    const c = document.createElement("canvas"); c.width = c.height = 64;
+    const g2 = c.getContext("2d");
+    const grd = g2.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grd.addColorStop(0, "rgba(255,244,214,1)"); grd.addColorStop(0.25, "rgba(255,214,140,0.9)");
+    grd.addColorStop(0.6, "rgba(224,135,106,0.35)"); grd.addColorStop(1, "rgba(224,135,106,0)");
+    g2.fillStyle = grd; g2.fillRect(0, 0, 64, 64);
+    const tex = new T.CanvasTexture(c);
+    const mat = new T.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, blending: T.AdditiveBlending });
+    baseMarker = new T.Sprite(mat);
+    const th = (90 - lat) * Math.PI / 180, ph = (lon + 180) * Math.PI / 180;
+    const rr = earthRadiusVis * 1.012;
+    baseMarker.position.set(-rr * Math.sin(th) * Math.cos(ph), rr * Math.cos(th), rr * Math.sin(th) * Math.sin(ph));
+    baseMarker.scale.setScalar(0.085);
+    baseMarker.name = "BaseBeacon";
+    earth.mesh.add(baseMarker);
+  }
+
   return {
     group,
     tick,
+    earthSurfacePoint,
+    setBaseMarker,
     dispose
   };
 

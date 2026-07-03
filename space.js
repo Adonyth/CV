@@ -99,6 +99,20 @@
       var zoomRef = 100;          // px-equivalent that counts as 1.0 firm unit
       var zoomHi = 2.2;           // per-EVENT upper clamp on units (anti-fling); no lower floor
       var zoomEase = 0.18;        // per-frame log-space easing coefficient (critically-damped feel)
+      /* ---- GROUND MODE (the base 根据地): lying at a place on the Earth, looking up ----
+         The camera stands ON the globe; drag = look around the sky (yaw/pitch, first person),
+         wheel/pinch OUT = lift off (handled by the onLiftoff callback the page provides).
+         The orbit model is suspended: update() leaves the camera alone entirely. */
+      var groundMode = false, gEast = null, gNorth = null, gNormal = null;
+      var gYaw = 0, gPitch = 1.15, gLiftoff = null, gLiftFired = false;
+      function applyGroundLook() {
+        var ch = Math.cos(gPitch), sh = Math.sin(gPitch), cy2 = Math.cos(gYaw), sy2 = Math.sin(gYaw);
+        var d = new T3.Vector3()
+          .addScaledVector(gNorth, ch * cy2).addScaledVector(gEast, ch * sy2).addScaledVector(gNormal, sh).normalize();
+        cam.up.copy(gNormal);
+        target.copy(cam.position).addScaledVector(d, 400);   // the "target" is a far sky point along the gaze
+        cam.lookAt(target);
+      }
       function safeLookAtTarget() {
         var dx = target.x - cam.position.x, dy = target.y - cam.position.y, dz = target.z - cam.position.z;
         var d = Math.sqrt(dx * dx + dy * dy + dz * dz);
@@ -150,6 +164,23 @@
         },
         clearDelta: function () { angVel.set(0, 0, 0); },
         setExternalDrive: function (v) { externalDrive = !!v; },
+        setGroundMode: function (o) {
+          groundMode = true; gLiftFired = false;
+          gNormal = o.normal.clone().normalize();
+          var upW = new T3.Vector3(0, 1, 0);
+          gEast = new T3.Vector3().crossVectors(upW, gNormal);
+          if (gEast.lengthSq() < 1e-6) gEast.set(1, 0, 0);
+          gEast.normalize();
+          gNorth = new T3.Vector3().crossVectors(gNormal, gEast).normalize();
+          gYaw = (o.yaw != null ? o.yaw : 0.35); gPitch = (o.pitch != null ? o.pitch : 1.12);
+          gLiftoff = o.onLiftoff || null;
+          cam.position.copy(o.position);
+          angVel.set(0, 0, 0);
+          applyGroundLook();
+        },
+        exitGroundMode: function () { groundMode = false; },   // deliberately touches nothing — the caller's glide steers the handoff
+        isGround: function () { return groundMode; },
+        groundDrift: function (dYaw) { if (groundMode) { gYaw += dYaw; applyGroundLook(); } },
         rotateWorld: function (axis, ang) {                 // idle turn / glides ride the same math
           var q = new T3.Quaternion().setFromAxisAngle(axis, ang);
           var off = cam.position.clone().sub(target).applyQuaternion(q);
@@ -164,19 +195,19 @@
         },
         getRadius: function () { return cam.position.distanceTo(target); },
         update: function () {
+          if (groundMode) return;   // on the ground the orbit model is suspended entirely
           applyAngVel(angVel);
           angVel.multiplyScalar(1 - dampingFactor);
           if (angVel.lengthSq() < 1e-14) angVel.set(0, 0, 0);
           var off = safeOrbitOffset(); var r = off.length();
           if (!isFinite(r) || r < 1e-8) return;
           if (externalDrive) {
-            // an entrance/glide owns the radius this frame — don't ease; keep the target glued to
-            // the driven radius so the wheel resumes cleanly the instant control returns.
+            // an entrance/glide owns the radius this frame — don't ease and NEVER clamp-reposition
+            // against an authored path (ground launches/landings legitimately fly inside minDistance).
+            // Keep the target glued (clamped) so the wheel resumes cleanly the instant control
+            // returns — if a cancelled glide strands the camera out of bounds, the ease below
+            // recovers it smoothly on the next free frame.
             zoomTarget = Math.max(minDistance, Math.min(maxDistance, r));
-            if (r < minDistance || r > maxDistance) {
-              r = zoomTarget; off.normalize();
-              cam.position.copy(target).add(off.multiplyScalar(r)); safeLookAtTarget();
-            }
           } else {
             if (zoomTarget < 0) zoomTarget = r;                         // first frame: adopt live radius
             zoomTarget = Math.max(minDistance, Math.min(maxDistance, zoomTarget));
@@ -213,6 +244,10 @@
         if (!(e.pointerId in activePointers)) { return; }
         activePointers[e.pointerId] = { x: e.clientX, y: e.clientY };
         if (pinchActive) {
+          if (groundMode) {   // any pinch on the ground = lift off toward space
+            if (!gLiftFired && gLiftoff) { gLiftFired = true; gLiftoff(); }
+            e.stopPropagation(); return;
+          }
           var d = getPinchDist();
           if (pinchLastDist > 0 && d > 0) {
             var off = safeOrbitOffset();
@@ -224,6 +259,15 @@
           pinchLastDist = d; e.stopPropagation(); return;
         }
         if (!dragging) return;
+        if (groundMode) {
+          // first-person look-around: grab the SKY — drag right pans the gaze left,
+          // drag down pulls the sky down (gaze rises). Pitch stays above the horizon.
+          gYaw -= (e.clientX - lastX) * 0.0028;
+          gPitch = Math.max(0.10, Math.min(1.52, gPitch + (e.clientY - lastY) * 0.0028));
+          applyGroundLook();
+          lastX = e.clientX; lastY = e.clientY;
+          e.stopPropagation(); return;
+        }
         addRotation(e.clientX - lastX, e.clientY - lastY);
         lastX = e.clientX; lastY = e.clientY;
         e.stopPropagation();
@@ -245,6 +289,11 @@
         // normalize delta across deltaMode (0=px, 1=lines, 2=pages) to px-equivalents
         var norm = e.deltaMode === 1 ? e.deltaY * 18 : e.deltaMode === 2 ? e.deltaY * 300 : e.deltaY;
         if (!isFinite(norm) || norm === 0) { e.stopPropagation(); return; }
+        if (groundMode) {
+          // on the ground, pulling BACK is the launch gesture — you rise off the Earth
+          if (norm > 0 && !gLiftFired && gLiftoff) { gLiftFired = true; gLiftoff(); }
+          e.stopPropagation(); return;
+        }
         // magnitude-aware unit, UPPER-clamped only (anti-fling); NO lower floor so tiny trackpad
         // events stay tiny and sum smoothly. ~zoomRef px == one firm mouse notch == 1.0 unit.
         var unit = Math.min(zoomHi, Math.abs(norm) / zoomRef);
@@ -269,15 +318,60 @@
     var HOME = new THREE.Vector3(0, 0, 0), UP_Y = new THREE.Vector3(0, 1, 0);
     var lastTouch = 0, userMoved = false, entranceUntil = 0;
     var glide = { frames: 0, axis: null, step: 0, distTarget: 0 };
+
+    /* ===== THE BASE (根据地): where the visitor actually is =====
+       On load we resolve the visitor's place from their IP (client-side, city-level,
+       cached) and the site OPENS lying on the ground at that spot, looking up at the
+       natal sky. Everything else — lift-off, tours, the whole orrery — starts from there. */
+    var DEFAULT_BASE = { lat: 41.824, lon: -71.4128, city: "Providence" };   // the author's home, if the visitor can't be placed
+    var baseGeo = null, groundEntered = false, tryGroundEntrance = null;
+    function fetchBase() {
+      function viaIpwho() {
+        return fetch("https://ipwho.is/").then(function (r) { return r.json(); }).then(function (j) {
+          if (j && j.success !== false && isFinite(j.latitude) && isFinite(j.longitude)) return { lat: j.latitude, lon: j.longitude, city: j.city || "" };
+          throw new Error("ipwho");
+        });
+      }
+      function viaGeojs() {
+        return fetch("https://get.geojs.io/v1/ip/geo.json").then(function (r) { return r.json(); }).then(function (j) {
+          var la = parseFloat(j.latitude), lo = parseFloat(j.longitude);
+          if (isFinite(la) && isFinite(lo)) return { lat: la, lon: lo, city: j.city || "" };
+          throw new Error("geojs");
+        });
+      }
+      var p = (typeof Promise.any === "function") ? Promise.any([viaIpwho(), viaGeojs()])
+                                                  : viaIpwho().catch(viaGeojs);
+      return p.then(function (g) {
+        try { localStorage.setItem("cv-base", JSON.stringify(g)); } catch (e) {}
+        return g;
+      }).catch(function () { return null; });
+    }
+    function resolveBase() {
+      try {
+        var c = JSON.parse(localStorage.getItem("cv-base") || "null");
+        if (c && isFinite(c.lat) && isFinite(c.lon)) { fetchBase(); /* refresh for next visit */ return Promise.resolve(c); }
+      } catch (e) {}
+      return fetchBase();
+    }
+    var basePromise = COSMOS ? resolveBase() : Promise.resolve(null);
+
     if (COSMOS) {
-      // entrance: arrive from deep space; the frame loop eases the radius home
-      camera.position.set(HOME.x - 150, HOME.y + 116, HOME.z - 132);   // arrive on the SUN-lit side — you land looking at the real continents (the Americas) with the footprint on them
+      // the visitor wakes on the GROUND (ground entrance below); the canvas stays dark
+      // until the base resolves, then the sky fades in overhead. The old deep-space dive
+      // remains only as the fallback if the armature or geolocation never arrive.
+      camera.position.set(HOME.x - 150, HOME.y + 116, HOME.z - 132);
       camera.lookAt(HOME);
       controls = createPremiumOrbitControls(camera, canvas, THREE);
       controls.target.copy(HOME);
       controls.setDistanceLimits(5.0, 430);   // 5.0 floor clears the Moon (2.99) + inner rings — no more near-Earth clip
       controls.setInteractionTuning({ rotateSpeed: 0.00050, dampingFactor: 0.042, zoomStepLn: 0.40, zoomRef: 100, zoomHi: 2.2, zoomEase: 0.18, maxEventDelta: 0.014 });
-      entranceUntil = performance.now() + 4600;
+      canvas.style.opacity = "0.001";
+      setTimeout(function () {   // fallback: never leave the visitor in the dark
+        if (!groundEntered) {
+          canvas.style.transition = "opacity 1s ease"; canvas.style.opacity = "1";
+          entranceUntil = performance.now() + 4600;
+        }
+      }, 6500);
     } else { camera.position.set(0, 0, 60); }
 
 
@@ -636,7 +730,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=19").then(function (mod) {
+    import("./nye-armature.js?v=20").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -672,6 +766,7 @@
         applySceneLocale();
         window.__space.setNyeScale = function (s) { if (nyeArmature) nyeArmature.group.scale.setScalar(s); };
         window.__space.setClearing = function (i, o) { deepFusion.uniforms.uClearInner.value = i; deepFusion.uniforms.uClearOuter.value = o; };
+        if (tryGroundEntrance) tryGroundEntrance();   // the armature is up — wake at the base
       } catch (e) { window.__space.nyeError = String(e); }
     }).catch(function (e) { window.__space.nyeError = String(e); });
 
@@ -710,6 +805,7 @@
         window.__space.natalStats = natalSky.stats;
         tryAlignChart();
         applySceneLocale();
+        if (tryGroundEntrance) tryGroundEntrance();   // the chart is ALIGNED now — safe to wake on the ground
       });
     }).catch(function (e) { window.__space.natalError = String(e); });
 
@@ -745,6 +841,12 @@
       }
       function updateCta(e) {
         if (!earthCta || !nyeArmature) return;
+        if (controls.isGround()) {   // on the ground the sky is the interface — no body doors
+          if (ctaOn) { ctaOn = false; earthCta.classList.remove("is-on"); }
+          if (sunCtaOn && sunCta) { sunCtaOn = false; sunCta.classList.remove("is-on"); }
+          if (!ptrDown) canvas.style.cursor = "grab";
+          return;
+        }
         if ((ctaTick = (ctaTick + 1) % 3) !== 0) return;
         _ctaNdc.x = (e.clientX / innerWidth) * 2 - 1; _ctaNdc.y = -(e.clientY / innerHeight) * 2 + 1;
         _ctaRay.setFromCamera(_ctaNdc, camera);
@@ -831,6 +933,7 @@
         var nearEarth = controls.target.lengthSq() < 1.0;
         var proximity = nearEarth ? Math.max(0, Math.min(1, (r - 8.5) / 8.0)) : 1;   // 0 at r≤8.5 → 1 at r≥16.5
         var want = (soloBody || (ctaOn && r < 16)) ? 0 : proximity;
+        if (controls.isGround()) want = 0;   // lying on the ground, the sky must be pure — no gear-rings overhead
         if (Math.abs(ringFade - want) < 0.004) { ringFade = want; return; }
         ringFade += (want - ringFade) * 0.1;
         for (var rf = 0; rf < ringFadeMats.length; rf++) {
@@ -842,9 +945,116 @@
       }
       window.__space.applyRingFade = applyRingFade;
 
+      /* ===== GROUND VIEW: lying at the base (根据地), looking up at the natal sky =====
+         The visitor's own place on the Earth is the site's home. The session OPENS here —
+         flat on the ground, the constellations overhead — and every departure is a LAUNCH:
+         rise off the base first, then soar to wherever was asked. */
+      var groundHintEl = document.getElementById("ground-hint");
+      var groundCityEl = document.getElementById("ground-city");
+      var baseBtn = document.getElementById("cosmos-base");
+      function groundHint(on) {
+        if (groundHintEl) groundHintEl.classList.toggle("is-on", !!on);
+        if (on && groundCityEl) groundCityEl.textContent = (baseGeo && baseGeo.city) ? ("⌂ " + baseGeo.city) : "⌂";
+        document.body.classList.toggle("on-ground", !!on);
+      }
+      function enterGroundView(opts) {
+        if (!nyeArmature || !nyeArmature.earthSurfacePoint || !controls || !baseGeo) return;
+        var sp = nyeArmature.earthSurfacePoint(baseGeo.lat, baseGeo.lon, 0.028);
+        camera.near = 0.008; camera.updateProjectionMatrix();   // the ground is centimeters away in scene scale
+        soloBody = null; clearSel();
+        glide.frames = 0; glide.onDone = null;
+        /* aim the waking gaze at the richest thing in THIS sky — the Moon if it's up,
+           else the highest constellation. The zodiac hugs the ecliptic band, so a blind
+           zenith stare can open onto empty sky; the first sight must never be empty. */
+        var aim = null;
+        var nrm = sp.normal, upW = new THREE.Vector3(0, 1, 0);
+        var east = new THREE.Vector3().crossVectors(upW, nrm); if (east.lengthSq() < 1e-6) east.set(1, 0, 0); east.normalize();
+        var north = new THREE.Vector3().crossVectors(nrm, east).normalize();
+        var best = null, bestScore = -2;
+        var consider = function (getP, bonus) {
+          try {                                          // each candidate fails ALONE — one bad
+            var p = getP(); if (!p) return;              // constellation must never cost us the Moon
+            var d = p.clone().sub(sp.position).normalize();
+            var alt = d.dot(nrm);                        // sine of the altitude above the horizon
+            if (alt > 0.08 && alt + (bonus || 0) > bestScore) { bestScore = alt + (bonus || 0); best = d; }
+          } catch (eC) { window.__aimErr = String(eC); }
+        };
+        consider(function () { var m = nyeArmature.group.getObjectByName("NyeMoon"); return m && m.getWorldPosition(new THREE.Vector3()); }, 0.22);
+        ["leo", "cancer", "gemini", "capricorn"].forEach(function (cid) {
+          consider(function () { return natalSky && natalSky.getConCentroid ? natalSky.getConCentroid(cid) : null; }, 0);
+        });
+        if (best) {
+          aim = {
+            yaw: Math.atan2(best.dot(east), best.dot(north)),
+            pitch: Math.max(0.3, Math.min(1.25, Math.asin(Math.max(-1, Math.min(1, best.dot(nrm)))) + 0.12))
+          };
+        }
+        controls.setGroundMode({
+          position: sp.position, normal: sp.normal,
+          yaw: (opts && opts.yaw != null) ? opts.yaw : (aim ? aim.yaw : 0.35),
+          pitch: (opts && opts.pitch != null) ? opts.pitch : (aim ? aim.pitch : 0.9),
+          onLiftoff: function () { ascendThen(null, 12); }
+        });
+        groundHint(true);
+      }
+      /* the launch: straight up off the base — the gaze pivots from the sky down to the
+         world shrinking beneath — then hand over to whatever comes next */
+      function ascendThen(fn, highR) {
+        if (!controls || !controls.isGround()) { if (fn) fn(); return false; }
+        controls.exitGroundMode();
+        groundHint(false);
+        var up = camera.position.clone().normalize();
+        glide.targetTo = HOME.clone();
+        glide.camTo = up.multiplyScalar(highR || 12);
+        glide.axis = null; glide.step = 0; glide.distTarget = 0; glide.frames = 60;
+        glide.onDone = fn || null;
+        lastTouch = performance.now(); userMoved = true;
+        return true;
+      }
+      /* the homecoming: from anywhere in space, descend onto the base and lie back down */
+      function glideToBase() {
+        if (!nyeArmature || !nyeArmature.earthSurfacePoint || !baseGeo || !controls || controls.isGround()) return;
+        clearSel(); soloBody = null;
+        var sp = nyeArmature.earthSurfacePoint(baseGeo.lat, baseGeo.lon, 0.028);
+        camera.near = 0.008; camera.updateProjectionMatrix();   // the ground must render all the way down
+        glide.targetTo = sp.position.clone().addScaledVector(sp.normal, 60);   // gaze settles on the sky above the base
+        glide.camTo = sp.position.clone();
+        glide.axis = null; glide.step = 0; glide.distTarget = 0; glide.frames = 120;
+        glide.onDone = function () { enterGroundView({ pitch: 1.42 }); };
+        lastTouch = performance.now(); userMoved = true;
+      }
+      if (baseBtn) baseBtn.addEventListener("click", glideToBase);
+      /* the entrance: once the armature is up and the visitor's place is known, wake on the ground */
+      tryGroundEntrance = function () {
+        Promise.race([basePromise, new Promise(function (res) { setTimeout(function () { res(null); }, 2600); })])
+          .then(function (g) {
+            // require BOTH the armature and the natal sky: tryAlignChart rotates the whole
+            // orrery when the second one arrives — entering earlier would leave the camera
+            // hovering over the wrong place once the globe turns to its aligned position
+            if (groundEntered || !nyeArmature || !natalSky) return;
+            baseGeo = g || DEFAULT_BASE;
+            try { nyeArmature.setBaseMarker(baseGeo.lat, baseGeo.lon); } catch (e2) {}
+            enterGroundView();
+            groundEntered = true;
+            canvas.style.transition = "opacity 1.25s ease";
+            canvas.style.opacity = "1";
+          });
+      };
+      window.__space.ground = {
+        enter: function (lat, lon, city) {
+          baseGeo = { lat: lat, lon: lon, city: city || "" };
+          if (nyeArmature && nyeArmature.setBaseMarker) nyeArmature.setBaseMarker(lat, lon);
+          enterGroundView();
+        },
+        lift: function () { ascendThen(null, 12); },
+        toBase: glideToBase,
+        is: function () { return !!(controls && controls.isGround()); }
+      };
+
       /* ===== the TOUR: the nav asks, the camera travels, the door opens ===== */
       window.__space.tour = function (name, href) {
         lastTouch = performance.now(); userMoved = true; glide.onDone = null;
+        if (controls.isGround()) { ascendThen(function () { window.__space.tour(name, href); }); return; }
         if (name === "pillars" || name === "zodiac" || name === "footprint") { soloBody = null; clearSel(); }
         if (name === "footprint") {
           glide.axis = null; glide.step = 0; glide.frames = 110; glide.distTarget = 9;
@@ -926,6 +1136,7 @@
       // clean-click routing: a drag is never a click
       var pickRay = new THREE.Raycaster(), pickNdc = new THREE.Vector2();
       function glideToBody(objName, viewDist, nFrames) {
+        if (controls.isGround()) { ascendThen(function () { glideToBody(objName, viewDist, nFrames); }); return; }
         var obj = nyeArmature.group.getObjectByName(objName);
         if (!obj && natalSky && natalSky.group) obj = natalSky.group.getObjectByName(objName);
         if (!obj) return;
@@ -960,6 +1171,7 @@
          so the Earth, the Sun and the rings are all BEHIND the camera — nothing can veil it */
       function focusConstellation(id, nFrames) {
         if (!natalSky || !natalSky.getConCentroid) return;
+        if (controls.isGround()) { ascendThen(function () { focusConstellation(id, nFrames); }); return; }
         var c = natalSky.getConCentroid(id); if (!c) return;
         var dir = c.clone().normalize();
         glide.targetTo = c.clone();
@@ -985,6 +1197,7 @@
       }
       function focusStar(info) {
         if (!info) { clearSel(); return; }                       // a click into the void lets go
+        if (controls.isGround()) { ascendThen(function () { focusStar(info); }); return; }   // launch first, then approach the star
         if (selStar && selStar.id === info.id) { openStarDoor(); return; }
         selStar = info;
         if (starCta) {
@@ -1010,6 +1223,16 @@
       /* return to the whole-sky overview — a smooth glide to the canonical home frame */
       var homeBtn = document.getElementById("cosmos-home");
       function goHome() {
+        if (controls.isGround()) {
+          // from the ground, "whole sky" is one clean launch straight up to the overview
+          controls.exitGroundMode(); groundHint(false);
+          clearSel(); soloBody = null;
+          var gdir = camera.position.clone().normalize();
+          glide.targetTo = HOME.clone(); glide.camTo = gdir.multiplyScalar(128);
+          glide.axis = null; glide.step = 0; glide.distTarget = 0; glide.frames = 120; glide.onDone = null;
+          lastTouch = performance.now(); userMoved = true;
+          return;
+        }
         clearSel(); soloBody = null;             // the whole chart returns — rings and all
         var az = (function () { var o = camera.position.clone().sub(controls.target); return (o.x * o.x + o.z * o.z > 1e-6) ? Math.atan2(o.x, o.z) : 0.8; })();
         var el = 0.26, dir = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
@@ -1036,6 +1259,8 @@
           var away = soloBody || selStar || controls.getRadius() < 104 || controls.target.lengthSq() > 36;
           homeBtn.classList.toggle("is-on", !!away && glide.frames === 0);
         }
+        // the "⌂ base" affordance appears whenever you're OFF the ground (and a base exists)
+        if (baseBtn) baseBtn.classList.toggle("is-on", !!baseGeo && !!nyeArmature && !controls.isGround() && glide.frames === 0);
       };
 
       addEventListener("click", function (e) {
@@ -1056,6 +1281,7 @@
           var pick = null, o = hits[i].object;
           while (o && !pick) { pick = o.userData && o.userData.nyePick; o = o.parent; }
           if (pick !== "sun" && pick !== "moon" && pick !== "earth" && pick !== "jupiter" && pick !== "saturn") continue;   // glyphs never swallow a click
+          if (pick === "earth" && controls.isGround()) { e.stopImmediatePropagation(); return; }   // you're standing on it
           if (pick === "sun") {
             if (natalSky) { natalSky.highlight("capricorn", true); setTimeout(function () { natalSky.highlight("capricorn", false); }, 2800); }
             glideToBody("NyeSun", 34);
@@ -1119,8 +1345,14 @@
           }
         }
         // after 20s of stillness the world turns slowly on its own; manual always wins (dt-based: same speed at any frame rate)
-        if (userMoved && nowMs - lastTouch > 20000 && glide.frames === 0) controls.rotateWorld(camera.up, 0.0108 * dt);
-        if (!userMoved && nowMs >= entranceUntil) controls.rotateWorld(camera.up, 0.0108 * dt);
+        if (userMoved && nowMs - lastTouch > 20000 && glide.frames === 0 && !controls.isGround()) controls.rotateWorld(camera.up, 0.0108 * dt);
+        if (!userMoved && nowMs >= entranceUntil && !controls.isGround()) controls.rotateWorld(camera.up, 0.0108 * dt);
+        // lying on the ground, the sky itself turns slowly overhead — the world breathing
+        if (controls.isGround() && glide.frames === 0 && nowMs - lastTouch > 6000) controls.groundDrift(0.008 * dt);
+        // once truly back in space, restore the normal near-plane (ground views need 0.008)
+        if (camera.near < 0.1 && !controls.isGround() && glide.frames === 0 && camera.position.length() > 9) {
+          camera.near = 0.2; camera.updateProjectionMatrix();
+        }
         // the entrance/glide owns the radius this frame → update() must NOT ease against it;
         // otherwise the wheel's log-target owns it. Recomputed every frame, so it clears cleanly.
         controls.setExternalDrive((glide.frames > 0) || (!userMoved && nowMs < entranceUntil));

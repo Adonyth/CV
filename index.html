@@ -25,7 +25,7 @@
       href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=29" />
+    <link rel="stylesheet" href="styles.css?v=30" />
     <script>
       (function () {
         try {
@@ -132,10 +132,21 @@
       <a href="cv.html" class="cosmos-nav__cv" data-magnet><span class="i18n-en">CV ↗</span><span class="i18n-zh">完整履历 ↗</span></a>
     </nav>
 
-    <!-- appears only once you've left the overview: one tap back to the whole sky -->
-    <button id="cosmos-home" class="cosmos-home no-print" type="button" data-magnet>
-      <span class="i18n-en">✦ Whole sky</span><span class="i18n-zh">✦ 星盘全景</span>
-    </button>
+    <!-- the bottom dock: return to the whole sky, or descend home to your base -->
+    <div class="cosmos-dock no-print">
+      <button id="cosmos-base" class="cosmos-home" type="button" data-magnet>
+        <span class="i18n-en">⌂ Base</span><span class="i18n-zh">⌂ 基地</span>
+      </button>
+      <button id="cosmos-home" class="cosmos-home" type="button" data-magnet>
+        <span class="i18n-en">✦ Whole sky</span><span class="i18n-zh">✦ 星盘全景</span>
+      </button>
+    </div>
+    <!-- shown while lying at the base looking up -->
+    <div id="ground-hint" class="ground-hint no-print" aria-hidden="true">
+      <b id="ground-city">⌂</b>
+      <span class="i18n-en">· your base — drag to look around · scroll to lift off</span>
+      <span class="i18n-zh">· 你的基地 — 拖动环顾星空 · 滚轮升空</span>
+    </div>
 
     <!-- hovering the Earth summons this doorway (positioned & shown by space.js) -->
     <button id="earth-cta" class="earth-cta no-print" type="button" data-magnet>
@@ -149,7 +160,7 @@
     <button id="star-cta" class="earth-cta no-print" type="button" data-magnet></button>
 
     <!-- visible build stamp — so "which version am I seeing" is never a mystery again -->
-    <div class="cosmos-build no-print" aria-hidden="true">build 57 · 07-02</div>
+    <div class="cosmos-build no-print" aria-hidden="true">build 58 · 07-02</div>
 
     <!-- fallback when 3D is gated off (mobile / low power / reduced motion):
          a full, tappable mobile home that reaches every page -->
@@ -184,6 +195,6 @@
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
     <script src="home.js?v=5" defer></script>
     <script src="magnet.js?v=1" defer></script>
-    <script type="module" src="space.js?v=54"></script>
+    <script type="module" src="space.js?v=58"></script>
   </body>
 </html>

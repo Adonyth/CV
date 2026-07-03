@@ -499,6 +499,21 @@ body.cosmos #field{z-index:-1; opacity:.62;}
 .cosmos-home:hover{color:var(--accent); border-color:var(--accent);}
 body.is-flat .cosmos-home{display:none !important;}
 @media(max-width:700px){ .cosmos-home{bottom:16px;} }
+/* the bottom dock holds BOTH journey buttons side by side (⌂ base + ✦ whole sky) */
+.cosmos-dock{position:fixed; left:50%; bottom:26px; transform:translateX(-50%); z-index:6;
+  display:flex; gap:10px; pointer-events:none;}
+.cosmos-dock .cosmos-home{position:static; left:auto; bottom:auto; transform:translateY(8px);}
+.cosmos-dock .cosmos-home.is-on{transform:translateY(0);}
+body.is-flat .cosmos-dock{display:none !important;}
+@media(max-width:700px){ .cosmos-dock{bottom:16px;} }
+/* lying at the base: a quiet line names your place; the chart legend steps aside */
+.ground-hint{position:fixed; left:50%; bottom:72px; transform:translateX(-50%); z-index:6;
+  font-family:var(--mono); font-size:11.5px; letter-spacing:.1em; color:var(--muted);
+  opacity:0; pointer-events:none; transition:opacity .8s ease; text-align:center; max-width:92vw;}
+.ground-hint b{color:#e8c37a; font-weight:500;}
+.ground-hint.is-on{opacity:1;}
+body.on-ground .cosmos-legend, body.on-ground .cosmos-hint{opacity:0 !important; transition:opacity .6s ease;}
+@media(max-width:700px){ .ground-hint{bottom:60px; font-size:10.5px;} }
 body.to-map #deep, body.to-map #field, body.to-map .cosmos-id, body.to-map .cosmos-ui,
 body.to-map .cosmos-legend, body.to-map .cosmos-hint{opacity:0 !important; transition:opacity .38s ease;}
 /* build 30 — the tour bar sits at the TOP CENTER; each group drops its leaves
