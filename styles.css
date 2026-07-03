@@ -514,6 +514,19 @@ body.is-flat .cosmos-dock{display:none !important;}
 .ground-hint.is-on{opacity:1;}
 body.on-ground .cosmos-legend, body.on-ground .cosmos-hint{opacity:0 !important; transition:opacity .6s ease;}
 @media(max-width:700px){ .ground-hint{bottom:60px; font-size:10.5px;} }
+/* tap-to-enter: the doorway from the simple menu into the 3D world */
+.flat-enter{display:block; width:100%; margin:22px 0 6px; padding:15px 18px; border-radius:14px;
+  font-family:var(--mono); font-size:13.5px; letter-spacing:.08em; color:#1a1109; cursor:pointer;
+  background:linear-gradient(135deg, #e8c37a, #e0876a); border:none; text-align:center;}
+.flat-enter:active{filter:brightness(1.08);}
+/* mobile-3D: a small way back to the simple menu */
+.exit3d{display:none;}
+body.is-mobile-3d .exit3d{display:block; position:fixed; left:14px; bottom:16px; z-index:7;
+  font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--muted);
+  background:rgba(11,10,9,.62); border:1px solid rgba(255,255,255,.12); border-radius:999px; padding:8px 13px;
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); cursor:pointer;}
+body.is-flat .exit3d{display:none !important;}
+body.is-mobile-3d .cosmos-build{display:none;}   /* no room for the stamp on a phone in the 3D world */
 body.to-map #deep, body.to-map #field, body.to-map .cosmos-id, body.to-map .cosmos-ui,
 body.to-map .cosmos-legend, body.to-map .cosmos-hint{opacity:0 !important; transition:opacity .38s ease;}
 /* build 30 — the tour bar sits at the TOP CENTER; each group drops its leaves
@@ -543,4 +556,10 @@ body.to-map .cosmos-legend, body.to-map .cosmos-hint{opacity:0 !important; trans
 .cosmos-nav__group:hover .cosmos-nav__head i, .cosmos-nav__group:focus-within .cosmos-nav__head i{opacity:1;}
 .cosmos-nav__group.open .cosmos-nav__head i{opacity:1; transform:rotate(90deg);}
 @media(max-width:1360px){ .cosmos-nav{left:auto; right:16px; transform:none; top:84px;} }
-@media(max-width:900px){ .cosmos-nav{display:none;} }
+@media(max-width:900px){
+  .cosmos-nav{display:none;}
+  /* in the mobile 3D world the atlas stays reachable: compact bar above the dock, leaves open upward */
+  body.is-mobile-3d .cosmos-nav{display:flex; flex-wrap:wrap; justify-content:center; gap:6px;
+    left:50%; right:auto; transform:translateX(-50%); top:auto; bottom:104px; max-width:96vw;}
+  body.is-mobile-3d .cosmos-nav__kids{top:auto; bottom:100%; padding-top:0; padding-bottom:10px;}
+}

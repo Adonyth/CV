@@ -279,6 +279,13 @@ export function mountNyeArmature(THREE, scene, opts) {
     baseMarker.position.set(-rr * Math.sin(th) * Math.cos(ph), rr * Math.cos(th), rr * Math.sin(th) * Math.sin(ph));
     baseMarker.scale.setScalar(0.085);
     baseMarker.name = "BaseBeacon";
+    baseMarker.userData.nyePick = "beacon";           // the landmark is a DOOR: click it to come home
+    const pickBall = new T.Mesh(                       // a fat invisible target so the click is forgiving
+      new T.SphereGeometry(0.11, 10, 10),
+      new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+    );
+    pickBall.userData.nyePick = "beacon";
+    baseMarker.add(pickBall);
     earth.mesh.add(baseMarker);
   }
 
@@ -299,6 +306,7 @@ export function mountNyeArmature(THREE, scene, opts) {
        shows no visible rotation, so that was pure redraw pressure for nothing.
        The rings are STATIC by decree (四柱 stay aligned forever). */
     earth.uniforms.uTime.value = t;
+    if (baseMarker) baseMarker.material.opacity = 0.72 + 0.28 * Math.sin(t * 2.4);   // the beacon breathes
   }
 
   function dispose() {

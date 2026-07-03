@@ -25,7 +25,7 @@
       href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=30" />
+    <link rel="stylesheet" href="styles.css?v=32" />
     <script>
       (function () {
         try {
@@ -141,6 +141,10 @@
         <span class="i18n-en">✦ Whole sky</span><span class="i18n-zh">✦ 星盘全景</span>
       </button>
     </div>
+    <!-- mobile-3D only: the way back to the simple menu -->
+    <button id="exit3d" class="exit3d no-print" type="button">
+      <span class="i18n-en">✕ simple view</span><span class="i18n-zh">✕ 简洁版</span>
+    </button>
     <!-- shown while lying at the base looking up -->
     <div id="ground-hint" class="ground-hint no-print" aria-hidden="true">
       <b id="ground-city">⌂</b>
@@ -160,7 +164,7 @@
     <button id="star-cta" class="earth-cta no-print" type="button" data-magnet></button>
 
     <!-- visible build stamp — so "which version am I seeing" is never a mystery again -->
-    <div class="cosmos-build no-print" aria-hidden="true">build 58 · 07-02</div>
+    <div class="cosmos-build no-print" aria-hidden="true">build 59 · 07-02</div>
 
     <!-- fallback when 3D is gated off (mobile / low power / reduced motion):
          a full, tappable mobile home that reaches every page -->
@@ -175,6 +179,9 @@
           <a href="https://ssrn.com/author=12014588" rel="noopener" target="_blank">SSRN</a>
         </div>
       </header>
+      <button id="flat-enter3d" class="flat-enter" type="button">
+        <span class="i18n-en">✦ Enter the sky — your base awaits</span><span class="i18n-zh">✦ 进入星空 — 你的基地在等你</span>
+      </button>
       <nav class="flat-menu" aria-label="Contents">
         <span class="flat-group"><span class="i18n-en">Research</span><span class="i18n-zh">研究</span></span>
         <a href="research.html"><span class="i18n-en">Sciences · 18</span><span class="i18n-zh">科学研究 · 18 题</span></a>
@@ -195,6 +202,6 @@
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
     <script src="home.js?v=5" defer></script>
     <script src="magnet.js?v=1" defer></script>
-    <script type="module" src="space.js?v=58"></script>
+    <script type="module" src="space.js?v=60"></script>
   </body>
 </html>

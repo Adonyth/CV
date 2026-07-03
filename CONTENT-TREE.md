@@ -100,3 +100,11 @@
 - EN/中文双语在 1440/1280 均无名片重叠(断点 1360)✓
 - 四柱读数牌(年·辛巳…10×12/60)永久隐藏 ✓
 - 太阳/月亮独显隐环、cv 唯一入口、手风琴收合——build 29/30 已上线 ✓
+
+## v5 addendum — THE BASE (根据地), build 58–59
+The site opens as an open-world: IP → the visitor's city → wake LYING ON THE GROUND
+there (aimed at the richest sky object), beacon planted, horizon glow at the visible
+limb (dips ~14° at this eye height). Every departure is a choreographed LAUNCH
+(log-radius easeInOutCubic, eastward arc); every homecoming a soft landing
+(easeOutCubic). The beacon is a door: click from orbit → come home. Mobile: 3D is
+tap-to-enter from the flat menu ("✦ 进入星空"), sticky via cv-motion, ✕ 简洁版 exits.

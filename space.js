@@ -40,7 +40,9 @@
     var stored = readMotion();
     if (stored === "flat") return "flat";
     if (reduced() || !webglOK()) return "flat";
-    if (isMobile()) return "flat";      // mobile off-by-default (tap-to-enter is a later milestone)
+    // mobile: the 3D world is OPT-IN (tap-to-enter from the flat menu); once chosen it
+    // sticks, and the explicit choice overrides the low-power heuristic
+    if (isMobile()) return (stored === "calm" || stored === "full") ? "calm" : "flat";
     if (lowPower()) return "flat";
     return stored === "full" ? "full" : "calm"; // desktop default = Calm
   }
@@ -50,6 +52,7 @@
   var COSMOS = document.body.classList.contains("cosmos");
   if (COSMOS && TIER !== "flat") {   // belt & braces: the 3D page must never show the flat wall
     var flatBB = document.getElementById("cosmos-flat"); if (flatBB) flatBB.hidden = true;
+    if (isMobile()) document.body.classList.add("is-mobile-3d");   // CSS hook: compact nav + exit affordance
   }
   if (TIER === "flat") {
     // no 3D — the flat fallback on the home page IS a full, usable mobile menu
@@ -57,6 +60,15 @@
       document.body.classList.add("is-flat");   // CSS hook: retire floating orrery chrome, reveal the menu
       var flatEl = document.getElementById("cosmos-flat"); if (flatEl) flatEl.hidden = false;
       var hintEl = document.getElementById("cosmos-hint"); if (hintEl) hintEl.style.display = "none";
+      // tap-to-enter: the doorway into the full 3D world (hidden when the device truly can't)
+      var enter3d = document.getElementById("flat-enter3d");
+      if (enter3d) {
+        if (!webglOK() || reduced()) { enter3d.style.display = "none"; }
+        else enter3d.addEventListener("click", function () {
+          try { localStorage.setItem(MOTION_KEY, "calm"); } catch (e) {}
+          location.reload();
+        });
+      }
     }
     return;
   }
@@ -263,7 +275,7 @@
           // first-person look-around: grab the SKY — drag right pans the gaze left,
           // drag down pulls the sky down (gaze rises). Pitch stays above the horizon.
           gYaw -= (e.clientX - lastX) * 0.0028;
-          gPitch = Math.max(0.10, Math.min(1.52, gPitch + (e.clientY - lastY) * 0.0028));
+          gPitch = Math.max(-0.14, Math.min(1.52, gPitch + (e.clientY - lastY) * 0.0028));   // -0.14: down to the visible limb (it dips below level at this height)
           applyGroundLook();
           lastX = e.clientX; lastY = e.clientY;
           e.stopPropagation(); return;
@@ -317,14 +329,69 @@
     var _refFar = null, _refPrev = { x: 0, y: 0, ok: false };
     var HOME = new THREE.Vector3(0, 0, 0), UP_Y = new THREE.Vector3(0, 1, 0);
     var lastTouch = 0, userMoved = false, entranceUntil = 0;
-    var glide = { frames: 0, axis: null, step: 0, distTarget: 0 };
+    var glide = { frames: 0, axis: null, step: 0, distTarget: 0, param: null };
+    function glideActive() { return glide.frames > 0 || !!glide.param; }
+    /* ===== choreographed flight (the game-camera): direction nlerp + LOG-radius =====
+       Launches and landings follow an authored curve instead of a raw lerp: radius is
+       interpolated in ln-space (equal time = equal RATIO — a rocket's accelerating rise,
+       a lander's double-soft touchdown) while the direction arcs and the gaze pivots. */
+    function easeInOutCubic(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+    function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+    var _pgDir = new THREE.Vector3();
+    function paramGlide(o) {
+      var camFrom = camera.position.clone(), camTo = o.camTo;
+      glide.frames = 0; glide.camTo = null; glide.targetTo = null; glide.axis = null; glide.distTarget = 0;
+      glide.param = {
+        t: 0, n: o.frames || 90, ease: o.ease || easeInOutCubic,
+        d0: camFrom.clone().normalize(), d1: camTo.clone().normalize(),
+        lnR0: Math.log(Math.max(0.001, camFrom.length())), lnR1: Math.log(Math.max(0.001, camTo.length())),
+        t0: controls.target.clone(), t1: o.targetTo.clone(),
+        up1: o.up ? o.up.clone() : UP_Y
+      };
+      glide.onDone = o.onDone || null;
+      lastTouch = performance.now(); userMoved = true;
+    }
 
     /* ===== THE BASE (根据地): where the visitor actually is =====
        On load we resolve the visitor's place from their IP (client-side, city-level,
        cached) and the site OPENS lying on the ground at that spot, looking up at the
        natal sky. Everything else — lift-off, tours, the whole orrery — starts from there. */
     var DEFAULT_BASE = { lat: 41.824, lon: -71.4128, city: "Providence" };   // the author's home, if the visitor can't be placed
-    var baseGeo = null, groundEntered = false, tryGroundEntrance = null;
+    var baseGeo = null, groundEntered = false, tryGroundEntrance = null, groundDome = null;
+    /* the ground-view ATMOSPHERE: a warm band of light hugging the horizon all around
+       the base — additive, baked once per landing, zero per-frame cost */
+    function makeGroundDome(pos, normal) {
+      removeGroundDome();
+      var c = document.createElement("canvas"); c.width = 4; c.height = 256;
+      var g2 = c.getContext("2d");
+      var gr = g2.createLinearGradient(0, 0, 0, 256);           // canvas top row = texture v=1 = zenith
+      // the band hugs the VISIBLE limb, not the level plane: at this eye height the
+      // horizon dips ~14 deg (sqrt(2h/R)), so the glow sits where the planet's edge is
+      gr.addColorStop(0.0, "rgba(0,0,0,0)");                    // zenith: pure night
+      gr.addColorStop(0.46, "rgba(90,70,120,0.05)");            // high sky: the faintest violet
+      gr.addColorStop(0.545, "rgba(224,135,106,0.20)");         // approach: warmth gathers
+      gr.addColorStop(0.578, "rgba(240,186,130,0.42)");         // the limb itself
+      gr.addColorStop(0.63, "rgba(120,70,50,0.12)");            // below: the dark of the land
+      gr.addColorStop(1.0, "rgba(0,0,0,0)");
+      g2.fillStyle = gr; g2.fillRect(0, 0, 4, 256);
+      var tex = new THREE.CanvasTexture(c);
+      groundDome = new THREE.Mesh(
+        new THREE.SphereGeometry(40, 32, 24),
+        new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.BackSide, depthWrite: false, blending: THREE.AdditiveBlending })
+      );
+      groundDome.name = "GroundHorizonDome";
+      groundDome.position.copy(pos);
+      groundDome.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal);
+      groundDome.renderOrder = 1;
+      scene.add(groundDome);
+    }
+    function removeGroundDome() {
+      if (!groundDome) return;
+      scene.remove(groundDome);
+      if (groundDome.material.map) groundDome.material.map.dispose();
+      groundDome.material.dispose(); groundDome.geometry.dispose();
+      groundDome = null;
+    }
     function fetchBase() {
       function viaIpwho() {
         return fetch("https://ipwho.is/").then(function (r) { return r.json(); }).then(function (j) {
@@ -730,7 +797,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=20").then(function (mod) {
+    import("./nye-armature.js?v=21").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -821,7 +888,7 @@
         ptrDown = true; canvas.style.cursor = "grabbing";
         lastTouch = performance.now(); userMoved = true;
         downX = e.clientX; downY = e.clientY; movedAcc = 0;
-        glide.frames = 0;                                   // a touch cancels any glide
+        glide.frames = 0; glide.param = null;               // a touch cancels any glide (param too)
         panOn = (e.button === 2 || e.button === 1 || e.shiftKey);
         plx = e.clientX; ply = e.clientY;
       }, true);
@@ -856,6 +923,7 @@
           if (hits[hI].object.name === "NyeEarthPickShell") continue;   // the oversized shell is not the globe
           var oo = hits[hI].object, pk = null;
           while (oo && !pk) { pk = oo.userData && oo.userData.nyePick; oo = oo.parent; }
+          if (pk === "beacon") { canvas.style.cursor = "pointer"; return; }   // the way home glows under the hand
           if (pk === "earth") { onEarth = true; break; }   // ring glyphs may sit in front — scan on
           if (pk === "sun") { onSun = true; break; }
         }
@@ -995,6 +1063,7 @@
           pitch: (opts && opts.pitch != null) ? opts.pitch : (aim ? aim.pitch : 0.9),
           onLiftoff: function () { ascendThen(null, 12); }
         });
+        makeGroundDome(sp.position, sp.normal);   // the horizon glows all around the base
         groundHint(true);
       }
       /* the launch: straight up off the base — the gaze pivots from the sky down to the
@@ -1003,12 +1072,13 @@
         if (!controls || !controls.isGround()) { if (fn) fn(); return false; }
         controls.exitGroundMode();
         groundHint(false);
+        // the LAUNCH: a slow, heavy rise off the pad that accelerates into space, arcing
+        // gently east while the gaze pivots from the sky down to the shrinking world —
+        // log-radius easing gives the rocket feel for free
         var up = camera.position.clone().normalize();
-        glide.targetTo = HOME.clone();
-        glide.camTo = up.multiplyScalar(highR || 12);
-        glide.axis = null; glide.step = 0; glide.distTarget = 0; glide.frames = 60;
-        glide.onDone = fn || null;
-        lastTouch = performance.now(); userMoved = true;
+        var east = new THREE.Vector3().crossVectors(UP_Y, up); if (east.lengthSq() < 1e-6) east.set(1, 0, 0); east.normalize();
+        var camTo = up.clone().multiplyScalar(highR || 12).addScaledVector(east, 2.2);
+        paramGlide({ camTo: camTo, targetTo: HOME.clone(), frames: 92, ease: easeInOutCubic, onDone: fn || null });
         return true;
       }
       /* the homecoming: from anywhere in space, descend onto the base and lie back down */
@@ -1017,13 +1087,21 @@
         clearSel(); soloBody = null;
         var sp = nyeArmature.earthSurfacePoint(baseGeo.lat, baseGeo.lon, 0.028);
         camera.near = 0.008; camera.updateProjectionMatrix();   // the ground must render all the way down
-        glide.targetTo = sp.position.clone().addScaledVector(sp.normal, 60);   // gaze settles on the sky above the base
-        glide.camTo = sp.position.clone();
-        glide.axis = null; glide.step = 0; glide.distTarget = 0; glide.frames = 120;
-        glide.onDone = function () { enterGroundView({ pitch: 1.42 }); };
-        lastTouch = performance.now(); userMoved = true;
+        // the HOMECOMING: swift approach from orbit easing into a double-soft touchdown
+        // (easeOut in log-radius: big radii sweep by, the last meters settle like a feather)
+        paramGlide({
+          camTo: sp.position.clone(),
+          targetTo: sp.position.clone().addScaledVector(sp.normal, 60),   // gaze settles on the sky above the base
+          frames: 150, ease: easeOutCubic, up: sp.normal,
+          onDone: function () { enterGroundView({ pitch: 1.42 }); }
+        });
       }
       if (baseBtn) baseBtn.addEventListener("click", glideToBase);
+      var exit3d = document.getElementById("exit3d");
+      if (exit3d) exit3d.addEventListener("click", function () {
+        try { localStorage.setItem(MOTION_KEY, "flat"); } catch (e) {}
+        location.reload();
+      });
       /* the entrance: once the armature is up and the visitor's place is known, wake on the ground */
       tryGroundEntrance = function () {
         Promise.race([basePromise, new Promise(function (res) { setTimeout(function () { res(null); }, 2600); })])
@@ -1224,13 +1302,11 @@
       var homeBtn = document.getElementById("cosmos-home");
       function goHome() {
         if (controls.isGround()) {
-          // from the ground, "whole sky" is one clean launch straight up to the overview
+          // from the ground, "whole sky" is one clean launch all the way to the overview
           controls.exitGroundMode(); groundHint(false);
           clearSel(); soloBody = null;
           var gdir = camera.position.clone().normalize();
-          glide.targetTo = HOME.clone(); glide.camTo = gdir.multiplyScalar(128);
-          glide.axis = null; glide.step = 0; glide.distTarget = 0; glide.frames = 120; glide.onDone = null;
-          lastTouch = performance.now(); userMoved = true;
+          paramGlide({ camTo: gdir.multiplyScalar(128), targetTo: HOME.clone(), frames: 135, ease: easeInOutCubic, onDone: null });
           return;
         }
         clearSel(); soloBody = null;             // the whole chart returns — rings and all
@@ -1244,7 +1320,7 @@
       if (homeBtn) homeBtn.addEventListener("click", goHome);
 
       window.__space.uiTick = function () {
-        if (soloBody && glide.frames === 0 && controls.getRadius() > 130) soloBody = null;   // zoomed back out BY HAND — the chart reassembles (never mid-flight)
+        if (soloBody && !glideActive() && controls.getRadius() > 130) soloBody = null;   // zoomed back out BY HAND — the chart reassembles (never mid-flight)
         if (selStar && starCta) {
           _selV.copy(selStar.world).project(camera);
           if (_selV.z > 1 || Math.abs(_selV.x) > 1.05 || Math.abs(_selV.y) > 1.05) { starCta.classList.remove("is-on"); }
@@ -1257,10 +1333,10 @@
         // the "full view" affordance appears only once the visitor has left the overview
         if (homeBtn) {
           var away = soloBody || selStar || controls.getRadius() < 104 || controls.target.lengthSq() > 36;
-          homeBtn.classList.toggle("is-on", !!away && glide.frames === 0);
+          homeBtn.classList.toggle("is-on", !!away && !glideActive());
         }
         // the "⌂ base" affordance appears whenever you're OFF the ground (and a base exists)
-        if (baseBtn) baseBtn.classList.toggle("is-on", !!baseGeo && !!nyeArmature && !controls.isGround() && glide.frames === 0);
+        if (baseBtn) baseBtn.classList.toggle("is-on", !!baseGeo && !!nyeArmature && !controls.isGround() && !glideActive());
       };
 
       addEventListener("click", function (e) {
@@ -1280,7 +1356,11 @@
           if (hits[i].object.name === "NyeEarthPickShell") continue;   // the oversized shell is not the globe
           var pick = null, o = hits[i].object;
           while (o && !pick) { pick = o.userData && o.userData.nyePick; o = o.parent; }
-          if (pick !== "sun" && pick !== "moon" && pick !== "earth" && pick !== "jupiter" && pick !== "saturn") continue;   // glyphs never swallow a click
+          if (pick !== "sun" && pick !== "moon" && pick !== "earth" && pick !== "jupiter" && pick !== "saturn" && pick !== "beacon") continue;   // glyphs never swallow a click
+          if (pick === "beacon") {                       // the beacon is the door home
+            if (!controls.isGround()) glideToBase();
+            e.stopImmediatePropagation(); return;
+          }
           if (pick === "earth" && controls.isGround()) { e.stopImmediatePropagation(); return; }   // you're standing on it
           if (pick === "sun") {
             if (natalSky) { natalSky.highlight("capricorn", true); setTimeout(function () { natalSky.highlight("capricorn", false); }, 2800); }
@@ -1315,7 +1395,7 @@
         /* thermal guard: when the visitor rests, render at half rate — the slow
            drift is indistinguishable at 30fps, the GPU cools. Any touch, glide,
            entrance or stirred dust restores 60fps instantly. */
-        var busy = (nowMs - lastTouch < 2500) || glide.frames > 0 ||
+        var busy = (nowMs - lastTouch < 2500) || glideActive() ||
                    (!userMoved && nowMs < entranceUntil) ||
                    deepFusion.uniforms.uPointerAmt.value > 0.05;
         if (!busy && (frameNo % 3)) { requestAnimationFrame(frame); return; }   // idle → ~20fps (was 30): the slow drift is smooth, the GPU cools further
@@ -1325,6 +1405,23 @@
         if (!userMoved && nowMs < entranceUntil) {
           var r0 = controls.getRadius();
           controls.setRadius(r0 + (7.6 - r0) * 0.045);   // land close on the Earth, not the wide overview
+        }
+        // choreographed flight (launch / landing) — a standard glide starting takes precedence
+        if (glide.param && glide.frames > 0) glide.param = null;
+        if (glide.param) {
+          var P = glide.param;
+          P.t = Math.min(1, P.t + 1 / P.n);
+          var pe = P.ease(P.t);
+          var pr = Math.exp(P.lnR0 + (P.lnR1 - P.lnR0) * pe);
+          _pgDir.copy(P.d0).lerp(P.d1, pe).normalize();
+          camera.position.copy(_pgDir).multiplyScalar(pr);
+          controls.target.copy(P.t0).lerp(P.t1, pe);
+          camera.up.lerp(P.up1, 0.08).normalize();
+          camera.lookAt(controls.target);
+          if (P.t >= 1) {
+            glide.param = null;
+            if (glide.onDone) { var fP = glide.onDone; glide.onDone = null; fP(); }
+          }
         }
         // guided glide after clicking a body (any touch cancels)
         if (glide.frames > 0) {
@@ -1345,17 +1442,22 @@
           }
         }
         // after 20s of stillness the world turns slowly on its own; manual always wins (dt-based: same speed at any frame rate)
-        if (userMoved && nowMs - lastTouch > 20000 && glide.frames === 0 && !controls.isGround()) controls.rotateWorld(camera.up, 0.0108 * dt);
+        if (userMoved && nowMs - lastTouch > 20000 && !glideActive() && !controls.isGround()) controls.rotateWorld(camera.up, 0.0108 * dt);
         if (!userMoved && nowMs >= entranceUntil && !controls.isGround()) controls.rotateWorld(camera.up, 0.0108 * dt);
         // lying on the ground, the sky itself turns slowly overhead — the world breathing
-        if (controls.isGround() && glide.frames === 0 && nowMs - lastTouch > 6000) controls.groundDrift(0.008 * dt);
+        if (controls.isGround() && !glideActive() && nowMs - lastTouch > 6000) controls.groundDrift(0.008 * dt);
         // once truly back in space, restore the normal near-plane (ground views need 0.008)
-        if (camera.near < 0.1 && !controls.isGround() && glide.frames === 0 && camera.position.length() > 9) {
+        if (camera.near < 0.1 && !controls.isGround() && !glideActive() && camera.position.length() > 9) {
           camera.near = 0.2; camera.updateProjectionMatrix();
+        }
+        // the horizon glow dissolves behind you as you climb
+        if (groundDome && !controls.isGround()) {
+          groundDome.material.opacity *= 0.94;
+          if (groundDome.material.opacity < 0.02) removeGroundDome();
         }
         // the entrance/glide owns the radius this frame → update() must NOT ease against it;
         // otherwise the wheel's log-target owns it. Recomputed every frame, so it clears cleanly.
-        controls.setExternalDrive((glide.frames > 0) || (!userMoved && nowMs < entranceUntil));
+        controls.setExternalDrive(glideActive() || (!userMoved && nowMs < entranceUntil));
         controls.update();
         if (!beltCentered && natalSky && nyeArmature) {   // one-shot: the WHOLE planetary system (planets + belt) orbits the SUN, not the Earth
           var _bodies = natalSky.group.getObjectByName("NatalBodies");
