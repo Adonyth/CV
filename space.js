@@ -211,7 +211,7 @@
           if (groundMode) {   // the orbit model is suspended — only the flick inertia glides out
             if (!dragging && (Math.abs(gVelYaw) > 4e-5 || Math.abs(gVelPitch) > 4e-5)) {
               gYaw += gVelYaw;
-              gPitch = Math.max(-0.14, Math.min(1.52, gPitch + gVelPitch));
+              gPitch = Math.max(-0.10, Math.min(1.52, gPitch + gVelPitch));
               gVelYaw *= 0.90; gVelPitch *= 0.90;
               applyGroundLook();
             }
@@ -285,7 +285,7 @@
           // drag down pulls the sky down (gaze rises). Pitch may dip to the visible limb.
           var gdx = e.clientX - lastX, gdy = e.clientY - lastY;
           gYaw -= gdx * 0.0028;
-          gPitch = Math.max(-0.14, Math.min(1.52, gPitch + gdy * 0.0028));
+          gPitch = Math.max(-0.10, Math.min(1.52, gPitch + gdy * 0.0028));
           gVelYaw = -gdx * 0.0028 * 0.42;                 // remember the flick — it glides on after release
           gVelPitch = gdy * 0.0028 * 0.42;
           applyGroundLook();
@@ -355,6 +355,7 @@
       glide.frames = 0; glide.camTo = null; glide.targetTo = null; glide.axis = null; glide.distTarget = 0;
       glide.param = {
         t: 0, n: o.frames || 90, ease: o.ease || easeInOutCubic,
+        tease: o.targetEase || null,                       // the gaze may sweep on its own clock
         d0: camFrom.clone().normalize(), d1: camTo.clone().normalize(),
         lnR0: Math.log(Math.max(0.001, camFrom.length())), lnR1: Math.log(Math.max(0.001, camTo.length())),
         t0: controls.target.clone(), t1: o.targetTo.clone(),
@@ -381,11 +382,12 @@
       // the band hugs the VISIBLE limb, not the level plane: at this eye height the
       // horizon dips ~14 deg (sqrt(2h/R)), so the glow sits where the planet's edge is
       gr.addColorStop(0.0, "rgba(0,0,0,0)");                    // zenith: pure night
-      gr.addColorStop(0.40, "rgba(24,38,84,0.07)");             // high sky: night blue arrives
-      gr.addColorStop(0.50, "rgba(38,58,120,0.14)");            // the blue hour band
-      gr.addColorStop(0.545, "rgba(224,135,106,0.26)");         // warmth gathers at the edge
-      gr.addColorStop(0.578, "rgba(255,204,148,0.60)");         // the limb itself burns
-      gr.addColorStop(0.615, "rgba(140,82,56,0.18)");           // just below: embered land
+      gr.addColorStop(0.36, "rgba(24,38,84,0.06)");             // high sky: night blue arrives
+      gr.addColorStop(0.47, "rgba(38,58,120,0.14)");            // the blue hour band
+      gr.addColorStop(0.512, "rgba(224,135,106,0.30)");         // warmth gathers at the edge
+      gr.addColorStop(0.529, "rgba(255,208,150,0.74)");         // the horizon LINE itself burns (dip ≈5.3° at the low eye)
+      gr.addColorStop(0.56, "rgba(140,82,56,0.22)");            // just below: embered land
+      gr.addColorStop(0.78, "rgba(30,18,12,0.05)");             // the dark of the near ground
       gr.addColorStop(1.0, "rgba(0,0,0,0)");
       g2.fillStyle = gr; g2.fillRect(0, 0, 4, 256);
       var tex = new THREE.CanvasTexture(c);
@@ -1103,11 +1105,17 @@
         if (groundHintEl) groundHintEl.classList.toggle("is-on", !!on);
         if (on && groundCityEl) groundCityEl.textContent = (baseGeo && baseGeo.city) ? ("⌂ " + baseGeo.city) : "⌂";
         document.body.classList.toggle("on-ground", !!on);
+        // you're standing AT the beacon: hide it on the ground or its screen-filling
+        // additive glow washes the whole night white (it pulses, too — the wandering haze)
+        if (nyeArmature && nyeArmature.group) {
+          var bk = nyeArmature.group.getObjectByName("BaseBeacon");
+          if (bk) bk.visible = !on;
+        }
       }
       function enterGroundView(opts) {
         if (!nyeArmature || !nyeArmature.earthSurfacePoint || !controls || !baseGeo) return;
-        var sp = nyeArmature.earthSurfacePoint(baseGeo.lat, baseGeo.lon, 0.028);
-        camera.near = 0.008; camera.updateProjectionMatrix();   // the ground is centimeters away in scene scale
+        var sp = nyeArmature.earthSurfacePoint(baseGeo.lat, baseGeo.lon, 0.004);   // LOW: the horizon reads level, like a body on the ground
+        camera.near = 0.006; camera.updateProjectionMatrix();   // the ground is centimeters away in scene scale
         soloBody = null; clearSel();
         glide.frames = 0; glide.onDone = null;
         /* aim the waking gaze at the richest thing in THIS sky — the Moon if it's up,
@@ -1133,13 +1141,13 @@
         if (best) {
           aim = {
             yaw: Math.atan2(best.dot(east), best.dot(north)),
-            pitch: Math.max(0.3, Math.min(1.25, Math.asin(Math.max(-1, Math.min(1, best.dot(nrm)))) + 0.12))
+            pitch: Math.max(0.32, Math.min(0.42, Math.asin(Math.max(-1, Math.min(1, best.dot(nrm)))) + 0.12))   // low gaze: the burning horizon stays in frame — you KNOW you're on the ground
           };
         }
         controls.setGroundMode({
           position: sp.position, normal: sp.normal,
           yaw: (opts && opts.yaw != null) ? opts.yaw : (aim ? aim.yaw : 0.35),
-          pitch: (opts && opts.pitch != null) ? opts.pitch : (aim ? aim.pitch : 0.9),
+          pitch: (opts && opts.pitch != null) ? opts.pitch : (aim ? aim.pitch : 0.38),
           onLiftoff: function () { ascendThen(null, 12); }
         });
         makeGroundDome(sp.position, sp.normal);   // the horizon glows all around the base
@@ -1151,28 +1159,33 @@
         if (!controls || !controls.isGround()) { if (fn) fn(); return false; }
         controls.exitGroundMode();
         groundHint(false);
-        // the LAUNCH: a slow, heavy rise off the pad that accelerates into space, arcing
-        // gently east while the gaze pivots from the sky down to the shrinking world —
-        // log-radius easing gives the rocket feel for free
+        // the LAUNCH v2 — ascent must read as RISING, not zooming. The gaze sweeps down
+        // to the pad EARLY (easeOut, while the craft is still low), so the whole climb is
+        // spent WATCHING the ground fall away, sliding east beneath you — parallax is the
+        // language of altitude; a gaze fixed on infinite stars reads as nothing at all
         var up = camera.position.clone().normalize();
         var east = new THREE.Vector3().crossVectors(UP_Y, up); if (east.lengthSq() < 1e-6) east.set(1, 0, 0); east.normalize();
-        var camTo = up.clone().multiplyScalar(highR || 12).addScaledVector(east, 2.2);
-        paramGlide({ camTo: camTo, targetTo: HOME.clone(), frames: 92, ease: easeInOutCubic, fovKick: 7, onDone: fn || null });
+        var camTo = up.clone().multiplyScalar(highR || 12).addScaledVector(east, 5.0);
+        paramGlide({
+          camTo: camTo, targetTo: HOME.clone(), frames: 112,
+          ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 7, onDone: fn || null
+        });
         return true;
       }
       /* the homecoming: from anywhere in space, descend onto the base and lie back down */
       function glideToBase() {
         if (!nyeArmature || !nyeArmature.earthSurfacePoint || !baseGeo || !controls || controls.isGround()) return;
         clearSel(); soloBody = null;
-        var sp = nyeArmature.earthSurfacePoint(baseGeo.lat, baseGeo.lon, 0.028);
-        camera.near = 0.008; camera.updateProjectionMatrix();   // the ground must render all the way down
+        var sp = nyeArmature.earthSurfacePoint(baseGeo.lat, baseGeo.lon, 0.004);
+        camera.near = 0.006; camera.updateProjectionMatrix();   // the ground must render all the way down
         // the HOMECOMING: swift approach from orbit easing into a double-soft touchdown
         // (easeOut in log-radius: big radii sweep by, the last meters settle like a feather)
+        function easeInCubic(t) { return t * t * t; }
         paramGlide({
           camTo: sp.position.clone(),
-          targetTo: sp.position.clone().addScaledVector(sp.normal, 60),   // gaze settles on the sky above the base
-          frames: 150, ease: easeOutCubic, up: sp.normal,
-          onDone: function () { enterGroundView({ pitch: 1.42 }); }
+          targetTo: sp.position.clone().addScaledVector(sp.normal, 60),   // gaze lifts to the sky only at touchdown
+          frames: 150, ease: easeOutCubic, targetEase: easeInCubic, up: sp.normal,
+          onDone: function () { enterGroundView({ pitch: 0.52 }); }
         });
       }
       if (baseBtn) baseBtn.addEventListener("click", glideToBase);
@@ -1385,7 +1398,7 @@
           controls.exitGroundMode(); groundHint(false);
           clearSel(); soloBody = null;
           var gdir = camera.position.clone().normalize();
-          paramGlide({ camTo: gdir.multiplyScalar(128), targetTo: HOME.clone(), frames: 135, ease: easeInOutCubic, fovKick: 5, onDone: null });
+          paramGlide({ camTo: gdir.multiplyScalar(128), targetTo: HOME.clone(), frames: 145, ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 5, onDone: null });
           return;
         }
         clearSel(); soloBody = null;             // the whole chart returns — rings and all
@@ -1494,7 +1507,7 @@
           var pr = Math.exp(P.lnR0 + (P.lnR1 - P.lnR0) * pe);
           _pgDir.copy(P.d0).lerp(P.d1, pe).normalize();
           camera.position.copy(_pgDir).multiplyScalar(pr);
-          controls.target.copy(P.t0).lerp(P.t1, pe);
+          controls.target.copy(P.t0).lerp(P.t1, P.tease ? P.tease(P.t) : pe);
           camera.up.lerp(P.up1, 0.08).normalize();
           camera.lookAt(controls.target);
           if (P.fovK) {   // the lens breathes with the burn — speed you can feel
@@ -1568,8 +1581,14 @@
           _refPrev.x = rsx; _refPrev.y = rsy; _refPrev.ok = true;
         } else { _refPrev.ok = false; }
         if (fieldEl2 && (fmT2 = (fmT2 + 1) % 12) === 0) {
-          var rr2 = controls.getRadius();
-          fieldEl2.style.opacity = (0.5 + 0.28 * Math.max(0, Math.min(1, (rr2 - 90) / 320))).toFixed(2);
+          // the 2D breath-dust is a FAR-VIEW veil only. On the ground it must vanish —
+          // it painted a milky wash over the whole night sky (in ground mode getRadius()
+          // is the 400-away gaze point, which drove the veil to maximum brightness).
+          if (controls.isGround()) fieldEl2.style.opacity = "0.04";
+          else {
+            var rr2 = controls.getRadius();
+            fieldEl2.style.opacity = (0.5 + 0.28 * Math.max(0, Math.min(1, (rr2 - 90) / 320))).toFixed(2);
+          }
         }
       } else if (COSMOS) {
         /* unreachable guard */
