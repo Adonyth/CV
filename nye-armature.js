@@ -27,7 +27,7 @@ export function mountNyeArmature(THREE, scene, opts) {
      on a screen (real skies win through luminance, glare and the moon illusion — a
      display has none of them). Films and games draw the luminaries at 3-5× their true
      angular size to look real. Here: ~2.2° from the ground — the sun you remember. */
-  const SUN_BASE_R = AU_SCALE * 0.01923;   // ≈ 0.346 local: 2.2° apparent from the earth (4× true, the cinematic real)
+  const SUN_BASE_R = AU_SCALE * 0.1346;   // ≈ 2.42 local: a commanding ~15° blaze from the ground (user-tuned, ×7 the cinematic base)
   const DEFAULT_INSTANT = new Date(2002, 0, 2, 15, 45, 0, 0);
   const instant =
     options.instant && typeof options.instant.getTime === "function" && isFinite(options.instant.getTime())
@@ -119,7 +119,7 @@ export function mountNyeArmature(THREE, scene, opts) {
 
   /* moon: ~2.0° apparent from the ground (4× the mathematical 0.5°, same perceptual law
      as the sun) — the size the moon FEELS when you look up on a clear night. */
-  const moon = buildMoon(earthRadiusVis * 11.0 * 0.0175);
+  const moon = buildMoon(earthRadiusVis * 11.0 * 0.0525);   // ~6° from the ground (user-tuned ×3): the moon OWNS its patch of sky
   moon.mesh.position.copy(moonVisiblePosition);
   solarSystem.add(moon.mesh);
 
@@ -172,8 +172,8 @@ export function mountNyeArmature(THREE, scene, opts) {
   const dayGear = createPillarGear({
     name: "DayPillarGear",
     pillar: PILLARS.day,
-    stemRadius: earthRadiusVis * 2.05,
-    branchRadius: earthRadiusVis * 2.58,
+    stemRadius: earthRadiusVis * 7.16,    // the day ring rides WITH the moon's orbit (11 earthR): 2.05 × 3.49
+    branchRadius: earthRadiusVis * 9.01,  // 2.58 × 3.49 — the moon travels just outside its own 日环
     toothScale: 0.18,
     glyphStemScale: 0.21,
     glyphBranchScale: 0.26,
@@ -186,7 +186,7 @@ export function mountNyeArmature(THREE, scene, opts) {
   const moonOrbitAngle = Math.atan2(moonInDayPlane.y, moonInDayPlane.x);
   dayGear.branchSwivel.rotation.z = moonOrbitAngle - PILLARS.day.branchIndex * (TAU / 12);
   dayGear.stemSwivel.rotation.z = moonOrbitAngle - (PILLARS.day.stemIndex + 0.5) * (TAU / 10);
-  placeLabel(dayGear.label, earthRadiusVis * 3.15, moonOrbitAngle + 0.22, 0.16);
+  placeLabel(dayGear.label, earthRadiusVis * 10.2, moonOrbitAngle + 0.22, 0.16);   // label rides out with the ring
   gearMotions.push({ target: dayGear.stemSwivel, base: dayGear.stemSwivel.rotation.z, speed: -0.0012 });
   gearMotions.push({ target: dayGear.branchSwivel, base: dayGear.branchSwivel.rotation.z, speed: 0.0010 });
 

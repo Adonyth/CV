@@ -405,6 +405,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
     mesh.name = grp.name + "Mesh";
     mesh.userData.nyePick = p.id;
     grp.add(mesh);
+    var pickR = Math.max(p.body.radius * 2.2, 1.25);   // a forgiving click target even for Mercury
+    var pb = new T.Mesh(new T.SphereGeometry(pickR, 10, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+    pb.userData.nyePick = p.id;
+    grp.add(pb);
     // the REAL planet (solarsystemscope photographs, CC BY 4.0) replaces the painted
     // placeholder the moment it loads — AAA close-ups cannot ride on procedural stripes
     (function (kind, mm) {
