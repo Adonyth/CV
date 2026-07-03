@@ -121,3 +121,18 @@ the only index). Canonical mapping:
   Moon          → music.html · Sun → journey.html · Earth → footprint
   Mars          → doorless sightseeing · Cancer/Leo → pure constellations (no nodes)
 Never re-add an aggregate/table page; never anchor one work to two objects.
+
+## v7 — reading-page design system "Quiet Instrument" (build 68)
+Hero self-title "Physicist · Independent researcher" removed (home + flat menu). The whole
+content-page family shares ONE design language (multi-agent-designed + adjudicated):
+  · ONE 8px spacing scale (--s0..--s9) — no ad-hoc gaps
+  · ONE hairline weight (--hairline .10) on every divider/border/rule
+  · gold = STRUCTURE (eyebrow+tick, rule, footer keys, card top-gradient) ·
+    coral --accent = INTERACTION only (hover, the year value, .go, focus, ::selection)
+  · --read #cbc4b6 reading-contrast prose tint (locked --body untouched)
+  · markup-free masthead: gold tick above the meta line, the year <b> in coral
+  · standfirst lede = .desc p:first-child:not(:last-child) (gated so a lone para stays body)
+  · Newsreader optical sizing driven (opsz 40 display / 24 lede / 16 body); CJK gets its
+    own looser leading + positive tracking, never italic, never negative kern
+Source of truth: scripts/gen-works.py CSS block (item pages); the same tokens/rules are
+propagated into products/*.html, music.html, journey.html, footprint.html.
