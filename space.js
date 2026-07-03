@@ -500,7 +500,7 @@
       camera.lookAt(HOME);
       controls = createPremiumOrbitControls(camera, canvas, THREE);
       controls.target.copy(HOME);
-      controls.setDistanceLimits(5.0, 430);   // 5.0 floor clears the Moon (2.99) + inner rings — no more near-Earth clip
+      controls.setDistanceLimits(5.0, 700);   // 5.0 floor clears the Moon (2.99); 700 lets you pull back past the outer planets + the expanded zodiac shell (R_STAR 410, far stars ~615)
       controls.setInteractionTuning({ rotateSpeed: 0.00050, dampingFactor: 0.042, zoomStepLn: 0.40, zoomRef: 100, zoomHi: 2.2, zoomEase: 0.18, maxEventDelta: 0.014 });
       canvas.style.opacity = "0.001";
       setTimeout(function () {   // fallback: never leave the visitor in the dark
@@ -987,11 +987,11 @@
     // the natal sphere holds STILL around the world (the chart is a fact, not weather);
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
-    fetch("data/natal-sky.json?v=6").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=28").then(function (mod) {
+    fetch("data/natal-sky.json?v=7").then(function (r) { return r.json(); }).then(function (natalData) {
+      return import("./natal-sky.js?v=29").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
-          group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 205 : 372,
+          group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
           mobile: MOBILE, calm: (TIER !== "full"),
           camera: camera, interactive: true
         });

@@ -84,7 +84,12 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var centroid = new T.Vector3();
     c._starPos = [];
     ecl.forEach(function (e, si) {
-      var pos = eclVec(e.lon + delta, e.lat, R);
+      // VOLUMETRIC ZODIAC: each star sits at its own radial DEPTH, not a single shell.
+      // Only the distance varies — the angular direction (lon+delta, lat) is untouched —
+      // so the figure reads identically from the Earth at origin, yet becomes a true 3D
+      // scatter the moment you fly into it. Deterministic per (constellation, star).
+      var df = 0.88 + 0.62 * hash(ci * 131 + si + 7);   // depth ∈ [0.88 R … 1.50 R]
+      var pos = eclVec(e.lon + delta, e.lat, R * df);
       c._starPos[si] = pos;
       centroid.add(pos);
       var node = nodeByStar[si] || null;
@@ -128,7 +133,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   var uniforms = {
     uMap: { value: o.tex }, uTime: { value: 0 }, uFusion: { value: 0.52 },
     uPixelRatio: { value: Math.min((typeof devicePixelRatio !== "undefined" ? devicePixelRatio : 1) || 1, mobile ? 1.5 : 2) },
-    uMaxPointSize: { value: mobile ? 11.0 : 16.0 }, uRefDepth: { value: 640.0 }, // lift constellation stars above the drifting field
+    uMaxPointSize: { value: mobile ? 11.0 : 16.0 }, uRefDepth: { value: 1200.0 }, // lifted with the expanded shell (R_STAR 410): keeps the zodiac prominent from the ground while near stars still read bigger than far ones (the depth cue)
     uAmplitude: { value: 6.0 },              // near-frozen: figures hold their shape
     uLayerKind: { value: 0.0 }, uClearInner: { value: -2.0 }, uClearOuter: { value: -1.0 }
   };
@@ -270,20 +275,27 @@ export function buildNatalSky(THREE, scene, data, opts) {
     [0.00, "#a98f68"], [0.12, "#bda87e"], [0.24, "#d3bd8e"], [0.36, "#c8ae7e"], [0.46, "#e2cfa0"],
     [0.54, "#e6d3a8"], [0.64, "#cdb384"], [0.76, "#d8c193"], [0.90, "#b89e73"], [1.00, "#a3895f"]
   ];
+  var URANUS_RAMP = [ // pale aquamarine, near-featureless — Voyager 2 saw an almost blank disk
+    [0.00, "#9ccad6"], [0.30, "#a8dce6"], [0.50, "#b8e6ec"], [0.70, "#a8dce6"], [1.00, "#9ccad6"]
+  ];
+  var NEPTUNE_RAMP = [ // deeper azure with the faintest banding
+    [0.00, "#3350cf"], [0.30, "#3f5ee0"], [0.50, "#4a6ae6"], [0.62, "#4060e0"], [0.80, "#354fce"], [1.00, "#2c43bc"]
+  ];
   function giantTexture(kind) {
     var W = 1024, H = 512, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
     var ctx = cv.getContext("2d"), img = ctx.createImageData(W, H);
     var jup = kind === "jupiter";
-    var ramp = jup ? JUPITER_RAMP : SATURN_RAMP;
+    var ice = (kind === "uranus" || kind === "neptune");           // ice giants: nearly smooth spheres
+    var ramp = jup ? JUPITER_RAMP : kind === "uranus" ? URANUS_RAMP : kind === "neptune" ? NEPTUNE_RAMP : SATURN_RAMP;
     var warp = gFbm(jup ? 5 : 71, 6), swirl = gFbm(jup ? 29 : 83, 12);
-    var wAmp = jup ? 0.030 : 0.008;
+    var wAmp = jup ? 0.030 : ice ? 0.004 : 0.008;
     var y, x;
     for (y = 0; y < H; y++) {
       for (x = 0; x < W; x++) {
         var u = x / W, v = y / H;
         var vv = v + (warp(u * 6, v * 3) - 0.5) * wAmp * (1 + 1.6 * Math.abs(Math.sin(v * Math.PI * 7)));
         var c = rampAt(ramp, Math.max(0, Math.min(1, vv)));
-        var tone = 0.94 + 0.12 * (swirl(u * 12, v * 6) - 0.5) * (jup ? 1.0 : 0.45);
+        var tone = 0.94 + 0.12 * (swirl(u * 12, v * 6) - 0.5) * (jup ? 1.0 : ice ? 0.22 : 0.45);
         var i4 = (y * W + x) * 4;
         img.data[i4] = Math.min(255, c[0] * tone);
         img.data[i4 + 1] = Math.min(255, c[1] * tone);
@@ -319,7 +331,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var spec = {
       mercury: { base: "#8f8a86", lo: "#5c5854", hi: "#b4afa8", seed: 12, spots: 60, mottle: 0.5 },
       venus:   { base: "#d8c48c", lo: "#c2a86a", hi: "#efe4bd", seed: 34, spots: 0,  mottle: 0.35 },
-      mars:    { base: "#b25a35", lo: "#7f3b22", hi: "#d59a6a", seed: 56, spots: 26, mottle: 0.55 }
+      mars:    { base: "#b25a35", lo: "#7f3b22", hi: "#d59a6a", seed: 56, spots: 26, mottle: 0.55 },
+      pluto:   { base: "#cda783", lo: "#a9855f", hi: "#ece0cb", seed: 78, spots: 7,  mottle: 0.5 },  // tholin butterscotch + icy highs
+      charon:  { base: "#9a968e", lo: "#6f6b64", hi: "#c6c2b8", seed: 91, spots: 12, mottle: 0.45 }  // grey water-ice
     }[kind] || { base: "#999", lo: "#666", hi: "#ccc", seed: 1, spots: 20, mottle: 0.4 };
     var fb = gFbm(spec.seed, 8);
     var cB = hexRGB(spec.base), cL = hexRGB(spec.lo), cH = hexRGB(spec.hi);
@@ -400,18 +414,20 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var grp = new T.Group();
     grp.name = "Natal" + p.id.charAt(0).toUpperCase() + p.id.slice(1);
     grp.position.copy(eclVec(lon2, lat2, p.body.dist));
-    var terra = (p.body.kind === "mercury" || p.body.kind === "venus" || p.body.kind === "mars");
+    var terra = (p.body.kind === "mercury" || p.body.kind === "venus" || p.body.kind === "mars" || p.body.kind === "pluto" || p.body.kind === "charon");
     var mesh = new T.Mesh(new T.SphereGeometry(p.body.radius, 48, 32), giantMaterial(terra ? terrestrialTexture(p.body.kind) : giantTexture(p.body.kind)));
     mesh.name = grp.name + "Mesh";
-    mesh.userData.nyePick = p.id;
+    if (!p.decorative) mesh.userData.nyePick = p.id;   // decorative outer planets are scenery, not content anchors
     grp.add(mesh);
-    var pickR = Math.max(p.body.radius * 2.2, 1.25);   // a forgiving click target even for Mercury
-    var pb = new T.Mesh(new T.SphereGeometry(pickR, 10, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
-    pb.userData.nyePick = p.id;
-    grp.add(pb);
+    if (!p.decorative) {
+      var pickR = Math.max(p.body.radius * 2.2, 1.25);   // a forgiving click target even for Mercury
+      var pb = new T.Mesh(new T.SphereGeometry(pickR, 10, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+      pb.userData.nyePick = p.id;
+      grp.add(pb);
+    }
     // the REAL planet (solarsystemscope photographs, CC BY 4.0) replaces the painted
-    // placeholder the moment it loads — AAA close-ups cannot ride on procedural stripes
-    (function (kind, mm) {
+    // placeholder the moment it loads — procedural-only bodies (no shipped map) keep the paint
+    if (!p.body.procOnly) (function (kind, mm) {
       new T.TextureLoader().load("data/planet-" + kind + ".jpg", function (ptex) {
         if ("colorSpace" in ptex && T.SRGBColorSpace) ptex.colorSpace = T.SRGBColorSpace;
         ptex.wrapS = T.RepeatWrapping; ptex.anisotropy = 4;
@@ -435,8 +451,17 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var ring = new T.Mesh(rg, ringMat);
       ring.name = grp.name + "Ring";
       ring.rotation.x = (p.body.ringTiltDeg || 26.7) * Math.PI / 180;  // the belt's ecliptic is the XY plane; tilt off it
-      ring.userData.nyePick = p.id;
+      if (!p.decorative) ring.userData.nyePick = p.id;
       grp.add(ring);
+    }
+    if (p.body.moon) {   // a bound companion (Charon over Pluto) offset along the local ecliptic tangent
+      var mo = p.body.moon;
+      var mmesh = new T.Mesh(new T.SphereGeometry(mo.radius, 32, 24), giantMaterial(terrestrialTexture(mo.kind)));
+      mmesh.name = grp.name + "Moon";
+      var radial = eclVec(lon2, lat2, 1).normalize();
+      var tangent = new T.Vector3().crossVectors(radial, new T.Vector3(0, 1, 0)).normalize();
+      mmesh.position.copy(tangent.multiplyScalar(mo.dist || (p.body.radius * 6)));
+      grp.add(mmesh);
     }
     bodyGroup.add(grp);
   });
@@ -689,7 +714,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     },
     // live tuning levers (for judging on the real machine)
     setLineOpacity: function (v) { for (var i = 0; i < lineEntries.length; i++) { var e = lineEntries[i]; if (e) e.base = cons[i].loadBearing ? v : v * 0.48; } },
-    setStarScale: function (v) { uniforms.uRefDepth.value = 640 * v; },
+    setStarScale: function (v) { uniforms.uRefDepth.value = 1200 * v; },
     stats: { stars: N, segments: totalSegs, dataNodes: nodeIndex.filter(Boolean).length, planets: planetSprites.length, constellations: cons.length },
     dispose: function () {
       if (onMove) removeEventListener("pointermove", onMove);
