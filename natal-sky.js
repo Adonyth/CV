@@ -458,10 +458,15 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var mo = p.body.moon;
       var mmesh = new T.Mesh(new T.SphereGeometry(mo.radius, 32, 24), giantMaterial(terrestrialTexture(mo.kind)));
       mmesh.name = grp.name + "Moon";
+      mmesh.userData.nyePick = mo.kind;                 // Charon is independently clickable + focusable
       var radial = eclVec(lon2, lat2, 1).normalize();
       var tangent = new T.Vector3().crossVectors(radial, new T.Vector3(0, 1, 0)).normalize();
-      mmesh.position.copy(tangent.multiplyScalar(mo.dist || (p.body.radius * 6)));
+      var moff = tangent.multiplyScalar(mo.dist || (p.body.radius * 6));
+      mmesh.position.copy(moff);
       grp.add(mmesh);
+      var cpb = new T.Mesh(new T.SphereGeometry(Math.max(mo.radius * 2.6, 0.9), 10, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+      cpb.userData.nyePick = mo.kind; cpb.position.copy(moff);   // a forgiving click target for the tiny moon
+      grp.add(cpb);
     }
     bodyGroup.add(grp);
   });

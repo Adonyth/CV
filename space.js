@@ -90,7 +90,7 @@
     scene.fog = new THREE.FogExp2(0x0b0a09, 0.0018); // fog === body colour --page; no back wall
     // NEVER set scene.background — one black on the page (CSS --page)
 
-    var camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 1600);
+    var camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 2400);   // far plane grown for the pulled-back full-system overview (maxDist 1600 + far zodiac stars ~615 → ~2215 from camera)
     /* cosmos: the camera orbits the world with the REAL Nye Clock's premium
        trackball — world-space angular velocity about ANY axis, up-vector riding
        along (ported from nye-clock-bazi.html createPremiumOrbitControls).
@@ -500,7 +500,7 @@
       camera.lookAt(HOME);
       controls = createPremiumOrbitControls(camera, canvas, THREE);
       controls.target.copy(HOME);
-      controls.setDistanceLimits(5.0, 700);   // 5.0 floor clears the Moon (2.99); 700 lets you pull back past the outer planets + the expanded zodiac shell (R_STAR 410, far stars ~615)
+      controls.setDistanceLimits(5.0, 1600);   // 5.0 floor clears the Moon (2.99); 1600 lets you pull all the way back and comfortably frame the whole system + the expanded zodiac shell (R_STAR 410, far stars ~615) in one view
       controls.setInteractionTuning({ rotateSpeed: 0.00050, dampingFactor: 0.042, zoomStepLn: 0.40, zoomRef: 100, zoomHi: 2.2, zoomEase: 0.18, maxEventDelta: 0.014 });
       canvas.style.opacity = "0.001";
       setTimeout(function () {   // fallback: never leave the visitor in the dark
@@ -987,8 +987,8 @@
     // the natal sphere holds STILL around the world (the chart is a fact, not weather);
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
-    fetch("data/natal-sky.json?v=7").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=29").then(function (mod) {
+    fetch("data/natal-sky.json?v=8").then(function (r) { return r.json(); }).then(function (natalData) {
+      return import("./natal-sky.js?v=30").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1050,7 +1050,7 @@
             for (var gI = 0; gI < gHits.length; gI++) {
               var gO = gHits[gI].object, gPk = null;
               while (gO && !gPk) { gPk = gO.userData && gO.userData.nyePick; gO = gO.parent; }
-              if (gPk === "sun" || gPk === "moon" || gPk === "jupiter" || gPk === "saturn" || gPk === "mercury" || gPk === "venus" || gPk === "mars") { overSky = true; break; }
+              if (gPk === "sun" || gPk === "moon" || gPk === "jupiter" || gPk === "saturn" || gPk === "mercury" || gPk === "venus" || gPk === "mars" || gPk === "uranus" || gPk === "neptune" || gPk === "pluto" || gPk === "charon") { overSky = true; break; }
             }
             if (!overSky && natalSky && natalSky.isOverInteractive) overSky = !!natalSky.isOverInteractive(e.clientX, e.clientY);
             canvas.style.cursor = overSky ? "pointer" : "grab";
@@ -1378,14 +1378,14 @@
 
       // clean-click routing: a drag is never a click
       var pickRay = new THREE.Raycaster(), pickNdc = new THREE.Vector2();
-      var FOCUS_MIN = { NyeSun: 9.5, NyeMoon: 2.2, NatalJupiter: 4.5, NatalSaturn: 4.5, NatalMercury: 0.9, NatalVenus: 1.6, NatalMars: 1.1 };   // closest approach per body (must clear each surface + the near-plane)
+      var FOCUS_MIN = { NyeSun: 9.5, NyeMoon: 2.2, NatalJupiter: 4.5, NatalSaturn: 4.5, NatalMercury: 0.9, NatalVenus: 1.6, NatalMars: 1.1, NatalUranus: 1.9, NatalNeptune: 1.8, NatalPluto: 0.5, NatalPlutoMoon: 0.35 };   // closest approach per body (must clear each surface + the near-plane)
       function glideToBody(objName, viewDist, nFrames) {
         var obj = nyeArmature.group.getObjectByName(objName);
         if (!obj && natalSky && natalSky.group) obj = natalSky.group.getObjectByName(objName);
         if (!obj) return;
-        soloBody = ({ NyeSun: "sun", NyeMoon: "moon", NatalJupiter: "jupiter", NatalSaturn: "saturn", NatalMercury: "mercury", NatalVenus: "venus", NatalMars: "mars" })[objName] || soloBody;
+        soloBody = ({ NyeSun: "sun", NyeMoon: "moon", NatalJupiter: "jupiter", NatalSaturn: "saturn", NatalMercury: "mercury", NatalVenus: "venus", NatalMars: "mars", NatalUranus: "uranus", NatalNeptune: "neptune", NatalPluto: "pluto", NatalPlutoMoon: "charon" })[objName] || soloBody;
         clearSel();
-        controls.setDistanceLimits(FOCUS_MIN[objName] || 5.0, 430);   // AFTER clearSel — clearSel resets the floor to the earth-anchored 5.0
+        controls.setDistanceLimits(FOCUS_MIN[objName] || 5.0, 1600);   // AFTER clearSel — clearSel resets the floor to the earth-anchored 5.0; 1600 lets you pull back from any focused body to the full-system overview
         var w = obj.getWorldPosition(new THREE.Vector3());
         /* stand OUTSIDE the body along the Earth→body line, swung aside within the
            gear-ring plane AND lifted above it — the sightline can never pass through
@@ -1434,7 +1434,7 @@
       var selStar = null, starCta = document.getElementById("star-cta");
       function clearSel() {
         selStar = null; if (starCta) starCta.classList.remove("is-on");
-        if (controls) controls.setDistanceLimits(5.0, 430);   // leaving any body-focus: the earth-anchored floor returns
+        if (controls) controls.setDistanceLimits(5.0, 1600);   // leaving any body-focus: the earth-anchored floor returns; 1600 keeps the full-system overview reachable
       }
       window.__space.clearSel = clearSel;
       function openStarDoor() {
@@ -1529,7 +1529,7 @@
           if (hits[i].object.name === "NyeEarthPickShell") continue;   // the oversized shell is not the globe
           var pick = null, o = hits[i].object;
           while (o && !pick) { pick = o.userData && o.userData.nyePick; o = o.parent; }
-          if (pick !== "sun" && pick !== "moon" && pick !== "earth" && pick !== "jupiter" && pick !== "saturn" && pick !== "beacon" && pick !== "mercury" && pick !== "venus" && pick !== "mars") continue;   // glyphs never swallow a click
+          if (pick !== "sun" && pick !== "moon" && pick !== "earth" && pick !== "jupiter" && pick !== "saturn" && pick !== "beacon" && pick !== "mercury" && pick !== "venus" && pick !== "mars" && pick !== "uranus" && pick !== "neptune" && pick !== "pluto" && pick !== "charon") continue;   // glyphs never swallow a click
           if (pick === "beacon") {                       // the beacon is the door home
             // on the ground the camera sits INSIDE the beacon's pick bubble (and the
             // raycaster ignores visible=false) — look PAST it to the real target
@@ -1553,6 +1553,14 @@
             focusGiant("NatalVenus", "venus", "Omytea", "Omytea", "products/omytea.html", null);
           } else if (pick === "mars") {
             glideToBody("NatalMars", 2.8);
+          } else if (pick === "uranus") {
+            glideToBody("NatalUranus", 6.5);
+          } else if (pick === "neptune") {
+            glideToBody("NatalNeptune", 6.2);
+          } else if (pick === "pluto") {
+            glideToBody("NatalPluto", 1.1);
+          } else if (pick === "charon") {
+            glideToBody("NatalPlutoMoon", 0.7);
           } else if (pick === "earth") {
             glide.axis = null; glide.step = 0; glide.frames = 30; glide.distTarget = 7;
             glide.targetTo = new THREE.Vector3(0, 0, 0);      // orbit the Earth itself

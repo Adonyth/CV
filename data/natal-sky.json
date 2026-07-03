@@ -142,7 +142,6 @@
    "sign": "aquarius",
    "eclLonDeg": 322.5,
    "eclLatDeg": -0.5,
-   "decorative": true,
    "role": {
     "en": "the ice giant that rolls on its side",
     "zh": "侧躺自转的冰巨星"
@@ -163,7 +162,6 @@
    "sign": "aquarius",
    "eclLonDeg": 307.5,
    "eclLatDeg": 0.4,
-   "decorative": true,
    "role": {
     "en": "the deep-blue outermost giant",
     "zh": "最外的深蓝巨行星"
@@ -184,7 +182,6 @@
    "sign": "sagittarius",
    "eclLonDeg": 256.1,
    "eclLatDeg": 10.5,
-   "decorative": true,
    "role": {
     "en": "the dwarf world, ~10° above the ecliptic, bound to its moon Charon",
     "zh": "矮行星·高出黄道约10°·与卡戎结为双星"
