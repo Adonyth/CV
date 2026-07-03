@@ -167,13 +167,13 @@ html.js body.cosmos .cosmos-legend, html.js body.cosmos .cosmos-hint, html.js bo
 html.js body.cosmos .cosmos-dock{
   opacity:0; transition:opacity var(--dur-4) var(--ease-out);
 }
-body.cosmos.cosmos-ready .cosmos-id{ opacity:1; transition-delay:.10s; }
-body.cosmos.cosmos-ready .cosmos-nav{ opacity:1; transition-delay:.22s; }
-body.cosmos.cosmos-ready .cosmos-ui{ opacity:1; transition-delay:.32s; }
-body.cosmos.cosmos-ready .cosmos-legend{ opacity:1; transition-delay:.42s; }
-body.cosmos.cosmos-ready .cosmos-hint{ opacity:.85; transition-delay:.42s; }  /* respects its resting .85 */
-body.cosmos.cosmos-ready .cosmos-build{ opacity:.55; transition-delay:.5s; }  /* respects its resting .55 */
-body.cosmos.cosmos-ready .cosmos-dock{ opacity:1; transition-delay:.5s; }
+html.js body.cosmos.cosmos-ready .cosmos-id{ opacity:1; transition-delay:.10s; }
+html.js body.cosmos.cosmos-ready .cosmos-nav{ opacity:1; transition-delay:.22s; }
+html.js body.cosmos.cosmos-ready .cosmos-ui{ opacity:1; transition-delay:.32s; }
+html.js body.cosmos.cosmos-ready .cosmos-legend{ opacity:1; transition-delay:.42s; }
+html.js body.cosmos.cosmos-ready .cosmos-hint{ opacity:.85; transition-delay:.42s; }  /* respects its resting .85 */
+html.js body.cosmos.cosmos-ready .cosmos-build{ opacity:.55; transition-delay:.5s; }  /* respects its resting .55 */
+html.js body.cosmos.cosmos-ready .cosmos-dock{ opacity:1; transition-delay:.5s; }
 /* NEVER hide chrome the state-machine toggles by opacity (flat / mobile-3d / to-map
    set their own opacity/display) — only run this cascade on the desktop cosmos. */
 body.cosmos.is-flat .cosmos-id, body.cosmos.is-flat .cosmos-legend,

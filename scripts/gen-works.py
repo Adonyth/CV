@@ -318,7 +318,7 @@ def page(title, body, depth=0, pager=False, desc=""):
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>{CSS}</style>
-  <link rel="stylesheet" href="{pre}craft.css?v=1" />
+  <link rel="stylesheet" href="{pre}craft.css?v=2" />
 </head>
 <body>
 {body}
