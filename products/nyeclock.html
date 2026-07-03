@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#0b0a09" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-  <title>音乐 · Music — Jiaxuan Chen</title>
-  <meta name="description" content="Music — a Chinese national orchestra, gamelan, and the guqin, played alongside the physics." />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <title>Nye Clock 弐时仪 — Jiaxuan Chen</title>
+  <meta name="description" content="Nye Clock (弐时仪) — a working timepiece that renders the moment as the traditional GanZhi cycles, live in the browser." />
   <meta name="author" content="Jiaxuan Chen (陈嘉轩)" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Jiaxuan Chen · 陈嘉轩" />
-  <meta property="og:title" content="音乐 · Music — Jiaxuan Chen" />
-  <meta property="og:description" content="Music — a Chinese national orchestra, gamelan, and the guqin, played alongside the physics." />
+  <meta property="og:title" content="Nye Clock 弐时仪 — Jiaxuan Chen" />
+  <meta property="og:description" content="Nye Clock (弐时仪) — a working timepiece that renders the moment as the traditional GanZhi cycles, live in the browser." />
   <meta name="twitter:card" content="summary" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -51,12 +51,13 @@
     .locale-zh .lede{line-height:1.9;}
     .rooms{margin-top:44px; display:grid; gap:18px;}
     .room{border:1px solid rgba(255,255,255,.09); border-radius:14px; padding:26px 26px 22px;
-      background:linear-gradient(160deg, rgba(232,195,122,.05), rgba(11,10,9,0));}
-    .room h2{font-size:22px; color:var(--ink); font-weight:500;}
+      background:linear-gradient(160deg, rgba(232,195,122,.05), rgba(11,10,9,0)); display:block;}
+    a.room:hover{border-color:var(--accent);}
+    .room h2{font-size:20px; color:var(--ink); font-weight:500;}
     .room .kind{font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:.14em; text-transform:uppercase; margin-top:6px;}
-    .room p{font-size:15.5px; line-height:1.85; margin-top:14px; max-width:58ch;}
+    .room p{font-size:15.5px; line-height:1.85; margin-top:12px; max-width:58ch;}
     .locale-zh .room p{line-height:1.95;}
-    /* cross-category footer — no page is an island */
+    .room .go{display:inline-block; margin-top:14px; font-family:var(--mono); font-size:12.5px; color:var(--accent);}
     .foot{max-width:760px; margin:0 auto; padding:36px 24px 72px; position:relative; z-index:1;}
     .foot__rule{height:1px; background:rgba(255,255,255,.08); margin-bottom:22px;}
     .foot__nav{display:flex; flex-wrap:wrap; gap:8px 20px; align-items:baseline;}
@@ -68,39 +69,23 @@
   </style>
 </head>
 <body>
-  <a class="map-back" data-magnet href="index.html">⟵ <span>星盘 · Orrery</span></a>
+  <a class="map-back" href="../index.html">⟵ <span>星盘 · Orrery</span></a>
   <div class="lang" role="group" aria-label="Language">
     <button type="button" id="btn-en" aria-pressed="true">EN</button>
     <button type="button" id="btn-zh" aria-pressed="false">中文</button>
   </div>
 
   <main>
-    <div class="eyebrow"><span class="i18n-en">CREATION · MUSIC</span><span class="i18n-zh">创造 · 音乐</span></div>
-    <h1><span class="i18n-en">Music</span><span class="i18n-zh">音乐</span></h1>
-    <p class="lede">
-      <span class="i18n-en">Three instruments, three ways of listening — carried alongside the physics.</span>
-      <span class="i18n-zh">三件乐器,三种聆听的方式——与物理并行。</span>
-    </p>
-
+    <div class="eyebrow"><span class="i18n-en">CREATION · PRODUCT</span><span class="i18n-zh">创造 · 产品</span></div>
+    <h1><span class="i18n-en">Nye Clock <span lang="zh">弐时仪</span></span><span class="i18n-zh">弐时仪 · Nye Clock</span></h1>
+    <p class="lede"><span class="i18n-en">A working timepiece: the present moment rendered as the traditional 干支 cycles — year, month, day and hour as turning gear-rings, live in the browser. The armature that carries this site&#39;s birth chart began its life here.</span><span class="i18n-zh">一件真正运转的时计:把当下时刻渲染为传统干支周期——年、月、日、时四柱化作转动的齿环,在浏览器中实时走时。本站承载出生星盘的那套机械结构,最初就诞生于此。</span></p>
     <div class="rooms">
-      <div class="room">
-        <h2><span class="i18n-en">Chinese National Orchestra</span><span class="i18n-zh">中国民族管弦乐团</span></h2>
-        <div class="kind"><span class="i18n-en">Ensemble</span><span class="i18n-zh">合奏 · Ensemble</span></div>
-        <p><span class="i18n-en">Performs in a Chinese national orchestra — the large modern ensemble that gathers the traditional instruments of China into a single symphonic voice.</span>
-           <span class="i18n-zh">在中国民族管弦乐团中演奏——将中国传统乐器汇入交响编制的大型现代合奏。</span></p>
-      </div>
-      <div class="room">
-        <h2><span class="i18n-en">Gamelan</span><span class="i18n-zh">甘美兰</span></h2>
-        <div class="kind"><span class="i18n-en">Ensemble</span><span class="i18n-zh">合奏 · Ensemble</span></div>
-        <p><span class="i18n-en">Plays in a gamelan ensemble — the interlocking bronze-percussion orchestra of Indonesia, where no one is a soloist and the whole becomes one shimmering instrument.</span>
-           <span class="i18n-zh">在甘美兰乐团中演奏——印度尼西亚相互咬合的青铜打击乐团,没有独奏者,整体即一件闪烁的乐器。</span></p>
-      </div>
-      <div class="room">
-        <h2><span class="i18n-en">Guqin</span><span class="i18n-zh">中国古琴</span></h2>
-        <div class="kind"><span class="i18n-en">Solo</span><span class="i18n-zh">独奏 · Solo</span></div>
-        <p><span class="i18n-en">Plays the guqin — the seven-stringed zither of the Chinese scholar, an instrument made for stillness, restraint, and a room of one's own.</span>
-           <span class="i18n-zh">弹奏古琴——中国文人的七弦之器,为静默、克制与独处而生。</span></p>
-      </div>
+      <a class="room" href="https://nyeclock.pages.dev" target="_blank" rel="noopener">
+        <h2><span class="i18n-en">Open the clock</span><span class="i18n-zh">打开时计</span></h2>
+        <div class="kind"><span class="i18n-en">Live</span><span class="i18n-zh">在线 · Live</span></div>
+        <p><span class="i18n-en">The clock runs in any modern browser — the rings turn with the real moment.</span><span class="i18n-zh">在任何现代浏览器中运行——齿环随真实时刻转动。</span></p>
+        <span class="go">nyeclock.pages.dev ↗</span>
+      </a>
     </div>
   </main>
 
@@ -108,22 +93,21 @@
     <div class="foot__rule"></div>
     <nav class="foot__nav" aria-label="More">
       <span class="lbl"><span class="i18n-en">Books</span><span class="i18n-zh">著作</span></span>
-      <a href="books/invitation.html">An Invitation After Abundance</a>
-      <a href="books/sovereign.html">Sovereign Scintillation</a>
+      <a href="../books/invitation.html">An Invitation After Abundance</a>
+      <a href="../books/sovereign.html">Sovereign Scintillation</a>
       <span class="lbl"><span class="i18n-en">Products</span><span class="i18n-zh">产品</span></span>
-      <a href="products/omytea.html">Omytea</a>
-      <a href="products/nyeclock.html"><span class="i18n-en">Nye Clock</span><span class="i18n-zh">弐时仪</span></a>
-      <a class="cur" href="music.html"><span class="i18n-en">Music</span><span class="i18n-zh">音乐</span></a>
-      <a href="journey.html"><span class="i18n-en">Journey</span><span class="i18n-zh">履历</span></a>
-      <a href="footprint.html"><span class="i18n-en">Footprint</span><span class="i18n-zh">足迹</span></a>
-      <a href="index.html"><span class="i18n-en">Orrery ↗</span><span class="i18n-zh">星盘 ↗</span></a>
-      <a href="cv.html"><span class="i18n-en">CV ↗</span><span class="i18n-zh">完整履历 ↗</span></a>
+      <a href="omytea.html">Omytea</a>
+      <a class="cur" href="nyeclock.html"><span class="i18n-en">Nye Clock</span><span class="i18n-zh">弐时仪</span></a>
+      <a href="../music.html"><span class="i18n-en">Music</span><span class="i18n-zh">音乐</span></a>
+      <a href="../journey.html"><span class="i18n-en">Journey</span><span class="i18n-zh">履历</span></a>
+      <a href="../footprint.html"><span class="i18n-en">Footprint</span><span class="i18n-zh">足迹</span></a>
+      <a href="../index.html"><span class="i18n-en">Orrery ↗</span><span class="i18n-zh">星盘 ↗</span></a>
+      <a href="../cv.html"><span class="i18n-en">CV ↗</span><span class="i18n-zh">完整履历 ↗</span></a>
     </nav>
   </footer>
 
-  <div class="stamp">music · build 50 · 07-02</div>
+  <div class="stamp">nyeclock · build 67 · 07-03</div>
 
-  <script src="magnet.js?v=1"></script>
   <script>
     (function () {
       var root = document.documentElement;

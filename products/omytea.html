@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#0b0a09" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-  <title>音乐 · Music — Jiaxuan Chen</title>
-  <meta name="description" content="Music — a Chinese national orchestra, gamelan, and the guqin, played alongside the physics." />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <title>Omytea — Jiaxuan Chen</title>
+  <meta name="description" content="Omytea — a physics research program: world-model instruments, a personal future console, and a quantum-substrate package." />
   <meta name="author" content="Jiaxuan Chen (陈嘉轩)" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Jiaxuan Chen · 陈嘉轩" />
-  <meta property="og:title" content="音乐 · Music — Jiaxuan Chen" />
-  <meta property="og:description" content="Music — a Chinese national orchestra, gamelan, and the guqin, played alongside the physics." />
+  <meta property="og:title" content="Omytea — Jiaxuan Chen" />
+  <meta property="og:description" content="Omytea — a physics research program: world-model instruments, a personal future console, and a quantum-substrate package." />
   <meta name="twitter:card" content="summary" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -51,12 +51,13 @@
     .locale-zh .lede{line-height:1.9;}
     .rooms{margin-top:44px; display:grid; gap:18px;}
     .room{border:1px solid rgba(255,255,255,.09); border-radius:14px; padding:26px 26px 22px;
-      background:linear-gradient(160deg, rgba(232,195,122,.05), rgba(11,10,9,0));}
-    .room h2{font-size:22px; color:var(--ink); font-weight:500;}
+      background:linear-gradient(160deg, rgba(232,195,122,.05), rgba(11,10,9,0)); display:block;}
+    a.room:hover{border-color:var(--accent);}
+    .room h2{font-size:20px; color:var(--ink); font-weight:500;}
     .room .kind{font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:.14em; text-transform:uppercase; margin-top:6px;}
-    .room p{font-size:15.5px; line-height:1.85; margin-top:14px; max-width:58ch;}
+    .room p{font-size:15.5px; line-height:1.85; margin-top:12px; max-width:58ch;}
     .locale-zh .room p{line-height:1.95;}
-    /* cross-category footer — no page is an island */
+    .room .go{display:inline-block; margin-top:14px; font-family:var(--mono); font-size:12.5px; color:var(--accent);}
     .foot{max-width:760px; margin:0 auto; padding:36px 24px 72px; position:relative; z-index:1;}
     .foot__rule{height:1px; background:rgba(255,255,255,.08); margin-bottom:22px;}
     .foot__nav{display:flex; flex-wrap:wrap; gap:8px 20px; align-items:baseline;}
@@ -68,39 +69,35 @@
   </style>
 </head>
 <body>
-  <a class="map-back" data-magnet href="index.html">⟵ <span>星盘 · Orrery</span></a>
+  <a class="map-back" href="../index.html">⟵ <span>星盘 · Orrery</span></a>
   <div class="lang" role="group" aria-label="Language">
     <button type="button" id="btn-en" aria-pressed="true">EN</button>
     <button type="button" id="btn-zh" aria-pressed="false">中文</button>
   </div>
 
   <main>
-    <div class="eyebrow"><span class="i18n-en">CREATION · MUSIC</span><span class="i18n-zh">创造 · 音乐</span></div>
-    <h1><span class="i18n-en">Music</span><span class="i18n-zh">音乐</span></h1>
-    <p class="lede">
-      <span class="i18n-en">Three instruments, three ways of listening — carried alongside the physics.</span>
-      <span class="i18n-zh">三件乐器,三种聆听的方式——与物理并行。</span>
-    </p>
-
+    <div class="eyebrow"><span class="i18n-en">CREATION · PRODUCT</span><span class="i18n-zh">创造 · 产品</span></div>
+    <h1><span class="i18n-en">Omytea</span><span class="i18n-zh">Omytea</span></h1>
+    <p class="lede"><span class="i18n-en">A physics research program building instruments for world-models — the study of how belief-states about the world can be represented, evolved and read. Its public instruments live below.</span><span class="i18n-zh">一个建造世界模型仪器的物理研究计划——研究关于世界的信念态如何被表示、演化与读取。它的公开仪器如下。</span></p>
     <div class="rooms">
-      <div class="room">
-        <h2><span class="i18n-en">Chinese National Orchestra</span><span class="i18n-zh">中国民族管弦乐团</span></h2>
-        <div class="kind"><span class="i18n-en">Ensemble</span><span class="i18n-zh">合奏 · Ensemble</span></div>
-        <p><span class="i18n-en">Performs in a Chinese national orchestra — the large modern ensemble that gathers the traditional instruments of China into a single symphonic voice.</span>
-           <span class="i18n-zh">在中国民族管弦乐团中演奏——将中国传统乐器汇入交响编制的大型现代合奏。</span></p>
-      </div>
-      <div class="room">
-        <h2><span class="i18n-en">Gamelan</span><span class="i18n-zh">甘美兰</span></h2>
-        <div class="kind"><span class="i18n-en">Ensemble</span><span class="i18n-zh">合奏 · Ensemble</span></div>
-        <p><span class="i18n-en">Plays in a gamelan ensemble — the interlocking bronze-percussion orchestra of Indonesia, where no one is a soloist and the whole becomes one shimmering instrument.</span>
-           <span class="i18n-zh">在甘美兰乐团中演奏——印度尼西亚相互咬合的青铜打击乐团,没有独奏者,整体即一件闪烁的乐器。</span></p>
-      </div>
-      <div class="room">
-        <h2><span class="i18n-en">Guqin</span><span class="i18n-zh">中国古琴</span></h2>
-        <div class="kind"><span class="i18n-en">Solo</span><span class="i18n-zh">独奏 · Solo</span></div>
-        <p><span class="i18n-en">Plays the guqin — the seven-stringed zither of the Chinese scholar, an instrument made for stillness, restraint, and a room of one's own.</span>
-           <span class="i18n-zh">弹奏古琴——中国文人的七弦之器,为静默、克制与独处而生。</span></p>
-      </div>
+      <a class="room" href="https://omyteaai.com" target="_blank" rel="noopener">
+        <h2><span class="i18n-en">Omytea — the program</span><span class="i18n-zh">Omytea — 主站</span></h2>
+        <div class="kind"><span class="i18n-en">Site</span><span class="i18n-zh">主站 · Site</span></div>
+        <p><span class="i18n-en">The program&#39;s public face: what a world-model instrument is, and where the work is going.</span><span class="i18n-zh">研究计划的公开门户:什么是世界模型仪器,这项工作走向何方。</span></p>
+        <span class="go">omyteaai.com ↗</span>
+      </a>
+      <a class="room" href="https://omytea-console.pages.dev" target="_blank" rel="noopener">
+        <h2><span class="i18n-en">Personal Future Console</span><span class="i18n-zh">个人未来控制台</span></h2>
+        <div class="kind"><span class="i18n-en">Instrument</span><span class="i18n-zh">仪器 · Instrument</span></div>
+        <p><span class="i18n-en">A console for reading one&#39;s own futures as branching belief-states — the program&#39;s first personal instrument.</span><span class="i18n-zh">把个人未来读作分支信念态的控制台——计划的第一件个人仪器。</span></p>
+        <span class="go">omytea-console.pages.dev ↗</span>
+      </a>
+      <a class="room" href="https://pypi.org/project/omytea-quantum-substrate/" target="_blank" rel="noopener">
+        <h2><span class="i18n-en">omytea-quantum-substrate</span><span class="i18n-zh">omytea-quantum-substrate</span></h2>
+        <div class="kind"><span class="i18n-en">Package</span><span class="i18n-zh">软件包 · Package</span></div>
+        <p><span class="i18n-en">The open Python substrate underneath: density-matrix belief states as working code.</span><span class="i18n-zh">底层的开源 Python 基座:作为可运行代码的密度矩阵信念态。</span></p>
+        <span class="go">PyPI ↗</span>
+      </a>
     </div>
   </main>
 
@@ -108,22 +105,21 @@
     <div class="foot__rule"></div>
     <nav class="foot__nav" aria-label="More">
       <span class="lbl"><span class="i18n-en">Books</span><span class="i18n-zh">著作</span></span>
-      <a href="books/invitation.html">An Invitation After Abundance</a>
-      <a href="books/sovereign.html">Sovereign Scintillation</a>
+      <a href="../books/invitation.html">An Invitation After Abundance</a>
+      <a href="../books/sovereign.html">Sovereign Scintillation</a>
       <span class="lbl"><span class="i18n-en">Products</span><span class="i18n-zh">产品</span></span>
-      <a href="products/omytea.html">Omytea</a>
-      <a href="products/nyeclock.html"><span class="i18n-en">Nye Clock</span><span class="i18n-zh">弐时仪</span></a>
-      <a class="cur" href="music.html"><span class="i18n-en">Music</span><span class="i18n-zh">音乐</span></a>
-      <a href="journey.html"><span class="i18n-en">Journey</span><span class="i18n-zh">履历</span></a>
-      <a href="footprint.html"><span class="i18n-en">Footprint</span><span class="i18n-zh">足迹</span></a>
-      <a href="index.html"><span class="i18n-en">Orrery ↗</span><span class="i18n-zh">星盘 ↗</span></a>
-      <a href="cv.html"><span class="i18n-en">CV ↗</span><span class="i18n-zh">完整履历 ↗</span></a>
+      <a class="cur" href="omytea.html">Omytea</a>
+      <a href="nyeclock.html"><span class="i18n-en">Nye Clock</span><span class="i18n-zh">弐时仪</span></a>
+      <a href="../music.html"><span class="i18n-en">Music</span><span class="i18n-zh">音乐</span></a>
+      <a href="../journey.html"><span class="i18n-en">Journey</span><span class="i18n-zh">履历</span></a>
+      <a href="../footprint.html"><span class="i18n-en">Footprint</span><span class="i18n-zh">足迹</span></a>
+      <a href="../index.html"><span class="i18n-en">Orrery ↗</span><span class="i18n-zh">星盘 ↗</span></a>
+      <a href="../cv.html"><span class="i18n-en">CV ↗</span><span class="i18n-zh">完整履历 ↗</span></a>
     </nav>
   </footer>
 
-  <div class="stamp">music · build 50 · 07-02</div>
+  <div class="stamp">omytea · build 67 · 07-03</div>
 
-  <script src="magnet.js?v=1"></script>
   <script>
     (function () {
       var root = document.documentElement;

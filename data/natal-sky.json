@@ -632,63 +632,7 @@
      7
     ]
    ],
-   "dataNodes": [
-    {
-     "id": "omytea",
-     "starIndex": 0,
-     "title": {
-      "en": "Omytea",
-      "zh": "Omytea"
-     },
-     "role": "product · omyteaai.com",
-     "importance": 1.0,
-     "href": "https://omyteaai.com"
-    },
-    {
-     "id": "nyeclock",
-     "starIndex": 3,
-     "title": {
-      "en": "Nye Clock 弐时仪",
-      "zh": "弐时仪 Nye Clock"
-     },
-     "role": "product · nyeclock.pages.dev",
-     "importance": 0.9,
-     "href": "https://nyeclock.pages.dev"
-    },
-    {
-     "id": "console",
-     "starIndex": 5,
-     "title": {
-      "en": "Omytea Personal Future Console",
-      "zh": "Omytea 个人未来控制台"
-     },
-     "role": "live demo",
-     "importance": 0.8,
-     "href": "https://omytea-console.pages.dev"
-    },
-    {
-     "id": "substrate",
-     "starIndex": 7,
-     "title": {
-      "en": "omytea-quantum-substrate",
-      "zh": "omytea-quantum-substrate"
-     },
-     "role": "PyPI package",
-     "importance": 0.75,
-     "href": "https://pypi.org/project/omytea-quantum-substrate/"
-    },
-    {
-     "id": "music",
-     "starIndex": 1,
-     "title": {
-      "en": "Music — orchestra · gamelan · guqin",
-      "zh": "音乐——民族管弦 · 甘美兰 · 古琴"
-     },
-     "role": "creation · music",
-     "importance": 0.85,
-     "href": "music.html"
-    }
-   ]
+   "dataNodes": []
   }
  ],
  "briefConstellations": [
@@ -820,30 +764,7 @@
      4
     ]
    ],
-   "dataNodes": [
-    {
-     "id": "invitation",
-     "starIndex": 1,
-     "title": {
-      "en": "An Invitation After Abundance",
-      "zh": "An Invitation After Abundance"
-     },
-     "role": "book · publish-ready",
-     "importance": 1.0,
-     "href": "books/invitation.html"
-    },
-    {
-     "id": "sovereign",
-     "starIndex": 0,
-     "title": {
-      "en": "Sovereign Scintillation Over Grand Fluctuation",
-      "zh": "Sovereign Scintillation Over Grand Fluctuation"
-     },
-     "role": "book · in manuscript",
-     "importance": 0.9,
-     "href": "books/sovereign.html"
-    }
-   ]
+   "dataNodes": []
   },
   {
    "id": "gemini",

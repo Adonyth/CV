@@ -987,7 +987,7 @@
     // the natal sphere holds STILL around the world (the chart is a fact, not weather);
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
-    fetch("data/natal-sky.json?v=5").then(function (r) { return r.json(); }).then(function (natalData) {
+    fetch("data/natal-sky.json?v=6").then(function (r) { return r.json(); }).then(function (natalData) {
       return import("./natal-sky.js?v=28").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
@@ -1310,6 +1310,10 @@
         } else if (name === "saturn") {
           glideToBody("NatalSaturn", 16, 200);
           if (natalSky) { natalSky.highlight("gemini", true); setTimeout(function () { natalSky.highlight("gemini", false); }, 4200); }
+        } else if (name === "venus") {
+          glideToBody("NatalVenus", 4.0, 170);
+        } else if (name === "mercury") {
+          glideToBody("NatalMercury", 2.2, 170);
         } else if (name === "pillars" || name === "zodiac") {
           /* return to the canonical framing: keep the current azimuth (the sky keeps
              turning) but restore the entrance elevation — never arrive edge-on */
@@ -1540,13 +1544,13 @@
             if (natalSky) { natalSky.highlight("leo", true); setTimeout(function () { natalSky.highlight("leo", false); }, 2800); }
             glideToBody("NyeMoon", 5.2);
           } else if (pick === "jupiter") {
-            focusGiant("NatalJupiter", "jupiter", "Books · 2", "著作 · 2 本", "books.html", "cancer");
+            focusGiant("NatalJupiter", "jupiter", "An Invitation After Abundance", "An Invitation After Abundance", "books/invitation.html", "cancer");
           } else if (pick === "saturn") {
-            focusGiant("NatalSaturn", "saturn", "Humanities & Social · 3", "人文社科 · 3 题", "humanities.html", "gemini");
+            focusGiant("NatalSaturn", "saturn", "Sovereign Scintillation", "Sovereign Scintillation", "books/sovereign.html", "gemini");
           } else if (pick === "mercury") {
-            glideToBody("NatalMercury", 2.2);
+            focusGiant("NatalMercury", "mercury", "Nye Clock 弐时仪", "弐时仪 · Nye Clock", "products/nyeclock.html", null);
           } else if (pick === "venus") {
-            glideToBody("NatalVenus", 4.0);
+            focusGiant("NatalVenus", "venus", "Omytea", "Omytea", "products/omytea.html", null);
           } else if (pick === "mars") {
             glideToBody("NatalMars", 2.8);
           } else if (pick === "earth") {

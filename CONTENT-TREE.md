@@ -108,3 +108,16 @@ limb (dips ~14° at this eye height). Every departure is a choreographed LAUNCH
 (log-radius easeInOutCubic, eastward arc); every homecoming a soft landing
 (easeOutCubic). The beacon is a door: click from orbit → come home. Mobile: 3D is
 tap-to-enter from the flat menu ("✦ 进入星空"), sticky via cv-motion, ✕ 简洁版 exits.
+
+## v6 — ONE OBJECT · ONE PAGE · ONE ANCHOR (build 67)
+The aggregates are dead (research.html/humanities.html/books.html deleted; the SKY is
+the only index). Canonical mapping:
+  Capricorn ×18 → research/<id>.html   (each science topic, own star, own page)
+  Gemini ×3     → humanities/<id>.html
+  Jupiter       → books/invitation.html   (An Invitation After Abundance)
+  Saturn        → books/sovereign.html    (Sovereign Scintillation)
+  Venus         → products/omytea.html    (all Omytea links INSIDE the page)
+  Mercury       → products/nyeclock.html  (弐时仪)
+  Moon          → music.html · Sun → journey.html · Earth → footprint
+  Mars          → doorless sightseeing · Cancer/Leo → pure constellations (no nodes)
+Never re-add an aggregate/table page; never anchor one work to two objects.

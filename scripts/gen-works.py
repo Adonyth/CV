@@ -159,16 +159,16 @@ def footer_nav(depth=0, current=None):
         tgt = ' target="_blank" rel="noopener"' if ext else ''
         h = href if ext else pre + href
         return f'<a class="{cur.strip()}" href="{h}"{tgt}>{bi(en, zh)}</a>'
+    # ONE OBJECT = ONE PAGE: no aggregate index pages exist — the sky is the only index.
     return (
         '<footer class="foot"><div class="foot__rule"></div><nav class="foot__nav" aria-label="More">'
-        + f'<span class="lbl">{bi("Research", "研究")}</span>'
-        + a("research.html", "Sciences", "科学研究", "research")
-        + a("humanities.html", "Humanities", "人文社科", "humanities")
-        + f'<span class="lbl">{bi("Creation", "创造")}</span>'
-        + a("books.html", "Books", "著作", "books")
+        + f'<span class="lbl">{bi("Books", "著作")}</span>'
+        + a("books/invitation.html", "An Invitation After Abundance", "An Invitation After Abundance", "invitation")
+        + a("books/sovereign.html", "Sovereign Scintillation", "Sovereign Scintillation", "sovereign")
+        + f'<span class="lbl">{bi("Products", "产品")}</span>'
+        + a("products/omytea.html", "Omytea", "Omytea", "omytea")
+        + a("products/nyeclock.html", "Nye Clock", "弐时仪", "nyeclock")
         + a("music.html", "Music", "音乐", "music")
-        + a("https://omyteaai.com", "Omytea ↗", "Omytea ↗", ext=True)
-        + a("https://nyeclock.pages.dev", "Nye Clock ↗", "弐时仪 ↗", ext=True)
         + a("journey.html", "Journey", "履历", "journey")
         + a("footprint.html", "Footprint", "足迹", "footprint")
         + a("index.html", "Orrery ↗", "星盘 ↗")
@@ -259,7 +259,7 @@ for cls, items in BY_CLS.items():
         pager = (f'<nav class="pager" aria-label="Within {c["en"]}">'
                  f'{pager_link(prev_w, "prev", "⟵ Previous", "⟵ 上一篇")}'
                  f'{pager_link(next_w, "next", "Next ⟶", "下一篇 ⟶")}</nav>')
-        body = chrome([("index.html", "星盘 · Orrery"), (c["index"], bi(c["en"], c["zh"]))], depth=1) + f"""
+        body = chrome([("index.html", "星盘 · Orrery")], depth=1) + f"""
   <main>
     <div class="eyebrow">{bi(c["eyebrow_en"], c["eyebrow_zh"])}</div>
     <h1>{bi(html.escape(w["title"]["en"]), html.escape(w["title"]["zh"]))}</h1>
@@ -274,34 +274,4 @@ for cls, items in BY_CLS.items():
         out = ROOT / c["dir"] / f'{w["id"]}.html'
         out.write_text(page(w["title"]["en"], body, depth=1, pager=True, desc=w["desc"]["en"][0]), encoding="utf-8")
 
-# ---------------- index pages ----------------
-LEDE = {
-    "research": ("Every topic below is a star in Capricornus — the sun-sign, the outward word. Each opens its own page.",
-                 "以下每一个课题都是摩羯座中的一颗星——日座,主外之言。每一题各有其页。"),
-    "humanities": ("Three studies in the sign of words, where Saturn — structure and discipline — truly stood in Gemini that night.",
-                   "文字之座中的三项研究。出生当夜,主结构与纪律的土星真实驻于双子。"),
-    "books": ("Two volumes under the publisher's star: Jupiter stood at opposition in Cancer the night of birth.",
-              "出版之星下的两部书:出生当夜,木星在巨蟹座正值冲日。"),
-}
-for cls, c in CLS.items():
-    items = [w for w in DATA if w["cls"] == cls]
-    rows = ""
-    for w in items:
-        rows += f"""      <a href="{c["dir"]}/{w["id"]}.html" data-magnet>
-        <h2 class="t">{bi(html.escape(w["title"]["en"]), html.escape(w["title"]["zh"]))}</h2>
-        <div class="m">{html.escape(w["period"])} · {bi(html.escape(w["status"]["en"]), html.escape(w["status"]["zh"]))}</div>
-        <div class="d">{bi(html.escape(w["desc"]["en"][0]), html.escape(w["desc"]["zh"][0]))}</div>
-      </a>\n"""
-    body = chrome([("index.html", "星盘 · Orrery")], depth=0) + constellation_svg(cls) + f"""
-  <main>
-    <div class="eyebrow">{bi(c["eyebrow_en"], c["eyebrow_zh"])}</div>
-    <h1>{bi(c["en"], c["zh"])} <span style="font-family:var(--mono);font-size:15px;color:var(--muted);vertical-align:middle;">· {len(items)}</span></h1>
-    <p class="lede">{bi(*LEDE[cls])}</p>
-    <div class="toc">
-{rows}    </div>
-    <div class="skyline">✦ {bi(c["sky_en"], c["sky_zh"])}</div>
-  </main>
-  {footer_nav(depth=0, current=cls)}"""
-    (ROOT / c["index"]).write_text(page(c["en"], body, depth=0, desc=LEDE[cls][0]), encoding="utf-8")
-
-print("generated:", len(DATA), "item pages + 3 index pages")
+print("generated:", len(DATA), "item pages (no aggregate index pages — the sky is the index)")
