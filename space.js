@@ -834,15 +834,10 @@
     function dressEarth(earthGrp) {
       var earthMesh = earthGrp.getObjectByName("NyeEarthMesh");
       if (!earthMesh) return;
-      var uni = earthMesh.material.uniforms;
-      var loader = new THREE.TextureLoader(); loader.crossOrigin = "anonymous";
+      // the ARMATURE owns the earth maps (self-hosted full-res albedo + brightened night
+      // lights). The CDN loads that used to live here raced it and silently clobbered
+      // both — the "cities never burn" mystery. dressEarth now dresses ONLY the trace.
       function srgb(t) { if ("colorSpace" in t && THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace; return t; }
-      loader.load("https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/earth-blue-marble.jpg", function (t) {
-        srgb(t); uni.uAlbedoMap.value = t; uni.uUseAlbedoMap.value = 1;
-      });
-      loader.load("https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/earth-night.jpg", function (t) {
-        srgb(t); uni.uNightMap.value = t; uni.uUseNightMap.value = 1;
-      });
       function bakeTrace() {
         fetch("data/footprint-points.f32").then(function (r) { return r.arrayBuffer(); }).then(function (buf) {
           var raw = new Float32Array(buf);
@@ -878,7 +873,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=22").then(function (mod) {
+    import("./nye-armature.js?v=26").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -1167,7 +1162,8 @@
         var east = new THREE.Vector3().crossVectors(UP_Y, up); if (east.lengthSq() < 1e-6) east.set(1, 0, 0); east.normalize();
         var camTo = up.clone().multiplyScalar(highR || 12).addScaledVector(east, 5.0);
         paramGlide({
-          camTo: camTo, targetTo: HOME.clone(), frames: 112,
+          camTo: camTo, targetTo: HOME.clone(),
+          frames: fn ? 210 : 290,        // ~3.5s when a flight follows, ~5s for the pure climb — nobody reaches space in two seconds
           ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 7, onDone: fn || null
         });
         return true;
@@ -1184,7 +1180,7 @@
         paramGlide({
           camTo: sp.position.clone(),
           targetTo: sp.position.clone().addScaledVector(sp.normal, 60),   // gaze lifts to the sky only at touchdown
-          frames: 150, ease: easeOutCubic, targetEase: easeInCubic, up: sp.normal,
+          frames: 260, ease: easeOutCubic, targetEase: easeInCubic, up: sp.normal,
           onDone: function () { enterGroundView({ pitch: 0.52 }); }
         });
       }
@@ -1398,7 +1394,7 @@
           controls.exitGroundMode(); groundHint(false);
           clearSel(); soloBody = null;
           var gdir = camera.position.clone().normalize();
-          paramGlide({ camTo: gdir.multiplyScalar(128), targetTo: HOME.clone(), frames: 145, ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 5, onDone: null });
+          paramGlide({ camTo: gdir.multiplyScalar(128), targetTo: HOME.clone(), frames: 300, ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 5, onDone: null });
           return;
         }
         clearSel(); soloBody = null;             // the whole chart returns — rings and all

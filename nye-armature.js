@@ -85,7 +85,7 @@ export function mountNyeArmature(THREE, scene, opts) {
   const emLen = earthToMoon.length();
   if (emLen < 1e-9) earthToMoon.set(1, 0, 0);
   else earthToMoon.multiplyScalar(1 / emLen);
-  const visibleMoonDistance = Math.max(emLen, earthRadiusVis * 3.15);
+  const visibleMoonDistance = Math.max(emLen, earthRadiusVis * 7.4);   // was 3.15: a 5° monster moon loomed over the ground view
   const moonVisiblePosition = ephem.earth.clone().add(earthToMoon.clone().multiplyScalar(visibleMoonDistance));
 
   const sun = buildSun();
@@ -119,9 +119,6 @@ export function mountNyeArmature(THREE, scene, opts) {
 
   setLightDirections();
   earth.mesh.rotation.y = siderealOrFallbackRotationY(instant);
-  // the footprint shell is a SIBLING of the mesh, so it must be given the SAME sidereal
-  // orientation — otherwise the trace sits ~311° off the real continents (over open ocean).
-  if (earth.footprint) earth.footprint.rotation.y = earth.mesh.rotation.y;
 
   solarSystem.updateMatrixWorld(true);
   const earthInEcliptic = ephem.earth.clone();
@@ -662,14 +659,14 @@ export function mountNyeArmature(THREE, scene, opts) {
       "  float terminator=smoothstep(-0.085,0.155,mu);",
       "  float dayAmt=max(mu,0.0);",
       "  vec3 dayDiff=alb*(0.028+1.05*dayAmt);",
-      "  float spec=pow(max(dot(reflect(-L,N),V),0.0),72.0)*0.38*isOcean*terminator;",
+      "  float spec=pow(max(dot(reflect(-L,N),V),0.0),220.0)*0.16*isOcean*terminator;",   // tight, dim sun-glint: water, not plastic wrap
       "  vec3 daySurf=dayDiff+vec3(spec);",
       "  float nightAmt=1.0-terminator;",
       "  vec3 nightSurf;",
       "  if(uUseNightMap>0.5){",
       "    vec3 nl=texture2D(uNightMap,vUv).rgb;",
       "    float lum=dot(nl,vec3(0.3,0.5,0.2));",
-      "    vec3 lights=nl*vec3(1.0,0.82,0.58)*smoothstep(0.02,0.65,lum)*0.26;",
+      "    vec3 lights=nl*vec3(1.0,0.84,0.60)*smoothstep(0.01,0.5,lum)*0.62;",   // cities must BURN on the night side
       "    nightSurf=alb*0.038+lights*nightAmt;",
       "  }else{",
       "    float cityN=en(vUv*80.0+vec2(uTime*0.001,0.0))*en(vUv*22.0);",
@@ -710,11 +707,17 @@ export function mountNyeArmature(THREE, scene, opts) {
 
     /* real equirectangular Earth, so the baked GPS footprint lands on the ACTUAL continents.
        Stays procedural until the map arrives, then switches in — no black flash on load. */
-    new T.TextureLoader().load("data/earth-map.jpg", function (etex) {
+    new T.TextureLoader().load("data/earth-map.jpg?v=2", function (etex) {   // ?v=2: now the full 4096px source
       if ("SRGBColorSpace" in T) etex.colorSpace = T.SRGBColorSpace;
-      etex.wrapS = T.RepeatWrapping; etex.anisotropy = 4;
+      etex.wrapS = T.RepeatWrapping; etex.anisotropy = 8;
       uniforms.uAlbedoMap.value = etex;
       uniforms.uUseAlbedoMap.value = 1;
+    });
+    new T.TextureLoader().load("data/earth-night.jpg?v=2", function (ntex) {      // real city lights burn on the night side
+      if ("SRGBColorSpace" in T) ntex.colorSpace = T.SRGBColorSpace;
+      ntex.wrapS = T.RepeatWrapping; ntex.anisotropy = 4;
+      uniforms.uNightMap.value = ntex;
+      uniforms.uUseNightMap.value = 1;
     });
 
     const earthGroup = new T.Group();
@@ -764,26 +767,10 @@ export function mountNyeArmature(THREE, scene, opts) {
     atmo2.name = "NyeEarthOuterHaze";
     earthGroup.add(atmo2);
 
-    /* the real 602,733-point GPS footprint, baked once to a glowing overlay
-       (data/footprint-earth.png, ~75KB) — the actual places, lit on the globe so
-       the trace is legible from the orbital view. Static: one texture sample, no
-       per-frame cost. Additive so it glows on the night side and warms the day. */
-    const fpTex = new T.TextureLoader().load("data/footprint-earth.png?v=2");
-    if ("SRGBColorSpace" in T) fpTex.colorSpace = T.SRGBColorSpace;
-    fpTex.anisotropy = 4;
-    const footprint = new T.Mesh(
-      new T.SphereGeometry(radius * 1.006, 128, 128),
-      new T.MeshBasicMaterial({
-        map: fpTex, transparent: true, opacity: 1.0,
-        blending: T.AdditiveBlending, depthWrite: false
-      })
-    );
-    footprint.name = "NyeEarthFootprint";
-    footprint.rotation.y = 0;       // base orientation; the caller re-sets this to the mesh's sidereal rotation.y so the trace matches the real continents
-    footprint.renderOrder = 2;
-    earthGroup.add(footprint);
-
-    return { group: earthGroup, mesh: earthMesh, uniforms, vertexShader: earthVert, footprint: footprint };
+    /* the GPS footprint shell lives in dressEarth (space.js) — ONE owner: it bakes the
+       602,733 points at 6144px as a child of the earth mesh (inherits the sidereal
+       rotation natively). The PNG shell that used to stack here doubled GPU memory. */
+    return { group: earthGroup, mesh: earthMesh, uniforms, vertexShader: earthVert };
   }
 
   function buildMoon(radius) {
@@ -837,9 +824,16 @@ export function mountNyeArmature(THREE, scene, opts) {
     ].join("\n");
     const uniforms = {
       uSunDirWorld: { value: new T.Vector3(0, 0, 1) },
-      uAlbedoMap: { value: bakeMoonAlbedo() },
+      uAlbedoMap: { value: bakeMoonAlbedo() },   // placeholder until the real Moon arrives
       uUseAlbedoMap: { value: 1 }
     };
+    // the REAL Moon: an actual lunar photograph (solarsystemscope, CC BY 4.0) replaces the
+    // painted highlands the moment it loads — no baked painting survives a human eye
+    new T.TextureLoader().load("data/moon-map.jpg", function (mtex) {
+      if ("SRGBColorSpace" in T) mtex.colorSpace = T.SRGBColorSpace;
+      mtex.anisotropy = 4;
+      uniforms.uAlbedoMap.value = mtex;
+    });
     const mat = new T.ShaderMaterial({ uniforms, vertexShader: moonVert, fragmentShader: moonFrag });
     disableToneMapping(mat);
     const mesh = new T.Mesh(new T.SphereGeometry(radius, 96, 96), mat);
