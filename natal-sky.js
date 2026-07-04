@@ -660,12 +660,14 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var bright = (0.15 + 0.85 * Math.pow(rng(), 2.3)) * Math.min(1.25, dust) * (1 - 0.7 * lane) * vert;
       push(disk(rr, a2, h), rr / Rgal, bright);
     }
-    // --- central bulge: a big, round, luminous warm core (the anchor of the whole galaxy) ---
+    // --- central bulge: a big, round, luminous warm core (the anchor of the whole galaxy).
+    // spread (pow 1.9, not cubed) + a modest per-point brightness so the dense core stays warm GOLD
+    // instead of additive-stacking to a flat white blob ---
     for (var j = 0; j < bulgeN; j++) {
-      var br = Math.pow(rng(), 2.3) * Rgal * 0.27;
+      var br = Math.pow(rng(), 1.9) * Rgal * 0.28;
       var uax = rng() * 2 - 1, ph = rng() * Math.PI * 2, ss = Math.sqrt(1 - uax * uax);
-      var bpt = C.clone().addScaledVector(uu, br * ss * Math.cos(ph)).addScaledVector(vv, br * ss * Math.sin(ph)).addScaledVector(w, br * uax * 0.64);
-      push(bpt, 0.02 + 0.30 * (br / (Rgal * 0.27)), 0.6 + 0.7 * Math.pow(rng(), 1.5));
+      var bpt = C.clone().addScaledVector(uu, br * ss * Math.cos(ph)).addScaledVector(vv, br * ss * Math.sin(ph)).addScaledVector(w, br * uax * 0.66);
+      push(bpt, 0.03 + 0.30 * (br / (Rgal * 0.28)), 0.42 + 0.5 * Math.pow(rng(), 1.7));
     }
     // --- faint inter-arm disc fill + a few globular clumps ---
     var clumpN = Math.round(haloN * 0.18), smoothN = haloN - clumpN;
@@ -686,7 +688,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
     g.setAttribute("color", new T.BufferAttribute(new Float32Array(Cc), 3));
     // constant SCREEN-size points (sizeAttenuation off): the galaxy is huge and mostly far, so
     // attenuation shrinks the bulge/arms to invisibility — constant size keeps it luminous at every zoom
-    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 2.0 : 2.5, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.8, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    // bigger, softer, lower-opacity points: in dense regions the soft sprites OVERLAP into a smooth
+    // luminous glow (not discrete speckles); the lower opacity also keeps the bright core warm, not white
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 2.7 : 3.4, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.6, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     var pts = new T.Points(g, m); pts.name = "MilkyWayGalaxy"; pts.renderOrder = -4; pts.frustumCulled = false;
     belt.add(pts);
