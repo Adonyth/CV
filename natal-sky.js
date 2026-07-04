@@ -962,8 +962,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
      between — the real large-scale texture (Voronoi skeleton: cell faces = walls, edges = filaments, verts
      = clusters, interiors = voids). Static, one draw, faded in only when the camera leaves the galaxy. --- */
   (function buildCosmicWeb() {
-    var COUNT = mobile ? 42000 : 78000, R_IN = 6200, R_OUT = 20000, NUM_SEEDS = 84;   // a TIGHTER, DENSER band (~4× the per-volume density of the old vast-but-sparse shell) so from inside it finally reads as filaments↔nodes↔voids, not uniform dust
-    var WALL_EPS = 0.055, FILA_EPS = 0.088, WALL_KEEP = 0.18;
+    var COUNT = mobile ? 42000 : 78000, R_IN = 6200, R_OUT = 20000, NUM_SEEDS = 32;   // FEW, BIG Voronoi cells (not 84 fine ones): from INSIDE the web you need coarse structure — wide dark voids + a handful of prominent walls/filaments/nodes — or it just averages into uniform dust. This is what finally reads as large-scale texture.
+    var WALL_EPS = 0.075, FILA_EPS = 0.115, WALL_KEEP = 0.26;
     var wr = gRng(0x1a91a), wG = function () { return wr() + wr() + wr() - 1.5; };
     var GA = Math.PI * (3 - Math.sqrt(5)), seeds = [];
     for (var si = 0; si < NUM_SEEDS; si++) {
@@ -1009,21 +1009,21 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // --- the GREAT ATTRACTOR: our own supercluster's basin. One DOMINANT cluster with filaments visibly
     //     streaming into it — the honest "simplified Laniakea" you're meant to notice when you dolly all the
     //     way out. (Laniakea is defined by galaxy in-flow toward this basin; here it reads as convergence.)
-    var gaC = new T.Vector3(0.34, 0.60, -0.72).normalize().multiplyScalar(13400);
-    for (var gac = 0; gac < 1300; gac++) {                                    // dense, bright supercluster core
-      var gr = Math.pow(wr(), 1.7) * 1050, gu = 2 * wr() - 1, gp = 2 * Math.PI * wr(), gsn = Math.sqrt(1 - gu * gu);
-      add(gaC.x + gr * gsn * Math.cos(gp), gaC.y + gr * gsn * Math.sin(gp), gaC.z + gr * gu, 2, 0.9 + 0.1 * wr());
+    var gaC = new T.Vector3(0.34, 0.58, -0.74).normalize().multiplyScalar(11800);
+    for (var gac = 0; gac < 2200; gac++) {                                    // the DOMINANT supercluster core — dense + bright so it reads as the one big landmark node even from across the void
+      var gr = Math.pow(wr(), 1.7) * 1250, gu = 2 * wr() - 1, gp = 2 * Math.PI * wr(), gsn = Math.sqrt(1 - gu * gu);
+      add(gaC.x + gr * gsn * Math.cos(gp), gaC.y + gr * gsn * Math.sin(gp), gaC.z + gr * gu, 2, 0.92 + 0.08 * wr());
     }
-    for (var gf = 0; gf < 7; gf++) {                                          // seven filaments flowing INTO the basin
-      var fd = new T.Vector3(wG(), wG(), wG()).normalize(), fl = 5200 + wr() * 3200;
-      for (var fp = 0; fp < 620; fp++) {
-        var tf = fp / 619, len = fl * Math.pow(tf, 0.82), jw = 150 + 520 * tf;   // thread widens outward from the node
-        add(gaC.x + fd.x * len + wG() * jw, gaC.y + fd.y * len + wG() * jw, gaC.z + fd.z * len + wG() * jw, 1, 0.65 * (1 - tf) + 0.35);
+    for (var gf = 0; gf < 8; gf++) {                                          // eight DIFFUSE filaments flowing INTO the basin (soft threads, not solid bars)
+      var fd = new T.Vector3(wG(), wG(), wG()).normalize(), fl = 5200 + wr() * 3400;
+      for (var fp = 0; fp < 560; fp++) {
+        var tf = fp / 559, len = fl * (0.12 + 0.88 * tf), jw = 260 + 720 * tf;   // spread evenly along length + wide transverse scatter → a soft stream
+        add(gaC.x + fd.x * len + wG() * jw, gaC.y + fd.y * len + wG() * jw, gaC.z + fd.z * len + wG() * jw, 1, 0.6 * (1 - tf) + 0.3);
       }
     }
-    var gaShell = new T.Mesh(new T.SphereGeometry(1700, 12, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
+    var gaShell = new T.Mesh(new T.SphereGeometry(1900, 12, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
     gaShell.position.copy(gaC); gaShell.name = "DSOPick_laniakea";
-    gaShell.userData.nyePick = "dso_laniakea"; gaShell.userData.dsoViewDist = 4400; gaShell.userData.dsoFocusMin = 1300;
+    gaShell.userData.nyePick = "dso_laniakea"; gaShell.userData.dsoViewDist = 3400; gaShell.userData.dsoFocusMin = 1050;
     gaShell.userData.dsoName = { en: "Laniakea · the Great Attractor", zh: "拉尼亚凯亚超星系团 · 巨引源" };
     dsoPickGroup.add(gaShell);
     var wgeo = new T.BufferGeometry();
