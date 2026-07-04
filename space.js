@@ -1218,13 +1218,13 @@
         if (best) {
           aim = {
             yaw: Math.atan2(best.dot(east), best.dot(north)),
-            pitch: Math.max(0.82, Math.min(1.05, Math.asin(Math.max(-1, Math.min(1, best.dot(nrm)))) + 0.45))   // wake looking well UP into the star-dome (the 2D field no longer backs the sky, so a low gaze onto the dark horizon opened onto black); the glowing horizon still rims the bottom of frame
+            pitch: Math.max(1.32, Math.min(1.5, Math.asin(Math.max(-1, Math.min(1, best.dot(nrm)))) + 0.9))   // wake gazing UP near the local zenith — "lying at your base, looking up at your natal sky." A lower gaze opens onto the dark near-horizon band (empty since the 2D field was retired); the glowing horizon still rims the very bottom of frame
           };
         }
         controls.setGroundMode({
           position: sp.position, normal: sp.normal,
           yaw: (opts && opts.yaw != null) ? opts.yaw : (aim ? aim.yaw : 0.35),
-          pitch: (opts && opts.pitch != null) ? opts.pitch : (aim ? aim.pitch : 0.86),
+          pitch: (opts && opts.pitch != null) ? opts.pitch : (aim ? aim.pitch : 1.35),
           onLiftoff: function () { ascendThen(null, 12); }
         });
         makeGroundDome(sp.position, sp.normal);   // the horizon glows all around the base
@@ -1263,7 +1263,7 @@
           camTo: sp.position.clone(),
           targetTo: sp.position.clone().addScaledVector(sp.normal, 60),   // gaze lifts to the sky only at touchdown
           frames: 260, ease: easeOutCubic, targetEase: easeInCubic, up: sp.normal,
-          onDone: function () { enterGroundView({ pitch: 0.82 }); }
+          onDone: function () { enterGroundView({ pitch: 1.32 }); }
         });
       }
       if (baseBtn) baseBtn.addEventListener("click", glideToBase);
