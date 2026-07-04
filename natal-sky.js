@@ -565,9 +565,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
       // COLOUR from the object's OWN photo (saturation-lifted so its true hue reads), then blended
       // toward the scene's warm ember so it still belongs here — this is how shape AND colour show
       var q4 = (y * sw + x) * 4;
-      var rr0 = px[q4] / 255, gg0 = px[q4 + 1] / 255, bb0 = px[q4 + 2] / 255, avg = (rr0 + gg0 + bb0) / 3, sb = 1.5;
+      var rr0 = px[q4] / 255, gg0 = px[q4 + 1] / 255, bb0 = px[q4 + 2] / 255, avg = (rr0 + gg0 + bb0) / 3, sb = 1.85;
       rr0 = Math.max(0, avg + (rr0 - avg) * sb); gg0 = Math.max(0, avg + (gg0 - avg) * sb); bb0 = Math.max(0, avg + (bb0 - avg) * sb);
-      var wc = dsoRamp(Math.pow(ln, gamma)), mix = 0.62, w = 0.5 + 0.5 * ln;         // 0.62 its real colour + 0.38 warm ember
+      var wc = dsoRamp(Math.pow(ln, gamma)), mix = 0.76, w = 0.6 + 0.4 * ln;          // mostly its OWN colour (0.76) + a touch of warm ember; flatter brightness so bright cores keep their hue instead of washing white
       var cr = (rr0 * mix + wc[0] * (1 - mix)) * bright * w, cg = (gg0 * mix + wc[1] * (1 - mix)) * bright * w, cb = (bb0 * mix + wc[2] * (1 - mix)) * bright * w, cmax = Math.max(cr, cg, cb);
       if (cmax > 1) { cr /= cmax; cg /= cmax; cb /= cmax; }                          // hue-preserving cap: bright cores stay coloured, never wash to white
       P.push(wx, wy, wz);
@@ -576,7 +576,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var geo = new T.BufferGeometry();
     geo.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
     geo.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
-    var m = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 4.8, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: d.opacity != null ? d.opacity : 0.72, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 4.8, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: d.opacity != null ? d.opacity : 0.62, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     return new T.Points(geo, m);
   }
