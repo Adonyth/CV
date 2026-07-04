@@ -599,34 +599,35 @@ export function buildNatalSky(THREE, scene, data, opts) {
      you are within the galaxy without a jarring galaxy "model" hanging in the void. Static
      Points, one draw call, built once — zero per-frame cost. ---------------- */
   (function buildMilkyWay() {
-    var R = 1300, N = mobile ? 5500 : 11000;
+    var R = 1300, N = mobile ? 18000 : 45000;                                   // dense enough that the lane reads as a smooth milky swath, not scattered dots — still one static draw call
     var gcE = raDecToEcl(17.7608, -28.94), npE = raDecToEcl(12.8571, 27.13);    // galactic centre + north pole
     var gc = eclVec(gcE.lon, gcE.lat, 1).normalize();
     var w = eclVec(npE.lon, npE.lat, 1).normalize();                            // the band's normal (galactic pole)
     var u = gc.clone().addScaledVector(w, -gc.dot(w)).normalize();              // in-plane, toward the centre
-    var v = new T.Vector3().crossVectors(w, u).normalize();
-    var rng = gRng(9137), fb = gFbm(613, 8);
-    var DEG = Math.PI / 180, laneSig = 6 * DEG, spread = 22 * DEG;
+    var vv = new T.Vector3().crossVectors(w, u).normalize();
+    var rng = gRng(9137), fb = gFbm(613, 8), fb2 = gFbm(211, 16);
+    var DEG = Math.PI / 180, laneSig = 5.5 * DEG, spread = 24 * DEG;
     var pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
     for (var i = 0; i < N; i++) {
       var th = rng() * Math.PI * 2;
-      var phi = ((rng() + rng() + rng()) / 3 - 0.5) * 2 * spread;                // ~gaussian band latitude, ±~22°
+      var phi = ((rng() + rng() + rng() + rng()) / 4 - 0.5) * 2 * spread;        // ~gaussian band latitude, concentrated on the plane, ±~24°
       var lane = Math.exp(-(phi * phi) / (2 * laneSig * laneSig));               // bright thin central lane → fades into a broad halo
       var cph = Math.cos(phi), sph = Math.sin(phi);
-      var dir = u.clone().multiplyScalar(cph * Math.cos(th)).addScaledVector(v, cph * Math.sin(th)).addScaledVector(w, sph);
-      var rr = R * (0.92 + rng() * 0.23);
+      var dir = u.clone().multiplyScalar(cph * Math.cos(th)).addScaledVector(vv, cph * Math.sin(th)).addScaledVector(w, sph);
+      var rr = R * (0.9 + rng() * 0.26);
       pos[i * 3] = dir.x * rr; pos[i * 3 + 1] = dir.y * rr; pos[i * 3 + 2] = dir.z * rr;
       var toward = Math.cos(th) * 0.5 + 0.5;                                     // 1 toward the galactic centre (Sagittarius bulge), 0 anti-centre
-      var clump = 0.5 + 0.9 * fb(th * 3.1, phi * 7 + 4);                          // patchy star-clouds
-      var b = (0.10 + 0.30 * lane) * clump * (0.4 + 0.6 * Math.pow(toward, 1.5)) * (0.55 + 0.45 * rng());
+      var clump = 0.42 + 0.9 * fb(th * 3.1, phi * 7 + 4);                         // patchy star-clouds
+      var rift = 1 - 0.55 * Math.exp(-Math.pow((phi + 1.6 * DEG) / (2.2 * DEG), 2)) * (0.5 + 0.5 * fb2(th * 5, 3));  // a thin dark dust rift just off the lane
+      var b = (0.05 + 0.15 * lane) * clump * rift * (0.42 + 0.58 * Math.pow(toward, 1.5)) * (0.55 + 0.45 * rng());
       var tint = 0.9 + 0.1 * rng();
-      col[i * 3] = Math.min(1, b * 0.98 * tint); col[i * 3 + 1] = Math.min(1, b * 0.9 * tint); col[i * 3 + 2] = Math.min(1, b * 0.76 * tint);  // warm pale
+      col[i * 3] = Math.min(1, b * 0.98 * tint); col[i * 3 + 1] = Math.min(1, b * 0.88 * tint); col[i * 3 + 2] = Math.min(1, b * 0.72 * tint);  // warm pale
     }
     var g = new T.BufferGeometry();
     g.setAttribute("position", new T.BufferAttribute(pos, 3));
     g.setAttribute("color", new T.BufferAttribute(col, 3));
     // constant SCREEN-size points (sizeAttenuation off) so the band we live inside reads at every zoom, like real distant stars
-    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 1.4 : 1.9, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 1.5 : 2.0, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.92, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     var pts = new T.Points(g, m); pts.name = "MilkyWayBand"; pts.renderOrder = -3; pts.frustumCulled = false;
     belt.add(pts);
