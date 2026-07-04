@@ -477,6 +477,27 @@ body.is-flat .cosmos-ui{top:18px; right:18px; z-index:9;}
 }
 .cosmos-build{position:fixed; right:22px; bottom:44px; z-index:4; font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--muted); opacity:.55; pointer-events:none;}
 @media(max-width:700px){ .cosmos-build{right:14px; bottom:40px;} }
+/* THE COSMIC ADDRESS RAIL — a continuous scale breadcrumb on the right edge, read
+   inner→outer (Solar System at top → Observable Universe at bottom). Populated &
+   highlighted by space.js from window.CosmicLOD. Minimal: a tick + a label per tier;
+   the current tier is gold with its label always shown, others reveal on hover. */
+.cosmos-rail{position:fixed; right:20px; top:50%; transform:translateY(-50%); z-index:6;
+  display:flex; flex-direction:column; gap:1px; align-items:flex-end; pointer-events:none;
+  opacity:0; transition:opacity .7s ease;}
+.cosmos-rail.is-on{opacity:1;}
+.cosmos-rail__i{display:flex; align-items:center; gap:9px; justify-content:flex-end;
+  pointer-events:auto; cursor:pointer; padding:3.5px 0; opacity:.42; transition:opacity .3s ease;}
+.cosmos-rail__i:hover{opacity:.95;}
+.cosmos-rail__l{font-family:var(--mono); font-size:10.5px; letter-spacing:.07em; color:var(--muted);
+  white-space:nowrap; opacity:0; transform:translateX(6px); transition:color .3s ease, opacity .3s ease, transform .3s ease;}
+.cosmos-rail__t{width:15px; height:1px; background:var(--muted); flex:none; transition:width .3s ease, background .3s ease;}
+.cosmos-rail__i:hover .cosmos-rail__l{opacity:1; transform:none;}
+.cosmos-rail__i:hover .cosmos-rail__t{width:25px; background:var(--accent);}
+.cosmos-rail__i.is-cur{opacity:1;}
+.cosmos-rail__i.is-cur .cosmos-rail__l{opacity:1; transform:none; color:#e8c37a;}
+.cosmos-rail__i.is-cur .cosmos-rail__t{width:30px; background:#e8c37a;}
+body.is-flat .cosmos-rail, body.on-ground .cosmos-rail{opacity:0 !important; pointer-events:none !important;}
+@media(max-width:700px){ .cosmos-rail{right:11px;} .cosmos-rail__l{font-size:9px;} .cosmos-rail__t{width:11px;} .cosmos-rail__i:hover .cosmos-rail__t{width:18px;} }
 /* THE fix: author display:flex was defeating the hidden attribute — the "flat fallback"
    was an invisible full-viewport wall over every machine, eating all pointer input */
 .cosmos-flat[hidden]{display:none !important;}

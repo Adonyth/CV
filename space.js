@@ -500,7 +500,7 @@
       camera.lookAt(HOME);
       controls = createPremiumOrbitControls(camera, canvas, THREE);
       controls.target.copy(HOME);
-      controls.setDistanceLimits(5.0, 15000);   // 5.0 floor clears the Moon (2.99); 1600 lets you pull all the way back and comfortably frame the whole system + the expanded zodiac shell (R_STAR 410, far stars ~615) in one view
+      controls.setDistanceLimits(5.0, (window.CosmicLOD ? window.CosmicLOD.MAXCAM : 46000));   // 5.0 floor clears the Moon (2.99); ceiling widened to the cosmic-address MAXCAM (46000) so the log zoom reaches the observable-universe tier
       controls.setInteractionTuning({ rotateSpeed: 0.00050, dampingFactor: 0.042, zoomStepLn: 0.40, zoomRef: 100, zoomHi: 2.2, zoomEase: 0.18, maxEventDelta: 0.014 });
       canvas.style.opacity = "0.001";
       setTimeout(function () {   // fallback: never leave the visitor in the dark
@@ -1477,7 +1477,7 @@
       function clearSel() {
         selStar = null; if (starCta) starCta.classList.remove("is-on");
         hideDossier();
-        if (controls) controls.setDistanceLimits(5.0, 15000);   // leaving any body-focus: the earth-anchored floor returns; 1600 keeps the full-system overview reachable
+        if (controls) controls.setDistanceLimits(5.0, (window.CosmicLOD ? window.CosmicLOD.MAXCAM : 46000));   // leaving any body-focus: the earth-anchored floor returns; ceiling stays at the cosmic-address MAXCAM so you can pull back to the web/observable tiers
       }
       window.__space.clearSel = clearSel;
       function openStarDoor() {
@@ -1563,6 +1563,27 @@
       window.__space.goHome = goHome;
       if (homeBtn) homeBtn.addEventListener("click", goHome);
 
+      /* ---- THE COSMIC ADDRESS RAIL: built once from window.CosmicLOD, highlighted per-frame
+              from camLen. Clicking a tier flies the camera to that scale (its camLenPeak). ---- */
+      var LOD = window.CosmicLOD, railEl = document.getElementById("cosmos-rail"), railItems = [], _railCur = null;
+      function flyToScale(peak) {
+        userMoved = true; clearSel(); soloBody = null;
+        if (controls.isGround()) { controls.exitGroundMode(); groundHint(false); }
+        var dir = camera.position.clone(); if (dir.lengthSq() < 1e-6) dir.set(0.42, 0.26, 0.88);
+        dir.normalize();
+        var frames = Math.round(120 + Math.abs(Math.log(peak / Math.max(1, camera.position.length()))) * 90);
+        paramGlide({ camTo: dir.multiplyScalar(peak), targetTo: HOME.clone(), frames: Math.min(360, frames), ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 4, onDone: null });
+      }
+      if (railEl && LOD) {
+        LOD.LAYERS.forEach(function (ly) {
+          var it = document.createElement("div"); it.className = "cosmos-rail__i"; it.dataset.id = ly.id;
+          it.innerHTML = '<span class="cosmos-rail__l"><span class="i18n-en">' + ly.label.en + '</span><span class="i18n-zh">' + ly.label.zh + '</span></span><span class="cosmos-rail__t"></span>';
+          it.addEventListener("click", function () { flyToScale(ly.camLenPeak); });
+          railEl.appendChild(it); railItems.push(it);
+        });
+      }
+      window.__space.flyToScale = flyToScale;
+
       window.__space.uiTick = function () {
         // zoomed back out BY HAND → the chart reassembles (never mid-flight). A deep-sky wonder is
         // admired from far out (view-dist ~400), so its focus only releases when you truly pull away.
@@ -1592,6 +1613,18 @@
         }
         // the "⌂ base" affordance appears whenever you're OFF the ground (and a base exists)
         if (baseBtn) baseBtn.classList.toggle("is-on", !!baseGeo && !!nyeArmature && !controls.isGround() && !glideActive());
+        // THE COSMIC ADDRESS rail: reveal once you've left the ground; highlight the current tier
+        if (railEl && LOD) {
+          var offGround = !controls.isGround();
+          railEl.classList.toggle("is-on", offGround && !!natalSky && userMoved);
+          if (offGround) {
+            var curId = LOD.currentLayerId(camera.position.length());
+            if (curId !== _railCur) {
+              _railCur = curId;
+              for (var ri = 0; ri < railItems.length; ri++) railItems[ri].classList.toggle("is-cur", railItems[ri].dataset.id === curId);
+            }
+          }
+        }
       };
 
       addEventListener("click", function (e) {
@@ -1769,9 +1802,13 @@
         // The scene only moves under the visitor's own hand or a choreographed glide. (Ground breath kept — it's
         // a deliberate, brief ambiance while lying down, and ground mode is a held, low-cost view.)
         if (controls.isGround() && !glideActive() && nowMs - lastTouch > 2500) controls.groundDrift(0.008 * dt);
-        // once truly back in space, restore the normal near-plane (ground views need 0.008)
-        if (camera.near < 0.1 && !controls.isGround() && !glideActive() && camera.position.length() > 9) {
-          camera.near = 0.2; camera.updateProjectionMatrix();
+        // once truly back in space, restore the normal near-plane (ground views need 0.008).
+        // At cosmic distances scale the near-plane with camLen (near = max(0.2, camLen·0.0005))
+        // so depth precision stays sane out to the 46k ceiling — kills z-fighting on the web
+        // filaments without touching the ground's 0.006 near.
+        if (!controls.isGround() && !glideActive() && camera.position.length() > 9) {
+          var _wantNear = Math.max(0.2, camera.position.length() * 0.0005);
+          if (Math.abs(camera.near - _wantNear) > _wantNear * 0.15) { camera.near = _wantNear; camera.updateProjectionMatrix(); }
         }
         // the horizon glow dissolves behind you as you climb
         if (groundDome && !controls.isGround()) {

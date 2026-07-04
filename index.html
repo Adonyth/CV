@@ -148,6 +148,11 @@
         <span class="i18n-en">✦ Whole sky</span><span class="i18n-zh">✦ 星盘全景</span>
       </button>
     </div>
+    <!-- the COSMIC ADDRESS rail: a continuous scale breadcrumb Earth → Observable Universe.
+         Populated from window.CosmicLOD.LAYERS by space.js; current tier highlighted from
+         camLen; clicking a tier flies the camera to that scale. Minimal by design. -->
+    <nav id="cosmos-rail" class="cosmos-rail no-print" aria-label="Cosmic address"></nav>
+
     <!-- mobile-3D only: the way back to the simple menu -->
     <button id="exit3d" class="exit3d no-print" type="button">
       <span class="i18n-en">✕ simple view</span><span class="i18n-zh">✕ 简洁版</span>
@@ -176,7 +181,7 @@
     <aside id="focus-card" class="focus-card no-print" aria-live="polite"></aside>
 
     <!-- visible build stamp — so "which version am I seeing" is never a mystery again -->
-    <div class="cosmos-build no-print" aria-hidden="true">build 153 · 07-04</div>
+    <div class="cosmos-build no-print" aria-hidden="true">build 154 · 07-04</div>
 
     <!-- fallback when 3D is gated off (mobile / low power / reduced motion):
          a full, tappable mobile home that reaches every page -->
@@ -237,6 +242,7 @@
     <script src="home.js?v=6" defer></script>
     <script src="magnet.js?v=1" defer></script>
     <script src="craft.js?v=1" defer></script>
-    <script type="module" src="space.js?v=167"></script>
+    <script src="cosmic-layers.js?v=1"></script>
+    <script type="module" src="space.js?v=168"></script>
   </body>
 </html>
