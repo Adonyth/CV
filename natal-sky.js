@@ -1032,9 +1032,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // Built at the LANIAKEA ladder scale (sceneRadius ~9700): the Great Attractor focus sits offset from HOME so
     // WE (the origin, the camera pivot) sit off the bright focus — on the basin's slope, exactly as refs 1/3 show.
     var Fdir = new T.Vector3(0.30, 0.42, -0.72).normalize();
-    var F = Fdir.clone().multiplyScalar(3800);   // the Great Attractor — the convergence point of the whole basin
+    var F = Fdir.clone().multiplyScalar(3200);   // the Great Attractor — the convergence point of the whole basin
     var swirlAxis = new T.Vector3(0.18, 1, 0.12).normalize();
-    var RAD = 8200, NLINE = mobile ? 2200 : 4200;   // dense enough that the streamlines read as combed hair (not sparse threads) when framed from the laniakea tier's distance
+    var RAD = 6500, NLINE = mobile ? 2200 : 4200;   // a tighter, denser basin so the streamlines read as combed hair (not sparse threads) when framed from the laniakea tier's distance
     // three fixed lobe axes bend the spawn shell into the IRREGULAR Tully basin (not a round ball): bulge toward
     // Virgo + Hydra-Centaurus, pinch at the Perseus-Pisces divide where our edge lies.
     var AX_VIRGO = eclVec(raDecToEcl(12.442, 12.72), 1).normalize();
@@ -1046,16 +1046,16 @@ export function buildNatalSky(THREE, scene, data, opts) {
     for (var s = 0; s < NLINE; s++) {
       var d0 = new T.Vector3(2 * wr() - 1, 2 * wr() - 1, 2 * wr() - 1); if (d0.lengthSq() < 1e-4) d0.set(1, 0, 0); d0.normalize();
       var pos = F.clone().addScaledVector(d0, RAD * (0.30 + 0.70 * Math.pow(wr(), 0.5)) * basinLobe(d0));
-      var steps = 58 + (wr() * 54 | 0), handed = d0.dot(swirlAxis) > 0 ? 1 : -1;   // coherent comb per hemisphere (refs 1/3), not per-line swirl; long lines so the hair reads continuous
+      var steps = 46 + (wr() * 40 | 0), handed = d0.dot(swirlAxis) > 0 ? 1 : -1;   // coherent comb per hemisphere (refs 1/3), not per-line swirl
       for (var t = 0; t < steps; t++) {
         var toF = new T.Vector3().subVectors(F, pos), dF = toF.length();
-        if (dF < 80) break;
+        if (dF < 200) break;   // stop short of the focus (the GA node fills the core) so points don't pile into one blob
         toF.multiplyScalar(1 / dF);
         var tang = new T.Vector3().crossVectors(toF, swirlAxis); if (tang.lengthSq() < 1e-4) tang.set(1, 0, 0); tang.normalize();
-        var frac = dF / RAD, stepLen = 48 + 188 * frac;
+        var frac = dF / RAD, stepLen = 82 + 42 * frac;   // near-UNIFORM spacing → points spread evenly along the whole line = continuous hair, not a pile-up at the focus
         pos.addScaledVector(toF, stepLen).addScaledVector(tang, handed * stepLen * (0.30 + 0.5 * frac));
-        pos.x += wG() * 13; pos.y += wG() * 13; pos.z += wG() * 13;
-        var prox = 1 - Math.min(1, frac), br = 0.50 + 0.80 * prox * prox, wf = Math.max(0, prox - 0.5) / 0.5;   // gold → white as it nears the attractor; rim stays bright (combed hair spans the whole basin, refs 1/3)
+        pos.x += wG() * 16; pos.y += wG() * 16; pos.z += wG() * 16;
+        var prox = 1 - Math.min(1, frac), br = 0.82 + 0.55 * prox * prox, wf = Math.max(0, prox - 0.5) / 0.5;   // bright gold everywhere → white near the attractor (refs 1/3 are bright combed hair, not dim threads)
         pushFlow(pos.x, pos.y, pos.z, br, wf);
       }
     }
@@ -1081,7 +1081,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var g = new T.BufferGeometry();
     g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
     g.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
-    var mat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 78 : 104, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: false });   // sized for the laniakea tier's framing (camLen ~13100); density carries the read, not raw size
+    var mat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 70 : 92, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: false });   // sized so evenly-spaced streamline points just touch into continuous hair at the laniakea tier's framing (camLen ~13100)
     if ("toneMapped" in mat) mat.toneMapped = false;
     _laniakeaFlow = new T.Points(g, mat); _laniakeaFlow.name = "LaniakeaFlow"; _laniakeaFlow.renderOrder = -5; _laniakeaFlow.frustumCulled = false; _laniakeaFlow.visible = false;
     belt.add(_laniakeaFlow);
