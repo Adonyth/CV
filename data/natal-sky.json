@@ -1,1637 +1,1659 @@
 {
- "meta": {
-  "birth": "2002-01-02T15:45:00+08:00",
-  "place": "Huozhou, Shanxi (36.57N, 111.72E)",
-  "frame": "tropical-belt",
-  "obliquityDeg": 23.4393,
-  "honestyNote": {
-   "en": "Planets are placed by their true ecliptic longitude; the constellation figures are re-seated into their tropical sign-cells so the sky reads as a chart. Signs and the real precessed stars differ by roughly a sign-width after two millennia.",
-   "zh": "行星按其真实黄经放置；星座图形被重置于回归制宫位之内，使天空可读作一张命盘。宫位与真实的岁差恒星，历两千年已相差约一个宫宽。"
-  }
- },
- "planets": [
-  {
-   "id": "sun",
-   "name": {
-    "en": "Sun",
-    "zh": "太阳"
-   },
-   "sign": "capricorn",
-   "eclLonDeg": 281.7,
-   "eclLatDeg": 0,
-   "dir": [
-    0.203,
-    -0.979,
-    0
-   ],
-   "polarity": "outer",
-   "role": {
-    "en": "Capricorn stellium — the outward public edifice",
-    "zh": "摩羯星群·主外"
-   }
-  },
-  {
-   "id": "moon",
-   "name": {
-    "en": "Moon",
-    "zh": "月亮"
-   },
-   "sign": "leo",
-   "eclLonDeg": 140.4,
-   "eclLatDeg": 4.2,
-   "dir": [
-    -0.768,
-    0.636,
-    0.074
-   ],
-   "polarity": "inner",
-   "role": {
-    "en": "the private driving fire",
-    "zh": "主内之火"
-   }
-  },
-  {
-   "id": "mercury",
-   "name": {
-    "en": "Mercury",
-    "zh": "水星"
-   },
-   "sign": "capricorn",
-   "eclLonDeg": 297.6,
-   "body": {
-    "kind": "mercury",
-    "radius": 0.38,
-    "dist": 22
-   }
-  },
-  {
-   "id": "venus",
-   "name": {
-    "en": "Venus",
-    "zh": "金星"
-   },
-   "sign": "capricorn",
-   "eclLonDeg": 278.8,
-   "body": {
-    "kind": "venus",
-    "radius": 0.9,
-    "dist": 40
-   }
-  },
-  {
-   "id": "mars",
-   "name": {
-    "en": "Mars",
-    "zh": "火星"
-   },
-   "sign": "pisces",
-   "eclLonDeg": 347.8,
-   "body": {
-    "kind": "mars",
-    "radius": 0.5,
-    "dist": 82
-   }
-  },
-  {
-   "id": "jupiter",
-   "name": {
-    "en": "Jupiter",
-    "zh": "木星"
-   },
-   "sign": "cancer",
-   "eclLonDeg": 100.48,
-   "eclLatDeg": 0.0,
-   "role": {
-    "en": "the publisher's star, at opposition that night",
-    "zh": "出版之星·出生当夜正值冲日"
-   },
-   "body": {
-    "kind": "jupiter",
-    "radius": 3.3,
-    "dist": 175
-   }
-  },
-  {
-   "id": "saturn",
-   "name": {
-    "en": "Saturn",
-    "zh": "土星"
-   },
-   "sign": "gemini",
-   "eclLonDeg": 69.24,
-   "eclLatDeg": -1.8,
-   "role": {
-    "en": "structure and discipline, in the sign of words",
-    "zh": "结构与纪律·居文字之座"
-   },
-   "body": {
-    "kind": "saturn",
-    "radius": 2.75,
-    "dist": 230,
-    "ringInner": 1.4,
-    "ringOuter": 2.28,
-    "ringTiltDeg": 26.7
-   }
-  },
-  {
-   "id": "uranus",
-   "name": {
-    "en": "Uranus",
-    "zh": "天王星"
-   },
-   "sign": "aquarius",
-   "eclLonDeg": 322.5,
-   "eclLatDeg": -0.5,
-   "role": {
-    "en": "the ice giant that rolls on its side",
-    "zh": "侧躺自转的冰巨星"
-   },
-   "body": {
-    "kind": "uranus",
-    "radius": 1.2,
-    "dist": 268,
-    "procOnly": true
-   }
-  },
-  {
-   "id": "neptune",
-   "name": {
-    "en": "Neptune",
-    "zh": "海王星"
-   },
-   "sign": "aquarius",
-   "eclLonDeg": 307.5,
-   "eclLatDeg": 0.4,
-   "role": {
-    "en": "the deep-blue outermost giant",
-    "zh": "最外的深蓝巨行星"
-   },
-   "body": {
-    "kind": "neptune",
-    "radius": 1.15,
-    "dist": 300,
-    "procOnly": true
-   }
-  },
-  {
-   "id": "pluto",
-   "name": {
-    "en": "Pluto",
-    "zh": "冥王星"
-   },
-   "sign": "sagittarius",
-   "eclLonDeg": 256.1,
-   "eclLatDeg": 10.5,
-   "role": {
-    "en": "the dwarf world, ~10° above the ecliptic, bound to its moon Charon",
-    "zh": "矮行星·高出黄道约10°·与卡戎结为双星"
-   },
-   "body": {
-    "kind": "pluto",
-    "radius": 0.16,
-    "dist": 326,
-    "procOnly": true,
-    "moon": {
-     "kind": "charon",
-     "radius": 0.08,
-     "dist": 2.8
+  "meta": {
+    "birth": "2002-01-02T15:45:00+08:00",
+    "place": "Huozhou, Shanxi (36.57N, 111.72E)",
+    "frame": "tropical-belt",
+    "obliquityDeg": 23.4393,
+    "honestyNote": {
+      "en": "Planets are placed by their true ecliptic longitude; the constellation figures are re-seated into their tropical sign-cells so the sky reads as a chart. Signs and the real precessed stars differ by roughly a sign-width after two millennia.",
+      "zh": "行星按其真实黄经放置；星座图形被重置于回归制宫位之内，使天空可读作一张命盘。宫位与真实的岁差恒星，历两千年已相差约一个宫宽。"
     }
-   }
-  }
- ],
- "constellations": [
-  {
-   "id": "capricorn",
-   "signIndex": 9,
-   "figureName": {
-    "en": "Capricornus",
-    "zh": "摩羯座"
-   },
-   "loadBearing": true,
-   "polarity": "outer",
-   "stars": [
+  },
+  "planets": [
     {
-     "i": 0,
-     "bayer": "alpha2 Cap",
-     "raH": 20.301,
-     "decDeg": -12.545,
-     "mag": 3.57,
-     "role": "head"
+      "id": "sun",
+      "name": {
+        "en": "Sun",
+        "zh": "太阳"
+      },
+      "sign": "capricorn",
+      "eclLonDeg": 281.7,
+      "eclLatDeg": 0,
+      "dir": [
+        0.203,
+        -0.979,
+        0
+      ],
+      "polarity": "outer",
+      "role": {
+        "en": "Capricorn stellium — the outward public edifice",
+        "zh": "摩羯星群·主外"
+      }
     },
     {
-     "i": 1,
-     "bayer": "beta Cap",
-     "raH": 20.35,
-     "decDeg": -14.781,
-     "mag": 3.05,
-     "role": "head"
+      "id": "moon",
+      "name": {
+        "en": "Moon",
+        "zh": "月亮"
+      },
+      "sign": "leo",
+      "eclLonDeg": 140.4,
+      "eclLatDeg": 4.2,
+      "dir": [
+        -0.768,
+        0.636,
+        0.074
+      ],
+      "polarity": "inner",
+      "role": {
+        "en": "the private driving fire",
+        "zh": "主内之火"
+      }
     },
     {
-     "i": 2,
-     "bayer": "psi Cap",
-     "raH": 20.768,
-     "decDeg": -25.271,
-     "mag": 4.13
+      "id": "mercury",
+      "name": {
+        "en": "Mercury",
+        "zh": "水星"
+      },
+      "sign": "capricorn",
+      "eclLonDeg": 297.6,
+      "body": {
+        "kind": "mercury",
+        "radius": 0.38,
+        "dist": 22
+      }
     },
     {
-     "i": 3,
-     "bayer": "omega Cap",
-     "raH": 20.863,
-     "decDeg": -26.919,
-     "mag": 4.11
+      "id": "venus",
+      "name": {
+        "en": "Venus",
+        "zh": "金星"
+      },
+      "sign": "capricorn",
+      "eclLonDeg": 278.8,
+      "body": {
+        "kind": "venus",
+        "radius": 0.9,
+        "dist": 40
+      }
     },
     {
-     "i": 4,
-     "bayer": "zeta Cap",
-     "raH": 21.444,
-     "decDeg": -22.411,
-     "mag": 3.74
+      "id": "mars",
+      "name": {
+        "en": "Mars",
+        "zh": "火星"
+      },
+      "sign": "pisces",
+      "eclLonDeg": 347.8,
+      "body": {
+        "kind": "mars",
+        "radius": 0.5,
+        "dist": 82
+      }
     },
     {
-     "i": 5,
-     "bayer": "gamma Cap",
-     "raH": 21.668,
-     "decDeg": -16.662,
-     "mag": 3.68
+      "id": "jupiter",
+      "name": {
+        "en": "Jupiter",
+        "zh": "木星"
+      },
+      "sign": "cancer",
+      "eclLonDeg": 100.48,
+      "eclLatDeg": 0.0,
+      "role": {
+        "en": "the publisher's star, at opposition that night",
+        "zh": "出版之星·出生当夜正值冲日"
+      },
+      "body": {
+        "kind": "jupiter",
+        "radius": 3.3,
+        "dist": 175
+      }
     },
     {
-     "i": 6,
-     "bayer": "delta Cap",
-     "raH": 21.784,
-     "decDeg": -16.127,
-     "mag": 2.85,
-     "role": "brightest"
+      "id": "saturn",
+      "name": {
+        "en": "Saturn",
+        "zh": "土星"
+      },
+      "sign": "gemini",
+      "eclLonDeg": 69.24,
+      "eclLatDeg": -1.8,
+      "role": {
+        "en": "structure and discipline, in the sign of words",
+        "zh": "结构与纪律·居文字之座"
+      },
+      "body": {
+        "kind": "saturn",
+        "radius": 2.75,
+        "dist": 230,
+        "ringInner": 1.4,
+        "ringOuter": 2.28,
+        "ringTiltDeg": 26.7
+      }
     },
     {
-     "i": 7,
-     "bayer": "theta Cap",
-     "raH": 21.099,
-     "decDeg": -17.233,
-     "mag": 4.07
+      "id": "uranus",
+      "name": {
+        "en": "Uranus",
+        "zh": "天王星"
+      },
+      "sign": "aquarius",
+      "eclLonDeg": 322.5,
+      "eclLatDeg": -0.5,
+      "role": {
+        "en": "the ice giant that rolls on its side",
+        "zh": "侧躺自转的冰巨星"
+      },
+      "body": {
+        "kind": "uranus",
+        "radius": 1.2,
+        "dist": 268,
+        "procOnly": true
+      }
     },
     {
-     "i": 8,
-     "bayer": "iota Cap",
-     "raH": 21.371,
-     "decDeg": -16.834,
-     "mag": 4.27
+      "id": "neptune",
+      "name": {
+        "en": "Neptune",
+        "zh": "海王星"
+      },
+      "sign": "aquarius",
+      "eclLonDeg": 307.5,
+      "eclLatDeg": 0.4,
+      "role": {
+        "en": "the deep-blue outermost giant",
+        "zh": "最外的深蓝巨行星"
+      },
+      "body": {
+        "kind": "neptune",
+        "radius": 1.15,
+        "dist": 300,
+        "procOnly": true
+      }
     },
     {
-     "i": 9,
-     "bayer": "epsilon Cap",
-     "raH": 21.618,
-     "decDeg": -19.466,
-     "mag": 4.68
-    },
-    {
-     "i": 10,
-     "bayer": "eta Cap",
-     "raH": 21.074,
-     "decDeg": -19.855,
-     "mag": 4.84
-    },
-    {
-     "i": 11,
-     "bayer": "kappa Cap",
-     "raH": 21.712,
-     "decDeg": -18.866,
-     "mag": 4.73
-    },
-    {
-     "i": 12,
-     "bayer": "lambda Cap",
-     "raH": 21.764,
-     "decDeg": -11.366,
-     "mag": 4.95
-    },
-    {
-     "i": 13,
-     "bayer": "mu Cap",
-     "raH": 21.884,
-     "decDeg": -13.552,
-     "mag": 4.98
-    },
-    {
-     "i": 14,
-     "bayer": "nu Cap",
-     "raH": 20.336,
-     "decDeg": -12.759,
-     "mag": 4.76
-    },
-    {
-     "i": 15,
-     "bayer": "rho Cap",
-     "raH": 20.481,
-     "decDeg": -17.814,
-     "mag": 4.78
-    },
-    {
-     "i": 16,
-     "bayer": "pi Cap",
-     "raH": 20.46,
-     "decDeg": -18.213,
-     "mag": 5.08
-    },
-    {
-     "i": 17,
-     "bayer": "omicron Cap",
-     "raH": 20.498,
-     "decDeg": -18.583,
-     "mag": 5.15
+      "id": "pluto",
+      "name": {
+        "en": "Pluto",
+        "zh": "冥王星"
+      },
+      "sign": "sagittarius",
+      "eclLonDeg": 256.1,
+      "eclLatDeg": 10.5,
+      "role": {
+        "en": "the dwarf world, ~10° above the ecliptic, bound to its moon Charon",
+        "zh": "矮行星·高出黄道约10°·与卡戎结为双星"
+      },
+      "body": {
+        "kind": "pluto",
+        "radius": 0.16,
+        "dist": 326,
+        "procOnly": true,
+        "moon": {
+          "kind": "charon",
+          "radius": 0.08,
+          "dist": 2.8
+        }
+      }
     }
-   ],
-   "figureLines": [
-    [
-     0,
-     1
-    ],
-    [
-     1,
-     2
-    ],
-    [
-     2,
-     3
-    ],
-    [
-     3,
-     4
-    ],
-    [
-     4,
-     5
-    ],
-    [
-     5,
-     6
-    ],
-    [
-     6,
-     8
-    ],
-    [
-     8,
-     7
-    ],
-    [
-     7,
-     0
-    ]
-   ],
-   "dataNodes": [
+  ],
+  "constellations": [
     {
-     "id": "worldmodel",
-     "starIndex": 6,
-     "title": {
-      "en": "A Density-Matrix Belief-State World Model",
-      "zh": "密度矩阵信念态世界模型"
-     },
-     "role": "research program · active",
-     "importance": 1.0,
-     "href": "research/worldmodel.html"
+      "id": "capricorn",
+      "signIndex": 9,
+      "figureName": {
+        "en": "Capricornus",
+        "zh": "摩羯座"
+      },
+      "loadBearing": true,
+      "polarity": "outer",
+      "stars": [
+        {
+          "i": 0,
+          "bayer": "alpha2 Cap",
+          "raH": 20.301,
+          "decDeg": -12.545,
+          "mag": 3.57,
+          "role": "head"
+        },
+        {
+          "i": 1,
+          "bayer": "beta Cap",
+          "raH": 20.35,
+          "decDeg": -14.781,
+          "mag": 3.05,
+          "role": "head"
+        },
+        {
+          "i": 2,
+          "bayer": "psi Cap",
+          "raH": 20.768,
+          "decDeg": -25.271,
+          "mag": 4.13
+        },
+        {
+          "i": 3,
+          "bayer": "omega Cap",
+          "raH": 20.863,
+          "decDeg": -26.919,
+          "mag": 4.11
+        },
+        {
+          "i": 4,
+          "bayer": "zeta Cap",
+          "raH": 21.444,
+          "decDeg": -22.411,
+          "mag": 3.74
+        },
+        {
+          "i": 5,
+          "bayer": "gamma Cap",
+          "raH": 21.668,
+          "decDeg": -16.662,
+          "mag": 3.68
+        },
+        {
+          "i": 6,
+          "bayer": "delta Cap",
+          "raH": 21.784,
+          "decDeg": -16.127,
+          "mag": 2.85,
+          "role": "brightest"
+        },
+        {
+          "i": 7,
+          "bayer": "theta Cap",
+          "raH": 21.099,
+          "decDeg": -17.233,
+          "mag": 4.07
+        },
+        {
+          "i": 8,
+          "bayer": "iota Cap",
+          "raH": 21.371,
+          "decDeg": -16.834,
+          "mag": 4.27
+        },
+        {
+          "i": 9,
+          "bayer": "epsilon Cap",
+          "raH": 21.618,
+          "decDeg": -19.466,
+          "mag": 4.68
+        },
+        {
+          "i": 10,
+          "bayer": "eta Cap",
+          "raH": 21.074,
+          "decDeg": -19.855,
+          "mag": 4.84
+        },
+        {
+          "i": 11,
+          "bayer": "kappa Cap",
+          "raH": 21.712,
+          "decDeg": -18.866,
+          "mag": 4.73
+        },
+        {
+          "i": 12,
+          "bayer": "lambda Cap",
+          "raH": 21.764,
+          "decDeg": -11.366,
+          "mag": 4.95
+        },
+        {
+          "i": 13,
+          "bayer": "mu Cap",
+          "raH": 21.884,
+          "decDeg": -13.552,
+          "mag": 4.98
+        },
+        {
+          "i": 14,
+          "bayer": "nu Cap",
+          "raH": 20.336,
+          "decDeg": -12.759,
+          "mag": 4.76
+        },
+        {
+          "i": 15,
+          "bayer": "rho Cap",
+          "raH": 20.481,
+          "decDeg": -17.814,
+          "mag": 4.78
+        },
+        {
+          "i": 16,
+          "bayer": "pi Cap",
+          "raH": 20.46,
+          "decDeg": -18.213,
+          "mag": 5.08
+        },
+        {
+          "i": 17,
+          "bayer": "omicron Cap",
+          "raH": 20.498,
+          "decDeg": -18.583,
+          "mag": 5.15
+        }
+      ],
+      "figureLines": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          5,
+          6
+        ],
+        [
+          6,
+          8
+        ],
+        [
+          8,
+          7
+        ],
+        [
+          7,
+          0
+        ]
+      ],
+      "dataNodes": [
+        {
+          "id": "worldmodel",
+          "starIndex": 6,
+          "title": {
+            "en": "A Density-Matrix Belief-State World Model",
+            "zh": "密度矩阵信念态世界模型"
+          },
+          "role": "research program · active",
+          "importance": 1.0,
+          "href": "research/worldmodel.html"
+        },
+        {
+          "id": "ringdown",
+          "starIndex": 0,
+          "title": {
+            "en": "Covariance Dependence of Ringdown Overtone Significance",
+            "zh": "铃宕泛音显著性的协方差依赖"
+          },
+          "role": "GW methods · RASTI-ready",
+          "importance": 1.0,
+          "href": "research/ringdown.html"
+        },
+        {
+          "id": "bornNaturalness",
+          "starIndex": 1,
+          "title": {
+            "en": "Born Rule & Naturalness",
+            "zh": "玻恩规则与自然性"
+          },
+          "role": "capstone track · active",
+          "importance": 1.0,
+          "href": "research/bornNaturalness.html"
+        },
+        {
+          "id": "paperB",
+          "starIndex": 5,
+          "title": {
+            "en": "The Universal Prior Does Not Select a Factorization",
+            "zh": "通用先验不选出分解"
+          },
+          "role": "foundations · in review cycle",
+          "importance": 0.9,
+          "href": "research/paperB.html"
+        },
+        {
+          "id": "paperD",
+          "starIndex": 4,
+          "title": {
+            "en": "Half-Line Free Fermions: Local CAR & Modular Scaling",
+            "zh": "半直线自由费米子:局域 CAR 与模流标度"
+          },
+          "role": "math-phys · AHP-ready",
+          "importance": 0.9,
+          "href": "research/paperD.html"
+        },
+        {
+          "id": "tachyon",
+          "starIndex": 2,
+          "title": {
+            "en": "Tachyonic Phase-Boundary Classification",
+            "zh": "快子相边界分类"
+          },
+          "role": "theory line · active",
+          "importance": 0.85,
+          "href": "research/tachyon.html"
+        },
+        {
+          "id": "paperB2",
+          "starIndex": 8,
+          "title": {
+            "en": "The Same Cross-Context Gap in Born-Rule Derivations",
+            "zh": "跨语境缺口在玻恩规则推导中的复现"
+          },
+          "role": "foundations · SciPost-ready",
+          "importance": 0.85,
+          "href": "research/paperB2.html"
+        },
+        {
+          "id": "paperA",
+          "starIndex": 7,
+          "title": {
+            "en": "Algorithmic-Idealism Modular Identification: a Delimitation",
+            "zh": "算法理想主义模块化识别之界定"
+          },
+          "role": "foundations · in prep",
+          "importance": 0.8,
+          "href": "research/paperA.html"
+        },
+        {
+          "id": "gwPopulation",
+          "starIndex": 3,
+          "title": {
+            "en": "Feature-Local Certificates for GW Populations (GWTC-4)",
+            "zh": "引力波族群特征证书(GWTC-4)"
+          },
+          "role": "GW methods · in prep",
+          "importance": 0.8,
+          "href": "research/gwPopulation.html"
+        },
+        {
+          "id": "paperC1",
+          "starIndex": 9,
+          "title": {
+            "en": "Boltzmann Brains under an Observer-State Ontology",
+            "zh": "观察者态本体论下的玻尔兹曼大脑"
+          },
+          "role": "phil-phys · in prep",
+          "importance": 0.75,
+          "href": "research/paperC1.html"
+        },
+        {
+          "id": "paperC2",
+          "starIndex": 10,
+          "title": {
+            "en": "Other Minds under an Observer-State Ontology",
+            "zh": "观察者态本体论下的他心问题"
+          },
+          "role": "phil-phys · in prep",
+          "importance": 0.75,
+          "href": "research/paperC2.html"
+        },
+        {
+          "id": "cmsJets",
+          "starIndex": 11,
+          "title": {
+            "en": "CMS Jet Physics",
+            "zh": "CMS 喷流物理"
+          },
+          "role": "Brown · 2024–26",
+          "importance": 0.7,
+          "href": "research/cmsJets.html"
+        },
+        {
+          "id": "cnt3omega",
+          "starIndex": 12,
+          "title": {
+            "en": "Unified 3ω Thermal Characterization Theory",
+            "zh": "3ω 热学表征统一理论"
+          },
+          "role": "Brown · co-authored",
+          "importance": 0.7,
+          "href": "research/cnt3omega.html"
+        },
+        {
+          "id": "blazar",
+          "starIndex": 13,
+          "title": {
+            "en": "Formation Mechanism of Blazar Jets",
+            "zh": "耀变体喷流的形成机制"
+          },
+          "role": "CONF-CIAP 2023 · accepted",
+          "importance": 0.7,
+          "href": "research/blazar.html"
+        },
+        {
+          "id": "gammaSpec",
+          "starIndex": 14,
+          "title": {
+            "en": "In-Beam γ-ray Spectroscopy",
+            "zh": "在束 γ 射线能谱学"
+          },
+          "role": "SDU · 2022",
+          "importance": 0.65,
+          "href": "research/gammaSpec.html"
+        },
+        {
+          "id": "alpDM",
+          "starIndex": 15,
+          "title": {
+            "en": "Axion-Like Dark Matter",
+            "zh": "类轴子暗物质"
+          },
+          "role": "BNU · 2022",
+          "importance": 0.65,
+          "href": "research/alpDM.html"
+        },
+        {
+          "id": "maxi",
+          "starIndex": 16,
+          "title": {
+            "en": "MAXI J1348-630 Black-Hole X-ray Binary",
+            "zh": "MAXI J1348-630 黑洞 X 射线双星"
+          },
+          "role": "SDU thesis · 2023–24",
+          "importance": 0.65,
+          "href": "research/maxi.html"
+        },
+        {
+          "id": "toiFlares",
+          "starIndex": 17,
+          "title": {
+            "en": "TOI Stellar-Flare Spectroscopy",
+            "zh": "TOI 恒星耀发光谱"
+          },
+          "role": "SDU · 2022–23",
+          "importance": 0.65,
+          "href": "research/toiFlares.html"
+        }
+      ]
     },
     {
-     "id": "ringdown",
-     "starIndex": 0,
-     "title": {
-      "en": "Covariance Dependence of Ringdown Overtone Significance",
-      "zh": "铃宕泛音显著性的协方差依赖"
-     },
-     "role": "GW methods · RASTI-ready",
-     "importance": 1.0,
-     "href": "research/ringdown.html"
-    },
-    {
-     "id": "bornNaturalness",
-     "starIndex": 1,
-     "title": {
-      "en": "Born Rule & Naturalness",
-      "zh": "玻恩规则与自然性"
-     },
-     "role": "capstone track · active",
-     "importance": 1.0,
-     "href": "research/bornNaturalness.html"
-    },
-    {
-     "id": "paperB",
-     "starIndex": 5,
-     "title": {
-      "en": "The Universal Prior Does Not Select a Factorization",
-      "zh": "通用先验不选出分解"
-     },
-     "role": "foundations · in review cycle",
-     "importance": 0.9,
-     "href": "research/paperB.html"
-    },
-    {
-     "id": "paperD",
-     "starIndex": 4,
-     "title": {
-      "en": "Half-Line Free Fermions: Local CAR & Modular Scaling",
-      "zh": "半直线自由费米子:局域 CAR 与模流标度"
-     },
-     "role": "math-phys · AHP-ready",
-     "importance": 0.9,
-     "href": "research/paperD.html"
-    },
-    {
-     "id": "tachyon",
-     "starIndex": 2,
-     "title": {
-      "en": "Tachyonic Phase-Boundary Classification",
-      "zh": "快子相边界分类"
-     },
-     "role": "theory line · active",
-     "importance": 0.85,
-     "href": "research/tachyon.html"
-    },
-    {
-     "id": "paperB2",
-     "starIndex": 8,
-     "title": {
-      "en": "The Same Cross-Context Gap in Born-Rule Derivations",
-      "zh": "跨语境缺口在玻恩规则推导中的复现"
-     },
-     "role": "foundations · SciPost-ready",
-     "importance": 0.85,
-     "href": "research/paperB2.html"
-    },
-    {
-     "id": "paperA",
-     "starIndex": 7,
-     "title": {
-      "en": "Algorithmic-Idealism Modular Identification: a Delimitation",
-      "zh": "算法理想主义模块化识别之界定"
-     },
-     "role": "foundations · in prep",
-     "importance": 0.8,
-     "href": "research/paperA.html"
-    },
-    {
-     "id": "gwPopulation",
-     "starIndex": 3,
-     "title": {
-      "en": "Feature-Local Certificates for GW Populations (GWTC-4)",
-      "zh": "引力波族群特征证书(GWTC-4)"
-     },
-     "role": "GW methods · in prep",
-     "importance": 0.8,
-     "href": "research/gwPopulation.html"
-    },
-    {
-     "id": "paperC1",
-     "starIndex": 9,
-     "title": {
-      "en": "Boltzmann Brains under an Observer-State Ontology",
-      "zh": "观察者态本体论下的玻尔兹曼大脑"
-     },
-     "role": "phil-phys · in prep",
-     "importance": 0.75,
-     "href": "research/paperC1.html"
-    },
-    {
-     "id": "paperC2",
-     "starIndex": 10,
-     "title": {
-      "en": "Other Minds under an Observer-State Ontology",
-      "zh": "观察者态本体论下的他心问题"
-     },
-     "role": "phil-phys · in prep",
-     "importance": 0.75,
-     "href": "research/paperC2.html"
-    },
-    {
-     "id": "cmsJets",
-     "starIndex": 11,
-     "title": {
-      "en": "CMS Jet Physics",
-      "zh": "CMS 喷流物理"
-     },
-     "role": "Brown · 2024–26",
-     "importance": 0.7,
-     "href": "research/cmsJets.html"
-    },
-    {
-     "id": "cnt3omega",
-     "starIndex": 12,
-     "title": {
-      "en": "Unified 3ω Thermal Characterization Theory",
-      "zh": "3ω 热学表征统一理论"
-     },
-     "role": "Brown · co-authored",
-     "importance": 0.7,
-     "href": "research/cnt3omega.html"
-    },
-    {
-     "id": "blazar",
-     "starIndex": 13,
-     "title": {
-      "en": "Formation Mechanism of Blazar Jets",
-      "zh": "耀变体喷流的形成机制"
-     },
-     "role": "CONF-CIAP 2023 · accepted",
-     "importance": 0.7,
-     "href": "research/blazar.html"
-    },
-    {
-     "id": "gammaSpec",
-     "starIndex": 14,
-     "title": {
-      "en": "In-Beam γ-ray Spectroscopy",
-      "zh": "在束 γ 射线能谱学"
-     },
-     "role": "SDU · 2022",
-     "importance": 0.65,
-     "href": "research/gammaSpec.html"
-    },
-    {
-     "id": "alpDM",
-     "starIndex": 15,
-     "title": {
-      "en": "Axion-Like Dark Matter",
-      "zh": "类轴子暗物质"
-     },
-     "role": "BNU · 2022",
-     "importance": 0.65,
-     "href": "research/alpDM.html"
-    },
-    {
-     "id": "maxi",
-     "starIndex": 16,
-     "title": {
-      "en": "MAXI J1348-630 Black-Hole X-ray Binary",
-      "zh": "MAXI J1348-630 黑洞 X 射线双星"
-     },
-     "role": "SDU thesis · 2023–24",
-     "importance": 0.65,
-     "href": "research/maxi.html"
-    },
-    {
-     "id": "toiFlares",
-     "starIndex": 17,
-     "title": {
-      "en": "TOI Stellar-Flare Spectroscopy",
-      "zh": "TOI 恒星耀发光谱"
-     },
-     "role": "SDU · 2022–23",
-     "importance": 0.65,
-     "href": "research/toiFlares.html"
+      "id": "leo",
+      "signIndex": 4,
+      "figureName": {
+        "en": "Leo",
+        "zh": "狮子座"
+      },
+      "loadBearing": true,
+      "polarity": "inner",
+      "stars": [
+        {
+          "i": 0,
+          "bayer": "Regulus",
+          "raH": 10.139,
+          "decDeg": 11.967,
+          "mag": 1.35,
+          "role": "heart"
+        },
+        {
+          "i": 1,
+          "bayer": "eta Leo",
+          "raH": 10.123,
+          "decDeg": 16.763,
+          "mag": 3.48
+        },
+        {
+          "i": 2,
+          "bayer": "Algieba",
+          "raH": 10.333,
+          "decDeg": 19.842,
+          "mag": 2.01
+        },
+        {
+          "i": 3,
+          "bayer": "Adhafera",
+          "raH": 10.278,
+          "decDeg": 23.417,
+          "mag": 3.44
+        },
+        {
+          "i": 4,
+          "bayer": "Rasalas",
+          "raH": 9.88,
+          "decDeg": 26.007,
+          "mag": 3.88
+        },
+        {
+          "i": 5,
+          "bayer": "Algenubi",
+          "raH": 9.764,
+          "decDeg": 23.774,
+          "mag": 2.98
+        },
+        {
+          "i": 6,
+          "bayer": "Zosma",
+          "raH": 11.235,
+          "decDeg": 20.524,
+          "mag": 2.56
+        },
+        {
+          "i": 7,
+          "bayer": "Chertan",
+          "raH": 11.237,
+          "decDeg": 15.43,
+          "mag": 3.32
+        },
+        {
+          "i": 8,
+          "bayer": "Denebola",
+          "raH": 11.818,
+          "decDeg": 14.572,
+          "mag": 2.14,
+          "role": "tail"
+        }
+      ],
+      "figureLines": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          0,
+          7
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          6,
+          2
+        ],
+        [
+          6,
+          8
+        ],
+        [
+          8,
+          7
+        ]
+      ],
+      "dataNodes": []
     }
-   ]
-  },
-  {
-   "id": "leo",
-   "signIndex": 4,
-   "figureName": {
-    "en": "Leo",
-    "zh": "狮子座"
-   },
-   "loadBearing": true,
-   "polarity": "inner",
-   "stars": [
+  ],
+  "briefConstellations": [
     {
-     "i": 0,
-     "bayer": "Regulus",
-     "raH": 10.139,
-     "decDeg": 11.967,
-     "mag": 1.35,
-     "role": "heart"
+      "id": "pisces",
+      "signIndex": 11,
+      "figureName": {
+        "en": "Pisces",
+        "zh": "双鱼座"
+      },
+      "polarity": "outer",
+      "stars": [
+        [
+          "Alrescha",
+          2.034,
+          2.76,
+          3.8
+        ],
+        [
+          "eta Psc",
+          1.525,
+          15.35,
+          3.6
+        ],
+        [
+          "gamma Psc",
+          23.286,
+          3.28,
+          3.7
+        ],
+        [
+          "omega Psc",
+          23.993,
+          6.86,
+          4.0
+        ],
+        [
+          "iota Psc",
+          23.666,
+          5.63,
+          4.1
+        ],
+        [
+          "beta Psc",
+          23.064,
+          3.82,
+          4.5
+        ]
+      ],
+      "figureLines": [
+        [
+          0,
+          4
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          3,
+          2
+        ],
+        [
+          2,
+          5
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "dataNodes": []
     },
     {
-     "i": 1,
-     "bayer": "eta Leo",
-     "raH": 10.123,
-     "decDeg": 16.763,
-     "mag": 3.48
+      "id": "cancer",
+      "signIndex": 3,
+      "figureName": {
+        "en": "Cancer",
+        "zh": "巨蟹座"
+      },
+      "polarity": "outer",
+      "stars": [
+        [
+          "Altarf",
+          8.275,
+          9.19,
+          3.5
+        ],
+        [
+          "Asellus Aus.",
+          8.745,
+          18.15,
+          3.9
+        ],
+        [
+          "Asellus Bor.",
+          8.722,
+          21.47,
+          4.7
+        ],
+        [
+          "iota Cnc",
+          8.778,
+          28.76,
+          4.0
+        ],
+        [
+          "Acubens",
+          8.975,
+          11.86,
+          4.25
+        ]
+      ],
+      "figureLines": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          1,
+          4
+        ]
+      ],
+      "dataNodes": []
     },
     {
-     "i": 2,
-     "bayer": "Algieba",
-     "raH": 10.333,
-     "decDeg": 19.842,
-     "mag": 2.01
+      "id": "gemini",
+      "signIndex": 2,
+      "figureName": {
+        "en": "Gemini",
+        "zh": "双子座"
+      },
+      "polarity": "outer",
+      "stars": [
+        [
+          "Pollux",
+          7.755,
+          28.03,
+          1.15
+        ],
+        [
+          "Castor",
+          7.577,
+          31.89,
+          1.6
+        ],
+        [
+          "Alhena",
+          6.629,
+          16.4,
+          1.9
+        ],
+        [
+          "mu Gem",
+          6.383,
+          22.51,
+          2.9
+        ],
+        [
+          "eps Gem",
+          6.732,
+          25.13,
+          3.0
+        ],
+        [
+          "xi Gem",
+          6.755,
+          12.9,
+          3.4
+        ]
+      ],
+      "figureLines": [
+        [
+          1,
+          4
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "dataNodes": [
+        {
+          "id": "monopolyRent",
+          "starIndex": 0,
+          "title": {
+            "en": "Technological Monopoly Rent",
+            "zh": "技术垄断租金"
+          },
+          "role": "SSRN · public",
+          "importance": 0.9,
+          "href": "humanities/monopolyRent.html"
+        },
+        {
+          "id": "stackPower",
+          "starIndex": 1,
+          "title": {
+            "en": "Stack Power: Frontier AI & Market Non-Correction",
+            "zh": "栈权力:前沿 AI 与市场不矫正"
+          },
+          "role": "journal re-submission",
+          "importance": 0.9,
+          "href": "humanities/stackPower.html"
+        },
+        {
+          "id": "cpe",
+          "starIndex": 2,
+          "title": {
+            "en": "Camera, Player, Engine",
+            "zh": "相机 · 棋手 · 引擎"
+          },
+          "role": "epistemology",
+          "importance": 0.8,
+          "href": "humanities/cpe.html"
+        }
+      ]
     },
     {
-     "i": 3,
-     "bayer": "Adhafera",
-     "raH": 10.278,
-     "decDeg": 23.417,
-     "mag": 3.44
+      "id": "aries",
+      "signIndex": 0,
+      "figureName": {
+        "en": "Aries",
+        "zh": "白羊座"
+      },
+      "stars": [
+        [
+          "Hamal",
+          2.119,
+          23.46,
+          2.0
+        ],
+        [
+          "Sheratan",
+          1.911,
+          20.81,
+          2.6
+        ],
+        [
+          "Mesarthim",
+          1.892,
+          19.29,
+          3.9
+        ],
+        [
+          "41 Ari",
+          2.833,
+          27.26,
+          3.6
+        ]
+      ],
+      "figureLines": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          0,
+          3
+        ]
+      ],
+      "dataNodes": []
     },
     {
-     "i": 4,
-     "bayer": "Rasalas",
-     "raH": 9.88,
-     "decDeg": 26.007,
-     "mag": 3.88
+      "id": "taurus",
+      "signIndex": 1,
+      "figureName": {
+        "en": "Taurus",
+        "zh": "金牛座"
+      },
+      "stars": [
+        [
+          "Aldebaran",
+          4.599,
+          16.51,
+          0.85
+        ],
+        [
+          "Elnath",
+          5.438,
+          28.61,
+          1.65
+        ],
+        [
+          "zeta Tau",
+          5.627,
+          21.14,
+          3.0
+        ],
+        [
+          "gamma Tau",
+          4.33,
+          15.63,
+          3.65
+        ],
+        [
+          "eps Tau",
+          4.478,
+          19.18,
+          3.5
+        ],
+        [
+          "lambda Tau",
+          4.011,
+          12.49,
+          3.4
+        ]
+      ],
+      "figureLines": [
+        [
+          0,
+          4
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "dataNodes": []
     },
     {
-     "i": 5,
-     "bayer": "Algenubi",
-     "raH": 9.764,
-     "decDeg": 23.774,
-     "mag": 2.98
+      "id": "virgo",
+      "signIndex": 5,
+      "figureName": {
+        "en": "Virgo",
+        "zh": "室女座"
+      },
+      "stars": [
+        [
+          "Spica",
+          13.42,
+          -11.16,
+          1.0
+        ],
+        [
+          "Porrima",
+          12.694,
+          -1.45,
+          2.75
+        ],
+        [
+          "Vindemiatrix",
+          13.036,
+          10.96,
+          2.85
+        ],
+        [
+          "Zavijava",
+          11.845,
+          1.76,
+          3.6
+        ],
+        [
+          "delta Vir",
+          12.927,
+          3.4,
+          3.4
+        ],
+        [
+          "Heze",
+          13.578,
+          -0.6,
+          3.4
+        ]
+      ],
+      "figureLines": [
+        [
+          0,
+          5
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          4,
+          2
+        ]
+      ],
+      "dataNodes": []
     },
     {
-     "i": 6,
-     "bayer": "Zosma",
-     "raH": 11.235,
-     "decDeg": 20.524,
-     "mag": 2.56
+      "id": "libra",
+      "signIndex": 6,
+      "figureName": {
+        "en": "Libra",
+        "zh": "天秤座"
+      },
+      "stars": [
+        [
+          "Zubeneschamali",
+          15.283,
+          -9.38,
+          2.6
+        ],
+        [
+          "Zubenelgenubi",
+          14.848,
+          -16.04,
+          2.75
+        ],
+        [
+          "sigma Lib",
+          15.067,
+          -25.28,
+          3.3
+        ],
+        [
+          "upsilon Lib",
+          15.607,
+          -28.14,
+          3.6
+        ]
+      ],
+      "figureLines": [
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          0,
+          3
+        ]
+      ],
+      "dataNodes": []
     },
     {
-     "i": 7,
-     "bayer": "Chertan",
-     "raH": 11.237,
-     "decDeg": 15.43,
-     "mag": 3.32
+      "id": "scorpio",
+      "signIndex": 7,
+      "figureName": {
+        "en": "Scorpius",
+        "zh": "天蝎座"
+      },
+      "stars": [
+        [
+          "Antares",
+          16.49,
+          -26.43,
+          1.05
+        ],
+        [
+          "Acrab",
+          16.09,
+          -19.81,
+          2.6
+        ],
+        [
+          "Dschubba",
+          16.005,
+          -22.62,
+          2.3
+        ],
+        [
+          "pi Sco",
+          15.981,
+          -26.11,
+          2.9
+        ],
+        [
+          "tau Sco",
+          16.598,
+          -28.22,
+          2.8
+        ],
+        [
+          "eps Sco",
+          16.836,
+          -34.29,
+          2.3
+        ],
+        [
+          "mu Sco",
+          16.865,
+          -38.05,
+          3.0
+        ],
+        [
+          "Sargas",
+          17.622,
+          -42.99,
+          1.85
+        ],
+        [
+          "Shaula",
+          17.56,
+          -37.1,
+          1.6
+        ],
+        [
+          "Lesath",
+          17.512,
+          -37.3,
+          2.7
+        ]
+      ],
+      "figureLines": [
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          5,
+          6
+        ],
+        [
+          6,
+          7
+        ],
+        [
+          7,
+          8
+        ],
+        [
+          8,
+          9
+        ]
+      ],
+      "dataNodes": []
     },
     {
-     "i": 8,
-     "bayer": "Denebola",
-     "raH": 11.818,
-     "decDeg": 14.572,
-     "mag": 2.14,
-     "role": "tail"
+      "id": "sagittarius",
+      "signIndex": 8,
+      "figureName": {
+        "en": "Sagittarius",
+        "zh": "人马座"
+      },
+      "stars": [
+        [
+          "Kaus Australis",
+          18.403,
+          -34.38,
+          1.85
+        ],
+        [
+          "Nunki",
+          18.921,
+          -26.3,
+          2.05
+        ],
+        [
+          "Kaus Media",
+          18.35,
+          -29.83,
+          2.7
+        ],
+        [
+          "Kaus Borealis",
+          18.466,
+          -25.42,
+          2.8
+        ],
+        [
+          "Ascella",
+          19.044,
+          -29.88,
+          2.6
+        ],
+        [
+          "phi Sgr",
+          18.741,
+          -26.99,
+          3.15
+        ],
+        [
+          "tau Sgr",
+          19.115,
+          -27.67,
+          3.3
+        ]
+      ],
+      "figureLines": [
+        [
+          0,
+          2
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          5,
+          1
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          4,
+          6
+        ],
+        [
+          3,
+          0
+        ]
+      ],
+      "dataNodes": []
+    },
+    {
+      "id": "aquarius",
+      "signIndex": 10,
+      "figureName": {
+        "en": "Aquarius",
+        "zh": "宝瓶座"
+      },
+      "stars": [
+        [
+          "Sadalsuud",
+          21.526,
+          -5.57,
+          2.9
+        ],
+        [
+          "Sadalmelik",
+          22.096,
+          -0.32,
+          2.95
+        ],
+        [
+          "Sadachbia",
+          22.361,
+          -1.39,
+          3.85
+        ],
+        [
+          "zeta Aqr",
+          22.481,
+          -0.02,
+          3.65
+        ],
+        [
+          "pi Aqr",
+          22.415,
+          1.38,
+          4.6
+        ],
+        [
+          "Skat",
+          22.911,
+          -15.82,
+          3.25
+        ]
+      ],
+      "figureLines": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "dataNodes": []
     }
-   ],
-   "figureLines": [
-    [
-     0,
-     1
-    ],
-    [
-     1,
-     2
-    ],
-    [
-     2,
-     3
-    ],
-    [
-     3,
-     4
-    ],
-    [
-     4,
-     5
-    ],
-    [
-     0,
-     7
-    ],
-    [
-     7,
-     6
-    ],
-    [
-     6,
-     2
-    ],
-    [
-     6,
-     8
-    ],
-    [
-     8,
-     7
-    ]
-   ],
-   "dataNodes": []
-  }
- ],
- "briefConstellations": [
-  {
-   "id": "pisces",
-   "signIndex": 11,
-   "figureName": {
-    "en": "Pisces",
-    "zh": "双鱼座"
-   },
-   "polarity": "outer",
-   "stars": [
-    [
-     "Alrescha",
-     2.034,
-     2.76,
-     3.8
-    ],
-    [
-     "eta Psc",
-     1.525,
-     15.35,
-     3.6
-    ],
-    [
-     "gamma Psc",
-     23.286,
-     3.28,
-     3.7
-    ],
-    [
-     "omega Psc",
-     23.993,
-     6.86,
-     4.0
-    ],
-    [
-     "iota Psc",
-     23.666,
-     5.63,
-     4.1
-    ],
-    [
-     "beta Psc",
-     23.064,
-     3.82,
-     4.5
-    ]
-   ],
-   "figureLines": [
-    [
-     0,
-     4
-    ],
-    [
-     4,
-     3
-    ],
-    [
-     3,
-     2
-    ],
-    [
-     2,
-     5
-    ],
-    [
-     0,
-     1
-    ]
-   ],
-   "dataNodes": []
-  },
-  {
-   "id": "cancer",
-   "signIndex": 3,
-   "figureName": {
-    "en": "Cancer",
-    "zh": "巨蟹座"
-   },
-   "polarity": "outer",
-   "stars": [
-    [
-     "Altarf",
-     8.275,
-     9.19,
-     3.5
-    ],
-    [
-     "Asellus Aus.",
-     8.745,
-     18.15,
-     3.9
-    ],
-    [
-     "Asellus Bor.",
-     8.722,
-     21.47,
-     4.7
-    ],
-    [
-     "iota Cnc",
-     8.778,
-     28.76,
-     4.0
-    ],
-    [
-     "Acubens",
-     8.975,
-     11.86,
-     4.25
-    ]
-   ],
-   "figureLines": [
-    [
-     0,
-     1
-    ],
-    [
-     1,
-     2
-    ],
-    [
-     2,
-     3
-    ],
-    [
-     1,
-     4
-    ]
-   ],
-   "dataNodes": []
-  },
-  {
-   "id": "gemini",
-   "signIndex": 2,
-   "figureName": {
-    "en": "Gemini",
-    "zh": "双子座"
-   },
-   "polarity": "outer",
-   "stars": [
-    [
-     "Pollux",
-     7.755,
-     28.03,
-     1.15
-    ],
-    [
-     "Castor",
-     7.577,
-     31.89,
-     1.6
-    ],
-    [
-     "Alhena",
-     6.629,
-     16.4,
-     1.9
-    ],
-    [
-     "mu Gem",
-     6.383,
-     22.51,
-     2.9
-    ],
-    [
-     "eps Gem",
-     6.732,
-     25.13,
-     3.0
-    ],
-    [
-     "xi Gem",
-     6.755,
-     12.9,
-     3.4
-    ]
-   ],
-   "figureLines": [
-    [
-     1,
-     4
-    ],
-    [
-     4,
-     0
-    ],
-    [
-     4,
-     3
-    ],
-    [
-     3,
-     5
-    ],
-    [
-     0,
-     2
-    ]
-   ],
-   "dataNodes": [
+  ],
+  "methodEdges_DEFERRED_v2": [
     {
-     "id": "monopolyRent",
-     "starIndex": 0,
-     "title": {
-      "en": "Technological Monopoly Rent",
-      "zh": "技术垄断租金"
-     },
-     "role": "SSRN · public",
-     "importance": 0.9,
-     "href": "humanities/monopolyRent.html"
+      "from": "ringdown",
+      "to": "beliefprobe",
+      "spine": "certificate"
     },
     {
-     "id": "stackPower",
-     "starIndex": 1,
-     "title": {
-      "en": "Stack Power: Frontier AI & Market Non-Correction",
-      "zh": "栈权力:前沿 AI 与市场不矫正"
-     },
-     "role": "journal re-submission",
-     "importance": 0.9,
-     "href": "humanities/stackPower.html"
+      "from": "beliefprobe",
+      "to": "omytea",
+      "spine": "certificate"
     },
     {
-     "id": "cpe",
-     "starIndex": 2,
-     "title": {
-      "en": "Camera, Player, Engine",
-      "zh": "相机 · 棋手 · 引擎"
-     },
-     "role": "epistemology",
-     "importance": 0.8,
-     "href": "humanities/cpe.html"
+      "from": "omytea",
+      "to": "golfcal",
+      "spine": "certificate"
+    },
+    {
+      "from": "acaexpl",
+      "to": "ringdown",
+      "spine": "certificate"
+    },
+    {
+      "from": "localityNoGo",
+      "to": "rss",
+      "spine": "obstruction"
+    },
+    {
+      "from": "cpe",
+      "to": "rss",
+      "spine": "bridge"
+    },
+    {
+      "from": "cpe",
+      "to": "monopolyRent",
+      "spine": "bridge"
+    },
+    {
+      "from": "invitation",
+      "to": "monopolyRent",
+      "spine": "rent"
+    },
+    {
+      "from": "monopolyRent",
+      "to": "stackPower",
+      "spine": "rent"
+    },
+    {
+      "from": "blazar",
+      "to": "ringdown",
+      "spine": "bridge"
     }
-   ]
+  ],
+  "asteroidBelt": {
+    "rInner": 112,
+    "rOuter": 142,
+    "count": 820,
+    "latSpread": 4.0,
+    "aroundSun": true
   },
-  {
-   "id": "aries",
-   "signIndex": 0,
-   "figureName": {
-    "en": "Aries",
-    "zh": "白羊座"
-   },
-   "stars": [
-    [
-     "Hamal",
-     2.119,
-     23.46,
-     2.0
-    ],
-    [
-     "Sheratan",
-     1.911,
-     20.81,
-     2.6
-    ],
-    [
-     "Mesarthim",
-     1.892,
-     19.29,
-     3.9
-    ],
-    [
-     "41 Ari",
-     2.833,
-     27.26,
-     3.6
-    ]
-   ],
-   "figureLines": [
-    [
-     0,
-     1
-    ],
-    [
-     1,
-     2
-    ],
-    [
-     0,
-     3
-    ]
-   ],
-   "dataNodes": []
-  },
-  {
-   "id": "taurus",
-   "signIndex": 1,
-   "figureName": {
-    "en": "Taurus",
-    "zh": "金牛座"
-   },
-   "stars": [
-    [
-     "Aldebaran",
-     4.599,
-     16.51,
-     0.85
-    ],
-    [
-     "Elnath",
-     5.438,
-     28.61,
-     1.65
-    ],
-    [
-     "zeta Tau",
-     5.627,
-     21.14,
-     3.0
-    ],
-    [
-     "gamma Tau",
-     4.33,
-     15.63,
-     3.65
-    ],
-    [
-     "eps Tau",
-     4.478,
-     19.18,
-     3.5
-    ],
-    [
-     "lambda Tau",
-     4.011,
-     12.49,
-     3.4
-    ]
-   ],
-   "figureLines": [
-    [
-     0,
-     4
-    ],
-    [
-     4,
-     1
-    ],
-    [
-     0,
-     3
-    ],
-    [
-     3,
-     5
-    ],
-    [
-     0,
-     2
-    ]
-   ],
-   "dataNodes": []
-  },
-  {
-   "id": "virgo",
-   "signIndex": 5,
-   "figureName": {
-    "en": "Virgo",
-    "zh": "室女座"
-   },
-   "stars": [
-    [
-     "Spica",
-     13.42,
-     -11.16,
-     1.0
-    ],
-    [
-     "Porrima",
-     12.694,
-     -1.45,
-     2.75
-    ],
-    [
-     "Vindemiatrix",
-     13.036,
-     10.96,
-     2.85
-    ],
-    [
-     "Zavijava",
-     11.845,
-     1.76,
-     3.6
-    ],
-    [
-     "delta Vir",
-     12.927,
-     3.4,
-     3.4
-    ],
-    [
-     "Heze",
-     13.578,
-     -0.6,
-     3.4
-    ]
-   ],
-   "figureLines": [
-    [
-     0,
-     5
-    ],
-    [
-     5,
-     4
-    ],
-    [
-     4,
-     1
-    ],
-    [
-     1,
-     3
-    ],
-    [
-     4,
-     2
-    ]
-   ],
-   "dataNodes": []
-  },
-  {
-   "id": "libra",
-   "signIndex": 6,
-   "figureName": {
-    "en": "Libra",
-    "zh": "天秤座"
-   },
-   "stars": [
-    [
-     "Zubeneschamali",
-     15.283,
-     -9.38,
-     2.6
-    ],
-    [
-     "Zubenelgenubi",
-     14.848,
-     -16.04,
-     2.75
-    ],
-    [
-     "sigma Lib",
-     15.067,
-     -25.28,
-     3.3
-    ],
-    [
-     "upsilon Lib",
-     15.607,
-     -28.14,
-     3.6
-    ]
-   ],
-   "figureLines": [
-    [
-     1,
-     0
-    ],
-    [
-     1,
-     2
-    ],
-    [
-     2,
-     3
-    ],
-    [
-     0,
-     3
-    ]
-   ],
-   "dataNodes": []
-  },
-  {
-   "id": "scorpio",
-   "signIndex": 7,
-   "figureName": {
-    "en": "Scorpius",
-    "zh": "天蝎座"
-   },
-   "stars": [
-    [
-     "Antares",
-     16.49,
-     -26.43,
-     1.05
-    ],
-    [
-     "Acrab",
-     16.09,
-     -19.81,
-     2.6
-    ],
-    [
-     "Dschubba",
-     16.005,
-     -22.62,
-     2.3
-    ],
-    [
-     "pi Sco",
-     15.981,
-     -26.11,
-     2.9
-    ],
-    [
-     "tau Sco",
-     16.598,
-     -28.22,
-     2.8
-    ],
-    [
-     "eps Sco",
-     16.836,
-     -34.29,
-     2.3
-    ],
-    [
-     "mu Sco",
-     16.865,
-     -38.05,
-     3.0
-    ],
-    [
-     "Sargas",
-     17.622,
-     -42.99,
-     1.85
-    ],
-    [
-     "Shaula",
-     17.56,
-     -37.1,
-     1.6
-    ],
-    [
-     "Lesath",
-     17.512,
-     -37.3,
-     2.7
-    ]
-   ],
-   "figureLines": [
-    [
-     1,
-     2
-    ],
-    [
-     2,
-     3
-    ],
-    [
-     3,
-     0
-    ],
-    [
-     0,
-     4
-    ],
-    [
-     4,
-     5
-    ],
-    [
-     5,
-     6
-    ],
-    [
-     6,
-     7
-    ],
-    [
-     7,
-     8
-    ],
-    [
-     8,
-     9
-    ]
-   ],
-   "dataNodes": []
-  },
-  {
-   "id": "sagittarius",
-   "signIndex": 8,
-   "figureName": {
-    "en": "Sagittarius",
-    "zh": "人马座"
-   },
-   "stars": [
-    [
-     "Kaus Australis",
-     18.403,
-     -34.38,
-     1.85
-    ],
-    [
-     "Nunki",
-     18.921,
-     -26.3,
-     2.05
-    ],
-    [
-     "Kaus Media",
-     18.35,
-     -29.83,
-     2.7
-    ],
-    [
-     "Kaus Borealis",
-     18.466,
-     -25.42,
-     2.8
-    ],
-    [
-     "Ascella",
-     19.044,
-     -29.88,
-     2.6
-    ],
-    [
-     "phi Sgr",
-     18.741,
-     -26.99,
-     3.15
-    ],
-    [
-     "tau Sgr",
-     19.115,
-     -27.67,
-     3.3
-    ]
-   ],
-   "figureLines": [
-    [
-     0,
-     2
-    ],
-    [
-     2,
-     3
-    ],
-    [
-     3,
-     5
-    ],
-    [
-     5,
-     1
-    ],
-    [
-     1,
-     4
-    ],
-    [
-     4,
-     0
-    ],
-    [
-     4,
-     6
-    ],
-    [
-     3,
-     0
-    ]
-   ],
-   "dataNodes": []
-  },
-  {
-   "id": "aquarius",
-   "signIndex": 10,
-   "figureName": {
-    "en": "Aquarius",
-    "zh": "宝瓶座"
-   },
-   "stars": [
-    [
-     "Sadalsuud",
-     21.526,
-     -5.57,
-     2.9
-    ],
-    [
-     "Sadalmelik",
-     22.096,
-     -0.32,
-     2.95
-    ],
-    [
-     "Sadachbia",
-     22.361,
-     -1.39,
-     3.85
-    ],
-    [
-     "zeta Aqr",
-     22.481,
-     -0.02,
-     3.65
-    ],
-    [
-     "pi Aqr",
-     22.415,
-     1.38,
-     4.6
-    ],
-    [
-     "Skat",
-     22.911,
-     -15.82,
-     3.25
-    ]
-   ],
-   "figureLines": [
-    [
-     0,
-     1
-    ],
-    [
-     1,
-     2
-    ],
-    [
-     2,
-     3
-    ],
-    [
-     2,
-     4
-    ],
-    [
-     1,
-     5
-    ]
-   ],
-   "dataNodes": []
-  }
- ],
- "methodEdges_DEFERRED_v2": [
-  {
-   "from": "ringdown",
-   "to": "beliefprobe",
-   "spine": "certificate"
-  },
-  {
-   "from": "beliefprobe",
-   "to": "omytea",
-   "spine": "certificate"
-  },
-  {
-   "from": "omytea",
-   "to": "golfcal",
-   "spine": "certificate"
-  },
-  {
-   "from": "acaexpl",
-   "to": "ringdown",
-   "spine": "certificate"
-  },
-  {
-   "from": "localityNoGo",
-   "to": "rss",
-   "spine": "obstruction"
-  },
-  {
-   "from": "cpe",
-   "to": "rss",
-   "spine": "bridge"
-  },
-  {
-   "from": "cpe",
-   "to": "monopolyRent",
-   "spine": "bridge"
-  },
-  {
-   "from": "invitation",
-   "to": "monopolyRent",
-   "spine": "rent"
-  },
-  {
-   "from": "monopolyRent",
-   "to": "stackPower",
-   "spine": "rent"
-  },
-  {
-   "from": "blazar",
-   "to": "ringdown",
-   "spine": "bridge"
-  }
- ],
- "asteroidBelt": {
-  "rInner": 112,
-  "rOuter": 142,
-  "count": 820,
-  "latSpread": 4.0,
-  "aroundSun": true
- },
- "deepSky": [
-  {
-   "id": "pillars",
-   "name": {
-    "en": "Pillars of Creation",
-    "zh": "创生之柱"
-   },
-   "raH": 18.313,
-   "decDeg": -13.82,
-   "dist": 880,
-   "tex": "dso-pillars.jpg",
-   "size": 130
-  },
-  {
-   "id": "orion",
-   "name": {
-    "en": "Orion Nebula",
-    "zh": "猎户座大星云"
-   },
-   "raH": 5.588,
-   "decDeg": -5.39,
-   "dist": 820,
-   "tex": "dso-orion.jpg",
-   "size": 200
-  },
-  {
-   "id": "rosette",
-   "name": {
-    "en": "Rosette Nebula",
-    "zh": "玫瑰星云"
-   },
-   "raH": 6.5625,
-   "decDeg": 4.95,
-   "dist": 860,
-   "tex": "dso-rosette.jpg",
-   "size": 190
-  },
-  {
-   "id": "andromeda",
-   "name": {
-    "en": "Andromeda Galaxy",
-    "zh": "仙女座星系"
-   },
-   "raH": 0.712,
-   "decDeg": 41.27,
-   "dist": 1000,
-   "tex": "dso-andromeda.jpg",
-   "size": 300
-  },
-  {
-   "id": "crab",
-   "name": {
-    "en": "Crab Nebula",
-    "zh": "蟹状星云"
-   },
-   "raH": 5.575,
-   "decDeg": 22.01,
-   "dist": 840,
-   "tex": "dso-crab.jpg",
-   "size": 120
-  },
-  {
-   "id": "horsehead",
-   "name": {
-    "en": "Horsehead Nebula",
-    "zh": "马头星云"
-   },
-   "raH": 5.68,
-   "decDeg": -2.46,
-   "dist": 830,
-   "tex": "dso-horsehead.jpg",
-   "size": 150
-  },
-  {
-   "id": "lagoon",
-   "name": {
-    "en": "Lagoon Nebula",
-    "zh": "礁湖星云"
-   },
-   "raH": 18.063,
-   "decDeg": -24.38,
-   "dist": 870,
-   "tex": "dso-lagoon.jpg",
-   "size": 190
-  },
-  {
-   "id": "ring",
-   "name": {
-    "en": "Ring Nebula",
-    "zh": "环状星云"
-   },
-   "raH": 18.893,
-   "decDeg": 33.03,
-   "dist": 810,
-   "tex": "dso-ring.jpg",
-   "size": 100
-  },
-  {
-   "id": "pleiades",
-   "name": {
-    "en": "Pleiades",
-    "zh": "昴星团"
-   },
-   "raH": 3.792,
-   "decDeg": 24.12,
-   "dist": 780,
-   "tex": "dso-pleiades.jpg",
-   "size": 210
-  },
-  {
-   "id": "carina",
-   "name": {
-    "en": "Carina Nebula",
-    "zh": "船底座星云"
-   },
-   "raH": 10.75,
-   "decDeg": -59.87,
-   "dist": 900,
-   "tex": "dso-carina.jpg",
-   "size": 230
-  },
-  {
-   "id": "helix",
-   "name": {
-    "en": "Helix Nebula",
-    "zh": "螺旋星云"
-   },
-   "raH": 22.494,
-   "decDeg": -20.84,
-   "dist": 850,
-   "tex": "dso-helix.jpg",
-   "size": 130
-  }
- ]
+  "deepSky": [
+    {
+      "id": "pillars",
+      "name": {
+        "en": "Pillars of Creation",
+        "zh": "创生之柱"
+      },
+      "raH": 18.313,
+      "decDeg": -13.82,
+      "dist": 880,
+      "tex": "dso-pillars.jpg",
+      "size": 130,
+      "ly": 6000,
+      "tier": "galactic"
+    },
+    {
+      "id": "orion",
+      "name": {
+        "en": "Orion Nebula",
+        "zh": "猎户座大星云"
+      },
+      "raH": 5.588,
+      "decDeg": -5.39,
+      "dist": 820,
+      "tex": "dso-orion.jpg",
+      "size": 200,
+      "ly": 1340,
+      "tier": "galactic"
+    },
+    {
+      "id": "rosette",
+      "name": {
+        "en": "Rosette Nebula",
+        "zh": "玫瑰星云"
+      },
+      "raH": 6.5625,
+      "decDeg": 4.95,
+      "dist": 860,
+      "tex": "dso-rosette.jpg",
+      "size": 190,
+      "ly": 5200,
+      "tier": "galactic"
+    },
+    {
+      "id": "andromeda",
+      "name": {
+        "en": "Andromeda Galaxy",
+        "zh": "仙女座星系"
+      },
+      "raH": 0.712,
+      "decDeg": 41.27,
+      "dist": 1000,
+      "tex": "dso-andromeda.jpg",
+      "size": 900,
+      "ly": 2500000,
+      "tier": "external"
+    },
+    {
+      "id": "crab",
+      "name": {
+        "en": "Crab Nebula",
+        "zh": "蟹状星云"
+      },
+      "raH": 5.575,
+      "decDeg": 22.01,
+      "dist": 840,
+      "tex": "dso-crab.jpg",
+      "size": 120,
+      "ly": 6500,
+      "tier": "galactic"
+    },
+    {
+      "id": "horsehead",
+      "name": {
+        "en": "Horsehead Nebula",
+        "zh": "马头星云"
+      },
+      "raH": 5.68,
+      "decDeg": -2.46,
+      "dist": 830,
+      "tex": "dso-horsehead.jpg",
+      "size": 150,
+      "ly": 1375,
+      "tier": "galactic"
+    },
+    {
+      "id": "lagoon",
+      "name": {
+        "en": "Lagoon Nebula",
+        "zh": "礁湖星云"
+      },
+      "raH": 18.063,
+      "decDeg": -24.38,
+      "dist": 870,
+      "tex": "dso-lagoon.jpg",
+      "size": 190,
+      "ly": 4100,
+      "tier": "galactic"
+    },
+    {
+      "id": "ring",
+      "name": {
+        "en": "Ring Nebula",
+        "zh": "环状星云"
+      },
+      "raH": 18.893,
+      "decDeg": 33.03,
+      "dist": 810,
+      "tex": "dso-ring.jpg",
+      "size": 100,
+      "ly": 2300,
+      "tier": "galactic"
+    },
+    {
+      "id": "pleiades",
+      "name": {
+        "en": "Pleiades",
+        "zh": "昴星团"
+      },
+      "raH": 3.792,
+      "decDeg": 24.12,
+      "dist": 780,
+      "tex": "dso-pleiades.jpg",
+      "size": 210,
+      "ly": 444,
+      "tier": "galactic"
+    },
+    {
+      "id": "carina",
+      "name": {
+        "en": "Carina Nebula",
+        "zh": "船底座星云"
+      },
+      "raH": 10.75,
+      "decDeg": -59.87,
+      "dist": 900,
+      "tex": "dso-carina.jpg",
+      "size": 230,
+      "ly": 7500,
+      "tier": "galactic"
+    },
+    {
+      "id": "helix",
+      "name": {
+        "en": "Helix Nebula",
+        "zh": "螺旋星云"
+      },
+      "raH": 22.494,
+      "decDeg": -20.84,
+      "dist": 850,
+      "tex": "dso-helix.jpg",
+      "size": 130,
+      "ly": 655,
+      "tier": "galactic"
+    }
+  ]
 }

@@ -563,7 +563,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // (so orbiting reveals parallax — not a flat sticker), colour is hue-normalized + brightness-capped
     // (so additive stacking keeps its hue, not white), and a soft glow underlay binds it into gas.
     var W = img.naturalWidth || img.width, H = img.naturalHeight || img.height;
-    var Wu = (d.size || 160) * 1.8, Hu = Wu * (H / W), Zu = 0.5 * Wu;               // world width/height + a REAL depth (~half the width → a genuine 3-D body, not a thin slab, so it never foreshortens to a line when you orbit)
+    var Wu = (d.size || 160) * 1.8 * (d._sizeScale || 1), Hu = Wu * (H / W), Zu = 0.5 * Wu;   // world size AFTER the true-scale shrink (in-galaxy nebulae are tiny vs the 2600-unit galaxy); real depth so it never foreshortens to a line when you orbit
     var sd = d.seed; if (sd == null) { sd = 7; for (var si = 0; si < (d.id || "").length; si++) sd = (sd * 33 + d.id.charCodeAt(si)) >>> 0; }
     var rng = gRng((sd * 131 + 7) >>> 0), zfb = gFbm((sd * 17 + 3) >>> 0, 8), cfb = gFbm((sd * 29 + 5) >>> 0, 8);
     var wr = 300, sc = Math.min(1, wr / Math.max(W, H));
@@ -662,18 +662,41 @@ export function buildNatalSky(THREE, scene, data, opts) {
   }
   var dsoPickGroup = new T.Group(); dsoPickGroup.name = "DeepSkyPicks"; belt.add(dsoPickGroup);
   var _dsoCount = (data.deepSky || []).length;
+
+  /* ---- GALACTIC FRAME at MODULE scope (pure function of two RA/Dec constants) so it exists at EAGER
+     DSO-placement time AND the LAZY buildMilkyWayGalaxy reuses the SAME basis → a nebula placed now lands
+     exactly where the galaxy's disc will be drawn later. No null-deref, no coordination race. ---- */
+  var GAL_RGAL = 2600, GAL_RSUN = 0.52 * 2600, GAL_HSUN = 140;
+  var _gcE = raDecToEcl(17.7608, -28.94), _npE = raDecToEcl(12.8571, 27.13);   // Sgr A*, galactic N pole
+  var GAL_W = eclVec(_npE.lon, _npE.lat, 1).normalize();
+  var GAL_UU = eclVec(_gcE.lon, _gcE.lat, 1); GAL_UU.addScaledVector(GAL_W, -GAL_UU.dot(GAL_W)).normalize();
+  var GAL_VV = new T.Vector3().crossVectors(GAL_W, GAL_UU).normalize();
+  var GAL_C = GAL_UU.clone().multiplyScalar(GAL_RSUN).addScaledVector(GAL_W, -GAL_HSUN);
+  /* ---- TRUE-SCALE COMPRESSION: real distance (ly) → scene radius. In-galaxy nebulae (444–7500 ly) sit
+     INSIDE the disc in true DIRECTION + true relative ORDER (log-compressed); the two extragalactic tiers
+     land beyond the rim. Sun = scene origin, embedded in the disc. ---- */
+  var GAL_RIM = GAL_RGAL;
+  var LY_NEAR = 400, LY_FAR = 7600, R_NEAR = 0.10 * GAL_RIM, R_FAR = 0.60 * GAL_RIM;
+  function nebulaSceneRadius(ly) {
+    var t = Math.log(Math.max(LY_NEAR, Math.min(LY_FAR, ly)) / LY_NEAR) / Math.log(LY_FAR / LY_NEAR);
+    return R_NEAR + (R_FAR - R_NEAR) * t;                 // 260 (Pleiades) … 1560 (Carina) from the Sun
+  }
+  var R_MAGELLANIC = 1.05 * GAL_RIM;                       // 2730 — satellite tier, just beyond the disc edge
+  var R_ANDROMEDA = 2.2 * GAL_RIM;                         // 5720 — its OWN galaxy in the clean gap before the cosmic-web (R_IN 6000)
+
   (data.deepSky || []).forEach(function (d, idx) {
     if (!d.tex) return;
-    // SPREAD the wonders out into deep 3-D so none crowd and none sit buried in the galactic plane:
-    // each at its own far DISTANCE (2200→3600, well beyond the galactic core), a golden-angle azimuth
-    // nudge, AND a big latitude push so they scatter well OFF the band (up/down out of the plane)
-    var dist = 4600 + (idx / Math.max(1, _dsoCount - 1)) * 2200;                     // 4600–6800: FAR beyond the galaxy's outer edge (~3950 from origin) so NONE sit inside the band — the Pillars of Creation especially
-    var nud = idx * 2.399963;
-    var latOff = (Math.sin(idx * 1.7 + 0.6) > 0 ? 1 : -1) * (0.45 + 0.45 * Math.abs(Math.sin(idx * 2.3 + 0.9)));   // always ≥0.45 rad (26°) off the band, alternating up/down → never buried in the galactic plane
+    // TRUE POSITION: real RA/Dec DIRECTION (no scatter) + a distance that is the real light-years,
+    // log-compressed into the scene. In-galaxy nebulae land INSIDE the disc among the arm stars, in
+    // true relative order (Pleiades nearest … Carina farthest); Andromeda gets its own far tier.
     var ecl = raDecToEcl(d.raH, d.decDeg);
-    var latF = Math.max(-1.45, Math.min(1.45, ecl.lat + Math.sin(nud) * 0.12 + latOff));
-    var world = eclVec(ecl.lon + Math.cos(nud) * 0.22, latF, dist);
-    var Wu = (d.size || 160) * 1.8;                          // matches the world width in dsoParticles
+    var dirU = eclVec(ecl.lon, ecl.lat, 1).normalize();
+    var isExternal = (d.tier === "external");
+    var world, sizeScale;
+    if (isExternal) { world = dirU.clone().multiplyScalar(R_ANDROMEDA); sizeScale = 1.0; }   // its own galaxy, far past the rim
+    else { world = dirU.clone().multiplyScalar(nebulaSceneRadius(d.ly || 2000)); sizeScale = 0.28; }   // inside the disc; tiny vs the galaxy → shrink render
+    d._sizeScale = sizeScale;
+    var Wu = (d.size || 160) * 1.8 * sizeScale;             // world width AFTER scaling (matches dsoParticles)
     // an invisible sphere is the reliable click/hover target — Points raycasting is fickle
     var shell = new T.Mesh(new T.SphereGeometry(Wu * 0.62, 10, 8),
       new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
@@ -681,7 +704,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     shell.name = "DSOPick_" + d.id;
     shell.userData.nyePick = "dso_" + d.id;
     shell.userData.dsoViewDist = Wu * 1.35;                  // stand back far enough to frame the whole cloud
-    shell.userData.dsoFocusMin = Math.max(24, Wu * 0.5);     // how close you may pull in to admire it
+    shell.userData.dsoFocusMin = Math.max(12, Wu * 0.5);     // how close you may pull in to admire it
     shell.userData.dsoName = d.name || null;
     dsoPickGroup.add(shell);
     var img = new Image();
@@ -751,13 +774,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
   var _bbPQ = new T.Quaternion(), _bbCQ = new T.Quaternion(), _cosmicWeb = null;
   var _farBuilt = false, _webBuilt = false;   // LAZY-BY-SCALE flags: the galaxy/black-hole and the cosmic web are heavy (~118k + ~100k pts + a 2.3M-iteration web sampler); they build ONLY when the camera actually voyages out to their scale, never at the ground/whole-sky view
   function buildMilkyWayGalaxy() {
-    var Rgal = 2600, N = mobile ? 78000 : 118000;                              // VAST but leaner — a real galaxy the size of the sky; count trimmed to cut additive-overdraw stutter (the glow underlayer keeps it dense-looking)
-    var Rsun = 0.52 * Rgal, Rin = 42, Rout = 150, hSun = 140;                   // Sun's galactocentric radius; the Orion ARM flows right THROUGH the solar system (tiny 42-unit clearing only for the planets themselves) → the sun sits embedded in the arm, not in a carved-out hole that truncates it
-    var gcE = raDecToEcl(17.7608, -28.94), npE = raDecToEcl(12.8571, 27.13);    // Sgr A* + galactic north pole
-    var w = eclVec(npE.lon, npE.lat, 1).normalize();                            // disc normal (galactic pole)
-    var uu = eclVec(gcE.lon, gcE.lat, 1); uu.addScaledVector(w, -uu.dot(w)).normalize();  // in-plane, toward the centre
-    var vv = new T.Vector3().crossVectors(w, uu).normalize();
-    var C = uu.clone().multiplyScalar(Rsun).addScaledVector(w, -hSun);          // the galactic centre in scene space
+    var Rgal = GAL_RGAL, N = mobile ? 78000 : 118000;                          // reuse the MODULE-scope galactic frame so nebulae (placed eagerly) and this disc share ONE basis
+    var Rsun = GAL_RSUN, Rin = 42, Rout = 150, hSun = GAL_HSUN;                 // Sun's galactocentric radius; the Orion ARM flows right THROUGH the solar system
+    var w = GAL_W, uu = GAL_UU, vv = GAL_VV, C = GAL_C;                         // shared basis (see the GALACTIC FRAME block near the DSO loop)
     galacticCentre = C.clone(); galacticNormal = w.clone();                     // expose for the clickable nucleus
     var arms = 4, bsp = Math.tan(12 * Math.PI / 180), span = 6.6;              // pitch 12°
     var aSpiral = Rgal / Math.exp(bsp * span);                                  // arm inner radius (derived so arms reach the rim)
@@ -958,6 +977,50 @@ export function buildNatalSky(THREE, scene, data, opts) {
     dsoPickGroup.add(shell);
   }
 
+  /* ---------------- ANDROMEDA (M31): a SECOND spiral galaxy — its own inclined disc + bulge, in its TRUE
+     sky direction, far beyond the Milky Way rim. Lazy (built with the far layers). ---------------- */
+  var andromeda = null;
+  function buildAndromeda() {
+    if (andromeda) return;
+    var m31 = (data.deepSky || []).filter(function (x) { return x.id === "andromeda"; })[0];
+    var ecl = raDecToEcl(m31 ? m31.raH : 0.712, m31 ? m31.decDeg : 41.27);
+    var center = eclVec(ecl.lon, ecl.lat, R_ANDROMEDA);
+    var Rg = 520, NA = mobile ? 9000 : 16000;
+    var wN = new T.Vector3(0.35, 0.86, 0.37).normalize();                        // inclined disc normal (M31 seen ~77°)
+    var uN = new T.Vector3().crossVectors(wN, new T.Vector3(0, 1, 0)).normalize();
+    var vN = new T.Vector3().crossVectors(wN, uN).normalize();
+    var rng = gRng(0xA11DA);
+    var P = [], Cc = [];
+    var RAMP2 = [[0, [1, 0.86, 0.64]], [0.3, [0.9, 0.7, 0.5]], [0.6, [0.72, 0.72, 0.66]], [1, [0.6, 0.68, 0.82]]];
+    function ramp2(f) { var i; for (i = 1; i < RAMP2.length; i++) if (f <= RAMP2[i][0]) break; if (i >= RAMP2.length) i = RAMP2.length - 1; var a = RAMP2[i - 1], b = RAMP2[i], k = (f - a[0]) / ((b[0] - a[0]) || 1); return [a[1][0] + (b[1][0] - a[1][0]) * k, a[1][1] + (b[1][1] - a[1][1]) * k, a[1][2] + (b[1][2] - a[1][2]) * k]; }
+    function G() { return rng() + rng() + rng() + rng() - 2; }
+    var bsp = Math.tan(12 * Math.PI / 180), span = 6.4, aSp = Rg / Math.exp(bsp * span);
+    var armN = Math.round(NA * 0.7), bulgeN = NA - armN;
+    for (var i = 0; i < armN; i++) {
+      var arm = i % 2, th = Math.pow(rng(), 1.6) * span, rC = aSp * Math.exp(bsp * th), ang = th + arm * Math.PI;
+      var rsig = 6 + 0.09 * rC, x = rC * Math.cos(ang) + G() * rsig, z = rC * Math.sin(ang) + G() * rsig;
+      var rr = Math.sqrt(x * x + z * z), h = G() * (60 + 0.05 * rC), f = rr / Rg, c = ramp2(f);
+      var pt = center.clone().addScaledVector(uN, x).addScaledVector(vN, z).addScaledVector(wN, h);
+      var amp = (0.12 + 0.7 * Math.pow(rng(), 2.4));
+      P.push(pt.x, pt.y, pt.z); Cc.push(c[0] * amp, c[1] * amp, c[2] * amp);
+    }
+    for (var j = 0; j < bulgeN; j++) {
+      var br = Math.pow(rng(), 1.9) * Rg * 0.16, ua = rng() * 2 - 1, ph = rng() * Math.PI * 2, ss = Math.sqrt(1 - ua * ua);
+      var bpt = center.clone().addScaledVector(uN, br * ss * Math.cos(ph)).addScaledVector(vN, br * ss * Math.sin(ph)).addScaledVector(wN, br * ua * 0.6);
+      var bc = ramp2(0.05 + 0.2 * (br / (Rg * 0.16))), a2 = 0.16 + 0.24 * Math.pow(rng(), 2.2);
+      P.push(bpt.x, bpt.y, bpt.z); Cc.push(bc[0] * a2, bc[1] * a2, bc[2] * a2);
+    }
+    var g = new T.BufferGeometry();
+    g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
+    g.setAttribute("color", new T.BufferAttribute(new Float32Array(Cc), 3));
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 3.2 : 4.0, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.75, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    if ("toneMapped" in m) m.toneMapped = false;
+    andromeda = new T.Points(g, m); andromeda.name = "Andromeda"; andromeda.renderOrder = -4; andromeda.frustumCulled = false;
+    belt.add(andromeda);
+    var sh = dsoPickGroup.getObjectByName("DSOPick_andromeda");
+    if (sh) { sh.userData.dsoViewDist = Rg * 2.4; sh.userData.dsoFocusMin = Rg * 0.5; }
+  }
+
   /* ---------------- the LANIAKEA SUPERCLUSTER — the cosmic web, far beyond the local star field. When you
      dolly WAY out, the ~26k faint galaxies resolve into FILAMENTS + WALLS + dense NODES with empty VOIDS
      between — the real large-scale texture (Voronoi skeleton: cell faces = walls, edges = filaments, verts
@@ -1052,7 +1115,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   }
   // idempotent LAZY-BY-SCALE entry points, called by space.js only on genuine user navigation (never during
   // the auto-entrance) so the ground/whole-sky view is instant & cool and heavy geometry is built on demand.
-  function ensureFarLayers() { if (_farBuilt) return; _farBuilt = true; buildMilkyWayGalaxy(); buildGalacticCore(); }   // galaxy MUST precede core (core reads galacticCentre)
+  function ensureFarLayers() { if (_farBuilt) return; _farBuilt = true; buildMilkyWayGalaxy(); buildGalacticCore(); buildAndromeda(); }   // galaxy MUST precede core (core reads galacticCentre)
   function ensureCosmicWeb() { if (_webBuilt) return; _webBuilt = true; buildCosmicWeb(); }
 
   /* ---------------- constellation names: IN-SCENE Songti sprites (same craft as the 干支 glyphs) ---------------- */
