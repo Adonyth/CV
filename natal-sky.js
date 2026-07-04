@@ -1041,7 +1041,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
 
     // ---- NODES (galaxy clusters). Node 0 = the MILKY WAY itself at the origin (no cluster drawn there — the
     //      galaxy IS the node — but filaments still connect to it, so WE SIT ON THE WEB). ----
-    var nodes = [];
+    var nodes = [{ p: new T.Vector3(0, 0, 0), mass: 1.15, mw: true }];   // OUR node — at cosmic-web scale the Milky Way is just ONE node (the giant spiral has faded); we sit on the web's outskirts, ~9200 from the Great Attractor
     var gaC = new T.Vector3(0.34, 0.58, -0.74).normalize().multiplyScalar(9200);   // the Great Attractor — the dominant basin
     nodes.push({ p: gaC, mass: 2.1, ga: true });
     var NN = mobile ? 18 : 26;
@@ -1053,7 +1053,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
 
     // ---- NODE CLUSTERS: bright, compact glowing knots (the galaxy clusters at the intersections) ----
     for (var n = 0; n < nodes.length; n++) {
-      var nd = nodes[n]; if (nd.mw) continue;   // the MW node is the galaxy itself — no web cluster there
+      var nd = nodes[n];
       var cn = Math.round((mobile ? 320 : 540) * nd.mass), cr = 230 + 340 * nd.mass;
       for (var q = 0; q < cn; q++) {
         var r = Math.pow(wr(), 2.0) * cr, u = 2 * wr() - 1, pp = 2 * Math.PI * wr(), sn = Math.sqrt(1 - u * u);
@@ -1239,7 +1239,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   }
 
   /* ---------------- lifecycle ---------------- */
-  var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null, _sfMat = null, _sfBase = 1;
+  var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null, _sfMat = null, _sfBase = 1, _bdT = 0, _keepGal = false, _galMats = null;
   function lineOpacities(sec) {
     // entrance pulse: the constellations announce themselves, then settle
     if (t0 === null) t0 = sec;
@@ -1255,22 +1255,12 @@ export function buildNatalSky(THREE, scene, data, opts) {
   /* when the visitor flies IN to admire one deep-sky wonder, the whole backdrop steps aside
      (constellations, galaxy, starfield fade) so the nebula owns the frame; t: 0 normal → 1 dimmed */
   function setBackdropDim(t, keepGalaxy) {
-    backdropMul = 1 - 0.9 * t;
+    backdropMul = 1 - 0.9 * t; _bdT = t; _keepGal = !!keepGalaxy;   // Starfield + Galaxy opacity are now owned by the tick (scale-fade × these solo flags); here we only fade the constellation stars
     if (!_bdCache) {
       _bdCache = [];
-      ["MilkyWayGalaxy", "MilkyWayGlow"].forEach(function (nm) {   // Starfield opacity is now owned by the tick (scale-fade), so it's not cached/driven here
-        var o = group.getObjectByName(nm);
-        if (o && o.material) _bdCache.push({ m: o.material, base: o.material.opacity, nm: nm });
-      });
       if (starPoints && starPoints.material) _bdCache.push({ m: starPoints.material, base: starPoints.material.opacity, nm: "natalStars" });
     }
-    for (var i = 0; i < _bdCache.length; i++) {
-      var e = _bdCache[i], gal = (e.nm === "MilkyWayGalaxy" || e.nm === "MilkyWayGlow");
-      // flying to the galactic-centre black hole, the galaxy STAYS (it's the context — the hole lives at its heart);
-      // for a lone nebula the galaxy steps aside too. Constellations + starfield always fade so the wonder owns the frame.
-      var keep = gal ? (keepGalaxy ? 1 : 0.14) : (e.nm === "Starfield" ? 0.45 : 0.4);
-      e.m.opacity = e.base * (1 - (1 - keep) * t);
-    }
+    for (var i = 0; i < _bdCache.length; i++) { var e = _bdCache[i]; e.m.opacity = e.base * (1 - 0.6 * t); }   // constellation stars fade to 0.4 when admiring a lone wonder
   }
   var api = {
     group: group,
@@ -1300,7 +1290,12 @@ export function buildNatalSky(THREE, scene, data, opts) {
         // fade them (full at galaxy scale ≤5500, down to a faint 0.10 by ~10000) → the WARM WEB becomes the star
         // of the max-zoom view. (× the solo-dim factor so admiring a lone wonder still dims the field.)
         if (!_sfMat) { var _sfo = group.getObjectByName("Starfield"); if (_sfo && _sfo.material) { _sfMat = _sfo.material; _sfBase = _sfo.material.opacity; } }
-        if (_sfMat) { var _sfScale = Math.max(0.10, Math.min(1, (10000 - _cl) / 4500)), _bdT = (1 - backdropMul) / 0.9; _sfMat.opacity = _sfBase * _sfScale * (1 - 0.55 * _bdT); }
+        if (_sfMat) { var _sfScale = Math.max(0.10, Math.min(1, (10000 - _cl) / 4500)); _sfMat.opacity = _sfBase * _sfScale * (1 - 0.55 * _bdT); }
+        // GALAXY recedes at web scale: a whole galaxy is an invisible speck at cosmic-web scale, so the giant
+        // central spiral fades as you pull out (full at galaxy scale ≤6500, faint by ~10500) → the scale finally
+        // reads — the web is VAST and the Milky Way is just ONE tiny node in it (see the MW node in the web).
+        if (!_galMats) { var _g1 = group.getObjectByName("MilkyWayGalaxy"), _g2 = group.getObjectByName("MilkyWayGlow"); if (_g1 && _g2) _galMats = [{ m: _g1.material, base: _g1.material.opacity }, { m: _g2.material, base: _g2.material.opacity }]; }
+        if (_galMats) { var _gScale = Math.max(0.06, Math.min(1, (10500 - _cl) / 4000)), _gSolo = _keepGal ? 1 : (1 - 0.86 * _bdT); for (var _gi = 0; _gi < _galMats.length; _gi++) _galMats[_gi].m.opacity = _galMats[_gi].base * _gScale * _gSolo; }
       }
       if (bloomSprite && bloomT > 0) { bloomT = Math.max(0, bloomT - 0.045); bloomSprite.material.opacity = bloomT * 0.7; if (bloomT === 0) bloomSprite.visible = false; }
       updateLabels();
