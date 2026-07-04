@@ -996,7 +996,7 @@
     var DOSSIER = {};   // the data-hook registry (keyed by pick-id) → the focus card; blank entries render nothing
     fetch("data/natal-sky.json?v=15").then(function (r) { return r.json(); }).then(function (natalData) {
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=90").then(function (mod) {
+      return import("./natal-sky.js?v=91").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1838,11 +1838,11 @@
         var _farCl = camera.position.length();
         if (natalSky && _farCl > 350) natalSky.ensureFarLayers();      // galaxy + black hole, once you rise past the constellation sphere toward galactic scale
         if (natalSky && _farCl > 2200) natalSky.ensureCosmicWeb();      // the cosmic web, only if you truly voyage out to intergalactic distance
-        // SCOPED exponential fog: the "infinite foam receding into black" depth cue. Only the cosmic-web
-        // material opts into fog (everything else is fog:false), armed only at web scale so the near scene is
-        // never touched. Hysteresis avoids flicker.
-        if (_farCl > 2200 && !scene.fog) scene.fog = new THREE.FogExp2(0x05040a, 0.000115);
-        else if (_farCl < 1900 && scene.fog) scene.fog = null;
+        // FOG DENSITY by scale: the scene keeps its near-field fog (0.0018, the "no back wall" look); at web
+        // scale ease it MUCH thinner (0.000115) so the far cosmic-web foam recedes into black yet the near
+        // filaments stay bright. Only fog:true materials (the web) respond — the galaxy etc. are fog:false. Ease
+        // smoothly (no pop, no nulling the init fog).
+        if (scene.fog) { var _fTgt = _farCl > 2200 ? 0.000115 : 0.0018; scene.fog.density += (_fTgt - scene.fog.density) * 0.08; }
         // 干支 GEAR-RINGS: solar-system-scale ornament — built ONLY when the visitor enters the orrery band
         // (never at init/ground, never at galaxy scale). The existing ringFade hides them once you pass ~900 out;
         // collectRingMats self-heals to pick up the freshly-built ring materials.
