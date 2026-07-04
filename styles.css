@@ -437,7 +437,7 @@ body.cosmos .natal-tip{z-index:6;}
 
 .cosmos-legend{position:fixed; left:22px; bottom:20px; z-index:4; display:flex; flex-wrap:wrap; gap:4px 18px; font-family:var(--mono); font-size:11px; letter-spacing:.06em; color:var(--muted); pointer-events:none; max-width:70vw;}
 .cosmos-legend__item{white-space:nowrap;}
-.cosmos-hint{position:fixed; left:50%; transform:translateX(-50%); bottom:18px; z-index:4; font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); pointer-events:none; text-align:center; max-width:min(760px,92vw); opacity:.85; transition:opacity 1s ease;}
+.cosmos-hint{position:fixed; left:50%; transform:translateX(-50%); bottom:18px; z-index:4; font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); pointer-events:none; text-align:center; white-space:nowrap; max-width:96vw; opacity:.85; transition:opacity 1s ease;}
 .cosmos-hint.is-faded{opacity:0;}
 
 /* flat fallback = a full mobile home. Scrollable, top-aligned, reaches every page. */
@@ -467,8 +467,8 @@ body.is-flat .cosmos-ui{top:18px; right:18px; z-index:9;}
   .cosmos-id{top:14px; left:14px; padding:13px 16px 11px;}
   .cosmos-ui{top:14px; right:14px;}
   .cosmos-legend{display:none;}
-  .cosmos-hint{left:14px; right:14px; transform:none; max-width:none; text-align:center; bottom:12px;}
-  .cosmos-dock{bottom:44px;}
+  .cosmos-hint{left:14px; right:14px; transform:none; max-width:none; white-space:normal; text-align:center; bottom:12px;}
+  .cosmos-dock{bottom:58px;}
 }
 .cosmos-build{position:fixed; right:22px; bottom:44px; z-index:4; font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--muted); opacity:.55; pointer-events:none;}
 @media(max-width:700px){ .cosmos-build{right:14px; bottom:40px;} }
@@ -514,7 +514,7 @@ body.is-flat .cosmos-home{display:none !important;}
 @media(max-width:700px){ .cosmos-home{bottom:16px;} }
 /* the bottom dock holds BOTH journey buttons side by side (⌂ base + ✦ whole sky) — raised ABOVE the
    centered hint line so the two never overlap */
-.cosmos-dock{position:fixed; left:50%; bottom:52px; transform:translateX(-50%); z-index:6;
+.cosmos-dock{position:fixed; left:50%; bottom:60px; transform:translateX(-50%); z-index:6;
   display:flex; gap:10px; pointer-events:none;}
 .cosmos-dock .cosmos-home{position:static; left:auto; bottom:auto; transform:translateY(8px);}
 .cosmos-dock .cosmos-home.is-on{transform:translateY(0);}
