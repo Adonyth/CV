@@ -587,7 +587,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     for (var q3 = 0; q3 < np; q3++) wgt[q3] /= wmax;
     var lsort = Float32Array.from(lum); Array.prototype.sort.call(lsort, function (a, b) { return a - b; });
     var lLo = lsort[(np * 0.35) | 0], lHi = lsort[Math.min(np - 1, (np * 0.99) | 0)], lSpan = Math.max(0.001, lHi - lLo);   // auto-levels — the photo's own contrast curve, now applied to the PARTICLES so bright cores blaze and faint gas stays dim (the beauty lives in the grain, not a flat overlay)
-    var N = mobile ? 12000 : 22000, PC = [], CC = [], GP = [], GC = [], placed = 0, guard = 0, lim = N * 45;
+    var N = mobile ? 9000 : 15000, PC = [], CC = [], GP = [], GC = [], placed = 0, guard = 0, lim = N * 45;   // fewer grain particles (the 3-D relief mesh + glow now carry the read) → lighter, less stutter
     while (placed < N && guard++ < lim) {
       var xi = (rng() * sw) | 0, yi = (rng() * sh) | 0, k = yi * sw + xi;
       if (rng() > wgt[k]) continue;
@@ -712,8 +712,16 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var rr = R0 + (R1 - R0) * Math.pow(rng(), 0.6);                            // spread through a deep shell so the field has real depth
       pos[i * 3] = ss * Math.cos(ph) * rr; pos[i * 3 + 1] = uax * rr; pos[i * 3 + 2] = ss * Math.sin(ph) * rr;
       var b = 0.45 + 0.55 * Math.pow(rng(), 1.5);                               // a VISIBLE sky — high floor so even the faintest star reads, a good scatter of brighter ones; space is clearly populated, not empty
-      var t = rng();                                                            // colour temperature: mostly white, a few warm, a few cool
-      col[i * 3] = Math.min(1, b * (0.95 + 0.2 * t)); col[i * 3 + 1] = Math.min(1, b * 0.96); col[i * 3 + 2] = Math.min(1, b * (0.95 + 0.2 * (1 - t)));
+      // a REAL stellar-colour distribution (spectral classes): hot blue-white O/B/A, white F, yellow-white G,
+      // orange K, red M — a true, subtly-coloured star field, not a wash of identical dots
+      var ct = rng(), sr, sg, sb;
+      if (ct < 0.14) { sr = 0.72; sg = 0.82; sb = 1.0; }        // hot blue-white
+      else if (ct < 0.30) { sr = 0.86; sg = 0.91; sb = 1.0; }   // blue-white
+      else if (ct < 0.62) { sr = 1.0; sg = 0.99; sb = 0.96; }   // white
+      else if (ct < 0.82) { sr = 1.0; sg = 0.95; sb = 0.80; }   // yellow-white
+      else if (ct < 0.94) { sr = 1.0; sg = 0.82; sb = 0.58; }   // orange
+      else { sr = 1.0; sg = 0.68; sb = 0.52; }                  // red
+      col[i * 3] = Math.min(1, b * sr); col[i * 3 + 1] = Math.min(1, b * sg); col[i * 3 + 2] = Math.min(1, b * sb);
     }
     var g = new T.BufferGeometry();
     g.setAttribute("position", new T.BufferAttribute(pos, 3));
@@ -739,9 +747,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
      Logarithmic-spiral arms + oblate bulge + patchy dust, warm ember palette, ~82k static points
      in one draw call. A local "bubble" is carved out so no galaxy star clutters the planets or
      the constellations that live nearer than the arm. Built once — zero per-frame cost. -------- */
-  var galacticCentre = null, galacticNormal = null, _bhSpin = [];                // exposed for the clickable black-hole nucleus; _bhSpin = accretion discs slowly turned each tick
+  var galacticCentre = null, galacticNormal = null, _bhSpin = [], _bhBB = [];    // exposed for the clickable black-hole nucleus; _bhBB = camera-facing Gargantua quads (billboarded + time-driven each tick)
+  var _bbPQ = new T.Quaternion(), _bbCQ = new T.Quaternion();
   (function buildMilkyWayGalaxy() {
-    var Rgal = 2600, N = mobile ? 90000 : 160000;                              // VAST but leaner — a real galaxy the size of the sky; count trimmed hard for a cooler GPU (additive overdraw is the cost; the glow underlayer keeps it dense-looking)
+    var Rgal = 2600, N = mobile ? 78000 : 118000;                              // VAST but leaner — a real galaxy the size of the sky; count trimmed to cut additive-overdraw stutter (the glow underlayer keeps it dense-looking)
     var Rsun = 0.52 * Rgal, Rin = 42, Rout = 150, hSun = 140;                   // Sun's galactocentric radius; the Orion ARM flows right THROUGH the solar system (tiny 42-unit clearing only for the planets themselves) → the sun sits embedded in the arm, not in a carved-out hole that truncates it
     var gcE = raDecToEcl(17.7608, -28.94), npE = raDecToEcl(12.8571, 27.13);    // Sgr A* + galactic north pole
     var w = eclVec(npE.lon, npE.lat, 1).normalize();                            // disc normal (galactic pole)
@@ -844,50 +853,45 @@ export function buildNatalSky(THREE, scene, data, opts) {
   (function buildGalacticCore() {
     if (!galacticCentre) return;
     var grp = new T.Group(); grp.name = "DSO_galcore"; grp.position.copy(galacticCentre);
-    // (1) the event horizon — a pure-black unlit sphere that truly OCCLUDES the disc/bulge behind it → reads as a hole, not a planet
-    var bh = new T.Mesh(new T.SphereGeometry(44, 28, 20), new T.MeshBasicMaterial({ color: 0x000000, fog: false }));
+    // (1) the event horizon — a pure-black unlit sphere that OCCLUDES the galaxy behind it (a real void)
+    var bh = new T.Mesh(new T.SphereGeometry(74, 40, 28), new T.MeshBasicMaterial({ color: 0x000000, fog: false }));
     bh.renderOrder = 1; grp.add(bh);
-    // (2) the ACCRETION DISC — a real tilted world-space ring (foreshortens to a thin ellipse and crosses
-    //     in front of / behind the horizon as you orbit → the 3-D parallax that says "black hole"), painted
-    //     with a gold blackbody ramp + Doppler beaming (one side blazing blue-white, the far side dim-red)
-    var s = 512, dc = document.createElement("canvas"); dc.width = dc.height = s;
-    var dcx = dc.getContext("2d"), imgd = dcx.createImageData(s, s), dp = imgd.data, R = s / 2;
-    var STOP = [[0.0, [255, 246, 230]], [0.15, [255, 217, 160]], [0.4, [255, 179, 71]], [0.7, [255, 122, 47]], [1.0, [194, 42, 8]]];
-    function dramp(t) { var i; for (i = 1; i < STOP.length; i++) if (t <= STOP[i][0]) break; if (i >= STOP.length) i = STOP.length - 1; var a = STOP[i - 1], b = STOP[i], k = (t - a[0]) / ((b[0] - a[0]) || 1); return [a[1][0] + (b[1][0] - a[1][0]) * k, a[1][1] + (b[1][1] - a[1][1]) * k, a[1][2] + (b[1][2] - a[1][2]) * k]; }
-    for (var yy = 0; yy < s; yy++) for (var xx = 0; xx < s; xx++) {
-      var ddx = (xx - R) / R, ddy = (yy - R) / R, rr = Math.sqrt(ddx * ddx + ddy * ddy), ang = Math.atan2(ddy, ddx), o = (yy * s + xx) * 4;
-      if (rr < 0.30 || rr > 1.0) { dp[o + 3] = 0; continue; }
-      var t = (rr - 0.30) / 0.70, col = dramp(t);
-      var env = Math.min(1, (rr - 0.30) / 0.07) * Math.pow(1 - t, 1.35);           // fade in from the inner rim, die out toward the edge
-      var bs = 0.5 + 0.5 * Math.cos(ang), beam = 0.28 + 0.72 * bs;                 // Doppler: bright on the approaching side (ang≈0), dim on the receding side
-      var cb2 = Math.min(255, col[2] + 55 * bs);                                   // approaching side lifts blue-white; receding stays warm
-      dp[o] = col[0]; dp[o + 1] = col[1]; dp[o + 2] = cb2; dp[o + 3] = 255 * Math.min(1, env * beam);
-    }
-    dcx.putImageData(imgd, 0, 0);
-    var dtex = new T.CanvasTexture(dc); if ("colorSpace" in dtex && T.SRGBColorSpace) dtex.colorSpace = T.SRGBColorSpace;
-    var dmat = new T.MeshBasicMaterial({ map: dtex, blending: T.AdditiveBlending, transparent: true, depthWrite: false, side: T.DoubleSide, fog: false });
-    if ("toneMapped" in dmat) dmat.toneMapped = false;
-    var disc = new T.Mesh(new T.RingGeometry(4, 240, 128, 2), dmat); disc.renderOrder = 3;
-    var A = galacticCentre.clone().normalize(), wv = galacticNormal.clone();       // tilt the disc ~62° off the fly-in axis → a graceful ellipse, never edge-on nor flat-on
-    var wp = wv.clone().addScaledVector(A, -wv.dot(A)); if (wp.lengthSq() < 1e-6) wp.set(A.y, -A.x, 0); wp.normalize();
-    var th = 62 * Math.PI / 180, Ndisc = A.clone().multiplyScalar(Math.cos(th)).addScaledVector(wp, Math.sin(th)).normalize();
-    disc.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), Ndisc); grp.add(disc); _bhSpin.push(disc);
-    // (3) the PHOTON RING — a razor-thin blazing blue-white circle hugging the shadow (camera-facing so it
-    //     always rings the void: the single detail that sells the black hole + the lensed over/under halo)
-    var ps = 128, pcv = document.createElement("canvas"); pcv.width = pcv.height = ps;
-    var pgx = pcv.getContext("2d"), pgr = pgx.createRadialGradient(ps / 2, ps / 2, 0, ps / 2, ps / 2, ps / 2);
-    pgr.addColorStop(0.0, "rgba(0,0,0,0)"); pgr.addColorStop(0.34, "rgba(190,220,255,0)");
-    pgr.addColorStop(0.40, "rgba(220,236,255,0.55)"); pgr.addColorStop(0.44, "rgba(248,251,255,1)"); pgr.addColorStop(0.48, "rgba(220,236,255,0.5)");
-    pgr.addColorStop(0.60, "rgba(190,220,255,0)"); pgr.addColorStop(1.0, "rgba(0,0,0,0)");
-    pgx.fillStyle = pgr; pgx.fillRect(0, 0, ps, ps);
-    var ptex = new T.CanvasTexture(pcv); if ("colorSpace" in ptex && T.SRGBColorSpace) ptex.colorSpace = T.SRGBColorSpace;
-    var pmat = new T.SpriteMaterial({ map: ptex, blending: T.AdditiveBlending, transparent: true, depthWrite: false, depthTest: false, fog: false });
-    if ("toneMapped" in pmat) pmat.toneMapped = false;
-    var photon = new T.Sprite(pmat); photon.scale.set(150, 150, 1); photon.renderOrder = 4; grp.add(photon);
-    // (4) the soft warm GLOW — ties it together, readable from across the galaxy
-    var gm2 = new T.SpriteMaterial({ map: DSO_SOFT, color: 0xffcf9a, blending: T.AdditiveBlending, transparent: true, opacity: 0.4, depthWrite: false, depthTest: false, fog: false });
-    if ("toneMapped" in gm2) gm2.toneMapped = false;
-    var glow = new T.Sprite(gm2); glow.scale.set(640, 640, 1); glow.renderOrder = 2; grp.add(glow);
+    // (2) the GARGANTUA — a camera-facing SHADER quad: a gravitationally-lensed accretion disc whose far side
+    //     arcs OVER and UNDER the shadow into a halo, a razor blue-white photon ring, Doppler beaming (one
+    //     side brighter/bluer), a hot gold blackbody ramp, swirl, and a soft glow. The most real + beautiful
+    //     black hole, cheaply — one small quad, only its own pixels shaded, always presenting the iconic face.
+    var bhUnif = { uTime: { value: 0 } };
+    var bhFrag = [
+      "precision highp float; varying vec2 vUv; uniform float uTime;",
+      "vec3 ramp(float t){ vec3 c0=vec3(1.0,0.97,0.90),c1=vec3(1.0,0.80,0.42),c2=vec3(1.0,0.52,0.18),c3=vec3(0.80,0.27,0.09);",
+      "  if(t<0.33) return mix(c0,c1,t/0.33); if(t<0.66) return mix(c1,c2,(t-0.33)/0.33); return mix(c2,c3,(t-0.66)/0.34); }",
+      "void main(){",
+      "  vec2 p=(vUv-0.5)*2.0; float d=length(p), ang=atan(p.y,p.x); float Rs=0.27;",
+      "  vec3 col=vec3(0.0); float a=0.0;",
+      "  float bs=0.5-0.5*cos(ang); float beam=0.5+0.62*bs;",                              // Doppler: left (approaching) brighter
+      "  float sq=0.32; float dEll=length(vec2(p.x,p.y/sq));",                             // thin tilted disc ellipse
+      "  float dIn=Rs*1.12, dOut=0.94; float dt=clamp((dEll-dIn)/(dOut-dIn),0.0,1.0);",
+      "  float disc=smoothstep(0.0,0.10,dt)*(1.0-smoothstep(0.66,1.0,dt));",
+      "  disc*=0.78+0.22*sin(ang*5.0-uTime*0.5+dEll*24.0);",                              // orbiting swirl
+      "  col+=ramp(dt)*disc*beam*1.85; a=max(a,disc*beam);",
+      "  float halo=smoothstep(0.19,0.015,abs(d-Rs*1.27));",                              // lensed over/under halo
+      "  col+=ramp(0.22)*halo*beam*1.2; a=max(a,halo*beam*0.9);",
+      "  float photon=smoothstep(0.02,0.0,abs(d-Rs*1.05));",                              // razor photon ring
+      "  col+=vec3(0.88,0.94,1.0)*photon*2.8; a=max(a,photon);",
+      "  float glow=pow(clamp(1.0-(d-Rs)/(1.35-Rs),0.0,1.0),2.2)*0.15;",                  // soft outer glow
+      "  col+=ramp(0.4)*glow; a=max(a,glow);",
+      "  float sh=smoothstep(Rs*0.97,Rs*1.0,d); col*=sh; a*=sh;",                          // hard shadow
+      "  gl_FragColor=vec4(col,clamp(a,0.0,1.0));",
+      "}"
+    ].join("\n");
+    var bhMat = new T.ShaderMaterial({
+      uniforms: bhUnif,
+      vertexShader: "varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
+      fragmentShader: bhFrag,
+      transparent: true, depthWrite: false, depthTest: false, blending: T.AdditiveBlending, fog: false
+    });
+    var bhQuad = new T.Mesh(new T.PlaneGeometry(560, 560), bhMat); bhQuad.renderOrder = 5; bhQuad.frustumCulled = false; grp.add(bhQuad);
+    _bhBB.push({ m: bhQuad, u: bhUnif });
     belt.add(grp);
     var shell = new T.Mesh(new T.SphereGeometry(210, 12, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
     shell.position.copy(galacticCentre); shell.name = "DSOPick_galcore";
@@ -1066,7 +1070,11 @@ export function buildNatalSky(THREE, scene, data, opts) {
     tick: function (sec) {
       uniforms.uTime.value = sec;
       lineOpacities(sec);
-      for (var _bi = 0; _bi < _bhSpin.length; _bi++) _bhSpin[_bi].rotateZ(0.004);   // the accretion disc slowly turns → orbiting gas
+      for (var _bi = 0; _bi < _bhSpin.length; _bi++) _bhSpin[_bi].rotateZ(0.004);   // (legacy) any spinning disc meshes
+      for (var _bb = 0; _bb < _bhBB.length; _bb++) {                                // the Gargantua quad: advance its swirl + billboard it to face the camera
+        var _e = _bhBB[_bb]; _e.u.uTime.value = sec;
+        if (o.camera && _e.m.parent) { _e.m.parent.getWorldQuaternion(_bbPQ); o.camera.getWorldQuaternion(_bbCQ); _e.m.quaternion.copy(_bbPQ.invert().multiply(_bbCQ)); }
+      }
       if (bloomSprite && bloomT > 0) { bloomT = Math.max(0, bloomT - 0.045); bloomSprite.material.opacity = bloomT * 0.7; if (bloomT === 0) bloomSprite.visible = false; }
       updateLabels();
     },
