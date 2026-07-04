@@ -996,7 +996,7 @@
     var DOSSIER = {};   // the data-hook registry (keyed by pick-id) → the focus card; blank entries render nothing
     fetch("data/natal-sky.json?v=15").then(function (r) { return r.json(); }).then(function (natalData) {
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=89").then(function (mod) {
+      return import("./natal-sky.js?v=90").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1571,7 +1571,7 @@
         // the constellations are genuine deep-field objects now — they must NOT vanish when you zoom out.
         // Keep the figures fully lit at every scale; only ease them off at the very edge of the world (past
         // all the nebulae) so the extreme long-shot doesn't clutter. (user: don't hide the zodiac on zoom.)
-        if (natalSky && natalSky.setZodiacFade) natalSky.setZodiacFade((camera.position.length() - 6200) / 1500);
+        if (natalSky && natalSky.setZodiacFade) natalSky.setZodiacFade((camera.position.length() - 800) / 1800);   // the busy zodiac FIGURE-LINES recede as you leave the star-chart scale (full at whole-sky ~128, faint ghosts by galaxy scale ~2600) so the galaxy + nebulae read clean; the constellation STARS stay
         // the orrery (esp. the SUN) must NEVER hide — it's the anchor you click to fly back to the solar
         // system. It stays drawn at every scale; the gear-rings fade themselves via ringFade, the Earth is a
         // cheap speck when tiny, and the Sun's glow keeps it findable from across the galaxy.

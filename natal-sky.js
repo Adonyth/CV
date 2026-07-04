@@ -1371,7 +1371,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     setBackdropDim: setBackdropDim,
     // pulled far enough back that the whole galaxy fills the view → the ecliptic zodiac constellations
     // (a solar-system-scale ring) melt away: they'd sit jarringly inside a galaxy-scale frame. t: 0 shown → 1 hidden
-    setZodiacFade: function (t) { zoomMul = 1 - Math.max(0, Math.min(1, t)); },
+    setZodiacFade: function (t) { zoomMul = 1 - 0.85 * Math.max(0, Math.min(1, t)); },   // floor 0.15: the figures never vanish ENTIRELY (a faint ghost of the natal sky remains at every scale) — honors "don't hide all the zodiac"
     setStarScale: function (v) { uniforms.uRefDepth.value = 840 * v; },
     stats: { stars: N, segments: totalSegs, dataNodes: nodeIndex.filter(Boolean).length, planets: planetSprites.length, constellations: cons.length },
     dispose: function () {
