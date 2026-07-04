@@ -1027,10 +1027,14 @@ export function buildNatalSky(THREE, scene, data, opts) {
       }
       return cc;
     }
-    supercluster(new T.Vector3(-0.52, 0.30, 0.60), 15800, 820, 1050, 6, 6000);   // three distant superclusters in other directions → the web has many nodes, not one
-    supercluster(new T.Vector3(0.68, -0.46, 0.22), 16800, 780, 1000, 6, 6200);
-    supercluster(new T.Vector3(-0.18, -0.70, -0.52), 14600, 840, 1050, 6, 5800);
-    var gaC = supercluster(new T.Vector3(0.34, 0.58, -0.74), 11000, 2600, 1350, 8, 6600);   // OUR basin: the biggest, brightest, closest node — Laniakea / the Great Attractor
+    // five neighbour superclusters RINGING the galaxy (radius ~9800–12200, so from a zoomed-out vantage at
+    // ~13000 several always fall in the forward view around the Milky Way → the web has many nodes, not one)
+    supercluster(new T.Vector3(-0.62, 0.35, 0.70), 10600, 950, 1080, 6, 5800);
+    supercluster(new T.Vector3(0.72, -0.42, 0.30), 11800, 900, 1040, 6, 6000);
+    supercluster(new T.Vector3(-0.25, -0.75, -0.55), 10000, 940, 1080, 6, 5600);
+    supercluster(new T.Vector3(0.55, 0.68, 0.30), 12200, 880, 1040, 6, 6000);
+    supercluster(new T.Vector3(-0.70, -0.10, -0.45), 9800, 950, 1080, 6, 5600);
+    var gaC = supercluster(new T.Vector3(0.34, 0.58, -0.74), 10500, 2800, 1380, 8, 6600);   // OUR basin: the biggest, brightest, closest node — Laniakea / the Great Attractor
     var gaShell = new T.Mesh(new T.SphereGeometry(1900, 12, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
     gaShell.position.copy(gaC); gaShell.name = "DSOPick_laniakea";
     gaShell.userData.nyePick = "dso_laniakea"; gaShell.userData.dsoViewDist = 3000; gaShell.userData.dsoFocusMin = 900;
