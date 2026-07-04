@@ -1037,9 +1037,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var RAD = 6500, NLINE = mobile ? 2200 : 4200;   // a tighter, denser basin so the streamlines read as combed hair (not sparse threads) when framed from the laniakea tier's distance
     // three fixed lobe axes bend the spawn shell into the IRREGULAR Tully basin (not a round ball): bulge toward
     // Virgo + Hydra-Centaurus, pinch at the Perseus-Pisces divide where our edge lies.
-    var AX_VIRGO = eclVec(raDecToEcl(12.442, 12.72), 1).normalize();
+    var _evV = raDecToEcl(12.442, 12.72), AX_VIRGO = eclVec(_evV.lon, _evV.lat, 1).normalize();
     var AX_CENT = Fdir.clone();
-    var AX_PP = eclVec(raDecToEcl(3.267, 41.5), 1).normalize();
+    var _evP = raDecToEcl(3.267, 41.5), AX_PP = eclVec(_evP.lon, _evP.lat, 1).normalize();
     function basinLobe(d) { return 0.70 + 0.42 * Math.max(0, d.dot(AX_VIRGO)) + 0.30 * Math.max(0, d.dot(AX_CENT)) - 0.26 * Math.max(0, d.dot(AX_PP)); }
     var P = [], C = [];
     function pushFlow(x, y, z, br, wf) { P.push(x, y, z); C.push(1.0 * br, (0.80 + 0.18 * wf) * br, (0.40 + 0.48 * wf) * br); }
@@ -1323,7 +1323,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   }
 
   /* ---------------- lifecycle ---------------- */
-  var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null, _sfMat = null, _sfBase = 1, _bdT = 0, _keepGal = false, _galMats = null, _localHide = null;
+  var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null, _sfMat = null, _sfBase = 1, _bdT = 0, _keepGal = false, _galMats = null, _localHide = null, _nsMat = null, _nsBase = 1;
   function lineOpacities(sec) {
     // entrance pulse: the constellations announce themselves, then settle
     if (t0 === null) t0 = sec;
@@ -1389,6 +1389,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
         // scale, faded out by the Local Group tier so it never drowns the deep structure. (× solo-dim factor.)
         if (!_sfMat) { var _sfo = group.getObjectByName("Starfield"); if (_sfo && _sfo.material) { _sfMat = _sfo.material; _sfBase = _sfo.material.opacity; } }
         if (_sfMat) { var _sfScale = LOD ? Math.max(0.05, 1 - LOD.smooth(Math.log(2600), Math.log(5400), _lg)) : Math.max(0.08, Math.min(1, (7000 - _cl) / 3200)); _sfMat.opacity = _sfBase * _sfScale * (1 - 0.55 * _bdT); }
+        // the CONSTELLATION STARS (the clickable work-stars) belong to the star-chart/galaxy scale — fade them out
+        // by the Local Group tier so the intergalactic structure (flow, web) reads clean; they return on the way in.
+        if (!_nsMat) { var _nso = group.getObjectByName("natalStars"); if (_nso && _nso.material) { _nsMat = _nso.material; _nsBase = _nso.material.opacity; } }
+        if (_nsMat) { var _nsScale = LOD ? (1 - LOD.smooth(Math.log(3200), Math.log(6000), _lg)) : 1; _nsMat.opacity = _nsBase * _nsScale * (1 - 0.6 * _bdT); }
         // GALAXY owns the milky-way tier: it fades IN as you leave the whole-sky (~260) and fades OUT as the
         // Local Group takes over (~5400), where it collapses to one node. A whole galaxy is a speck beyond that.
         if (!_galMats) { var _g1 = group.getObjectByName("MilkyWayGalaxy"), _g2 = group.getObjectByName("MilkyWayGlow"); if (_g1 && _g2) _galMats = [{ m: _g1.material, base: _g1.material.opacity }, { m: _g2.material, base: _g2.material.opacity }]; }
