@@ -1239,7 +1239,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   }
 
   /* ---------------- lifecycle ---------------- */
-  var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null;
+  var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null, _sfMat = null, _sfBase = 1;
   function lineOpacities(sec) {
     // entrance pulse: the constellations announce themselves, then settle
     if (t0 === null) t0 = sec;
@@ -1258,7 +1258,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     backdropMul = 1 - 0.9 * t;
     if (!_bdCache) {
       _bdCache = [];
-      ["Starfield", "MilkyWayGalaxy", "MilkyWayGlow"].forEach(function (nm) {
+      ["MilkyWayGalaxy", "MilkyWayGlow"].forEach(function (nm) {   // Starfield opacity is now owned by the tick (scale-fade), so it's not cached/driven here
         var o = group.getObjectByName(nm);
         if (o && o.material) _bdCache.push({ m: o.material, base: o.material.opacity, nm: nm });
       });
@@ -1290,9 +1290,17 @@ export function buildNatalSky(THREE, scene, data, opts) {
         var _e = _bhBB[_bb]; _e.u.uTime.value = sec;
         if (o.camera && _e.m.parent) { _e.m.parent.getWorldQuaternion(_bbPQ); o.camera.getWorldQuaternion(_bbCQ); _e.m.quaternion.copy(_bbPQ.invert().multiply(_bbCQ)); }
       }
-      if (_cosmicWeb && o.camera) {                                                 // the cosmic web blooms in as the camera dollies out past the galaxy — earlier + brighter so it's unmissable
-        var _cwo = Math.max(0, Math.min(1, (o.camera.position.length() - 2800) / 3500)) * 0.95;   // blooms in as you leave the galaxy, full by ~6300 so it's there when you pull outside to view the whole web
-        if (_cwo > 0.008) { _cosmicWeb.visible = true; _cosmicWeb.material.opacity = _cwo; } else if (_cosmicWeb.visible) { _cosmicWeb.visible = false; }
+      if (o.camera) {
+        var _cl = o.camera.position.length();
+        if (_cosmicWeb) {                                                            // the cosmic web blooms in as the camera dollies out past the galaxy
+          var _cwo = Math.max(0, Math.min(1, (_cl - 2800) / 3500)) * 0.95;
+          if (_cwo > 0.008) { _cosmicWeb.visible = true; _cosmicWeb.material.opacity = _cwo; } else if (_cosmicWeb.visible) { _cosmicWeb.visible = false; }
+        }
+        // STARFIELD recedes at web scale: the uniform local stars would drown the cosmic-web nodes/filaments, so
+        // fade them (full at galaxy scale ≤5500, down to a faint 0.10 by ~10000) → the WARM WEB becomes the star
+        // of the max-zoom view. (× the solo-dim factor so admiring a lone wonder still dims the field.)
+        if (!_sfMat) { var _sfo = group.getObjectByName("Starfield"); if (_sfo && _sfo.material) { _sfMat = _sfo.material; _sfBase = _sfo.material.opacity; } }
+        if (_sfMat) { var _sfScale = Math.max(0.10, Math.min(1, (10000 - _cl) / 4500)), _bdT = (1 - backdropMul) / 0.9; _sfMat.opacity = _sfBase * _sfScale * (1 - 0.55 * _bdT); }
       }
       if (bloomSprite && bloomT > 0) { bloomT = Math.max(0, bloomT - 0.045); bloomSprite.material.opacity = bloomT * 0.7; if (bloomT === 0) bloomSprite.visible = false; }
       updateLabels();
