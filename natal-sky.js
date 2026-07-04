@@ -579,7 +579,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
       x += (rng() - 0.5) * Wu * 0.02; y += (rng() - 0.5) * Wu * 0.02;
       var i4 = k * 4, r = px[i4] / 255, g = px[i4 + 1] / 255, b = px[i4 + 2] / 255, av = (r + g + b) / 3, sB = 1.35;
       r = Math.max(0, av + (r - av) * sB); g = Math.max(0, av + (g - av) * sB); b = Math.max(0, av + (b - av) * sB);   // saturation lift
-      var mxc = Math.max(r, g, b, 1e-3), bright = Math.min(0.6, Math.pow(mxc, 0.7) * 0.85), depthT = z / Zu * 0.5 + 0.5;
+      var mxc = Math.max(r, g, b, 1e-3), bright = Math.min(0.85, Math.pow(mxc, 0.62) * 1.05), depthT = z / Zu * 0.5 + 0.5;
       bright *= (0.72 + 0.28 * depthT);                                            // far side dimmer → depth cue
       var jt = 0.9 + 0.2 * rng();
       PC.push(x, y, z); CC.push((r / mxc) * bright * jt, (g / mxc) * bright * jt, (b / mxc) * bright * jt);  // hue kept, brightness capped
@@ -590,12 +590,12 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var gg = new T.BufferGeometry();                                               // glow underlay — big soft dim points fill the gaps into continuous gas
     gg.setAttribute("position", new T.BufferAttribute(new Float32Array(GP), 3));
     gg.setAttribute("color", new T.BufferAttribute(new Float32Array(GC), 3));
-    var gm = new T.PointsMaterial({ map: DSO_SOFT, size: (d.psize || 3.0) * 4.2, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.13, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var gm = new T.PointsMaterial({ map: DSO_SOFT, size: (d.psize || 5.0) * 4.6, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.2, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in gm) gm.toneMapped = false; grp.add(new T.Points(gg, gm));
     var cg2 = new T.BufferGeometry();                                              // crisp particle detail on top
     cg2.setAttribute("position", new T.BufferAttribute(new Float32Array(PC), 3));
     cg2.setAttribute("color", new T.BufferAttribute(new Float32Array(CC), 3));
-    var cm = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 3.0, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.62, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var cm = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 5.0, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.72, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in cm) cm.toneMapped = false; grp.add(new T.Points(cg2, cm));
     return grp;
   }
