@@ -1050,6 +1050,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
     _cosmicWeb = new T.Points(wgeo, wmat); _cosmicWeb.name = "CosmicWeb"; _cosmicWeb.renderOrder = -6; _cosmicWeb.frustumCulled = false; _cosmicWeb.visible = false;
     belt.add(_cosmicWeb);
   }
+  // idempotent LAZY-BY-SCALE entry points, called by space.js only on genuine user navigation (never during
+  // the auto-entrance) so the ground/whole-sky view is instant & cool and heavy geometry is built on demand.
+  function ensureFarLayers() { if (_farBuilt) return; _farBuilt = true; buildMilkyWayGalaxy(); buildGalacticCore(); }   // galaxy MUST precede core (core reads galacticCentre)
+  function ensureCosmicWeb() { if (_webBuilt) return; _webBuilt = true; buildCosmicWeb(); }
 
   /* ---------------- constellation names: IN-SCENE Songti sprites (same craft as the 干支 glyphs) ---------------- */
   function nameTexture(zh, en, key, loc) {
@@ -1218,14 +1222,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
   var api = {
     group: group,
     starPoints: starPoints,
+    ensureFarLayers: ensureFarLayers,
+    ensureCosmicWeb: ensureCosmicWeb,
     tick: function (sec) {
       uniforms.uTime.value = sec;
-      // LAZY-BY-SCALE build: the ground & whole-sky views never pay for the far structures. The galaxy +
-      // black hole assemble only once you rise past the constellation sphere; the cosmic web only if you
-      // truly voyage to intergalactic distance (most visits never do → its cost is never incurred).
-      var _cl = o.camera ? o.camera.position.length() : 0;
-      if (!_farBuilt && _cl > 200) { _farBuilt = true; buildMilkyWayGalaxy(); buildGalacticCore(); }
-      if (!_webBuilt && _cl > 2200) { _webBuilt = true; buildCosmicWeb(); }
       lineOpacities(sec);
       for (var _bi = 0; _bi < _bhSpin.length; _bi++) _bhSpin[_bi].rotateZ(0.004);   // (legacy) any spinning disc meshes
       for (var _bb = 0; _bb < _bhBB.length; _bb++) {                                // the Gargantua quad: advance its swirl + billboard it to face the camera

@@ -994,7 +994,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=13").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=85").then(function (mod) {
+      return import("./natal-sky.js?v=86").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1804,6 +1804,14 @@
         camera.lookAt(0, camera.position.y * 0.4, -300);
       }
       if (busy) _clk = sec;                     // the animation clock only advances while active → at rest the scene is frozen (no twinkle/dust/disc churn, no wasted GPU)
+      // LAZY-BY-SCALE: build the heavy far structures ONLY on genuine user navigation (userMoved gates out
+      // the auto-entrance + the fallback deep-space dive, which both transiently fling the camera far). The
+      // ground & whole-sky view therefore never pays for the galaxy / black hole / cosmic web.
+      if (natalSky && userMoved) {
+        var _farCl = camera.position.length();
+        if (_farCl > 350) natalSky.ensureFarLayers();      // galaxy + black hole, once you rise past the constellation sphere toward galactic scale
+        if (_farCl > 2200) natalSky.ensureCosmicWeb();      // the cosmic web, only if you truly voyage out to intergalactic distance
+      }
       deepFusion.tick(_clk);
       if (nyeArmature) nyeArmature.tick(_clk);
       if (natalSky) natalSky.tick(_clk);
