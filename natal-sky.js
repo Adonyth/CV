@@ -1072,7 +1072,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // the frame) individual filaments are THIN threads; it's the sheer density + fineness of the lattice that
     // reads as "the cosmic web." Our ENTIRE local universe (galaxy + Andromeda + Great Attractor + Laniakea) is
     // ONE ordinary node in it. NOT a few fat tubes.
-    var RMAX = 13500, MINSP = 1500;   // web extent; minimum node spacing → a fine lattice with round voids ~MINSP across
+    var RMAX = 13500;   // web extent (radius of the observable-universe box we sprinkle superclusters through)
     var wr = gRng(0x1a91a), wG = function () { return wr() + wr() + wr() - 1.5; };
     var POS = [], COL = [];
     // Millennium WARM MONOTONE ramp: near-black void → amber filament → gold → white-hot node core
@@ -1080,44 +1080,61 @@ export function buildNatalSky(THREE, scene, data, opts) {
     function rampw(L) { for (var i = 0; i < RAMPW.length - 1; i++) { if (L <= RAMPW[i + 1][0]) { var a = RAMPW[i], b = RAMPW[i + 1], f = (L - a[0]) / (b[0] - a[0]); return [a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f, a[3] + (b[3] - a[3]) * f]; } } return [RAMPW[4][1], RAMPW[4][2], RAMPW[4][3]]; }
     function pushPt(x, y, z, L, intensity) { var c = rampw(L), b = intensity * (0.72 + 0.55 * wr()); POS.push(x, y, z); COL.push(c[0] * b, c[1] * b, c[2] * b); }
 
-    // ---- NODES: our Laniakea node at the centre (ORDINARY), + MANY small cluster nodes filling the volume ----
-    var nodes = [{ p: new T.Vector3(0, 0, 0), mass: 1.0, us: true }];
-    var NTARGET = mobile ? 42 : 66, guard = 0;
-    while (nodes.length < NTARGET && guard++ < 14000) {
-      var ict = 2 * wr() - 1, ist = Math.sqrt(1 - ict * ict), iph = 2 * Math.PI * wr();
-      var irad = 1800 + (RMAX - 1800) * Math.pow(wr(), 0.5);
-      var cand = new T.Vector3(ist * Math.cos(iph) * irad, ict * irad, ist * Math.sin(iph) * irad), ok = true;
-      for (var k = 0; k < nodes.length; k++) { if (cand.distanceTo(nodes[k].p) < MINSP) { ok = false; break; } }
-      if (ok) nodes.push({ p: cand, mass: 0.4 + 0.9 * Math.pow(wr(), 1.7) });
+    // ==== The observable universe is built of SUPERCLUSTERS. Each is a Laniakea — a dense KNOT of galaxy clusters,
+    //      far larger than any galaxy. So the web's bright regions are CLUMPS (a handful of cluster-nodes packed
+    //      tight = one supercluster), scattered across huge voids, and bridged by long thin filaments. OUR clump
+    //      sits at the origin: it IS the Laniakea flow-basin you just pulled back from, now one knot among many. ====
+    var CLUMPSP = 3900, CLUMPR = 1050;
+    var clumps = [{ p: new T.Vector3(0, 0, 0), mass: 1.1 }];                                            // our supercluster = Laniakea
+    clumps.push({ p: new T.Vector3(0.55, 0.28, 0.62).normalize().multiplyScalar(9400), mass: 2.0 });    // Shapley — the great overdensity that dwarfs us
+    var NC = mobile ? 11 : 16, cguard = 0;
+    while (clumps.length < NC && cguard++ < 9000) {
+      var cct = 2 * wr() - 1, cst = Math.sqrt(1 - cct * cct), cph = 2 * Math.PI * wr();
+      var crad = 3600 + (RMAX - 3600) * Math.pow(wr(), 0.62);
+      var ccand = new T.Vector3(cst * Math.cos(cph) * crad, cct * crad, cst * Math.sin(cph) * crad), cok = true;
+      for (var ck = 0; ck < clumps.length; ck++) { if (ccand.distanceTo(clumps[ck].p) < CLUMPSP) { cok = false; break; } }
+      if (cok) clumps.push({ p: ccand, mass: 0.55 + 0.85 * Math.pow(wr(), 1.6) });
     }
 
-    // ---- NODE CORES: bright compact knots — many of them → a fine cobweb of glowing junctions ----
-    for (var n = 0; n < nodes.length; n++) {
-      var nd = nodes[n], cn = Math.round((mobile ? 200 : 340) * (0.6 + nd.mass)), cr = 90 + 195 * nd.mass;
-      for (var q = 0; q < cn; q++) {
-        var r = Math.pow(wr(), 1.9) * cr, u = 2 * wr() - 1, pp = 2 * Math.PI * wr(), sn = Math.sqrt(1 - u * u);
-        pushPt(nd.p.x + r * sn * Math.cos(pp), nd.p.y + r * sn * Math.sin(pp), nd.p.z + r * u, 0.90 + 0.10 * wr(), Math.min(2.0, 1.0 + 0.55 * nd.mass));
+    // ---- expand each clump into a tight group of cluster-NODES (a dominant central cluster + satellites) ----
+    var nodes = [];
+    for (var cc = 0; cc < clumps.length; cc++) {
+      var clp = clumps[cc], nInClump = 4 + (wr() * 4 | 0);
+      var core = { p: clp.p.clone(), mass: clp.mass * 1.25, clump: cc }; nodes.push(core); clp.nodes = [core];
+      for (var ci = 0; ci < nInClump; ci++) {
+        var off = new T.Vector3(wG(), wG(), wG()).multiplyScalar(CLUMPR * (0.55 + 0.45 * clp.mass) * (0.35 + 0.65 * wr()));
+        var sub = { p: clp.p.clone().add(off), mass: 0.35 + 0.55 * Math.pow(wr(), 1.6), clump: cc }; nodes.push(sub); clp.nodes.push(sub);
       }
     }
 
-    // ---- THIN FILAMENTS: join each node to its nearest 3-5 → an intricate LACEWORK of fine bright threads.
-    //      DENSE points along each thread so it reads as a continuous glowing strand even from far out. ----
-    var edges = {};
-    for (var a = 0; a < nodes.length; a++) {
-      var order = [];
-      for (var b = 0; b < nodes.length; b++) { if (b !== a) order.push({ b: b, d: nodes[a].p.distanceTo(nodes[b].p) }); }
-      order.sort(function (x, y) { return x.d - y.d; });
-      var kconn = 3 + (wr() < 0.5 ? 1 : 0) + (wr() < 0.2 ? 1 : 0);
-      for (var e = 0; e < Math.min(kconn, order.length); e++) {
-        var bb = order[e].b, key = Math.min(a, bb) + "_" + Math.max(a, bb);
-        if (edges[key]) continue; edges[key] = true;
-        var pA = nodes[a].p, pB = nodes[bb].p, L = pA.distanceTo(pB);
-        if (L > MINSP * 3.2) continue;   // only bridge genuine neighbours → a local lattice, not a mesh across the box
-        var nPts = Math.max(44, Math.round(L / 8));
-        for (var t = 0; t < nPts; t++) {
-          var f = t / (nPts - 1), jit = 16 + 46 * Math.sin(f * Math.PI);   // THIN thread, a touch fuller mid-span
-          pushPt(pA.x + (pB.x - pA.x) * f + wG() * jit, pA.y + (pB.y - pA.y) * f + wG() * jit, pA.z + (pB.z - pA.z) * f + wG() * jit, 0.42 + 0.24 * (1 - Math.sin(f * Math.PI)), 0.85);
-        }
+    // ---- NODE CORES: bright compact knots. Clump cores burn brightest → each supercluster reads as a luminous hub ----
+    for (var n = 0; n < nodes.length; n++) {
+      var nd = nodes[n], cn = Math.round((mobile ? 180 : 300) * (0.55 + nd.mass)), cr = 68 + 150 * nd.mass;
+      for (var q = 0; q < cn; q++) {
+        var r = Math.pow(wr(), 1.9) * cr, u = 2 * wr() - 1, pp = 2 * Math.PI * wr(), sn = Math.sqrt(1 - u * u);
+        pushPt(nd.p.x + r * sn * Math.cos(pp), nd.p.y + r * sn * Math.sin(pp), nd.p.z + r * u, 0.90 + 0.10 * wr(), Math.min(2.1, 1.0 + 0.6 * nd.mass));
+      }
+    }
+
+    // ---- FILAMENTS: a dense THREAD builder shared by intra-clump webs (short) & inter-clump bridges (long thin) ----
+    function thread(pA, pB, dens, briBase, inten) {
+      var L = pA.distanceTo(pB), nP = Math.max(18, Math.round(L / dens));
+      for (var t = 0; t < nP; t++) { var f = t / (nP - 1), jit = 12 + 34 * Math.sin(f * Math.PI); pushPt(pA.x + (pB.x - pA.x) * f + wG() * jit, pA.y + (pB.y - pA.y) * f + wG() * jit, pA.z + (pB.z - pA.z) * f + wG() * jit, briBase + 0.24 * (1 - Math.sin(f * Math.PI)), inten); }
+    }
+    // intra-clump: the internal cobweb of each supercluster — sub-clusters wired to their core (short, brighter)
+    for (var cd = 0; cd < clumps.length; cd++) { var cl = clumps[cd]; if (!cl.nodes) continue; for (var si = 1; si < cl.nodes.length; si++) thread(cl.nodes[0].p, cl.nodes[si].p, 8, 0.44, 0.8); }
+    // inter-clump: long thin filaments strung between neighbouring superclusters over the voids (the great skeleton)
+    var cedges = {};
+    for (var ca = 0; ca < clumps.length; ca++) {
+      var corder = [];
+      for (var cb = 0; cb < clumps.length; cb++) { if (cb !== ca) corder.push({ b: cb, d: clumps[ca].p.distanceTo(clumps[cb].p) }); }
+      corder.sort(function (x, y) { return x.d - y.d; });
+      var ckn = 2 + (wr() < 0.45 ? 1 : 0);
+      for (var ce = 0; ce < Math.min(ckn, corder.length); ce++) {
+        var cbb = corder[ce].b, ckey = Math.min(ca, cbb) + "_" + Math.max(ca, cbb);
+        if (cedges[ckey]) continue; cedges[ckey] = true;
+        if (clumps[ca].p.distanceTo(clumps[cbb].p) > CLUMPSP * 2.8) continue;   // don't bridge across the whole box
+        thread(clumps[ca].p, clumps[cbb].p, 10, 0.24, 0.5);
       }
     }
 
@@ -1279,7 +1296,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   }
 
   /* ---------------- lifecycle ---------------- */
-  var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null, _sfMat = null, _sfBase = 1, _bdT = 0, _keepGal = false, _galMats = null;
+  var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null, _sfMat = null, _sfBase = 1, _bdT = 0, _keepGal = false, _galMats = null, _localHide = null;
   function lineOpacities(sec) {
     // entrance pulse: the constellations announce themselves, then settle
     if (t0 === null) t0 = sec;
@@ -1325,7 +1342,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
         // TIER 3 — LANIAKEA FLOW BASIN (our supercluster): blooms at the supercluster scale, between the galaxy
         // and the whole cosmic web (in ~4000-7500, gone by ~9500 as the web takes over).
         if (_laniakeaFlow) {
-          var _lfo = Math.max(0, Math.min(1, (_cl - 3600) / 1200)) * Math.max(0, Math.min(1, (9600 - _cl) / 1800)) * 0.95;
+          var _lfo = Math.max(0, Math.min(1, (_cl - 4400) / 1400)) * Math.max(0, Math.min(1, (9600 - _cl) / 1800)) * 0.95;
           if (_lfo > 0.008) { _laniakeaFlow.visible = true; _laniakeaFlow.material.opacity = _lfo; } else if (_laniakeaFlow.visible) { _laniakeaFlow.visible = false; }
         }
         // TIER 4 — the whole COSMIC WEB (universe scale): blooms only once you pull PAST our supercluster, so it
@@ -1343,7 +1360,14 @@ export function buildNatalSky(THREE, scene, data, opts) {
         // central spiral fades as you pull out (full at galaxy scale ≤6500, faint by ~10500) → the scale finally
         // reads — the web is VAST and the Milky Way is just ONE tiny node in it (see the MW node in the web).
         if (!_galMats) { var _g1 = group.getObjectByName("MilkyWayGalaxy"), _g2 = group.getObjectByName("MilkyWayGlow"); if (_g1 && _g2) _galMats = [{ m: _g1.material, base: _g1.material.opacity }, { m: _g2.material, base: _g2.material.opacity }]; }
-        if (_galMats) { var _gScale = Math.max(0.10, Math.min(1, (6000 - _cl) / 2000)), _gSolo = _keepGal ? 1 : (1 - 0.86 * _bdT); for (var _gi = 0; _gi < _galMats.length; _gi++) _galMats[_gi].m.opacity = _galMats[_gi].base * _gScale * _gSolo; }
+        if (_galMats) { var _gScale = Math.max(0, Math.min(1, (4800 - _cl) / 1400)), _gSolo = _keepGal ? 1 : (1 - 0.86 * _bdT); for (var _gi = 0; _gi < _galMats.length; _gi++) _galMats[_gi].m.opacity = _galMats[_gi].base * _gScale * _gSolo; }
+        // LOCAL structures (nebulae, Andromeda, the black hole) VANISH at the supercluster scale — at Laniakea's
+        // ~5,200-galaxy size they are all sub-pixel specks. Hard-hide them so the flow basin owns the frame.
+        if (!_localHide && _cl > 3000) {
+          _localHide = []; var _andO = group.getObjectByName("Andromeda"); if (_andO) _localHide.push(_andO);
+          group.traverse(function (o) { if (o.name && o.name.indexOf("DSO_") === 0) _localHide.push(o); });
+        }
+        if (_localHide) { var _hl = _cl > 4600; for (var _hi = 0; _hi < _localHide.length; _hi++) _localHide[_hi].visible = !_hl; }
       }
       if (bloomSprite && bloomT > 0) { bloomT = Math.max(0, bloomT - 0.045); bloomSprite.material.opacity = bloomT * 0.7; if (bloomT === 0) bloomSprite.visible = false; }
       updateLabels();
