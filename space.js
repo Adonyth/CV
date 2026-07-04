@@ -994,7 +994,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=13").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=69").then(function (mod) {
+      return import("./natal-sky.js?v=70").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1106,6 +1106,7 @@
             }
           }
           if (!overClickable && natalSky.dsoPicks && _ctaRay.intersectObject(natalSky.dsoPicks, true).length) overClickable = true;   // a deep-sky wonder under the hand
+          if (!overClickable && natalSky.conPicks && _ctaRay.intersectObject(natalSky.conPicks, true).length) overClickable = true;   // a constellation under the hand
           if (!overClickable && natalSky.isOverInteractive && natalSky.isOverInteractive(e.clientX, e.clientY)) overClickable = true;
         }
         if (!ptrDown) canvas.style.cursor = overClickable ? "pointer" : "grab";   // never fight the grabbing cursor mid-drag
@@ -1537,10 +1538,10 @@
         // admired from far out (view-dist ~400), so its focus only releases when you truly pull away.
         if (soloBody && soloBody !== "dso" && soloBody !== "galcore" && !glideActive() && controls.getRadius() > 130) soloBody = null;
         if ((soloBody === "dso" || soloBody === "galcore") && !glideActive() && controls.getRadius() > 900) soloBody = null;
-        // the constellation STARS are genuine deep-field stars (part of the star sea, never faded here). But
-        // the connecting figure LINES only read as a pattern from near Earth; pull out and fly AMONG the stars
-        // and they'd shear into distracting streaks — so fade ONLY the lines once you leave the home scale.
-        if (natalSky && natalSky.setZodiacFade) natalSky.setZodiacFade((camera.position.length() - 1150) / 800);
+        // the constellations are genuine deep-field objects now — they must NOT vanish when you zoom out.
+        // Keep the figures fully lit at every scale; only ease them off at the very edge of the world (past
+        // all the nebulae) so the extreme long-shot doesn't clutter. (user: don't hide the zodiac on zoom.)
+        if (natalSky && natalSky.setZodiacFade) natalSky.setZodiacFade((camera.position.length() - 6200) / 1500);
         // the orrery (esp. the SUN) must NEVER hide — it's the anchor you click to fly back to the solar
         // system. It stays drawn at every scale; the gear-rings fade themselves via ringFade, the Earth is a
         // cheap speck when tiny, and the Sun's glow keeps it findable from across the galaxy.
@@ -1574,13 +1575,15 @@
         var hits = pickRay.intersectObject(nyeArmature.group, true);
         if (natalSky && natalSky.bodyGroup) hits = hits.concat(pickRay.intersectObject(natalSky.bodyGroup, true));
         if (natalSky && natalSky.dsoPicks) hits = hits.concat(pickRay.intersectObject(natalSky.dsoPicks, true));
+        if (natalSky && natalSky.conPicks) hits = hits.concat(pickRay.intersectObject(natalSky.conPicks, true));
         hits.sort(function (h1, h2) { return h1.distance - h2.distance; });
         for (var i = 0; i < hits.length; i++) {
           if (hits[i].object.name === "NyeEarthPickShell") continue;   // the oversized shell is not the globe
           var pick = null, o = hits[i].object;
           while (o && !pick) { pick = o.userData && o.userData.nyePick; o = o.parent; }
           var isDso = pick && pick.indexOf && pick.indexOf("dso_") === 0;
-          if (!isDso && pick !== "sun" && pick !== "moon" && pick !== "earth" && pick !== "jupiter" && pick !== "saturn" && pick !== "beacon" && pick !== "mercury" && pick !== "venus" && pick !== "mars" && pick !== "uranus" && pick !== "neptune" && pick !== "pluto" && pick !== "charon") continue;   // glyphs never swallow a click
+          var isCon = pick && pick.indexOf && pick.indexOf("con_") === 0;
+          if (!isDso && !isCon && pick !== "sun" && pick !== "moon" && pick !== "earth" && pick !== "jupiter" && pick !== "saturn" && pick !== "beacon" && pick !== "mercury" && pick !== "venus" && pick !== "mars" && pick !== "uranus" && pick !== "neptune" && pick !== "pluto" && pick !== "charon") continue;   // glyphs never swallow a click
           if (pick === "beacon") {                       // the beacon is the door home
             // on the ground the camera sits INSIDE the beacon's pick bubble (and the
             // raycaster ignores visible=false) — look PAST it to the real target
@@ -1614,6 +1617,8 @@
             glideToBody("NatalPlutoMoon", 0.7);
           } else if (isDso) {
             focusDeepSky(pick.slice(4), hits[i].object);   // a cosmic wonder: fly out to it, orbit it, admire — no door
+          } else if (isCon) {
+            focusConstellation(pick.slice(4), 110);        // a constellation: fly to it, it becomes the pivot, admire the figure
           } else if (pick === "earth") {
             glide.axis = null; glide.step = 0; glide.frames = 30; glide.distTarget = 7;
             glide.targetTo = new THREE.Vector3(0, 0, 0);      // orbit the Earth itself

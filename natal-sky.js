@@ -73,6 +73,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   var stars = [];        // { pos, mag, importance, conIdx, node }
   var conCentroid = [];  // Vector3 per constellation (for labels / back-hemisphere cull)
   var conNear = [], conFar = [], conDir = [];    // per-constellation framing (for navigation): nearest/farthest star depth + mean sightline direction
+  var conPickGroup = new T.Group(); conPickGroup.name = "ConstellationPicks"; belt.add(conPickGroup);   // generous invisible click targets so a whole figure is easy to grab
   cons.forEach(function (c, ci) {
     var ecl = c.stars.map(function (s) { return raDecToEcl(s.raH, s.decDeg); });
     // TRUE SKY POSITIONS — no more re-seating onto even 30° sign cells. Each star keeps its REAL
@@ -102,6 +103,14 @@ export function buildNatalSky(THREE, scene, data, opts) {
     });
     conCentroid[ci] = centroid.multiplyScalar(1 / (ecl.length || 1));
     conDir[ci] = dirSum.clone().normalize(); conNear[ci] = near; conFar[ci] = far;
+    // a generous invisible pick sphere covering the whole figure → clicking anywhere over the
+    // constellation grabs it (the tiny deep star-points are far too small to raycast reliably)
+    var bR = 0;
+    for (var bi = 0; bi < c._starPos.length; bi++) { var bd = c._starPos[bi].distanceTo(conCentroid[ci]); if (bd > bR) bR = bd; }
+    bR = Math.max(bR * 1.15, conFar[ci] * 0.14);
+    var pshell = new T.Mesh(new T.SphereGeometry(bR, 12, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
+    pshell.position.copy(conCentroid[ci]); pshell.name = "ConPick_" + c.id; pshell.userData.nyePick = "con_" + c.id;
+    conPickGroup.add(pshell);
   });
 
   /* ---------------- star-embers: ONE Points, deep-ember shader ---------------- */
@@ -119,8 +128,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var c = coreCol(h, spark);
     col[k] = c[0]; col[k + 1] = c[1]; col[k + 2] = c[2];
     var keyCon = cons[st.conIdx].loadBearing;
-    aSize[i] = lerp(2.4, 8.0, w) + (st.importance === 1.0 ? 3.0 : 0) + (keyCon && st.importance >= 0.7 ? 2.0 : 0);
-    aAlpha[i] = Math.min(1.0, lerp(0.52, 0.98, w) * (st.importance === 1.0 ? 1.15 : 1.0) * (keyCon ? 1.12 : 1.0));
+    aSize[i] = lerp(2.4, 8.0, w) + (st.importance === 1.0 ? 3.0 : 0) + (st.importance >= 0.7 ? 3.2 : 0) + (keyCon && st.importance >= 0.7 ? 2.0 : 0);   // figure stars stand out boldly
+    aAlpha[i] = Math.min(1.0, lerp(0.6, 1.0, w) * (st.importance >= 0.7 ? 1.25 : 1.0) * (keyCon ? 1.12 : 1.0));
     starConIdx[i] = st.conIdx;
     aSeed[i] = hash(i * 13 + 1);
     aSpark[i] = spark;
@@ -189,10 +198,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
     totalSegs += segs.length;
     var lgeo = new T.BufferGeometry();
     lgeo.setAttribute("position", new T.BufferAttribute(new Float32Array(pts), 3));
-    var base = c.loadBearing ? 0.50 : 0.42;   // dimmer figure-lines (owner: zodiac too bright); uiTick multiplies this base each frame
+    var base = c.loadBearing ? 0.85 : 0.72;   // BRIGHT, unmistakable figure-lines (now genuine deep-field constellations — they should read boldly); uiTick multiplies this base each frame
     var prx = Math.min((typeof devicePixelRatio !== "undefined" ? devicePixelRatio : 1) || 1, mobile ? 1.5 : 2);
     var mat = new T.PointsMaterial({
-      map: o.tex, color: c.loadBearing ? 0xffc79a : 0xf6b088, size: (c.loadBearing ? 7.0 : 5.4) * prx, sizeAttenuation: false,
+      map: o.tex, color: c.loadBearing ? 0xffc79a : 0xf6b088, size: (c.loadBearing ? 8.4 : 6.8) * prx, sizeAttenuation: false,
       transparent: true, opacity: base, depthWrite: false, depthTest: true, blending: T.AdditiveBlending
     });
     mat.fog = false;
@@ -682,7 +691,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
      every direction and to great depth, so nothing floats in a void — the nebulae are nestled
      among stars, and the eye reads "we are deep inside a galaxy full of stars". Static, one draw. */
   (function buildStarfield() {
-    var N = mobile ? 11000 : 19000, R0 = 110, R1 = 7200;                         // THE main star layer now (the old R=700 celestial-sphere shell is gone): a DEEP VOLUMETRIC field filling ALL of space from close-in (110) out past the far nebulae — evenly scattered, no shell, no boundary, no bubble
+    var N = mobile ? 26000 : 48000, R0 = 110, R1 = 7200;                         // THE main star layer now (the old R=700 celestial-sphere shell is gone): a DENSE DEEP VOLUMETRIC field — tens of thousands of stars filling ALL of space from close-in out past the far nebulae, evenly scattered, no shell, no bubble, never empty
     var rng = gRng(3391), pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
     for (var i = 0; i < N; i++) {
       var uax = rng() * 2 - 1, ph = rng() * Math.PI * 2, ss = Math.sqrt(1 - uax * uax);
@@ -711,7 +720,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   var galacticCentre = null, galacticNormal = null, _bhSpin = [];                // exposed for the clickable black-hole nucleus; _bhSpin = accretion discs slowly turned each tick
   (function buildMilkyWayGalaxy() {
     var Rgal = 2600, N = mobile ? 90000 : 160000;                              // VAST but leaner — a real galaxy the size of the sky; count trimmed hard for a cooler GPU (additive overdraw is the cost; the glow underlayer keeps it dense-looking)
-    var Rsun = 0.52 * Rgal, Rin = 200, Rout = 560, hSun = 140;                  // Sun's galactocentric radius; nearly IN the plane so the band WRAPS the whole sky; galaxy fills in CLOSE to the sun (Rin 200) so there's no dark bubble — just a gentle clearing around the planets
+    var Rsun = 0.52 * Rgal, Rin = 42, Rout = 150, hSun = 140;                   // Sun's galactocentric radius; the Orion ARM flows right THROUGH the solar system (tiny 42-unit clearing only for the planets themselves) → the sun sits embedded in the arm, not in a carved-out hole that truncates it
     var gcE = raDecToEcl(17.7608, -28.94), npE = raDecToEcl(12.8571, 27.13);    // Sgr A* + galactic north pole
     var w = eclVec(npE.lon, npE.lat, 1).normalize();                            // disc normal (galactic pole)
     var uu = eclVec(gcE.lon, gcE.lat, 1); uu.addScaledVector(w, -uu.dot(w)).normalize();  // in-plane, toward the centre
@@ -1054,6 +1063,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     group: group,
     bodyGroup: bodyGroup,
     dsoPicks: dsoPickGroup,
+    conPicks: conPickGroup,
     getConCentroid: function (id) {
       var ci = lineByCon[id]; if (ci == null || !conCentroid[ci]) return null;
       return belt.localToWorld(conCentroid[ci].clone());
