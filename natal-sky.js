@@ -578,18 +578,13 @@ export function buildNatalSky(THREE, scene, data, opts) {
     for (var q3 = 0; q3 < np; q3++) wgt[q3] /= wmax;
     var lsort = Float32Array.from(lum); Array.prototype.sort.call(lsort, function (a, b) { return a - b; });
     var lLo = lsort[(np * 0.35) | 0], lHi = lsort[Math.min(np - 1, (np * 0.99) | 0)], lSpan = Math.max(0.001, lHi - lLo);   // auto-levels — the photo's own contrast curve, now applied to the PARTICLES so bright cores blaze and faint gas stays dim (the beauty lives in the grain, not a flat overlay)
-    var N = mobile ? 17000 : 32000, PC = [], CC = [], GP = [], GC = [], placed = 0, guard = 0, lim = N * 45;
+    var N = mobile ? 12000 : 22000, PC = [], CC = [], GP = [], GC = [], placed = 0, guard = 0, lim = N * 45;
     while (placed < N && guard++ < lim) {
       var xi = (rng() * sw) | 0, yi = (rng() * sh) | 0, k = yi * sw + xi;
       if (rng() > wgt[k]) continue;
       var u = (xi + rng()) / sw, v = (yi + rng()) / sh;
       var x = (u - 0.5) * Wu, y = (0.5 - v) * Hu;
-      // two-depth grain, ALL particles (so they rotate together — no static billboard to fall out of sync):
-      // ~a third form the deep 3-D VOLUME, the rest a NEAR-FLAT recognisable FACE so the photo reads.
-      var deep = rng() < 0.34;
-      var z = deep
-        ? (zfb(x * 0.02, y * 0.02) * 2 - 1) * Zu * 0.55 + (rng() + rng() - 1) * Zu * 0.5 + (rng() - 0.5) * Zu * 0.14
-        : (zfb(x * 0.02, y * 0.02) * 2 - 1) * Zu * 0.12 + (rng() - 0.5) * Zu * 0.06;
+      var z = (zfb(x * 0.02, y * 0.02) * 2 - 1) * Zu * 0.6 + (rng() + rng() - 1) * Zu * 0.5 + (rng() - 0.5) * Zu * 0.14;  // a real 3-D VOLUME wrapping the recognisable image plane
       x += (rng() - 0.5) * Wu * 0.02; y += (rng() - 0.5) * Wu * 0.02;
       var i4 = k * 4, r = px[i4] / 255, g = px[i4 + 1] / 255, b = px[i4 + 2] / 255, av = (r + g + b) / 3, sB = 1.5;
       r = Math.max(0, av + (r - av) * sB); g = Math.max(0, av + (g - av) * sB); b = Math.max(0, av + (b - av) * sB);   // vivid saturation lift — recover the photo's rich colour
@@ -601,10 +596,35 @@ export function buildNatalSky(THREE, scene, data, opts) {
       placed++;
     }
     var grp = new T.Group();
-    // NO billboard sprite and NO flat plane — the nebula is ONE thing made of particles: a dense, near-flat,
-    // contrast-stretched FACE (recognisable — you can name it) + a deep VOLUME wrapped around it + a lush
-    // glow. All of it is world-fixed, so it all turns together when you orbit — the face can never fall out
-    // of sync with the grain (that was the disharmony). Recognisable + volumetric + harmonious, no sticker.
+    // (RECOGNISABLE) the nebula's REAL photo — contrast-stretched + colour-lifted + radially masked — as a
+    // WORLD-ORIENTED plane embedded at the middle of the particle volume (NOT a camera-facing billboard).
+    // Because it's world-fixed like the grain, image + particles TURN TOGETHER when you orbit — they can
+    // never fall out of sync (that was the disharmony). You arrive face-on and read WHAT it is; the volume
+    // wraps it in real 3-D grain. A "3-D sticker" that actually rotates.
+    (function () {
+      var cap = 360, sc2 = Math.min(1, cap / Math.max(W, H));
+      var sw2 = Math.max(2, Math.round(W * sc2)), sh2 = Math.max(2, Math.round(H * sc2));
+      var cv2 = document.createElement("canvas"); cv2.width = sw2; cv2.height = sh2;
+      var cx2 = cv2.getContext("2d"); cx2.drawImage(img, 0, 0, sw2, sh2);
+      var id2 = cx2.getImageData(0, 0, sw2, sh2), p2 = id2.data, npx2 = sw2 * sh2, srt = new Float32Array(npx2);
+      for (var q2 = 0; q2 < npx2; q2++) srt[q2] = (0.299 * p2[q2 * 4] + 0.587 * p2[q2 * 4 + 1] + 0.114 * p2[q2 * 4 + 2]) / 255;
+      Array.prototype.sort.call(srt, function (a, b) { return a - b; });
+      var lo2 = srt[(npx2 * 0.35) | 0], hi2 = srt[Math.min(npx2 - 1, (npx2 * 0.99) | 0)], span2 = Math.max(0.001, hi2 - lo2);
+      for (var yy = 0; yy < sh2; yy++) for (var xx = 0; xx < sw2; xx++) {
+        var ii = (yy * sw2 + xx) * 4, rr2 = p2[ii] / 255, gg2 = p2[ii + 1] / 255, bb2 = p2[ii + 2] / 255, avg2 = (rr2 + gg2 + bb2) / 3, sbb = 1.55;
+        rr2 = Math.max(0, Math.min(1, avg2 + (rr2 - avg2) * sbb)); gg2 = Math.max(0, Math.min(1, avg2 + (gg2 - avg2) * sbb)); bb2 = Math.max(0, Math.min(1, avg2 + (bb2 - avg2) * sbb));
+        var lm2 = ((0.299 * rr2 + 0.587 * gg2 + 0.114 * bb2) - lo2) / span2; lm2 = lm2 < 0 ? 0 : lm2 > 1 ? 1 : lm2;
+        var boost2 = 0.35 + 1.15 * lm2;
+        p2[ii] = Math.min(255, rr2 * 255 * boost2); p2[ii + 1] = Math.min(255, gg2 * 255 * boost2); p2[ii + 2] = Math.min(255, bb2 * 255 * boost2);
+        var rx = (xx / (sw2 - 1) - 0.5) * 2, ry = (yy / (sh2 - 1) - 0.5) * 2, rad2 = Math.sqrt(rx * rx + ry * ry);
+        p2[ii + 3] = 255 * (1 - Math.max(0, Math.min(1, (rad2 - 0.56) / 0.56)));
+      }
+      cx2.putImageData(id2, 0, 0);
+      var tex = new T.CanvasTexture(cv2); if ("colorSpace" in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
+      var sm = new T.MeshBasicMaterial({ map: tex, blending: T.AdditiveBlending, transparent: true, depthWrite: false, side: T.DoubleSide, opacity: d.opacity != null ? d.opacity : 0.8, fog: false });
+      if ("toneMapped" in sm) sm.toneMapped = false;
+      var face = new T.Mesh(new T.PlaneGeometry(Wu, Hu), sm); face.renderOrder = -1; grp.add(face);
+    })();
     var gg = new T.BufferGeometry();
     gg.setAttribute("position", new T.BufferAttribute(new Float32Array(GP), 3));
     gg.setAttribute("color", new T.BufferAttribute(new Float32Array(GC), 3));
