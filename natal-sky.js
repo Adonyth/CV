@@ -562,9 +562,14 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var edge = 1 - Math.max(0, Math.min(1, (rad - 0.66) / 0.5));                  // dissolve the frame edge → an organic cloud, not a photo cut-out
       if (ln <= 0.02 || rng() > dens * Math.min(1, Math.pow(ln, 0.45) * 1.35) * edge) continue;  // flatter brightness-density so bright cores don't pile up and clip; still fades at the rim
       var wx = (x / (sw - 1) - 0.5) * Wu, wy = (0.5 - y / (sh - 1)) * Hu, wz = ((ln - 0.5) * 0.5 + (rng() - 0.5)) * depth;
-      var col = dsoRamp(Math.pow(ln, gamma)), w = 0.5 + 0.5 * ln;                   // dim points for dim regions → contrast
-      var cr = col[0] * bright * w, cg = col[1] * bright * w, cb = col[2] * bright * w, cmax = Math.max(cr, cg, cb);
-      if (cmax > 1) { cr /= cmax; cg /= cmax; cb /= cmax; }                          // hue-preserving cap: a bright point stays saturated-warm, never washes to white
+      // COLOUR from the object's OWN photo (saturation-lifted so its true hue reads), then blended
+      // toward the scene's warm ember so it still belongs here — this is how shape AND colour show
+      var q4 = (y * sw + x) * 4;
+      var rr0 = px[q4] / 255, gg0 = px[q4 + 1] / 255, bb0 = px[q4 + 2] / 255, avg = (rr0 + gg0 + bb0) / 3, sb = 1.5;
+      rr0 = Math.max(0, avg + (rr0 - avg) * sb); gg0 = Math.max(0, avg + (gg0 - avg) * sb); bb0 = Math.max(0, avg + (bb0 - avg) * sb);
+      var wc = dsoRamp(Math.pow(ln, gamma)), mix = 0.62, w = 0.5 + 0.5 * ln;         // 0.62 its real colour + 0.38 warm ember
+      var cr = (rr0 * mix + wc[0] * (1 - mix)) * bright * w, cg = (gg0 * mix + wc[1] * (1 - mix)) * bright * w, cb = (bb0 * mix + wc[2] * (1 - mix)) * bright * w, cmax = Math.max(cr, cg, cb);
+      if (cmax > 1) { cr /= cmax; cg /= cmax; cb /= cmax; }                          // hue-preserving cap: bright cores stay coloured, never wash to white
       P.push(wx, wy, wz);
       C.push(cr, cg, cb);
     }
@@ -607,6 +612,29 @@ export function buildNatalSky(THREE, scene, data, opts) {
     img.src = "data/" + d.tex;
   });
 
+  /* ---------------- the deep-space STARFIELD: thousands of faint stars filling the whole sky in
+     every direction and to great depth, so nothing floats in a void — the nebulae are nestled
+     among stars, and the eye reads "we are deep inside a galaxy full of stars". Static, one draw. */
+  (function buildStarfield() {
+    var N = mobile ? 5000 : 11000, R0 = 540, R1 = 2700;
+    var rng = gRng(3391), pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
+    for (var i = 0; i < N; i++) {
+      var uax = rng() * 2 - 1, ph = rng() * Math.PI * 2, ss = Math.sqrt(1 - uax * uax);
+      var rr = R0 + (R1 - R0) * Math.pow(rng(), 0.6);                            // spread through a deep shell so the field has real depth
+      pos[i * 3] = ss * Math.cos(ph) * rr; pos[i * 3 + 1] = uax * rr; pos[i * 3 + 2] = ss * Math.sin(ph) * rr;
+      var b = 0.12 + 0.6 * Math.pow(rng(), 2.6);                                 // heavy dim tail — a sky of faint stars with a rare bright one
+      var t = rng();                                                            // colour temperature: mostly white, a few warm, a few cool
+      col[i * 3] = Math.min(1, b * (0.95 + 0.2 * t)); col[i * 3 + 1] = Math.min(1, b * 0.96); col[i * 3 + 2] = Math.min(1, b * (0.95 + 0.2 * (1 - t)));
+    }
+    var g = new T.BufferGeometry();
+    g.setAttribute("position", new T.BufferAttribute(pos, 3));
+    g.setAttribute("color", new T.BufferAttribute(col, 3));
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 1.4 : 1.7, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.92, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    if ("toneMapped" in m) m.toneMapped = false;
+    var pts = new T.Points(g, m); pts.name = "Starfield"; pts.renderOrder = -5; pts.frustumCulled = false;
+    belt.add(pts);
+  })();
+
   /* ---------------- the MILKY WAY, for real: a whole SPIRAL GALAXY that the solar system lives
      inside. The galactic centre sits ~880 units toward Sagittarius; the Sun (the scene origin)
      rides ~0.55 of the way out along the ORION ARM — so looking toward Sagittarius you see the
@@ -615,8 +643,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
      in one draw call. A local "bubble" is carved out so no galaxy star clutters the planets or
      the constellations that live nearer than the arm. Built once — zero per-frame cost. -------- */
   (function buildMilkyWayGalaxy() {
-    var Rgal = 1600, N = mobile ? 68000 : 155000;                              // dense enough that arms + bulge read as a luminous galaxy, one static draw call
-    var Rsun = 0.55 * Rgal, Rhole = 470, hSun = 270;                            // Sun's galactocentric radius; lifted a touch ABOVE the plane so you look OVER the disc, not edge-on
+    var Rgal = 1900, N = mobile ? 80000 : 178000;                              // BIG so the galaxy is vast and enveloping; dense enough to read as a luminous river of stars
+    var Rsun = 0.55 * Rgal, Rin = 260, Rout = 700, hSun = 110;                  // Sun's galactocentric radius; nearly IN the plane so the band WRAPS the whole sky; galaxy fades in gradually (no hard shell)
     var gcE = raDecToEcl(17.7608, -28.94), npE = raDecToEcl(12.8571, 27.13);    // Sgr A* + galactic north pole
     var w = eclVec(npE.lon, npE.lat, 1).normalize();                            // disc normal (galactic pole)
     var uu = eclVec(gcE.lon, gcE.lat, 1); uu.addScaledVector(w, -uu.dot(w)).normalize();  // in-plane, toward the centre
@@ -631,7 +659,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
     function G() { return rng() + rng() + rng() + rng() - 2; }                  // ~N(0, sd≈0.58)
     var P = [], Cc = [];
     function push(pt, f, bright) {
-      if (pt.lengthSq() < Rhole * Rhole) return;                                // carve the local bubble
+      var dd = pt.lengthSq();
+      if (dd < Rin * Rin) return;                                               // the immediate solar system stays clear
+      if (dd < Rout * Rout && rng() > (Math.sqrt(dd) - Rin) / (Rout - Rin)) return;  // fade the galaxy IN gradually — no hard spherical shell cutting it off
       var c = ramp(f < 0 ? 0 : f > 1 ? 1 : f);
       var r = c[0] * bright, g2 = c[1] * bright, b2 = c[2] * bright, mx = Math.max(r, g2, b2);
       if (mx > 1) { r /= mx; g2 /= mx; b2 /= mx; }                              // hue-preserving cap: dense regions stay warm, never a flat white
