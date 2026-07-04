@@ -711,14 +711,22 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var uax = rng() * 2 - 1, ph = rng() * Math.PI * 2, ss = Math.sqrt(1 - uax * uax);
       var rr = R0 + (R1 - R0) * Math.pow(rng(), 0.6);                            // spread through a deep shell so the field has real depth
       pos[i * 3] = ss * Math.cos(ph) * rr; pos[i * 3 + 1] = uax * rr; pos[i * 3 + 2] = ss * Math.sin(ph) * rr;
-      var b = 0.16 + 0.72 * Math.pow(rng(), 2.2);                                // a fuller sky — many faint stars, a good scatter of brighter ones so space reads as truly populated, not empty
+      var b = 0.45 + 0.55 * Math.pow(rng(), 1.5);                               // a VISIBLE sky — high floor so even the faintest star reads, a good scatter of brighter ones; space is clearly populated, not empty
       var t = rng();                                                            // colour temperature: mostly white, a few warm, a few cool
       col[i * 3] = Math.min(1, b * (0.95 + 0.2 * t)); col[i * 3 + 1] = Math.min(1, b * 0.96); col[i * 3 + 2] = Math.min(1, b * (0.95 + 0.2 * (1 - t)));
     }
     var g = new T.BufferGeometry();
     g.setAttribute("position", new T.BufferAttribute(pos, 3));
     g.setAttribute("color", new T.BufferAttribute(col, 3));
-    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 2.2 : 2.7, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 1.0, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    // a CRISP star sprite (hard white core + tight falloff). The shared ember-glow texture rendered stars as
+    // dim translucent smudges — this makes them read as sharp bright points, so the field is actually VISIBLE.
+    var stc = document.createElement("canvas"); stc.width = stc.height = 48;
+    var stg = stc.getContext("2d"), stgr = stg.createRadialGradient(24, 24, 0, 24, 24, 24);
+    stgr.addColorStop(0.0, "rgba(255,255,255,1)"); stgr.addColorStop(0.24, "rgba(255,255,255,0.92)");
+    stgr.addColorStop(0.5, "rgba(255,244,224,0.3)"); stgr.addColorStop(1.0, "rgba(255,238,214,0)");
+    stg.fillStyle = stgr; stg.fillRect(0, 0, 48, 48);
+    var starTex = new T.CanvasTexture(stc); if ("colorSpace" in starTex && T.SRGBColorSpace) starTex.colorSpace = T.SRGBColorSpace;
+    var m = new T.PointsMaterial({ map: starTex, size: mobile ? 2.6 : 3.1, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 1.0, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     var pts = new T.Points(g, m); pts.name = "Starfield"; pts.renderOrder = -5; pts.frustumCulled = false;
     belt.add(pts);
