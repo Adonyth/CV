@@ -1044,7 +1044,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var nodes = [];
     var gaC = new T.Vector3(0.34, 0.58, -0.74).normalize().multiplyScalar(9200);   // the Great Attractor — the dominant basin
     nodes.push({ p: gaC, mass: 2.1, ga: true });
-    var NN = mobile ? 16 : 22;
+    var NN = mobile ? 18 : 26;
     for (var i = 0; i < NN; i++) {
       var ict = 2 * wr() - 1, ist = Math.sqrt(1 - ict * ict), iph = 2 * Math.PI * wr();
       var irad = R_IN + (R_OUT - R_IN) * Math.pow(wr(), 0.85);
@@ -1054,10 +1054,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // ---- NODE CLUSTERS: bright, compact glowing knots (the galaxy clusters at the intersections) ----
     for (var n = 0; n < nodes.length; n++) {
       var nd = nodes[n]; if (nd.mw) continue;   // the MW node is the galaxy itself — no web cluster there
-      var cn = Math.round((mobile ? 260 : 440) * nd.mass), cr = 240 + 360 * nd.mass;
+      var cn = Math.round((mobile ? 320 : 540) * nd.mass), cr = 230 + 340 * nd.mass;
       for (var q = 0; q < cn; q++) {
         var r = Math.pow(wr(), 2.0) * cr, u = 2 * wr() - 1, pp = 2 * Math.PI * wr(), sn = Math.sqrt(1 - u * u);
-        pushPt(nd.p.x + r * sn * Math.cos(pp), nd.p.y + r * sn * Math.sin(pp), nd.p.z + r * u, 0.88 + 0.12 * wr(), Math.min(1.4, 0.8 + 0.4 * nd.mass));
+        pushPt(nd.p.x + r * sn * Math.cos(pp), nd.p.y + r * sn * Math.sin(pp), nd.p.z + r * u, 0.90 + 0.10 * wr(), Math.min(1.8, 0.95 + 0.5 * nd.mass));
       }
     }
 
@@ -1074,10 +1074,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
         if (edges[key]) continue; edges[key] = true;
         var pA = nodes[a].p, pB = nodes[bb].p, L = pA.distanceTo(pB);
         if (L > R_OUT * 1.25) continue;   // don't span the whole box with one thread
-        var nPts = Math.max(30, Math.round(L / 10));
+        var nPts = Math.max(40, Math.round(L / 7));
         for (var t = 0; t < nPts; t++) {
-          var f = t / (nPts - 1), swell = 9 + 32 * Math.sin(f * Math.PI);   // thin at the nodes, fat in the middle
-          pushPt(pA.x + (pB.x - pA.x) * f + wG() * swell, pA.y + (pB.y - pA.y) * f + wG() * swell, pA.z + (pB.z - pA.z) * f + wG() * swell, 0.30 + 0.20 * (1 - Math.sin(f * Math.PI)), 0.52);
+          var f = t / (nPts - 1), swell = 8 + 30 * Math.sin(f * Math.PI);   // thin at the nodes, fat in the middle
+          pushPt(pA.x + (pB.x - pA.x) * f + wG() * swell, pA.y + (pB.y - pA.y) * f + wG() * swell, pA.z + (pB.z - pA.z) * f + wG() * swell, 0.38 + 0.24 * (1 - Math.sin(f * Math.PI)), 0.72);
         }
       }
     }
