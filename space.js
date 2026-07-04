@@ -933,7 +933,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=33").then(function (mod) {
+    import("./nye-armature.js?v=34").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -1132,7 +1132,9 @@
          干支 rings step aside — the globe becomes the sole subject */
       var ringFadeMats = null, ringFade = 1, soloBody = null, backdropDim = 0, _bdGalPrev = false;   /* "sun"|"moon": rings step aside entirely; backdropDim eases when admiring a deep-sky wonder; _bdGalPrev tracks the galactic-centre keep-galaxy mode */
       function collectRingMats() {
-        if (ringFadeMats || !nyeArmature) return;
+        if (!nyeArmature) return;
+        if (ringFadeMats && ringFadeMats.length) return;   // already collected; but a lazily-built ring set starts EMPTY → re-collect once it exists
+        if (nyeArmature.hasRings && !nyeArmature.hasRings()) { ringFadeMats = null; return; }
         ringFadeMats = [];
         ["MonthEclipticGearPlane", "EarthOrbitTrace", "YearEclipticPlane", "DayClockOrbitPlane", "HeroHourLocalRing", "HourPillarReadout"].forEach(function (nm) {
           var rootO = nyeArmature.group.getObjectByName(nm); if (!rootO) return;
@@ -1518,6 +1520,7 @@
       /* return to the whole-sky overview — a smooth glide to the canonical home frame */
       var homeBtn = document.getElementById("cosmos-home");
       function goHome() {
+        userMoved = true;   // "whole sky" is genuine navigation → lets the scale director build the orrery rings
         if (controls.isGround()) {
           // from the ground, "whole sky" is one clean launch all the way to the overview
           controls.exitGroundMode(); groundHint(false);
@@ -1807,15 +1810,23 @@
       // LAZY-BY-SCALE: build the heavy far structures ONLY on genuine user navigation (userMoved gates out
       // the auto-entrance + the fallback deep-space dive, which both transiently fling the camera far). The
       // ground & whole-sky view therefore never pays for the galaxy / black hole / cosmic web.
-      if (natalSky && userMoved) {
+      if (userMoved) {
         var _farCl = camera.position.length();
-        if (_farCl > 350) natalSky.ensureFarLayers();      // galaxy + black hole, once you rise past the constellation sphere toward galactic scale
-        if (_farCl > 2200) natalSky.ensureCosmicWeb();      // the cosmic web, only if you truly voyage out to intergalactic distance
+        if (natalSky && _farCl > 350) natalSky.ensureFarLayers();      // galaxy + black hole, once you rise past the constellation sphere toward galactic scale
+        if (natalSky && _farCl > 2200) natalSky.ensureCosmicWeb();      // the cosmic web, only if you truly voyage out to intergalactic distance
         // SCOPED exponential fog: the "infinite foam receding into black" depth cue. Only the cosmic-web
-        // material opts into fog (everything else is fog:false), and we only arm it out at web scale so the
-        // near solar-system / ground scene is never touched. Toggle with hysteresis to avoid flicker.
+        // material opts into fog (everything else is fog:false), armed only at web scale so the near scene is
+        // never touched. Hysteresis avoids flicker.
         if (_farCl > 2200 && !scene.fog) scene.fog = new THREE.FogExp2(0x05040a, 0.000115);
         else if (_farCl < 1900 && scene.fog) scene.fog = null;
+        // 干支 GEAR-RINGS: solar-system-scale ornament — built ONLY when the visitor enters the orrery band
+        // (never at init/ground, never at galaxy scale). The existing ringFade hides them once you pass ~900 out;
+        // collectRingMats self-heals to pick up the freshly-built ring materials.
+        if (nyeArmature && nyeArmature.buildRings && _farCl > 18 && _farCl < 800 && !nyeArmature.hasRings()) nyeArmature.buildRings();
+        // UNLOAD the inner solar system at galaxy scale (the Sun always persists): hide Moon/atmosphere/footprint
+        // and the outer planets once you leave the solar system, so nothing paints overdraw at the wrong scale.
+        if (nyeArmature && nyeArmature.setInnerDetail) nyeArmature.setInnerDetail(_farCl < 400);
+        if (natalSky && natalSky.bodyGroup) natalSky.bodyGroup.visible = (_farCl < 400);
       }
       deepFusion.tick(_clk);
       if (nyeArmature) nyeArmature.tick(_clk);

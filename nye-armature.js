@@ -95,46 +95,48 @@ export function mountNyeArmature(THREE, scene, opts) {
   const sun = buildSun();
   solarSystem.add(sun.group);
 
-  const eclipticGroup = new T.Group();
-  eclipticGroup.name = "MonthEclipticGearPlane";
-  eclipticGroup.userData.nyePart = "month-gear-plane";
-  eclipticGroup.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), ephem.eclipticNormal);
-  solarSystem.add(eclipticGroup);
-
-  const monthGear = createPillarGear({
-    name: "MonthPillarGear",
-    pillar: PILLARS.month,
-    stemRadius: AU_SCALE - 1.55,
-    branchRadius: AU_SCALE + 1.45,
-    toothScale: 1.0,
-    glyphStemScale: 0.92,
-    glyphBranchScale: 1.0,
-    couplingOpacity: 0.18
-  });
-  eclipticGroup.add(monthGear.group);
-
+  // ---- WAVE 1 (eager, always present): the luminaries + Earth. Sun/Moon must exist at EVERY scale. ----
   const earth = buildEarth(earthRadiusVis);
   earth.group.position.copy(ephem.earth);
   solarSystem.add(earth.group);
 
-  /* moon: ~2.0° apparent from the ground (4× the mathematical 0.5°, same perceptual law
-     as the sun) — the size the moon FEELS when you look up on a clear night. */
-  const moon = buildMoon(earthRadiusVis * 11.0 * 0.0525);   // ~6° from the ground (user-tuned ×3): the moon OWNS its patch of sky
+  const moon = buildMoon(earthRadiusVis * 11.0 * 0.0525);   // ~6° from the ground: the moon OWNS its patch of sky
   moon.mesh.position.copy(moonVisiblePosition);
   solarSystem.add(moon.mesh);
 
   setLightDirections();
   earth.mesh.rotation.y = siderealOrFallbackRotationY(instant);
-
   solarSystem.updateMatrixWorld(true);
-  const earthInEcliptic = ephem.earth.clone();
-  eclipticGroup.worldToLocal(earthInEcliptic);
-  const earthOrbitAngle = Math.atan2(earthInEcliptic.y, earthInEcliptic.x);
-  monthGear.stemSwivel.rotation.z = earthOrbitAngle - PILLARS.month.stemIndex * (TAU / 10);
-  monthGear.branchSwivel.rotation.z = earthOrbitAngle - PILLARS.month.branchIndex * (TAU / 12);
-  placeLabel(monthGear.label, AU_SCALE + 4.7, earthOrbitAngle, 0.2);
-  gearMotions.push({ target: monthGear.stemSwivel, base: monthGear.stemSwivel.rotation.z, speed: 0.0009 });
-  gearMotions.push({ target: monthGear.branchSwivel, base: monthGear.branchSwivel.rotation.z, speed: -0.00072 });
+  markSubtree(group, { nyeArmature: true });   // mark the luminaries; the rings re-mark themselves when they build
+
+  // ---- the 干支 GEAR-RINGS (four pillars) — the heaviest single init cost (88 baked glyph textures). They are
+  //      solar-system-scale ornament, NEVER needed on the ground or at galaxy scale, so they are NOT built at
+  //      mount. The scale director (space.js) calls buildRings() only when the visitor enters the orrery band;
+  //      teardownRings()/setInnerDetail() unload the near system when zoomed out. Sun/Moon/Earth above persist. ----
+  let ringsBuilt = false;
+  function buildGanzhiRings() {
+    if (ringsBuilt) return; ringsBuilt = true;
+
+    const eclipticGroup = new T.Group();
+    eclipticGroup.name = "MonthEclipticGearPlane";
+    eclipticGroup.userData.nyePart = "month-gear-plane";
+    eclipticGroup.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), ephem.eclipticNormal);
+    solarSystem.add(eclipticGroup);
+
+    const monthGear = createPillarGear({
+      name: "MonthPillarGear", pillar: PILLARS.month,
+      stemRadius: AU_SCALE - 1.55, branchRadius: AU_SCALE + 1.45,
+      toothScale: 1.0, glyphStemScale: 0.92, glyphBranchScale: 1.0, couplingOpacity: 0.18
+    });
+    eclipticGroup.add(monthGear.group);
+
+    solarSystem.updateMatrixWorld(true);
+    const earthInEcliptic = ephem.earth.clone();
+    eclipticGroup.worldToLocal(earthInEcliptic);
+    const earthOrbitAngle = Math.atan2(earthInEcliptic.y, earthInEcliptic.x);
+    monthGear.stemSwivel.rotation.z = earthOrbitAngle - PILLARS.month.stemIndex * (TAU / 10);
+    monthGear.branchSwivel.rotation.z = earthOrbitAngle - PILLARS.month.branchIndex * (TAU / 12);
+    placeLabel(monthGear.label, AU_SCALE + 4.7, earthOrbitAngle, 0.2);
 
   /* YEAR pillar 辛巳 — same factory, but the ring is EARTH-centred with radius =
      the Earth–Sun distance: the month ring circles the Sun and passes through the
@@ -222,30 +224,45 @@ export function mountNyeArmature(THREE, scene, opts) {
   gearMotions.push({ target: hourGear.stemSwivel, base: hourGear.stemSwivel.rotation.z, speed: 0.0015 });
   gearMotions.push({ target: hourGear.branchSwivel, base: hourGear.branchSwivel.rotation.z, speed: -0.00125 });
 
-  const orbitTrace = buildOrbitTrace(AU_SCALE, 0xe0876a, 0.12, "EarthOrbitTrace");
-  orbitTrace.quaternion.copy(eclipticGroup.quaternion);
-  solarSystem.add(orbitTrace);
+    const orbitTrace = buildOrbitTrace(AU_SCALE, 0xe0876a, 0.12, "EarthOrbitTrace");
+    orbitTrace.quaternion.copy(eclipticGroup.quaternion);
+    solarSystem.add(orbitTrace);
+    // lift the month-plane + orbit-trace off the Earth along the ecliptic normal (this used to run in space.js
+    // post-mount; baked here now that the rings build lazily, so space.js's null eclPlane lookup can't skip it)
+    var eclN = new T.Vector3(0, 0, 1).applyQuaternion(eclipticGroup.quaternion).normalize();
+    eclipticGroup.position.addScaledVector(eclN, 3.1);
+    orbitTrace.position.addScaledVector(eclN, 3.1);
 
-  /* prominence of the EIGHT CHARACTERS: 日柱庚 brightest, then 日午 + 月子,
-     then the rest of the natal pairs; every unrelated glyph recedes */
-  (function prominencePass() {
-    var pil = { year: yearPillar, month: PILLARS.month, day: PILLARS.day, hour: PILLARS.hour };
-    var tier2 = { "day-stem": 3, "day-branch": 2, "month-branch": 2 };
-    group.traverse(function (o) {
-      if (!o.isSprite || !o.userData || !o.userData.nyePart) return;
-      var m2 = String(o.userData.nyePart).match(/^(year|month|day|hour)-(stem|branch)-glyph$/);
-      if (!m2) return;
-      var slot = m2[1], kind = m2[2], p2 = pil[slot];
-      var idx = (kind === "stem") ? o.userData.stemIndex : o.userData.branchIndex;
-      var active = idx === ((kind === "stem") ? p2.stemIndex : p2.branchIndex);
-      if (!active) { o.material.opacity = 0.48; return; }
-      var t2 = tier2[slot + "-" + kind] || 1;
-      o.scale.multiplyScalar(t2 === 3 ? 1.8 : t2 === 2 ? 1.5 : 1.25);
-      o.material.opacity = t2 === 3 ? 1.0 : t2 === 2 ? 0.98 : 0.93;
-    });
-  })();
+    /* prominence of the EIGHT CHARACTERS: 日柱庚 brightest, then 日午 + 月子,
+       then the rest of the natal pairs; every unrelated glyph recedes */
+    (function prominencePass() {
+      var pil = { year: yearPillar, month: PILLARS.month, day: PILLARS.day, hour: PILLARS.hour };
+      var tier2 = { "day-stem": 3, "day-branch": 2, "month-branch": 2 };
+      group.traverse(function (o) {
+        if (!o.isSprite || !o.userData || !o.userData.nyePart) return;
+        var m2 = String(o.userData.nyePart).match(/^(year|month|day|hour)-(stem|branch)-glyph$/);
+        if (!m2) return;
+        var slot = m2[1], kind = m2[2], p2 = pil[slot];
+        var idx = (kind === "stem") ? o.userData.stemIndex : o.userData.branchIndex;
+        var active = idx === ((kind === "stem") ? p2.stemIndex : p2.branchIndex);
+        if (!active) { o.material.opacity = 0.48; return; }
+        var t2 = tier2[slot + "-" + kind] || 1;
+        o.scale.multiplyScalar(t2 === 3 ? 1.8 : t2 === 2 ? 1.5 : 1.25);
+        o.material.opacity = t2 === 3 ? 1.0 : t2 === 2 ? 0.98 : 0.93;
+      });
+    })();
+    group.updateMatrixWorld(true);
+    markSubtree(group, { nyeArmature: true });
+  }
 
-  markSubtree(group, { nyeArmature: true });
+  // hide the Moon + Earth's expensive skin (atmosphere shells, footprint overdraw) at galaxy scale; the Sun
+  // is never touched here → it persists at every scale, as required.
+  function setInnerDetail(on) {
+    if (moon && moon.mesh) moon.mesh.visible = on;
+    var a1 = group.getObjectByName("NyeEarthAtmosphere"); if (a1) a1.visible = on;
+    var a2 = group.getObjectByName("NyeEarthOuterHaze"); if (a2) a2.visible = on;
+    var tr = earth.mesh.getObjectByName("FootprintTrace"); if (tr) tr.visible = on;
+  }
 
   /* ---- the BASE (根据地): a point on the real Earth ---- */
   /* lat/lon → WORLD position on the globe. Same equirectangular convention the albedo and
@@ -297,7 +314,10 @@ export function mountNyeArmature(THREE, scene, opts) {
     tick,
     earthSurfacePoint,
     setBaseMarker,
-    dispose
+    dispose,
+    buildRings: buildGanzhiRings,        // idempotent; called by the scale director at orrery scale
+    hasRings: function () { return ringsBuilt; },
+    setInnerDetail: setInnerDetail
   };
 
   function tick(seconds) {
