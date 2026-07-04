@@ -837,6 +837,41 @@ export function buildNatalSky(THREE, scene, data, opts) {
         push(kp, PINK[0], PINK[1] * (0.8 + 0.3 * rng()), PINK[2] * (0.9 + 0.2 * rng()), (0.22 + 0.5 * Math.pow(rng(), 2.0)), 0.14);
       }
     }
+    // --- COMPANION GALAXIES the Milky Way is devouring RIGHT NOW (real, ongoing mergers) ---
+    // (a) the SAGITTARIUS DWARF — being tidally shredded this epoch: a small OLD-STAR core below the far side
+    //     of the disc, trailing a great tidal STREAM that loops the galaxy in a near-polar orbit.
+    var sgrC = C.clone().addScaledVector(uu, -0.30 * Rgal).addScaledVector(w, -0.44 * Rgal);
+    for (var sg = 0; sg < 950; sg++) {
+      var sgr = Math.pow(rng(), 1.6) * 0.085 * Rgal, sgu = rng() * 2 - 1, sgp = rng() * Math.PI * 2, sgs = Math.sqrt(1 - sgu * sgu);
+      var sgpt = sgrC.clone().addScaledVector(uu, sgr * sgs * Math.cos(sgp) * 1.5).addScaledVector(vv, sgr * sgs * Math.sin(sgp)).addScaledVector(w, sgr * sgu * 0.9);
+      push(sgpt, 0.95, 0.78, 0.62, 0.13 + 0.2 * Math.pow(rng(), 2), 0.06);
+    }
+    for (var ss = 0; ss < 2600; ss++) {                                        // the tidal stream — a polar great-loop of pulled-out stars wrapping the disc
+      var phi = rng() * Math.PI * 2, loopR = Rgal * (0.5 + 0.42 * (0.5 + 0.5 * Math.cos(phi)));
+      var sp = C.clone().addScaledVector(uu, loopR * Math.cos(phi)).addScaledVector(w, loopR * Math.sin(phi) * 0.92).addScaledVector(vv, G() * (26 + 0.02 * loopR));
+      sp.addScaledVector(uu, G() * 42).addScaledVector(w, G() * 42);
+      push(sp, 0.93, 0.76, 0.6, (0.045 + 0.09 * Math.pow(rng(), 2)) * (0.4 + 0.6 * Math.abs(Math.sin(phi))), 0.02);
+    }
+    // (b) the MAGELLANIC CLOUDS — irregular satellite galaxies just off the disc, young BLUE stars + pink HII,
+    //     trailing the faint Magellanic Stream the Milky Way is stripping from them.
+    var lmc = C.clone().addScaledVector(vv, 0.46 * Rgal).addScaledVector(w, -0.52 * Rgal);
+    for (var lm = 0; lm < 1500; lm++) {
+      var lr = Math.pow(rng(), 1.4) * 0.11 * Rgal, lu = rng() * 2 - 1, lp = rng() * Math.PI * 2, lsn = Math.sqrt(1 - lu * lu);
+      var lpt = lmc.clone().addScaledVector(uu, lr * lsn * Math.cos(lp) * 1.7).addScaledVector(vv, lr * lsn * Math.sin(lp)).addScaledVector(w, lr * lu * 0.6);
+      if (rng() < 0.5) push(lpt, 0.7, 0.8, 1.0, 0.1 + 0.22 * Math.pow(rng(), 2), 0.06);
+      else if (rng() < 0.14) push(lpt, PINK[0], PINK[1], PINK[2], 0.25 + 0.3 * rng(), 0.2);
+      else push(lpt, 0.92, 0.9, 0.85, 0.08 + 0.16 * Math.pow(rng(), 2), 0.05);
+    }
+    var smc = lmc.clone().addScaledVector(uu, -0.2 * Rgal).addScaledVector(vv, -0.06 * Rgal).addScaledVector(w, -0.05 * Rgal);
+    for (var sm = 0; sm < 750; sm++) {
+      var mr = Math.pow(rng(), 1.4) * 0.065 * Rgal, mu = rng() * 2 - 1, mp = rng() * Math.PI * 2, msn = Math.sqrt(1 - mu * mu);
+      var mpt = smc.clone().addScaledVector(uu, mr * msn * Math.cos(mp)).addScaledVector(vv, mr * msn * Math.sin(mp) * 1.4).addScaledVector(w, mr * mu * 0.6);
+      push(mpt, rng() < 0.45 ? 0.72 : 0.9, 0.82, rng() < 0.45 ? 1.0 : 0.9, 0.08 + 0.16 * Math.pow(rng(), 2), 0.05);
+    }
+    for (var mb = 0; mb < 900; mb++) {                                         // the Magellanic Stream — a faint gas arc trailing the Clouds
+      var tb = rng(), bp = lmc.clone().lerp(smc, tb).addScaledVector(vv, (0.1 + 0.6 * tb) * Rgal * 0.5).addScaledVector(w, G() * 60).addScaledVector(uu, G() * 60);
+      push(bp, 0.7, 0.85, 0.95, 0.03 + 0.05 * Math.pow(rng(), 2), 0.0);
+    }
     // the GLOW underlayer — big soft low-opacity sprites blur into a smooth luminous galaxy beneath the stars
     var gg = new T.BufferGeometry();
     gg.setAttribute("position", new T.BufferAttribute(new Float32Array(GP), 3));
