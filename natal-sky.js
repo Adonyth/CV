@@ -1027,12 +1027,12 @@ export function buildNatalSky(THREE, scene, data, opts) {
      between — the real large-scale texture (Voronoi skeleton: cell faces = walls, edges = filaments, verts
      = clusters, interiors = voids). Static, one draw, faded in only when the camera leaves the galaxy. --- */
   function buildCosmicWeb() {
-    // SCALE-HONEST cosmic web (the observable-universe foam). UNIT of measure = a supercluster NODE core.
-    // Our ENTIRE local universe — Milky Way + Andromeda + Great Attractor + Laniakea — is now ONE node here (the
-    // giant galaxy spiral has faded into it). The web is FAT filaments (as thick as a node core — "beads on a
-    // string as fat as the beads") joining ~15 supercluster nodes across HUGE voids (~8× a node) that fill ~85%
-    // of the volume. Our node is ORDINARY — one bead among many; Shapley is the big neighbour.
-    var NODE = 460, RMAX = 14000, SPACING = 4600;   // node-core radius (the unit); web extent; min node spacing → a whole void between every pair
+    // The MILLENNIUM-SIMULATION look: a FINE, DENSE, INTRICATE LACEWORK — MANY small bright cluster NODES joined
+    // by THIN bright filament threads into a cobweb, around dark round VOIDS. At this scale (~1 billion ly across
+    // the frame) individual filaments are THIN threads; it's the sheer density + fineness of the lattice that
+    // reads as "the cosmic web." Our ENTIRE local universe (galaxy + Andromeda + Great Attractor + Laniakea) is
+    // ONE ordinary node in it. NOT a few fat tubes.
+    var RMAX = 13500, MINSP = 1500;   // web extent; minimum node spacing → a fine lattice with round voids ~MINSP across
     var wr = gRng(0x1a91a), wG = function () { return wr() + wr() + wr() - 1.5; };
     var POS = [], COL = [];
     // Millennium WARM MONOTONE ramp: near-black void → amber filament → gold → white-hot node core
@@ -1040,61 +1040,51 @@ export function buildNatalSky(THREE, scene, data, opts) {
     function rampw(L) { for (var i = 0; i < RAMPW.length - 1; i++) { if (L <= RAMPW[i + 1][0]) { var a = RAMPW[i], b = RAMPW[i + 1], f = (L - a[0]) / (b[0] - a[0]); return [a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f, a[3] + (b[3] - a[3]) * f]; } } return [RAMPW[4][1], RAMPW[4][2], RAMPW[4][3]]; }
     function pushPt(x, y, z, L, intensity) { var c = rampw(L), b = intensity * (0.72 + 0.55 * wr()); POS.push(x, y, z); COL.push(c[0] * b, c[1] * b, c[2] * b); }
 
-    // ---- NODES: OUR Laniakea node at the centre (ORDINARY size — we live in a plain knot), a big Shapley
-    //      neighbour, then generic nodes, all kept ≥ SPACING apart so a whole VOID sits between every pair. ----
+    // ---- NODES: our Laniakea node at the centre (ORDINARY), + MANY small cluster nodes filling the volume ----
     var nodes = [{ p: new T.Vector3(0, 0, 0), mass: 1.0, us: true }];
-    nodes.push({ p: new T.Vector3(0.55, 0.30, 0.62).normalize().multiplyScalar(9400), mass: 1.9, shapley: true });   // Shapley — the biggest nearby supercluster
-    var NTARGET = mobile ? 12 : 15, guard = 0;
-    while (nodes.length < NTARGET && guard++ < 6000) {
+    var NTARGET = mobile ? 42 : 66, guard = 0;
+    while (nodes.length < NTARGET && guard++ < 14000) {
       var ict = 2 * wr() - 1, ist = Math.sqrt(1 - ict * ict), iph = 2 * Math.PI * wr();
-      var irad = 3600 + (RMAX - 3600) * Math.pow(wr(), 0.72);
+      var irad = 1800 + (RMAX - 1800) * Math.pow(wr(), 0.5);
       var cand = new T.Vector3(ist * Math.cos(iph) * irad, ict * irad, ist * Math.sin(iph) * irad), ok = true;
-      for (var k = 0; k < nodes.length; k++) { if (cand.distanceTo(nodes[k].p) < SPACING) { ok = false; break; } }
-      if (ok) nodes.push({ p: cand, mass: 0.6 + 0.9 * Math.pow(wr(), 1.4) });
+      for (var k = 0; k < nodes.length; k++) { if (cand.distanceTo(nodes[k].p) < MINSP) { ok = false; break; } }
+      if (ok) nodes.push({ p: cand, mass: 0.4 + 0.9 * Math.pow(wr(), 1.7) });
     }
 
-    // ---- NODE CORES: bright, compact glowing knots (the superclusters at the web's junctions) ----
+    // ---- NODE CORES: compact bright knots — SMALL, because there are MANY (a fine cobweb, not a few blobs) ----
     for (var n = 0; n < nodes.length; n++) {
-      var nd = nodes[n], cn = Math.round((mobile ? 520 : 880) * nd.mass), cr = NODE * (0.55 + 0.5 * nd.mass);
+      var nd = nodes[n], cn = Math.round((mobile ? 130 : 220) * (0.5 + nd.mass)), cr = 75 + 150 * nd.mass;
       for (var q = 0; q < cn; q++) {
         var r = Math.pow(wr(), 1.9) * cr, u = 2 * wr() - 1, pp = 2 * Math.PI * wr(), sn = Math.sqrt(1 - u * u);
-        pushPt(nd.p.x + r * sn * Math.cos(pp), nd.p.y + r * sn * Math.sin(pp), nd.p.z + r * u, 0.90 + 0.10 * wr(), Math.min(1.7, 0.9 + 0.45 * nd.mass));
+        pushPt(nd.p.x + r * sn * Math.cos(pp), nd.p.y + r * sn * Math.sin(pp), nd.p.z + r * u, 0.90 + 0.10 * wr(), Math.min(1.7, 0.85 + 0.5 * nd.mass));
       }
     }
 
-    // ---- FAT FILAMENTS: join each node to its nearest 2-3; a THICK TUBE (radius ≈ a node core, FATTER toward
-    //      each node) of points spread across the cross-section → a glowing strand as thick as the beads. ----
-    var edges = {}, _uX = new T.Vector3(), _vX = new T.Vector3(), _dX = new T.Vector3(), _upA = new T.Vector3(0, 1, 0);
+    // ---- THIN FILAMENTS: join each node to its nearest 3-5 → an intricate LACEWORK of fine bright threads ----
+    var edges = {};
     for (var a = 0; a < nodes.length; a++) {
       var order = [];
       for (var b = 0; b < nodes.length; b++) { if (b !== a) order.push({ b: b, d: nodes[a].p.distanceTo(nodes[b].p) }); }
       order.sort(function (x, y) { return x.d - y.d; });
-      var kconn = 2 + (wr() < 0.4 ? 1 : 0);
+      var kconn = 3 + (wr() < 0.5 ? 1 : 0) + (wr() < 0.2 ? 1 : 0);
       for (var e = 0; e < Math.min(kconn, order.length); e++) {
         var bb = order[e].b, key = Math.min(a, bb) + "_" + Math.max(a, bb);
         if (edges[key]) continue; edges[key] = true;
         var pA = nodes[a].p, pB = nodes[bb].p, L = pA.distanceTo(pB);
-        if (L > SPACING * 2.4) continue;   // only bridge genuine neighbours (never a thread across the whole box)
-        _dX.subVectors(pB, pA).multiplyScalar(1 / L);
-        _uX.crossVectors(_dX, _upA); if (_uX.lengthSq() < 1e-4) _uX.set(1, 0, 0); _uX.normalize();
-        _vX.crossVectors(_dX, _uX).normalize();
-        var steps = Math.max(24, Math.round(L / 58)), perStep = mobile ? 20 : 30;
-        for (var t = 0; t < steps; t++) {
-          var f = t / (steps - 1), thick = NODE * (0.75 + 0.6 * Math.abs(Math.cos(f * Math.PI)));   // ≈ node core, fatter toward each node
-          var cx = pA.x + (pB.x - pA.x) * f, cy = pA.y + (pB.y - pA.y) * f, cz = pA.z + (pB.z - pA.z) * f;
-          for (var j = 0; j < perStep; j++) {
-            var rr = Math.pow(wr(), 0.7) * thick, aa = 2 * Math.PI * wr(), oa = rr * Math.cos(aa), ob = rr * Math.sin(aa), oz = wG() * 55;
-            pushPt(cx + _uX.x * oa + _vX.x * ob + _dX.x * oz, cy + _uX.y * oa + _vX.y * ob + _dX.y * oz, cz + _uX.z * oa + _vX.z * ob + _dX.z * oz, 0.36 + 0.20 * Math.abs(Math.cos(f * Math.PI)), 0.58);
-          }
+        if (L > MINSP * 3.2) continue;   // only bridge genuine neighbours → a local lattice, not a mesh across the box
+        var nPts = Math.max(26, Math.round(L / 13));
+        for (var t = 0; t < nPts; t++) {
+          var f = t / (nPts - 1), jit = 14 + 42 * Math.sin(f * Math.PI);   // THIN thread, a touch fuller mid-span
+          pushPt(pA.x + (pB.x - pA.x) * f + wG() * jit, pA.y + (pB.y - pA.y) * f + wG() * jit, pA.z + (pB.z - pA.z) * f + wG() * jit, 0.34 + 0.22 * (1 - Math.sin(f * Math.PI)), 0.62);
         }
       }
     }
 
-    // ---- a faint sprinkle in the voids (they aren't perfectly empty — a few stray galaxies) ----
-    var strays = mobile ? 700 : 1300;
+    // ---- faint galaxies dusting the walls & voids (the diffuse haze between the bright threads) ----
+    var strays = mobile ? 1800 : 3200;
     for (var v = 0; v < strays; v++) {
-      var vr = 3000 + (RMAX - 3000) * wr(), vct = 2 * wr() - 1, vst = Math.sqrt(1 - vct * vct), vph = 2 * Math.PI * wr();
-      pushPt(vr * vst * Math.cos(vph), vr * vct, vr * vst * Math.sin(vph), 0.035, 0.10);
+      var vr = 1600 + (RMAX - 1600) * Math.pow(wr(), 0.5), vct = 2 * wr() - 1, vst = Math.sqrt(1 - vct * vct), vph = 2 * Math.PI * wr();
+      pushPt(vr * vst * Math.cos(vph), vr * vct, vr * vst * Math.sin(vph), 0.05, 0.12);
     }
 
     // ---- OUR node IS Laniakea — the Great Attractor & Milky Way are INSIDE it, not separate. Click it to pull
@@ -1107,7 +1097,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var wgeo = new T.BufferGeometry();
     wgeo.setAttribute("position", new T.BufferAttribute(new Float32Array(POS), 3));
     wgeo.setAttribute("color", new T.BufferAttribute(new Float32Array(COL), 3));
-    var wmat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 72 : 95, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: true });   // BIG soft points → nodes/filaments still read as glowing knots & threads even viewed from far outside the web; fog dissolves the far side
+    var wmat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 42 : 55, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: true });   // small soft points → the FINE lacework reads as thin threads + compact knots, not fat blobs; fog dissolves the far side
     if ("toneMapped" in wmat) wmat.toneMapped = false;
     _cosmicWeb = new T.Points(wgeo, wmat); _cosmicWeb.name = "CosmicWeb"; _cosmicWeb.renderOrder = -6; _cosmicWeb.frustumCulled = false; _cosmicWeb.visible = false;
     belt.add(_cosmicWeb);
