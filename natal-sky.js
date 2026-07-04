@@ -1031,7 +1031,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // seen from inside). Real cluster NODES joined by real filament THREADS over empty VOIDS = the recognizable
     // Millennium / kitchen-sponge cosmic web. BOUNDED (R_OUT 9500) so you can dolly OUTSIDE it (maxDistance
     // 15000) and read the whole network as one structure — the way every real cosmic-web image is an external view.
-    var R_IN = 3200, R_OUT = 9500;
+    var R_IN = 7500, R_OUT = 11000;   // a shell BEYOND the local starfield (R1≈7200) → the web reads on BLACK, not drowned by the uniform stars; the galaxy + local stars stay a bright central ball, the cosmic web wraps around it
     var wr = gRng(0x1a91a), wG = function () { return wr() + wr() + wr() - 1.5; };
     var POS = [], COL = [];
     // Millennium WARM MONOTONE ramp: near-black void → amber filament → gold → white-hot node core
@@ -1041,8 +1041,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
 
     // ---- NODES (galaxy clusters). Node 0 = the MILKY WAY itself at the origin (no cluster drawn there — the
     //      galaxy IS the node — but filaments still connect to it, so WE SIT ON THE WEB). ----
-    var nodes = [{ p: new T.Vector3(0, 0, 0), mass: 1.0, mw: true }];
-    var gaC = new T.Vector3(0.34, 0.58, -0.74).normalize().multiplyScalar(7600);   // the Great Attractor — the dominant basin
+    var nodes = [];
+    var gaC = new T.Vector3(0.34, 0.58, -0.74).normalize().multiplyScalar(9200);   // the Great Attractor — the dominant basin
     nodes.push({ p: gaC, mass: 2.1, ga: true });
     var NN = mobile ? 16 : 22;
     for (var i = 0; i < NN; i++) {
