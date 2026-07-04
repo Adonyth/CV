@@ -1531,10 +1531,10 @@
         // admired from far out (view-dist ~400), so its focus only releases when you truly pull away.
         if (soloBody && soloBody !== "dso" && soloBody !== "galcore" && !glideActive() && controls.getRadius() > 130) soloBody = null;
         if ((soloBody === "dso" || soloBody === "galcore") && !glideActive() && controls.getRadius() > 900) soloBody = null;
-        // pulled back to galaxy scale (most/all of the galaxy in view) → the solar-system zodiac ring melts away
-        // the constellations are now genuine DEEP-FIELD stars (not a solar-system ring), so they stay lit at
-        // normal scales; only fade once you're pulled WAY out among the nebulae, to avoid clutter from behind
-        if (natalSky && natalSky.setZodiacFade) natalSky.setZodiacFade((camera.position.length() - 4000) / 1500);
+        // the constellation STARS are genuine deep-field stars (part of the star sea, never faded here). But
+        // the connecting figure LINES only read as a pattern from near Earth; pull out and fly AMONG the stars
+        // and they'd shear into distracting streaks — so fade ONLY the lines once you leave the home scale.
+        if (natalSky && natalSky.setZodiacFade) natalSky.setZodiacFade((camera.position.length() - 1150) / 800);
         // scale LOD: once the whole solar-system orrery (detailed Earth shader, Sun, gear-rings) is a distant
         // speck, stop DRAWING it entirely — nothing to see, and its per-fragment Earth shader is the costliest thing
         if (nyeArmature) { var _farOut = camera.position.length() > 1000 && !controls.isGround(); if (nyeArmature.group.visible === _farOut) nyeArmature.group.visible = !_farOut; }
