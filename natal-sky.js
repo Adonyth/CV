@@ -89,9 +89,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // shell, no flat ring), while its OWN stars stay at a similar depth (±18%) so the figure holds its
     // shape and still connects into the recognisable pattern from Earth. (Full per-star true distances
     // shears the lines into unreadable depth-streaks from anywhere but the exact origin — this keeps both.)
-    var conBase = 450 * Math.pow(7.0, hash(ci * 977 + 31));
+    var conBase = 700 * Math.pow(3.7, hash(ci * 977 + 31));                     // each constellation 700–2600 (scattered wide → volumetric, but none so close it balloons)
     ecl.forEach(function (e, si) {
-      var dist = conBase * (0.82 + 0.36 * hash(ci * 131 + si + 7));
+      var dist = conBase * (0.94 + 0.12 * hash(ci * 131 + si + 7));             // its stars within ±6% depth → the figure lies nearly flat to the sightline and reads cleanly (no receding beams)
       var pos = eclVec(e.lon, e.lat, dist);
       c._starPos[si] = pos;
       centroid.add(pos); dirSum.add(pos.clone().normalize());
@@ -173,7 +173,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var pts = [];
     segs.forEach(function (sg) {
       var L = sg.a.distanceTo(sg.b);
-      var n = Math.max(4, Math.round(L / (c.loadBearing ? 1.55 : 1.95)));
+      var Dseg = Math.max(1, sg.a.clone().add(sg.b).multiplyScalar(0.5).length());
+      // spacing scales with the segment's DISTANCE → constant SCREEN-space dot density at ANY depth, so a
+      // far-scattered constellation is a delicate sparse chain, never a thick beam of piled-up dots
+      var n = Math.max(4, Math.min(160, Math.round(L / Dseg * (c.loadBearing ? 264 : 210))));
       for (var ii = 0; ii <= n; ii++) {
         var t = ii / n;
         pts.push(
