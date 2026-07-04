@@ -542,7 +542,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   }
   function dsoParticles(d, img) {
     var W = img.naturalWidth || img.width, H = img.naturalHeight || img.height;
-    var cap = d.sample || 230, sc = Math.min(1, cap / Math.max(W, H));
+    var cap = d.sample || 300, sc = Math.min(1, cap / Math.max(W, H));
     var sw = Math.max(2, Math.round(W * sc)), sh = Math.max(2, Math.round(H * sc));
     var cv = document.createElement("canvas"); cv.width = sw; cv.height = sh;
     var cx = cv.getContext("2d"); cx.drawImage(img, 0, 0, sw, sh);
@@ -553,7 +553,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var lo = srt[(npx * 0.40) | 0], hi = srt[Math.min(npx - 1, (npx * 0.995) | 0)], span = Math.max(0.001, hi - lo);  // per-image auto-levels
     var sd = d.seed; if (sd == null) { sd = 7; for (var si = 0; si < (d.id || "").length; si++) sd = (sd * 33 + d.id.charCodeAt(si)) >>> 0; }  // per-object dithering so no two clouds share a grain pattern
     var rng = gRng((sd * 131 + 7) >>> 0);
-    var dens = d.density != null ? d.density : 0.72, gamma = d.gamma != null ? d.gamma : 0.72, bright = d.bright != null ? d.bright : 1.7;
+    var dens = d.density != null ? d.density : 0.88, gamma = d.gamma != null ? d.gamma : 0.72, bright = d.bright != null ? d.bright : 1.75;
     var Wu = (d.size || 160) * 1.5, Hu = Wu * (sh / sw), depth = (d.depth != null ? d.depth : 0.4) * Wu;  // ×1.5 world size: the clouds can't be flown into, so they must be big enough to read shape+colour from afar
     var P = [], C = [];
     for (var y = 0; y < sh; y++) for (var x = 0; x < sw; x++) {
@@ -571,7 +571,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var geo = new T.BufferGeometry();
     geo.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
     geo.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
-    var m = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 3.6, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: d.opacity != null ? d.opacity : 0.6, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 4.8, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: d.opacity != null ? d.opacity : 0.72, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     return new T.Points(geo, m);
   }
@@ -615,56 +615,63 @@ export function buildNatalSky(THREE, scene, data, opts) {
      in one draw call. A local "bubble" is carved out so no galaxy star clutters the planets or
      the constellations that live nearer than the arm. Built once — zero per-frame cost. -------- */
   (function buildMilkyWayGalaxy() {
-    var Rgal = 1600, N = mobile ? 55000 : 120000;                              // dense enough that arms + bulge read as a luminous galaxy, one static draw call
-    var Rsun = 0.55 * Rgal, Rhole = 470;                                        // Sun's galactocentric radius; local bubble kept clear
+    var Rgal = 1600, N = mobile ? 68000 : 155000;                              // dense enough that arms + bulge read as a luminous galaxy, one static draw call
+    var Rsun = 0.55 * Rgal, Rhole = 470, hSun = 270;                            // Sun's galactocentric radius; lifted a touch ABOVE the plane so you look OVER the disc, not edge-on
     var gcE = raDecToEcl(17.7608, -28.94), npE = raDecToEcl(12.8571, 27.13);    // Sgr A* + galactic north pole
     var w = eclVec(npE.lon, npE.lat, 1).normalize();                            // disc normal (galactic pole)
     var uu = eclVec(gcE.lon, gcE.lat, 1); uu.addScaledVector(w, -uu.dot(w)).normalize();  // in-plane, toward the centre
     var vv = new T.Vector3().crossVectors(w, uu).normalize();
-    var C = uu.clone().multiplyScalar(Rsun);                                    // the galactic centre in scene space
+    var C = uu.clone().multiplyScalar(Rsun).addScaledVector(w, -hSun);          // the galactic centre: Rsun toward Sgr and hSun below us → the disc spreads out below the eye
     var arms = 4, bsp = Math.tan(12 * Math.PI / 180), span = 6.6;              // pitch 12°
     var aSpiral = Rgal / Math.exp(bsp * span);                                  // arm inner radius (derived so arms reach the rim)
     var thetaSun = Math.log(Rsun / aSpiral) / bsp, phase0 = Math.PI - thetaSun; // phase arm 0 so it threads the Sun → the Orion Arm
-    var rng = gRng(7717), fb = gFbm(4021, 8);
-    var RAMP = [[0, [1.0, 0.93, 0.80]], [0.12, [1.0, 0.82, 0.50]], [0.34, [0.97, 0.58, 0.31]], [0.62, [0.82, 0.36, 0.20]], [1, [0.5, 0.20, 0.16]]];
+    var rng = gRng(7717), fb = gFbm(4021, 8), fb2 = gFbm(88, 12);
+    var RAMP = [[0, [1.0, 0.93, 0.80]], [0.10, [1.0, 0.82, 0.52]], [0.30, [0.98, 0.6, 0.34]], [0.5, [0.95, 0.45, 0.34]], [0.72, [0.78, 0.32, 0.22]], [1, [0.46, 0.18, 0.16]]];  // warm gold core → coral/rose mid → deep rust rim
     function ramp(f) { var i; for (i = 1; i < RAMP.length; i++) if (f <= RAMP[i][0]) break; if (i >= RAMP.length) i = RAMP.length - 1; var a = RAMP[i - 1], b = RAMP[i], k = (f - a[0]) / ((b[0] - a[0]) || 1); return [a[1][0] + (b[1][0] - a[1][0]) * k, a[1][1] + (b[1][1] - a[1][1]) * k, a[1][2] + (b[1][2] - a[1][2]) * k]; }
     function G() { return rng() + rng() + rng() + rng() - 2; }                  // ~N(0, sd≈0.58)
     var P = [], Cc = [];
     function push(pt, f, bright) {
       if (pt.lengthSq() < Rhole * Rhole) return;                                // carve the local bubble
       var c = ramp(f < 0 ? 0 : f > 1 ? 1 : f);
+      var r = c[0] * bright, g2 = c[1] * bright, b2 = c[2] * bright, mx = Math.max(r, g2, b2);
+      if (mx > 1) { r /= mx; g2 /= mx; b2 /= mx; }                              // hue-preserving cap: dense regions stay warm, never a flat white
       P.push(pt.x, pt.y, pt.z);
-      Cc.push(Math.min(1, c[0] * bright), Math.min(1, c[1] * bright), Math.min(1, c[2] * bright));
+      Cc.push(r, g2, b2);
     }
     function disk(rr, ang, h) { return C.clone().addScaledVector(uu, rr * Math.cos(ang)).addScaledVector(vv, rr * Math.sin(ang)).addScaledVector(w, h); }
-    var armN = Math.round(N * 0.72), bulgeN = Math.round(N * 0.16), haloN = N - armN - bulgeN;
-    // --- spiral arms ---
+    var armN = Math.round(N * 0.70), bulgeN = Math.round(N * 0.20), haloN = N - armN - bulgeN;
+    // --- spiral arms: a THICK, glowing band (not a hairline), with a dark dust rift threading it ---
     for (var i = 0; i < armN; i++) {
       var arm = i % arms;
       var theta = Math.pow(rng(), 1.7) * span;                                  // density front-loaded toward the core
       var rC = aSpiral * Math.exp(bsp * theta);
       var ang = theta + phase0 + arm * (2 * Math.PI / arms);
-      var rsig = 9 + 0.15 * rC;                                                 // arms fan out with radius → soft bands, not lines
+      var rsig = 10 + 0.14 * rC;                                                 // arms fan out with radius → soft bands
       var x = rC * Math.cos(ang) + G() * rsig, z = rC * Math.sin(ang) + G() * rsig;
       var rr = Math.sqrt(x * x + z * z), a2 = Math.atan2(z, x);
-      var zsig = (12 + 0.018 * rC) * (0.4 + 0.6 * Math.exp(-rC / (Rgal * 0.55)));
-      var dust = 0.45 + 0.85 * fb(ang * 1.9, rC * 0.010);                       // large-scale patchiness → clouds & dark dust
-      dust = dust < 0 ? 0 : dust > 1.25 ? 1.25 : dust;
-      var bright = (0.20 + 0.80 * Math.pow(rng(), 2.2)) * Math.min(1.15, dust); // heavy dim tail so few points are hot
-      push(disk(rr, a2, G() * zsig), rr / Rgal, bright * 0.9);
+      var zsig = (40 + 0.036 * rC) * (0.5 + 0.5 * Math.exp(-rC / (Rgal * 0.6)));  // MUCH thicker → the band has volume, reads as a glowing river not a white line
+      var h = G() * zsig;
+      var dust = 0.22 + 1.0 * fb(ang * 1.8, rC * 0.009);                         // patchy star-clouds, strong contrast
+      dust = dust < 0 ? 0 : dust;
+      var laneW = 12 + 0.006 * rC;                                              // the Great Rift: a thin dark dust lane on the midplane
+      var lane = Math.exp(-(h * h) / (2 * laneW * laneW)) * (0.4 + 0.6 * fb2(ang * 2.2, rC * 0.02));
+      if (rng() > 0.42 + 0.58 * (1 - lane)) continue;                            // drop points in the rift → a real dark gap, not just dim
+      var vert = 0.5 + 0.5 * Math.exp(-(h * h) / (2 * (zsig * 0.72) * (zsig * 0.72)));  // brighter toward the midplane → the band glows and softens at its edges
+      var bright = (0.15 + 0.85 * Math.pow(rng(), 2.3)) * Math.min(1.25, dust) * (1 - 0.7 * lane) * vert;
+      push(disk(rr, a2, h), rr / Rgal, bright);
     }
-    // --- central bulge (oblate, brightest, warmest) ---
+    // --- central bulge: a big, round, luminous warm core (the anchor of the whole galaxy) ---
     for (var j = 0; j < bulgeN; j++) {
-      var br = Math.pow(rng(), 2.6) * Rgal * 0.19;
+      var br = Math.pow(rng(), 2.3) * Rgal * 0.27;
       var uax = rng() * 2 - 1, ph = rng() * Math.PI * 2, ss = Math.sqrt(1 - uax * uax);
-      var bpt = C.clone().addScaledVector(uu, br * ss * Math.cos(ph)).addScaledVector(vv, br * ss * Math.sin(ph)).addScaledVector(w, br * uax * 0.55);
-      push(bpt, 0.02 + 0.30 * (br / (Rgal * 0.19)), 0.5 + 0.6 * Math.pow(rng(), 1.6));
+      var bpt = C.clone().addScaledVector(uu, br * ss * Math.cos(ph)).addScaledVector(vv, br * ss * Math.sin(ph)).addScaledVector(w, br * uax * 0.64);
+      push(bpt, 0.02 + 0.30 * (br / (Rgal * 0.27)), 0.6 + 0.7 * Math.pow(rng(), 1.5));
     }
     // --- faint inter-arm disc fill + a few globular clumps ---
     var clumpN = Math.round(haloN * 0.18), smoothN = haloN - clumpN;
     for (var k = 0; k < smoothN; k++) {
       var hr = Math.sqrt(rng()) * Rgal * 1.02, ha = rng() * Math.PI * 2;
-      push(disk(hr, ha, G() * (24 + 0.02 * hr)), hr / Rgal, 0.10 + 0.16 * Math.pow(rng(), 2.4));
+      push(disk(hr, ha, G() * (60 + 0.05 * hr)), hr / Rgal, 0.08 + 0.14 * Math.pow(rng(), 2.4));  // a thick puffy haze between the arms so they float in a glow, not black
     }
     for (var cc = 0; cc < 7; cc++) {
       var clR = Rgal * (0.3 + rng() * 0.7), clA = rng() * Math.PI * 2, clH = (rng() * 2 - 1) * Rgal * 0.22, clS = Rgal * (0.02 + rng() * 0.03);
@@ -679,7 +686,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     g.setAttribute("color", new T.BufferAttribute(new Float32Array(Cc), 3));
     // constant SCREEN-size points (sizeAttenuation off): the galaxy is huge and mostly far, so
     // attenuation shrinks the bulge/arms to invisibility — constant size keeps it luminous at every zoom
-    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 1.8 : 2.2, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 2.0 : 2.5, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.8, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     var pts = new T.Points(g, m); pts.name = "MilkyWayGalaxy"; pts.renderOrder = -4; pts.frustumCulled = false;
     belt.add(pts);
