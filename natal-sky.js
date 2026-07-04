@@ -599,31 +599,34 @@ export function buildNatalSky(THREE, scene, data, opts) {
      you are within the galaxy without a jarring galaxy "model" hanging in the void. Static
      Points, one draw call, built once — zero per-frame cost. ---------------- */
   (function buildMilkyWay() {
-    var R = 1350, N = mobile ? 3000 : 6000;
+    var R = 1300, N = mobile ? 5500 : 11000;
     var gcE = raDecToEcl(17.7608, -28.94), npE = raDecToEcl(12.8571, 27.13);    // galactic centre + north pole
     var gc = eclVec(gcE.lon, gcE.lat, 1).normalize();
     var w = eclVec(npE.lon, npE.lat, 1).normalize();                            // the band's normal (galactic pole)
     var u = gc.clone().addScaledVector(w, -gc.dot(w)).normalize();              // in-plane, toward the centre
     var v = new T.Vector3().crossVectors(w, u).normalize();
     var rng = gRng(9137), fb = gFbm(613, 8);
+    var DEG = Math.PI / 180, laneSig = 6 * DEG, spread = 22 * DEG;
     var pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
     for (var i = 0; i < N; i++) {
       var th = rng() * Math.PI * 2;
-      var phi = ((rng() + rng() + rng()) / 3 - 0.5) * (26 * Math.PI / 180);      // gaussian-ish band latitude, ±~13°
+      var phi = ((rng() + rng() + rng()) / 3 - 0.5) * 2 * spread;                // ~gaussian band latitude, ±~22°
+      var lane = Math.exp(-(phi * phi) / (2 * laneSig * laneSig));               // bright thin central lane → fades into a broad halo
       var cph = Math.cos(phi), sph = Math.sin(phi);
       var dir = u.clone().multiplyScalar(cph * Math.cos(th)).addScaledVector(v, cph * Math.sin(th)).addScaledVector(w, sph);
-      var rr = R * (0.9 + rng() * 0.28);
+      var rr = R * (0.92 + rng() * 0.23);
       pos[i * 3] = dir.x * rr; pos[i * 3 + 1] = dir.y * rr; pos[i * 3 + 2] = dir.z * rr;
-      var toward = Math.cos(th) * 0.5 + 0.5;                                     // 1 toward the galactic centre, 0 away
-      var clump = 0.55 + 0.85 * fb(th * 3.1, phi * 6 + 4);                        // patchy star-clouds
-      var b = (0.055 + 0.20 * Math.pow(toward, 1.6)) * clump * (0.5 + 0.5 * rng());
+      var toward = Math.cos(th) * 0.5 + 0.5;                                     // 1 toward the galactic centre (Sagittarius bulge), 0 anti-centre
+      var clump = 0.5 + 0.9 * fb(th * 3.1, phi * 7 + 4);                          // patchy star-clouds
+      var b = (0.10 + 0.30 * lane) * clump * (0.4 + 0.6 * Math.pow(toward, 1.5)) * (0.55 + 0.45 * rng());
       var tint = 0.9 + 0.1 * rng();
-      col[i * 3] = Math.min(1, b * 0.96 * tint); col[i * 3 + 1] = Math.min(1, b * 0.88 * tint); col[i * 3 + 2] = Math.min(1, b * 0.74 * tint);  // warm pale
+      col[i * 3] = Math.min(1, b * 0.98 * tint); col[i * 3 + 1] = Math.min(1, b * 0.9 * tint); col[i * 3 + 2] = Math.min(1, b * 0.76 * tint);  // warm pale
     }
     var g = new T.BufferGeometry();
     g.setAttribute("position", new T.BufferAttribute(pos, 3));
     g.setAttribute("color", new T.BufferAttribute(col, 3));
-    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 4.0 : 5.5, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    // constant SCREEN-size points (sizeAttenuation off) so the band we live inside reads at every zoom, like real distant stars
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 1.4 : 1.9, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     var pts = new T.Points(g, m); pts.name = "MilkyWayBand"; pts.renderOrder = -3; pts.frustumCulled = false;
     belt.add(pts);
