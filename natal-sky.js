@@ -85,11 +85,13 @@ export function buildNatalSky(THREE, scene, data, opts) {
     c.figureLines.forEach(function (seg) { inFigure[seg[0]] = 1; inFigure[seg[1]] = 1; });
     var centroid = new T.Vector3(), dirSum = new T.Vector3(), near = 1e9, far = 0;
     c._starPos = [];
+    // VOLUMETRIC BUT READABLE: each CONSTELLATION sits at its own distance (450–3150, scattered wide → no
+    // shell, no flat ring), while its OWN stars stay at a similar depth (±18%) so the figure holds its
+    // shape and still connects into the recognisable pattern from Earth. (Full per-star true distances
+    // shears the lines into unreadable depth-streaks from anywhere but the exact origin — this keeps both.)
+    var conBase = 450 * Math.pow(7.0, hash(ci * 977 + 31));
     ecl.forEach(function (e, si) {
-      // REAL, WIDELY-VARIED DISTANCES: each star at its own depth over a broad log-uniform range → a
-      // genuine volumetric 3-D scatter (no shell). The DIRECTION is exact, so the figure reads perfectly
-      // FROM EARTH (origin) yet becomes a true 3-D structure the instant you fly in. Deterministic.
-      var dist = 300 * Math.pow(10.0, hash(ci * 131 + si + 7));   // depth ∈ [300 … 3000], log-uniform
+      var dist = conBase * (0.82 + 0.36 * hash(ci * 131 + si + 7));
       var pos = eclVec(e.lon, e.lat, dist);
       c._starPos[si] = pos;
       centroid.add(pos); dirSum.add(pos.clone().normalize());
