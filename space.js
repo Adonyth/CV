@@ -90,7 +90,7 @@
     scene.fog = new THREE.FogExp2(0x0b0a09, 0.0018); // fog === body colour --page; no back wall
     // NEVER set scene.background — one black on the page (CSS --page)
 
-    var camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 3300);   // far plane: maxDist 1600 + the Milky-Way environment band's far rim (~1600 from origin) → ~3200 from camera, so the galaxy we live inside never clips when pulled all the way back
+    var camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 4300);   // far plane: maxDist 1600 + the far rim of the spiral galaxy we live inside (galactic centre ~880 toward Sgr, disc reaches ~2500 beyond) → keep it all unclipped when pulled fully back
     /* cosmos: the camera orbits the world with the REAL Nye Clock's premium
        trackball — world-space angular velocity about ANY axis, up-vector riding
        along (ported from nye-clock-bazi.html createPremiumOrbitControls).
@@ -988,7 +988,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=13").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=44").then(function (mod) {
+      return import("./natal-sky.js?v=45").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1099,6 +1099,7 @@
               if (gp === "jupiter" || gp === "saturn") { overClickable = true; break; }
             }
           }
+          if (!overClickable && natalSky.dsoPicks && _ctaRay.intersectObject(natalSky.dsoPicks, true).length) overClickable = true;   // a deep-sky wonder under the hand
           if (!overClickable && natalSky.isOverInteractive && natalSky.isOverInteractive(e.clientX, e.clientY)) overClickable = true;
         }
         if (!ptrDown) canvas.style.cursor = overClickable ? "pointer" : "grab";   // never fight the grabbing cursor mid-drag
@@ -1470,6 +1471,26 @@
         focusStar({ id: id, href: href, titleEn: titleEn, titleZh: titleZh, world: o.getWorldPosition(new THREE.Vector3()) });
       }
       window.__space.focusGiant = focusGiant;
+      /* a deep-sky wonder becomes the pivot: fly OUT past it along the Earth→cloud line, swung
+         a little aside so the Sun and rings never crowd the frame, then orbit and zoom to admire.
+         No content door — these are pure spectacle. */
+      function focusDeepSky(id, shell) {
+        var vd = 220, fmin = 60;
+        if (shell && shell.userData) { vd = shell.userData.dsoViewDist || vd; fmin = shell.userData.dsoFocusMin || fmin; }
+        var obj = (natalSky && natalSky.group.getObjectByName("DSO_" + id)) || shell;
+        if (!obj) return;
+        var w = obj.getWorldPosition(new THREE.Vector3());
+        soloBody = "dso";
+        clearSel();
+        controls.setDistanceLimits(fmin, 1600);
+        var outward = w.clone().normalize();
+        if (outward.lengthSq() < 1e-9) outward.set(0, 0, 1);
+        var ringN = new THREE.Vector3(0, 1, 0).applyQuaternion(nyeArmature.group.getWorldQuaternion(new THREE.Quaternion())).normalize();
+        outward.applyAxisAngle(ringN, -0.32);
+        outward.multiplyScalar(Math.cos(0.26)).addScaledVector(ringN, Math.sin(0.26)).normalize();
+        flyTo({ camTo: w.clone().add(outward.multiplyScalar(vd)), targetTo: w.clone(), lookAt: w.clone(), frames: null, fovKick: 5, onDone: null });
+      }
+      window.__space.focusDeepSky = focusDeepSky;
       var _selV = new THREE.Vector3();
       /* return to the whole-sky overview — a smooth glide to the canonical home frame */
       var homeBtn = document.getElementById("cosmos-home");
@@ -1521,15 +1542,15 @@
         pickNdc.x = (e.clientX / innerWidth) * 2 - 1; pickNdc.y = -(e.clientY / innerHeight) * 2 + 1;
         pickRay.setFromCamera(pickNdc, camera);
         var hits = pickRay.intersectObject(nyeArmature.group, true);
-        if (natalSky && natalSky.bodyGroup) {
-          hits = hits.concat(pickRay.intersectObject(natalSky.bodyGroup, true));
-          hits.sort(function (h1, h2) { return h1.distance - h2.distance; });
-        }
+        if (natalSky && natalSky.bodyGroup) hits = hits.concat(pickRay.intersectObject(natalSky.bodyGroup, true));
+        if (natalSky && natalSky.dsoPicks) hits = hits.concat(pickRay.intersectObject(natalSky.dsoPicks, true));
+        hits.sort(function (h1, h2) { return h1.distance - h2.distance; });
         for (var i = 0; i < hits.length; i++) {
           if (hits[i].object.name === "NyeEarthPickShell") continue;   // the oversized shell is not the globe
           var pick = null, o = hits[i].object;
           while (o && !pick) { pick = o.userData && o.userData.nyePick; o = o.parent; }
-          if (pick !== "sun" && pick !== "moon" && pick !== "earth" && pick !== "jupiter" && pick !== "saturn" && pick !== "beacon" && pick !== "mercury" && pick !== "venus" && pick !== "mars" && pick !== "uranus" && pick !== "neptune" && pick !== "pluto" && pick !== "charon") continue;   // glyphs never swallow a click
+          var isDso = pick && pick.indexOf && pick.indexOf("dso_") === 0;
+          if (!isDso && pick !== "sun" && pick !== "moon" && pick !== "earth" && pick !== "jupiter" && pick !== "saturn" && pick !== "beacon" && pick !== "mercury" && pick !== "venus" && pick !== "mars" && pick !== "uranus" && pick !== "neptune" && pick !== "pluto" && pick !== "charon") continue;   // glyphs never swallow a click
           if (pick === "beacon") {                       // the beacon is the door home
             // on the ground the camera sits INSIDE the beacon's pick bubble (and the
             // raycaster ignores visible=false) — look PAST it to the real target
@@ -1561,6 +1582,8 @@
             glideToBody("NatalPluto", 1.1);
           } else if (pick === "charon") {
             glideToBody("NatalPlutoMoon", 0.7);
+          } else if (isDso) {
+            focusDeepSky(pick.slice(4), hits[i].object);   // a cosmic wonder: fly out to it, orbit it, admire — no door
           } else if (pick === "earth") {
             glide.axis = null; glide.step = 0; glide.frames = 30; glide.distTarget = 7;
             glide.targetTo = new THREE.Vector3(0, 0, 0);      // orbit the Earth itself
