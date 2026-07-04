@@ -90,7 +90,7 @@
     scene.fog = new THREE.FogExp2(0x0b0a09, 0.0018); // fog === body colour --page; no back wall
     // NEVER set scene.background — one black on the page (CSS --page)
 
-    var camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 8600);   // far plane: maxDist now 3400 (pull OUT to behold the whole galaxy) + the vast disc rim (~3950) + far off-plane nebulae (~3600) + the deep starfield (3400) → nothing clips from any vantage
+    var camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 9600);   // far plane: maxDist 3400 (pull OUT to behold the galaxy) + the vast disc rim (~3950) + far off-plane nebulae (~4400) + the deep starfield (3400) → nothing clips from any vantage
     /* cosmos: the camera orbits the world with the REAL Nye Clock's premium
        trackball — world-space angular velocity about ANY axis, up-vector riding
        along (ported from nye-clock-bazi.html createPremiumOrbitControls).
@@ -988,7 +988,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=13").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=58").then(function (mod) {
+      return import("./natal-sky.js?v=59").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,

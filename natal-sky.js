@@ -568,7 +568,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var wv = Math.pow(Lv, 0.62) * vig * clump; wgt[q2] = wv; if (wv > wmax) wmax = wv;
     }
     for (var q3 = 0; q3 < np; q3++) wgt[q3] /= wmax;
-    var N = mobile ? 15000 : 32000, PC = [], CC = [], GP = [], GC = [], placed = 0, guard = 0, lim = N * 45;
+    var N = mobile ? 13000 : 26000, PC = [], CC = [], GP = [], GC = [], placed = 0, guard = 0, lim = N * 45;
     while (placed < N && guard++ < lim) {
       var xi = (rng() * sw) | 0, yi = (rng() * sh) | 0, k = yi * sw + xi;
       if (rng() > wgt[k]) continue;
@@ -587,15 +587,40 @@ export function buildNatalSky(THREE, scene, data, opts) {
       placed++;
     }
     var grp = new T.Group();
+    // (A) the recognizable, BEAUTIFUL nebula image as a soft additive sprite (the "correct direction"),
+    //     laid UNDER the 3-D particle cloud so it reads crisp + beautiful AND gains grain + parallax
+    (function () {
+      var scp = Math.min(1, 360 / Math.max(W, H)), sws = Math.max(2, Math.round(W * scp)), shs = Math.max(2, Math.round(H * scp));
+      var scv = document.createElement("canvas"); scv.width = sws; scv.height = shs;
+      var sctx = scv.getContext("2d"); sctx.drawImage(img, 0, 0, sws, shs);
+      var sid = sctx.getImageData(0, 0, sws, shs), spx = sid.data, snp = sws * shs, st = new Float32Array(snp);
+      for (var sq = 0; sq < snp; sq++) st[sq] = (0.299 * spx[sq * 4] + 0.587 * spx[sq * 4 + 1] + 0.114 * spx[sq * 4 + 2]) / 255;
+      Array.prototype.sort.call(st, function (a, b) { return a - b; });
+      var slo = st[(snp * 0.35) | 0], shi = st[Math.min(snp - 1, (snp * 0.99) | 0)], ssp = Math.max(0.001, shi - slo);
+      for (var sy = 0; sy < shs; sy++) for (var sx = 0; sx < sws; sx++) {
+        var si2 = (sy * sws + sx) * 4, sr = spx[si2] / 255, sg = spx[si2 + 1] / 255, sbb = spx[si2 + 2] / 255, sav = (sr + sg + sbb) / 3, ssb = 1.5;
+        sr = Math.max(0, Math.min(1, sav + (sr - sav) * ssb)); sg = Math.max(0, Math.min(1, sav + (sg - sav) * ssb)); sbb = Math.max(0, Math.min(1, sav + (sbb - sav) * ssb));
+        var slm = ((0.299 * sr + 0.587 * sg + 0.114 * sbb) - slo) / ssp; slm = slm < 0 ? 0 : slm > 1 ? 1 : slm;
+        var sbo = 0.3 + 1.2 * slm;
+        spx[si2] = Math.min(255, sr * 255 * sbo); spx[si2 + 1] = Math.min(255, sg * 255 * sbo); spx[si2 + 2] = Math.min(255, sbb * 255 * sbo);
+        var srx = (sx / (sws - 1) - 0.5) * 2, sry = (sy / (shs - 1) - 0.5) * 2, srd = Math.sqrt(srx * srx + sry * sry);
+        spx[si2 + 3] = 255 * (1 - Math.max(0, Math.min(1, (srd - 0.56) / 0.56)));
+      }
+      sctx.putImageData(sid, 0, 0);
+      var stex = new T.CanvasTexture(scv); if ("colorSpace" in stex && T.SRGBColorSpace) stex.colorSpace = T.SRGBColorSpace;
+      var smat = new T.SpriteMaterial({ map: stex, blending: T.AdditiveBlending, transparent: true, depthWrite: false, opacity: d.opacity != null ? d.opacity : 0.7, fog: false });
+      if ("toneMapped" in smat) smat.toneMapped = false;
+      var spr = new T.Sprite(smat); spr.scale.set(Wu, Hu, 1); spr.renderOrder = -3; grp.add(spr);
+    })();
     var gg = new T.BufferGeometry();                                               // glow underlay — big soft dim points fill the gaps into continuous gas
     gg.setAttribute("position", new T.BufferAttribute(new Float32Array(GP), 3));
     gg.setAttribute("color", new T.BufferAttribute(new Float32Array(GC), 3));
-    var gm = new T.PointsMaterial({ map: DSO_SOFT, size: (d.psize || 5.0) * 4.6, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.2, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var gm = new T.PointsMaterial({ map: DSO_SOFT, size: (d.psize || 4.6) * 4.4, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.14, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in gm) gm.toneMapped = false; grp.add(new T.Points(gg, gm));
-    var cg2 = new T.BufferGeometry();                                              // crisp particle detail on top
+    var cg2 = new T.BufferGeometry();                                              // crisp particle grain on top of the image — this is the "particle感" + parallax
     cg2.setAttribute("position", new T.BufferAttribute(new Float32Array(PC), 3));
     cg2.setAttribute("color", new T.BufferAttribute(new Float32Array(CC), 3));
-    var cm = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 5.0, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.72, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var cm = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 4.6, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.6, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in cm) cm.toneMapped = false; grp.add(new T.Points(cg2, cm));
     return grp;
   }
@@ -606,7 +631,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // SPREAD the wonders out into deep 3-D so none crowd and none sit buried in the galactic plane:
     // each at its own far DISTANCE (2200→3600, well beyond the galactic core), a golden-angle azimuth
     // nudge, AND a big latitude push so they scatter well OFF the band (up/down out of the plane)
-    var dist = 2200 + (idx / Math.max(1, _dsoCount - 1)) * 1400;
+    var dist = 2800 + (idx / Math.max(1, _dsoCount - 1)) * 1600;                     // even farther — distinct distant wonders out beyond the galaxy
     var nud = idx * 2.399963;
     var latOff = Math.sin(idx * 1.7 + 0.6) * 0.5;           // ±~28° off the ecliptic/galactic band
     var ecl = raDecToEcl(d.raH, d.decDeg);
@@ -669,6 +694,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
      Logarithmic-spiral arms + oblate bulge + patchy dust, warm ember palette, ~82k static points
      in one draw call. A local "bubble" is carved out so no galaxy star clutters the planets or
      the constellations that live nearer than the arm. Built once — zero per-frame cost. -------- */
+  var galacticCentre = null, galacticNormal = null;                              // exposed for the clickable black-hole nucleus
   (function buildMilkyWayGalaxy() {
     var Rgal = 2600, N = mobile ? 130000 : 300000;                             // VAST — a real galaxy the size of the sky; dense enough to read as a luminous river of countless stars
     var Rsun = 0.52 * Rgal, Rin = 340, Rout = 900, hSun = 140;                  // Sun's galactocentric radius; nearly IN the plane so the band WRAPS the whole sky; galaxy fades in gradually (no hard shell)
@@ -677,6 +703,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var uu = eclVec(gcE.lon, gcE.lat, 1); uu.addScaledVector(w, -uu.dot(w)).normalize();  // in-plane, toward the centre
     var vv = new T.Vector3().crossVectors(w, uu).normalize();
     var C = uu.clone().multiplyScalar(Rsun).addScaledVector(w, -hSun);          // the galactic centre in scene space
+    galacticCentre = C.clone(); galacticNormal = w.clone();                     // expose for the clickable nucleus
     var arms = 4, bsp = Math.tan(12 * Math.PI / 180), span = 6.6;              // pitch 12°
     var aSpiral = Rgal / Math.exp(bsp * span);                                  // arm inner radius (derived so arms reach the rim)
     var thetaSun = Math.log(Rsun / aSpiral) / bsp, phase0 = Math.PI - thetaSun; // phase arm 0 so it threads the Sun → the Orion Arm
@@ -707,10 +734,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var rsig = 10 + 0.14 * rC;
       var x = rC * Math.cos(ang) + G() * rsig, z = rC * Math.sin(ang) + G() * rsig;
       var rr = Math.sqrt(x * x + z * z), a2 = Math.atan2(z, x), f = rr / Rgal;
-      var zsig = (40 + 0.036 * rC) * (0.5 + 0.5 * Math.exp(-rC / (Rgal * 0.6)));
+      var zsig = (120 + 0.108 * rC) * (0.5 + 0.5 * Math.exp(-rC / (Rgal * 0.6)));  // 3× thicker disc — a deep, voluminous band, not a thin ribbon
       var h = G() * zsig;
       var dust = 0.22 + 1.0 * fb(ang * 1.8, rC * 0.009); dust = dust < 0 ? 0 : dust;
-      var laneW = 12 + 0.006 * rC;
+      var laneW = 22 + 0.012 * rC;                                                // dust rift scales with the thicker disc
       var lane = Math.exp(-(h * h) / (2 * laneW * laneW)) * (0.4 + 0.6 * fb2(ang * 2.2, rC * 0.02));
       if (rng() > 0.42 + 0.58 * (1 - lane)) continue;                            // drop points in the rift → a real dark gap
       var vert = 0.5 + 0.5 * Math.exp(-(h * h) / (2 * (zsig * 0.72) * (zsig * 0.72)));
@@ -725,8 +752,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var br = Math.pow(rng(), 1.9) * Rgal * 0.15;
       var uax = rng() * 2 - 1, ph = rng() * Math.PI * 2, ss = Math.sqrt(1 - uax * uax);
       var bpt = C.clone().addScaledVector(uu, br * ss * Math.cos(ph)).addScaledVector(vv, br * ss * Math.sin(ph)).addScaledVector(w, br * uax * 0.7);
-      var bc = ramp(0.02 + 0.2 * (br / (Rgal * 0.15)));
-      push(bpt, bc[0], bc[1], bc[2], 0.45 + 0.5 * Math.pow(rng(), 1.7), 0.32);
+      var bc = ramp(0.04 + 0.24 * (br / (Rgal * 0.15)));
+      push(bpt, bc[0], bc[1], bc[2], 0.24 + 0.3 * Math.pow(rng(), 1.9), 0.18);   // dimmer core — no longer a blinding blob
     }
     // --- faint inter-arm haze + a few globular clumps so the arms float in a glow ---
     var clumpN = Math.round(haloN * 0.2), smoothN = haloN - clumpN;
@@ -769,6 +796,35 @@ export function buildNatalSky(THREE, scene, data, opts) {
     if ("toneMapped" in m) m.toneMapped = false;
     var pts = new T.Points(g, m); pts.name = "MilkyWayGalaxy"; pts.renderOrder = -4; pts.frustumCulled = false;
     belt.add(pts);
+  })();
+
+  /* ---------------- the GALACTIC CENTRE — a supermassive BLACK HOLE you can fly to: a dark event
+     horizon that truly OCCLUDES the bulge stars behind it, ringed by a blazing accretion disc, at the
+     heart of the galaxy. Clickable → fly in → it becomes the pivot → admire, like every other wonder. */
+  (function buildGalacticCore() {
+    if (!galacticCentre) return;
+    var grp = new T.Group(); grp.name = "DSO_galcore"; grp.position.copy(galacticCentre);
+    var bh = new T.Mesh(new T.SphereGeometry(46, 24, 18), new T.MeshBasicMaterial({ color: 0x000000, fog: false }));
+    bh.renderOrder = 1; grp.add(bh);                                            // opaque event horizon → a real dark void
+    var s = 128, rc = document.createElement("canvas"); rc.width = rc.height = s;
+    var rg = rc.getContext("2d"), grd = rg.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    grd.addColorStop(0.0, "rgba(0,0,0,0)"); grd.addColorStop(0.34, "rgba(0,0,0,0)");
+    grd.addColorStop(0.40, "rgba(255,190,110,0.85)"); grd.addColorStop(0.48, "rgba(255,242,208,1)");
+    grd.addColorStop(0.58, "rgba(255,150,80,0.7)"); grd.addColorStop(0.8, "rgba(150,72,42,0.16)"); grd.addColorStop(1.0, "rgba(0,0,0,0)");
+    rg.fillStyle = grd; rg.fillRect(0, 0, s, s);
+    var rtex = new T.CanvasTexture(rc); if ("colorSpace" in rtex && T.SRGBColorSpace) rtex.colorSpace = T.SRGBColorSpace;
+    var rm = new T.SpriteMaterial({ map: rtex, blending: T.AdditiveBlending, transparent: true, depthWrite: false, depthTest: false, fog: false });
+    if ("toneMapped" in rm) rm.toneMapped = false;
+    var ring = new T.Sprite(rm); ring.scale.set(250, 250, 1); ring.renderOrder = 3; grp.add(ring);  // accretion disc (transparent centre → the void shows through)
+    var gm2 = new T.SpriteMaterial({ map: DSO_SOFT, color: 0xffd6a0, blending: T.AdditiveBlending, transparent: true, opacity: 0.45, depthWrite: false, depthTest: false, fog: false });
+    if ("toneMapped" in gm2) gm2.toneMapped = false;
+    var glow = new T.Sprite(gm2); glow.scale.set(560, 560, 1); glow.renderOrder = 2; grp.add(glow);  // luminous halo, readable from afar
+    belt.add(grp);
+    var shell = new T.Mesh(new T.SphereGeometry(210, 12, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
+    shell.position.copy(galacticCentre); shell.name = "DSOPick_galcore";
+    shell.userData.nyePick = "dso_galcore"; shell.userData.dsoViewDist = 640; shell.userData.dsoFocusMin = 130;
+    shell.userData.dsoName = { en: "Galactic Centre · Sgr A*", zh: "银心 · 人马座 A*" };
+    dsoPickGroup.add(shell);
   })();
 
   /* ---------------- constellation names: IN-SCENE Songti sprites (same craft as the 干支 glyphs) ---------------- */
