@@ -553,7 +553,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var lo = srt[(npx * 0.40) | 0], hi = srt[Math.min(npx - 1, (npx * 0.995) | 0)], span = Math.max(0.001, hi - lo);  // per-image auto-levels
     var sd = d.seed; if (sd == null) { sd = 7; for (var si = 0; si < (d.id || "").length; si++) sd = (sd * 33 + d.id.charCodeAt(si)) >>> 0; }  // per-object dithering so no two clouds share a grain pattern
     var rng = gRng((sd * 131 + 7) >>> 0);
-    var dens = d.density != null ? d.density : 0.72, gamma = d.gamma != null ? d.gamma : 0.72, bright = d.bright != null ? d.bright : 1.5;
+    var dens = d.density != null ? d.density : 0.72, gamma = d.gamma != null ? d.gamma : 0.72, bright = d.bright != null ? d.bright : 1.7;
     var Wu = (d.size || 160) * 1.5, Hu = Wu * (sh / sw), depth = (d.depth != null ? d.depth : 0.4) * Wu;  // ×1.5 world size: the clouds can't be flown into, so they must be big enough to read shape+colour from afar
     var P = [], C = [];
     for (var y = 0; y < sh; y++) for (var x = 0; x < sw; x++) {
@@ -621,7 +621,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var toward = Math.cos(th) * 0.5 + 0.5;                                     // 1 toward the galactic centre (Sagittarius bulge), 0 anti-centre
       var clump = 0.42 + 0.9 * fb(th * 3.1, phi * 7 + 4);                         // patchy star-clouds
       var rift = 1 - 0.55 * Math.exp(-Math.pow((phi + 1.6 * DEG) / (2.2 * DEG), 2)) * (0.5 + 0.5 * fb2(th * 5, 3));  // a thin dark dust rift just off the lane
-      var b = (0.035 + 0.42 * lane) * clump * rift * (0.45 + 0.55 * Math.pow(toward, 1.4)) * (0.6 + 0.4 * rng());  // bright DEFINED lane, faint halo → the band reads clearly without fogging the whole sky
+      var b = (0.04 + 0.62 * lane) * clump * rift * (0.45 + 0.55 * Math.pow(toward, 1.4)) * (0.6 + 0.4 * rng());  // bright DEFINED lane, faint halo → the band reads clearly without fogging the whole sky
       var tint = 0.9 + 0.1 * rng();
       col[i * 3] = Math.min(1, b * 0.98 * tint); col[i * 3 + 1] = Math.min(1, b * 0.88 * tint); col[i * 3 + 2] = Math.min(1, b * 0.72 * tint);  // warm pale
     }
@@ -629,7 +629,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     g.setAttribute("position", new T.BufferAttribute(pos, 3));
     g.setAttribute("color", new T.BufferAttribute(col, 3));
     // constant SCREEN-size points (sizeAttenuation off) so the band we live inside reads at every zoom, like real distant stars
-    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 1.9 : 2.6, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.98, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 2.1 : 3.0, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 1.0, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     var pts = new T.Points(g, m); pts.name = "MilkyWayBand"; pts.renderOrder = -3; pts.frustumCulled = false;
     belt.add(pts);
