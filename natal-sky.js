@@ -89,7 +89,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // shell, no flat ring), while its OWN stars stay at a similar depth (±18%) so the figure holds its
     // shape and still connects into the recognisable pattern from Earth. (Full per-star true distances
     // shears the lines into unreadable depth-streaks from anywhere but the exact origin — this keeps both.)
-    var conBase = 400 * Math.pow(4.0, hash(ci * 977 + 31));                     // each constellation 400–1600: the near ones read as prominently as before, the far ones recede → real depth scatter, no flat shell
+    var conBase = 1200 * Math.pow(4.2, hash(ci * 977 + 31));                    // each constellation is OUT in the deep star field (1200–5000, light-years away, NOT a shell around the solar system), scattered among the background stars, the galaxy and reaching toward the nebulae — so the whole space is one continuous star-filled volume and nothing is abrupt. (Angular size from Earth is unchanged by distance — the figure looks the same, just genuinely far and with less parallax shear.)
     ecl.forEach(function (e, si) {
       var dist = conBase * (0.94 + 0.12 * hash(ci * 131 + si + 7));             // its stars within ±6% depth → the figure lies nearly flat to the sightline and reads cleanly (no receding beams)
       var pos = eclVec(e.lon, e.lat, dist);
@@ -138,7 +138,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   var uniforms = {
     uMap: { value: o.tex }, uTime: { value: 0 }, uFusion: { value: 0.52 },
     uPixelRatio: { value: Math.min((typeof devicePixelRatio !== "undefined" ? devicePixelRatio : 1) || 1, mobile ? 1.5 : 2) },
-    uMaxPointSize: { value: mobile ? 7.0 : 10.0 }, uRefDepth: { value: 1200.0 }, // ref-depth raised to match the new WIDE star distances (300–3000) so the far figure stars don't shrink to nothing
+    uMaxPointSize: { value: mobile ? 7.0 : 10.0 }, uRefDepth: { value: 2600.0 }, // ref-depth matched to the deep-field constellation distances (1200–5000) so the far figure stars keep a natural, visible size
     uAmplitude: { value: 6.0 },              // near-frozen: figures hold their shape
     uLayerKind: { value: 0.0 }, uClearInner: { value: -2.0 }, uClearOuter: { value: -1.0 }
   };
