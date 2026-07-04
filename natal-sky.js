@@ -635,14 +635,15 @@ export function buildNatalSky(THREE, scene, data, opts) {
       // a 3-D RELIEF, not a flat sticker: subdivide the plane and push each vertex forward by the photo's
       // local brightness → the bright nebula BULGES toward you into a real 3-D cloud, the dark gas recedes.
       // Recognisable (it IS the photo) AND three-dimensional AND world-fixed → it turns WITH the particle volume.
-      var SEG = 64, pgeo = new T.PlaneGeometry(Wu, Hu, SEG, SEG), pa = pgeo.attributes.position;
-      var Zr = Zu * 1.15, zfb2 = gFbm((sd * 23 + 9) >>> 0, 8);
+      var SEG = 48, pgeo = new T.PlaneGeometry(Wu, Hu, SEG, SEG), pa = pgeo.attributes.position;
+      var Zr = Zu * 1.2, zfb2 = gFbm((sd * 23 + 9) >>> 0, 8);
       for (var vi = 0; vi < pa.count; vi++) {
         var vx = pa.getX(vi), vy = pa.getY(vi);
         var uu2 = Math.max(0, Math.min(1, vx / Wu + 0.5)), vv2 = Math.max(0, Math.min(1, 0.5 - vy / Hu));
-        var pxx = Math.min(sw2 - 1, (uu2 * sw2) | 0), pyy = Math.min(sh2 - 1, (vv2 * sh2) | 0), pib = (pyy * sw2 + pxx) * 4;
-        var bb = (0.299 * p2[pib] + 0.587 * p2[pib + 1] + 0.114 * p2[pib + 2]) / 255;
-        pa.setZ(vi, (Math.pow(bb, 0.7) - 0.34) * Zr + (zfb2(uu2 * 5, vv2 * 5) * 2 - 1) * Zr * 0.28);
+        // a SMOOTH cloud relief: a soft dome (the core bulges toward you) + low-frequency rolling. NO sharp
+        // per-pixel steps (those shattered the mesh into shards). The image still reads; the FORM is 3-D.
+        var rc = Math.min(1, ((uu2 - 0.5) * (uu2 - 0.5) + (vv2 - 0.5) * (vv2 - 0.5)) * 4);   // 0 centre → 1 rim
+        pa.setZ(vi, (1 - rc * rc) * Zr * 0.85 + (zfb2(uu2 * 2.2, vv2 * 2.2) * 2 - 1) * Zr * 0.35);
       }
       pa.needsUpdate = true;
       var face = new T.Mesh(pgeo, sm); face.renderOrder = -1; grp.add(face);
