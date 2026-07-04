@@ -1074,10 +1074,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
         if (edges[key]) continue; edges[key] = true;
         var pA = nodes[a].p, pB = nodes[bb].p, L = pA.distanceTo(pB);
         if (L > R_OUT * 1.25) continue;   // don't span the whole box with one thread
-        var nPts = Math.max(40, Math.round(L / 7));
+        var nPts = Math.max(50, Math.round(L / 6));
         for (var t = 0; t < nPts; t++) {
           var f = t / (nPts - 1), swell = 8 + 30 * Math.sin(f * Math.PI);   // thin at the nodes, fat in the middle
-          pushPt(pA.x + (pB.x - pA.x) * f + wG() * swell, pA.y + (pB.y - pA.y) * f + wG() * swell, pA.z + (pB.z - pA.z) * f + wG() * swell, 0.38 + 0.24 * (1 - Math.sin(f * Math.PI)), 0.72);
+          pushPt(pA.x + (pB.x - pA.x) * f + wG() * swell, pA.y + (pB.y - pA.y) * f + wG() * swell, pA.z + (pB.z - pA.z) * f + wG() * swell, 0.42 + 0.26 * (1 - Math.sin(f * Math.PI)), 0.82);
         }
       }
     }
@@ -1098,7 +1098,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var wgeo = new T.BufferGeometry();
     wgeo.setAttribute("position", new T.BufferAttribute(new Float32Array(POS), 3));
     wgeo.setAttribute("color", new T.BufferAttribute(new Float32Array(COL), 3));
-    var wmat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 46 : 60, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: true });   // fog ON → distant foam dissolves into black = infinite depth
+    var wmat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 72 : 95, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: true });   // BIG soft points → nodes/filaments still read as glowing knots & threads even viewed from far outside the web; fog dissolves the far side
     if ("toneMapped" in wmat) wmat.toneMapped = false;
     _cosmicWeb = new T.Points(wgeo, wmat); _cosmicWeb.name = "CosmicWeb"; _cosmicWeb.renderOrder = -6; _cosmicWeb.frustumCulled = false; _cosmicWeb.visible = false;
     belt.add(_cosmicWeb);
@@ -1295,7 +1295,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
         // central spiral fades as you pull out (full at galaxy scale ≤6500, faint by ~10500) → the scale finally
         // reads — the web is VAST and the Milky Way is just ONE tiny node in it (see the MW node in the web).
         if (!_galMats) { var _g1 = group.getObjectByName("MilkyWayGalaxy"), _g2 = group.getObjectByName("MilkyWayGlow"); if (_g1 && _g2) _galMats = [{ m: _g1.material, base: _g1.material.opacity }, { m: _g2.material, base: _g2.material.opacity }]; }
-        if (_galMats) { var _gScale = Math.max(0.06, Math.min(1, (10500 - _cl) / 4000)), _gSolo = _keepGal ? 1 : (1 - 0.86 * _bdT); for (var _gi = 0; _gi < _galMats.length; _gi++) _galMats[_gi].m.opacity = _galMats[_gi].base * _gScale * _gSolo; }
+        if (_galMats) { var _gScale = Math.max(0.13, Math.min(1, (10500 - _cl) / 4000)), _gSolo = _keepGal ? 1 : (1 - 0.86 * _bdT); for (var _gi = 0; _gi < _galMats.length; _gi++) _galMats[_gi].m.opacity = _galMats[_gi].base * _gScale * _gSolo; }
       }
       if (bloomSprite && bloomT > 0) { bloomT = Math.max(0, bloomT - 0.045); bloomSprite.material.opacity = bloomT * 0.7; if (bloomT === 0) bloomSprite.visible = false; }
       updateLabels();
