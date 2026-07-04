@@ -1045,7 +1045,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
         var frac = dF / RAD, stepLen = 26 + 105 * frac;
         pos.addScaledVector(toF, stepLen).addScaledVector(tang, handed * stepLen * (0.32 + 0.5 * frac));
         pos.x += wG() * 7; pos.y += wG() * 7; pos.z += wG() * 7;
-        var prox = 1 - Math.min(1, frac), br = 0.10 + 0.72 * prox * prox, wf = Math.max(0, prox - 0.5) / 0.5;   // gold → white as it nears the attractor
+        var prox = 1 - Math.min(1, frac), br = 0.20 + 1.15 * prox * prox, wf = Math.max(0, prox - 0.5) / 0.5;   // gold → white as it nears the attractor
         P.push(pos.x, pos.y, pos.z); C.push(1.0 * br, (0.80 + 0.18 * wf) * br, (0.40 + 0.48 * wf) * br);
       }
     }
@@ -1056,7 +1056,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var g = new T.BufferGeometry();
     g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
     g.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
-    var mat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 12 : 16, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var mat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 30 : 42, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in mat) mat.toneMapped = false;
     _laniakeaFlow = new T.Points(g, mat); _laniakeaFlow.name = "LaniakeaFlow"; _laniakeaFlow.renderOrder = -5; _laniakeaFlow.frustumCulled = false; _laniakeaFlow.visible = false;
     belt.add(_laniakeaFlow);
@@ -1130,9 +1130,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
 
     // ---- OUR node IS Laniakea — the Great Attractor & Milky Way are INSIDE it, not separate. Click it to pull
     //      back and see our whole supercluster as one knot of the web. ----
-    var gaShell = new T.Mesh(new T.SphereGeometry(900, 12, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
-    gaShell.position.set(0, 0, 0); gaShell.name = "DSOPick_laniakea";
-    gaShell.userData.nyePick = "dso_laniakea"; gaShell.userData.dsoViewDist = 6000; gaShell.userData.dsoFocusMin = 1500;
+    var gaShell = new T.Mesh(new T.SphereGeometry(1200, 12, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
+    gaShell.position.copy(new T.Vector3(0.30, 0.42, -0.72).normalize().multiplyScalar(2100)); gaShell.name = "DSOPick_laniakea";   // the Great Attractor convergence, so clicking frames the flow basin
+    gaShell.userData.nyePick = "dso_laniakea"; gaShell.userData.dsoViewDist = 4400; gaShell.userData.dsoFocusMin = 1500;
     gaShell.userData.dsoName = { en: "Laniakea · our supercluster", zh: "拉尼亚凯亚 · 我们的本超星系团" };
     dsoPickGroup.add(gaShell);
     var wgeo = new T.BufferGeometry();
@@ -1338,7 +1338,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
         // fade them (full at galaxy scale ≤5500, down to a faint 0.10 by ~10000) → the WARM WEB becomes the star
         // of the max-zoom view. (× the solo-dim factor so admiring a lone wonder still dims the field.)
         if (!_sfMat) { var _sfo = group.getObjectByName("Starfield"); if (_sfo && _sfo.material) { _sfMat = _sfo.material; _sfBase = _sfo.material.opacity; } }
-        if (_sfMat) { var _sfScale = Math.max(0.10, Math.min(1, (8500 - _cl) / 4000)); _sfMat.opacity = _sfBase * _sfScale * (1 - 0.55 * _bdT); }
+        if (_sfMat) { var _sfScale = Math.max(0.08, Math.min(1, (7000 - _cl) / 3200)); _sfMat.opacity = _sfBase * _sfScale * (1 - 0.55 * _bdT); }
         // GALAXY recedes at web scale: a whole galaxy is an invisible speck at cosmic-web scale, so the giant
         // central spiral fades as you pull out (full at galaxy scale ≤6500, faint by ~10500) → the scale finally
         // reads — the web is VAST and the Milky Way is just ONE tiny node in it (see the MW node in the web).
