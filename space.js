@@ -90,7 +90,7 @@
     scene.fog = new THREE.FogExp2(0x0b0a09, 0.0018); // fog === body colour --page; no back wall
     // NEVER set scene.background — one black on the page (CSS --page)
 
-    var camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 9600);   // far plane: maxDist 3400 (pull OUT to behold the galaxy) + the vast disc rim (~3950) + far off-plane nebulae (~4400) + the deep starfield (3400) → nothing clips from any vantage
+    var camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 13000);  // far plane: maxDist 3400 (pull OUT to behold the galaxy) + the vast disc rim (~3950) + far nebulae now pushed to ~6800 + the deep starfield (7200) → nothing clips from any vantage
     /* cosmos: the camera orbits the world with the REAL Nye Clock's premium
        trackball — world-space angular velocity about ANY axis, up-vector riding
        along (ported from nye-clock-bazi.html createPremiumOrbitControls).
@@ -988,7 +988,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=13").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=60").then(function (mod) {
+      return import("./natal-sky.js?v=61").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1148,7 +1148,8 @@
         // to the natal-chart overview. Only near the Earth — a constellation is handled by soloBody.
         var nearEarth = controls.target.lengthSq() < 1.0;
         var proximity = nearEarth ? Math.max(0, Math.min(1, (r - 8.5) / 8.0)) : 1;   // 0 at r≤8.5 → 1 at r≥16.5
-        var want = (soloBody || (ctaOn && r < 16)) ? 0 : proximity;
+        var zoomOut = Math.max(0, Math.min(1, (camera.position.length() - 520) / 380));  // the solar-system gear-rings melt away as you pull out to galaxy scale (like the zodiac)
+        var want = (soloBody || (ctaOn && r < 16)) ? 0 : Math.min(proximity, 1 - zoomOut);
         if (controls.isGround()) want = 0;   // lying on the ground, the sky must be pure — no gear-rings overhead
         if (Math.abs(ringFade - want) < 0.004) { ringFade = want; return; }
         ringFade += (want - ringFade) * 0.1;
@@ -1526,6 +1527,9 @@
         if ((soloBody === "dso" || soloBody === "galcore") && !glideActive() && controls.getRadius() > 900) soloBody = null;
         // pulled back to galaxy scale (most/all of the galaxy in view) → the solar-system zodiac ring melts away
         if (natalSky && natalSky.setZodiacFade) { var _zr = controls.getRadius(); natalSky.setZodiacFade((_zr - 1150) / 800); }
+        // scale LOD: once the whole solar-system orrery (detailed Earth shader, Sun, gear-rings) is a distant
+        // speck, stop DRAWING it entirely — nothing to see, and its per-fragment Earth shader is the costliest thing
+        if (nyeArmature) { var _farOut = camera.position.length() > 1000 && !controls.isGround(); if (nyeArmature.group.visible === _farOut) nyeArmature.group.visible = !_farOut; }
         if (selStar && starCta) {
           _selV.copy(selStar.world).project(camera);
           if (_selV.z > 1 || Math.abs(_selV.x) > 1.05 || Math.abs(_selV.y) > 1.05) { starCta.classList.remove("is-on"); }
@@ -1607,9 +1611,10 @@
     }
 
     var running = true;
-    var frameNo = 0, prevSec = 0, beltCentered = false;
+    var frameNo = 0, prevSec = 0, _clk = 0, beltCentered = false;
     function frame(t) {
       if (!running) return;
+      var busy = true;
       var sec = (t || 0) * 0.001;
       var dt = Math.min(0.1, Math.max(0.001, sec - prevSec)); prevSec = sec;
       frameNo++;
@@ -1618,10 +1623,10 @@
         /* thermal guard: when the visitor rests, render at half rate — the slow
            drift is indistinguishable at 30fps, the GPU cools. Any touch, glide,
            entrance or stirred dust restores 60fps instantly. */
-        var busy = (nowMs - lastTouch < 2500) || glideActive() ||
+        busy = (nowMs - lastTouch < 2500) || glideActive() ||
                    (!userMoved && nowMs < entranceUntil) ||
                    deepFusion.uniforms.uPointerAmt.value > 0.05;
-        if (!busy && (frameNo % 3)) { requestAnimationFrame(frame); return; }   // idle → ~20fps (was 30): the slow drift is smooth, the GPU cools further
+        if (!busy && (frameNo % 10)) { requestAnimationFrame(frame); return; }   // AT REST the scene is fully static → drop to ~6fps; any touch/glide/entrance restores 60fps instantly
         // cinematic arrival: dive from deep space and LAND on the Earth — the visitor
         // meets the home world first (its real footprint glowing on it), then rotates to
         // the starfield and pulls out to the whole orrery ("✦ Whole sky" invites it).
@@ -1705,10 +1710,9 @@
             if (glide.onDone) { var fD = glide.onDone; glide.onDone = null; fD(); }
           }
         }
-        // after 20s of stillness the world turns slowly on its own; manual always wins (dt-based: same speed at any frame rate)
-        if (userMoved && nowMs - lastTouch > 20000 && !glideActive() && !controls.isGround()) controls.rotateWorld(camera.up, 0.0108 * dt);
-        if (!userMoved && nowMs >= entranceUntil && !controls.isGround()) controls.rotateWorld(camera.up, 0.0108 * dt);
-        // lying on the ground, the sky itself turns slowly overhead — the world breathing
+        // NO perpetual auto-rotation: at rest the world holds still (static modelling → zero wasted GPU / heat).
+        // The scene only moves under the visitor's own hand or a choreographed glide. (Ground breath kept — it's
+        // a deliberate, brief ambiance while lying down, and ground mode is a held, low-cost view.)
         if (controls.isGround() && !glideActive() && nowMs - lastTouch > 2500) controls.groundDrift(0.008 * dt);
         // once truly back in space, restore the normal near-plane (ground views need 0.008)
         if (camera.near < 0.1 && !controls.isGround() && !glideActive() && camera.position.length() > 9) {
@@ -1771,9 +1775,10 @@
         camera.position.y += (targetCamY - camera.position.y) * 0.06;
         camera.lookAt(0, camera.position.y * 0.4, -300);
       }
-      deepFusion.tick(sec);
-      if (nyeArmature) nyeArmature.tick(sec);
-      if (natalSky) natalSky.tick(sec);
+      if (busy) _clk = sec;                     // the animation clock only advances while active → at rest the scene is frozen (no twinkle/dust/disc churn, no wasted GPU)
+      deepFusion.tick(_clk);
+      if (nyeArmature) nyeArmature.tick(_clk);
+      if (natalSky) natalSky.tick(_clk);
       renderer.render(scene, camera);
       requestAnimationFrame(frame);
     }

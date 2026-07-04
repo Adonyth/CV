@@ -568,7 +568,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var wv = Math.pow(Lv, 0.62) * vig * clump; wgt[q2] = wv; if (wv > wmax) wmax = wv;
     }
     for (var q3 = 0; q3 < np; q3++) wgt[q3] /= wmax;
-    var N = mobile ? 13000 : 26000, PC = [], CC = [], GP = [], GC = [], placed = 0, guard = 0, lim = N * 45;
+    var lsort = Float32Array.from(lum); Array.prototype.sort.call(lsort, function (a, b) { return a - b; });
+    var lLo = lsort[(np * 0.35) | 0], lHi = lsort[Math.min(np - 1, (np * 0.99) | 0)], lSpan = Math.max(0.001, lHi - lLo);   // auto-levels — the photo's own contrast curve, now applied to the PARTICLES so bright cores blaze and faint gas stays dim (the beauty lives in the grain, not a flat overlay)
+    var N = mobile ? 20000 : 40000, PC = [], CC = [], GP = [], GC = [], placed = 0, guard = 0, lim = N * 45;
     while (placed < N && guard++ < lim) {
       var xi = (rng() * sw) | 0, yi = (rng() * sh) | 0, k = yi * sw + xi;
       if (rng() > wgt[k]) continue;
@@ -576,52 +578,28 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var x = (u - 0.5) * Wu, y = (0.5 - v) * Hu;
       var z = (zfb(x * 0.02, y * 0.02) * 2 - 1) * Zu * 0.62 + (rng() + rng() - 1) * Zu * 0.5 + (rng() - 0.5) * Zu * 0.14;  // coherent noise + gaussian scatter → a smooth 3-D VOLUME (no shell banding, no thin slab; depth ≈ half the width)
       x += (rng() - 0.5) * Wu * 0.02; y += (rng() - 0.5) * Wu * 0.02;
-      var i4 = k * 4, r = px[i4] / 255, g = px[i4 + 1] / 255, b = px[i4 + 2] / 255, av = (r + g + b) / 3, sB = 1.35;
-      r = Math.max(0, av + (r - av) * sB); g = Math.max(0, av + (g - av) * sB); b = Math.max(0, av + (b - av) * sB);   // saturation lift
-      var mxc = Math.max(r, g, b, 1e-3), bright = Math.min(0.85, Math.pow(mxc, 0.62) * 1.05), depthT = Math.max(0, Math.min(1, z / Zu * 0.45 + 0.5));
-      bright *= (0.72 + 0.28 * depthT);                                            // far side dimmer → depth cue
-      var jt = 0.9 + 0.2 * rng();
-      PC.push(x, y, z); CC.push((r / mxc) * bright * jt, (g / mxc) * bright * jt, (b / mxc) * bright * jt);  // hue kept, brightness capped
-      if (rng() < 0.34) { GP.push(x, y, z); GC.push((r / mxc) * bright * 0.9, (g / mxc) * bright * 0.9, (b / mxc) * bright * 0.9); }
+      var i4 = k * 4, r = px[i4] / 255, g = px[i4 + 1] / 255, b = px[i4 + 2] / 255, av = (r + g + b) / 3, sB = 1.5;
+      r = Math.max(0, av + (r - av) * sB); g = Math.max(0, av + (g - av) * sB); b = Math.max(0, av + (b - av) * sB);   // vivid saturation lift — recover the photo's rich colour
+      var mxc = Math.max(r, g, b, 1e-3), Lstr = Math.max(0, Math.min(1, (lum[k] - lLo) / lSpan)), depthT = Math.max(0, Math.min(1, z / Zu * 0.45 + 0.5));
+      var bright = Math.min(0.94, 0.24 + 1.05 * Lstr) * (0.7 + 0.3 * depthT);       // contrast-stretched: bright cores blaze, faint gas dim + far side dimmer → the photo's beauty, carried BY the particles
+      var jt = 0.88 + 0.24 * rng();
+      PC.push(x, y, z); CC.push((r / mxc) * bright * jt, (g / mxc) * bright * jt, (b / mxc) * bright * jt);  // hue kept
+      if (rng() < 0.55) { GP.push(x, y, z); GC.push((r / mxc) * bright * 0.95, (g / mxc) * bright * 0.95, (b / mxc) * bright * 0.95); }   // over HALF also feed the lush glow → a continuous, beautiful nebula, not sparse dots
       placed++;
     }
     var grp = new T.Group();
-    // (A) the recognizable, BEAUTIFUL nebula image as a soft additive sprite (the "correct direction"),
-    //     laid UNDER the 3-D particle cloud so it reads crisp + beautiful AND gains grain + parallax
-    (function () {
-      var scp = Math.min(1, 360 / Math.max(W, H)), sws = Math.max(2, Math.round(W * scp)), shs = Math.max(2, Math.round(H * scp));
-      var scv = document.createElement("canvas"); scv.width = sws; scv.height = shs;
-      var sctx = scv.getContext("2d"); sctx.drawImage(img, 0, 0, sws, shs);
-      var sid = sctx.getImageData(0, 0, sws, shs), spx = sid.data, snp = sws * shs, st = new Float32Array(snp);
-      for (var sq = 0; sq < snp; sq++) st[sq] = (0.299 * spx[sq * 4] + 0.587 * spx[sq * 4 + 1] + 0.114 * spx[sq * 4 + 2]) / 255;
-      Array.prototype.sort.call(st, function (a, b) { return a - b; });
-      var slo = st[(snp * 0.35) | 0], shi = st[Math.min(snp - 1, (snp * 0.99) | 0)], ssp = Math.max(0.001, shi - slo);
-      for (var sy = 0; sy < shs; sy++) for (var sx = 0; sx < sws; sx++) {
-        var si2 = (sy * sws + sx) * 4, sr = spx[si2] / 255, sg = spx[si2 + 1] / 255, sbb = spx[si2 + 2] / 255, sav = (sr + sg + sbb) / 3, ssb = 1.5;
-        sr = Math.max(0, Math.min(1, sav + (sr - sav) * ssb)); sg = Math.max(0, Math.min(1, sav + (sg - sav) * ssb)); sbb = Math.max(0, Math.min(1, sav + (sbb - sav) * ssb));
-        var slm = ((0.299 * sr + 0.587 * sg + 0.114 * sbb) - slo) / ssp; slm = slm < 0 ? 0 : slm > 1 ? 1 : slm;
-        var sbo = 0.3 + 1.2 * slm;
-        spx[si2] = Math.min(255, sr * 255 * sbo); spx[si2 + 1] = Math.min(255, sg * 255 * sbo); spx[si2 + 2] = Math.min(255, sbb * 255 * sbo);
-        var srx = (sx / (sws - 1) - 0.5) * 2, sry = (sy / (shs - 1) - 0.5) * 2, srd = Math.sqrt(srx * srx + sry * sry);
-        spx[si2 + 3] = 255 * (1 - Math.max(0, Math.min(1, (srd - 0.56) / 0.56)));
-      }
-      sctx.putImageData(sid, 0, 0);
-      var stex = new T.CanvasTexture(scv); if ("colorSpace" in stex && T.SRGBColorSpace) stex.colorSpace = T.SRGBColorSpace;
-      var smat = new T.MeshBasicMaterial({ map: stex, blending: T.AdditiveBlending, transparent: true, depthWrite: false, opacity: d.opacity != null ? d.opacity : 0.62, side: T.DoubleSide, fog: false });
-      if ("toneMapped" in smat) smat.toneMapped = false;
-      // a WORLD-ORIENTED image plane (NOT a camera-facing billboard), sunk into the MIDDLE of the particle
-      // volume → when you orbit, image + particle body turn together and stay locked, never diverging
-      var spr = new T.Mesh(new T.PlaneGeometry(Wu, Hu), smat); spr.renderOrder = -3; grp.add(spr);
-    })();
-    var gg = new T.BufferGeometry();                                               // glow underlay — big soft dim points fill the gaps into continuous gas
+    // NO flat image sprite/plane — the nebula IS the particles: a lush soft glow layer (continuous gas,
+    // carries the beauty) + a fine crisp grain layer (particle感 + detail + parallax), both coloured by the
+    // photo's own contrast-stretched palette. Recognizable + beautiful + volumetric, with no "sticker" layer.
+    var gg = new T.BufferGeometry();
     gg.setAttribute("position", new T.BufferAttribute(new Float32Array(GP), 3));
     gg.setAttribute("color", new T.BufferAttribute(new Float32Array(GC), 3));
-    var gm = new T.PointsMaterial({ map: DSO_SOFT, size: (d.psize || 4.6) * 4.4, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.14, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var gm = new T.PointsMaterial({ map: DSO_SOFT, size: (d.psize || 3.0) * 3.6, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.2, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in gm) gm.toneMapped = false; grp.add(new T.Points(gg, gm));
-    var cg2 = new T.BufferGeometry();                                              // crisp particle grain on top of the image — this is the "particle感" + parallax
+    var cg2 = new T.BufferGeometry();
     cg2.setAttribute("position", new T.BufferAttribute(new Float32Array(PC), 3));
     cg2.setAttribute("color", new T.BufferAttribute(new Float32Array(CC), 3));
-    var cm = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 4.6, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.6, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var cm = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 3.0, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.62, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in cm) cm.toneMapped = false; grp.add(new T.Points(cg2, cm));
     return grp;
   }
@@ -632,11 +610,12 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // SPREAD the wonders out into deep 3-D so none crowd and none sit buried in the galactic plane:
     // each at its own far DISTANCE (2200→3600, well beyond the galactic core), a golden-angle azimuth
     // nudge, AND a big latitude push so they scatter well OFF the band (up/down out of the plane)
-    var dist = 2800 + (idx / Math.max(1, _dsoCount - 1)) * 1600;                     // even farther — distinct distant wonders out beyond the galaxy
+    var dist = 4600 + (idx / Math.max(1, _dsoCount - 1)) * 2200;                     // 4600–6800: FAR beyond the galaxy's outer edge (~3950 from origin) so NONE sit inside the band — the Pillars of Creation especially
     var nud = idx * 2.399963;
-    var latOff = Math.sin(idx * 1.7 + 0.6) * 0.5;           // ±~28° off the ecliptic/galactic band
+    var latOff = (Math.sin(idx * 1.7 + 0.6) > 0 ? 1 : -1) * (0.45 + 0.45 * Math.abs(Math.sin(idx * 2.3 + 0.9)));   // always ≥0.45 rad (26°) off the band, alternating up/down → never buried in the galactic plane
     var ecl = raDecToEcl(d.raH, d.decDeg);
-    var world = eclVec(ecl.lon + Math.cos(nud) * 0.22, ecl.lat + Math.sin(nud) * 0.12 + latOff, dist);
+    var latF = Math.max(-1.45, Math.min(1.45, ecl.lat + Math.sin(nud) * 0.12 + latOff));
+    var world = eclVec(ecl.lon + Math.cos(nud) * 0.22, latF, dist);
     var Wu = (d.size || 160) * 1.8;                          // matches the world width in dsoParticles
     // an invisible sphere is the reliable click/hover target — Points raycasting is fickle
     var shell = new T.Mesh(new T.SphereGeometry(Wu * 0.62, 10, 8),
@@ -669,7 +648,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
      every direction and to great depth, so nothing floats in a void — the nebulae are nestled
      among stars, and the eye reads "we are deep inside a galaxy full of stars". Static, one draw. */
   (function buildStarfield() {
-    var N = mobile ? 7000 : 15000, R0 = 560, R1 = 3400;
+    var N = mobile ? 7000 : 13000, R0 = 560, R1 = 7200;                          // a DEEP field reaching out past the far nebulae (~6800) so they're nestled among stars, never floating in a void
     var rng = gRng(3391), pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
     for (var i = 0; i < N; i++) {
       var uax = rng() * 2 - 1, ph = rng() * Math.PI * 2, ss = Math.sqrt(1 - uax * uax);
@@ -697,7 +676,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
      the constellations that live nearer than the arm. Built once — zero per-frame cost. -------- */
   var galacticCentre = null, galacticNormal = null, _bhSpin = [];                // exposed for the clickable black-hole nucleus; _bhSpin = accretion discs slowly turned each tick
   (function buildMilkyWayGalaxy() {
-    var Rgal = 2600, N = mobile ? 130000 : 300000;                             // VAST — a real galaxy the size of the sky; dense enough to read as a luminous river of countless stars
+    var Rgal = 2600, N = mobile ? 110000 : 200000;                             // VAST but leaner — a real galaxy the size of the sky; count trimmed for a cooler GPU (the glow underlayer keeps it dense-looking)
     var Rsun = 0.52 * Rgal, Rin = 340, Rout = 900, hSun = 140;                  // Sun's galactocentric radius; nearly IN the plane so the band WRAPS the whole sky; galaxy fades in gradually (no hard shell)
     var gcE = raDecToEcl(17.7608, -28.94), npE = raDecToEcl(12.8571, 27.13);    // Sgr A* + galactic north pole
     var w = eclVec(npE.lon, npE.lat, 1).normalize();                            // disc normal (galactic pole)
@@ -759,19 +738,11 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var bc = ramp(0.04 + 0.24 * (br / (Rgal * 0.15)));
       push(bpt, bc[0], bc[1], bc[2], 0.16 + 0.22 * Math.pow(rng(), 2.4), 0.09);  // a warm-gold core held well below white — capped brightness, sparse glow
     }
-    // --- faint inter-arm haze + a few globular clumps so the arms float in a glow ---
-    var clumpN = Math.round(haloN * 0.2), smoothN = haloN - clumpN;
-    for (var k = 0; k < smoothN; k++) {
+    // --- faint SMOOTH inter-arm haze so the arms float in a soft glow (no lumpy globular clusters —
+    //     those read as ugly blobs strewn across the disc; the disc should be a smooth luminous field) ---
+    for (var k = 0; k < haloN; k++) {
       var hr = Math.sqrt(rng()) * Rgal * 1.02, ha = rng() * Math.PI * 2, hc = ramp(hr / Rgal);
       push(disk(hr, ha, G() * (60 + 0.05 * hr)), hc[0], hc[1], hc[2], 0.08 + 0.14 * Math.pow(rng(), 2.4), 0.04);
-    }
-    for (var cc = 0; cc < 8; cc++) {
-      var clR = Rgal * (0.3 + rng() * 0.7), clA = rng() * Math.PI * 2, clH = (rng() * 2 - 1) * Rgal * 0.22, clS = Rgal * (0.02 + rng() * 0.03), cclr = ramp(clR / Rgal);
-      var base = disk(clR, clA, clH);
-      for (var m2 = 0; m2 < clumpN / 8; m2++) {
-        var cp = base.clone().addScaledVector(uu, G() * clS).addScaledVector(vv, G() * clS).addScaledVector(w, G() * clS);
-        push(cp, cclr[0], cclr[1], cclr[2], 0.28 + 0.3 * Math.pow(rng(), 2), 0.06);
-      }
     }
     // --- PINK HII star-forming knots strung along the arms: the dramatic colour pops of a real spiral ---
     var nKnot = 20;
