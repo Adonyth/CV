@@ -884,7 +884,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   }
 
   /* ---------------- lifecycle ---------------- */
-  var t0 = null;
+  var t0 = null, backdropMul = 1, _bdCache = null;
   function lineOpacities(sec) {
     // entrance pulse: the constellations announce themselves, then settle
     if (t0 === null) t0 = sec;
@@ -893,9 +893,23 @@ export function buildNatalSky(THREE, scene, data, opts) {
     for (var ci = 0; ci < lineEntries.length; ci++) {
       var e = lineEntries[ci]; if (!e) continue;
       var hl = isLit(ci) ? 1.9 : 1;
-      e.mat.opacity = Math.min(1.0, e.base * (isDark ? 1 : 1.18) * pulse * hl);
-      if (e.glowMat) e.glowMat.opacity = Math.min(0.68, e.base * 0.42 * pulse * hl);
+      e.mat.opacity = Math.min(1.0, e.base * (isDark ? 1 : 1.18) * pulse * hl) * backdropMul;
+      if (e.glowMat) e.glowMat.opacity = Math.min(0.68, e.base * 0.42 * pulse * hl) * backdropMul;
     }
+  }
+  /* when the visitor flies IN to admire one deep-sky wonder, the whole backdrop steps aside
+     (constellations, galaxy, starfield fade) so the nebula owns the frame; t: 0 normal → 1 dimmed */
+  function setBackdropDim(t) {
+    backdropMul = 1 - 0.9 * t;
+    if (!_bdCache) {
+      _bdCache = [];
+      ["Starfield", "MilkyWayGalaxy", "MilkyWayGlow"].forEach(function (nm) {
+        var o = group.getObjectByName(nm);
+        if (o && o.material) _bdCache.push({ m: o.material, base: o.material.opacity, keep: nm === "Starfield" ? 0.45 : 0.14 });
+      });
+      if (starPoints && starPoints.material) _bdCache.push({ m: starPoints.material, base: starPoints.material.opacity, keep: 0.4 });
+    }
+    for (var i = 0; i < _bdCache.length; i++) { var e = _bdCache[i]; e.m.opacity = e.base * (1 - (1 - e.keep) * t); }
   }
   var api = {
     group: group,
@@ -954,6 +968,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     },
     // live tuning levers (for judging on the real machine)
     setLineOpacity: function (v) { for (var i = 0; i < lineEntries.length; i++) { var e = lineEntries[i]; if (e) e.base = cons[i].loadBearing ? v : v * 0.48; } },
+    setBackdropDim: setBackdropDim,
     setStarScale: function (v) { uniforms.uRefDepth.value = 840 * v; },
     stats: { stars: N, segments: totalSegs, dataNodes: nodeIndex.filter(Boolean).length, planets: planetSprites.length, constellations: cons.length },
     dispose: function () {

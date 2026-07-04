@@ -988,7 +988,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=13").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=51").then(function (mod) {
+      return import("./natal-sky.js?v=52").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1123,7 +1123,7 @@
 
       /* when the Earth owns the page (close zoom) and the hand hovers it, the
          干支 rings step aside — the globe becomes the sole subject */
-      var ringFadeMats = null, ringFade = 1, soloBody = null;   /* "sun"|"moon": rings step aside entirely */
+      var ringFadeMats = null, ringFade = 1, soloBody = null, backdropDim = 0;   /* "sun"|"moon": rings step aside entirely; backdropDim eases when admiring a deep-sky wonder */
       function collectRingMats() {
         if (ringFadeMats || !nyeArmature) return;
         ringFadeMats = [];
@@ -1136,6 +1136,9 @@
         });
       }
       function applyRingFade() {
+        // admiring one deep-sky wonder → the whole backdrop (constellations, galaxy, starfield) steps aside
+        var wantBD = (soloBody === "dso") ? 1 : 0;
+        if (Math.abs(backdropDim - wantBD) > 0.002) { backdropDim += (wantBD - backdropDim) * 0.06; if (natalSky && natalSky.setBackdropDim) natalSky.setBackdropDim(backdropDim); }
         if (!nyeArmature) return;
         collectRingMats(); if (!ringFadeMats) return;
         var r = controls.getRadius();
@@ -1516,7 +1519,10 @@
       if (homeBtn) homeBtn.addEventListener("click", goHome);
 
       window.__space.uiTick = function () {
-        if (soloBody && !glideActive() && controls.getRadius() > 130) soloBody = null;   // zoomed back out BY HAND — the chart reassembles (never mid-flight)
+        // zoomed back out BY HAND → the chart reassembles (never mid-flight). A deep-sky wonder is
+        // admired from far out (view-dist ~400), so its focus only releases when you truly pull away.
+        if (soloBody && soloBody !== "dso" && !glideActive() && controls.getRadius() > 130) soloBody = null;
+        if (soloBody === "dso" && !glideActive() && controls.getRadius() > 900) soloBody = null;
         if (selStar && starCta) {
           _selV.copy(selStar.world).project(camera);
           if (_selV.z > 1 || Math.abs(_selV.x) > 1.05 || Math.abs(_selV.y) > 1.05) { starCta.classList.remove("is-on"); }
