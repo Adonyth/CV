@@ -1485,9 +1485,11 @@
         controls.setDistanceLimits(fmin, 1600);
         var outward = w.clone().normalize();
         if (outward.lengthSq() < 1e-9) outward.set(0, 0, 1);
+        // approach nearly along the Earth→cloud line so the cloud (which faces home) is seen FACE-ON,
+        // with just a small lift so the distant Sun/rings don't sit dead-centre behind it
         var ringN = new THREE.Vector3(0, 1, 0).applyQuaternion(nyeArmature.group.getWorldQuaternion(new THREE.Quaternion())).normalize();
-        outward.applyAxisAngle(ringN, -0.32);
-        outward.multiplyScalar(Math.cos(0.26)).addScaledVector(ringN, Math.sin(0.26)).normalize();
+        outward.applyAxisAngle(ringN, -0.1);
+        outward.multiplyScalar(Math.cos(0.12)).addScaledVector(ringN, Math.sin(0.12)).normalize();
         flyTo({ camTo: w.clone().add(outward.multiplyScalar(vd)), targetTo: w.clone(), lookAt: w.clone(), frames: null, fovKick: 5, onDone: null });
       }
       window.__space.focusDeepSky = focusDeepSky;
