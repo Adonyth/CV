@@ -72,31 +72,34 @@ export function buildNatalSky(THREE, scene, data, opts) {
   // circular-mean longitude lands at its 30deg sign-cell centre (planets stay true).
   var stars = [];        // { pos, mag, importance, conIdx, node }
   var conCentroid = [];  // Vector3 per constellation (for labels / back-hemisphere cull)
+  var conNear = [], conFar = [], conDir = [];    // per-constellation framing (for navigation): nearest/farthest star depth + mean sightline direction
   cons.forEach(function (c, ci) {
     var ecl = c.stars.map(function (s) { return raDecToEcl(s.raH, s.decDeg); });
-    var meanLon = circMeanLon(ecl.map(function (e) { return e.lon; }));
-    var cell = (30 * c.signIndex + 15) * Math.PI / 180;
-    var delta = cell - meanLon;
+    // TRUE SKY POSITIONS — no more re-seating onto even 30° sign cells. Each star keeps its REAL
+    // direction (lon, lat), so the zodiac no longer forms an artificial flat ring; it scatters along
+    // the true ecliptic band. The Sun's sign is its birth ECLIPTIC LONGITUDE (a coordinate fact),
+    // wholly independent of where the constellation art sits — so nothing astrological is lost.
     var nodeByStar = {};
     c.dataNodes.forEach(function (n) { nodeByStar[n.starIndex] = n; });
     var inFigure = {};
     c.figureLines.forEach(function (seg) { inFigure[seg[0]] = 1; inFigure[seg[1]] = 1; });
-    var centroid = new T.Vector3();
+    var centroid = new T.Vector3(), dirSum = new T.Vector3(), near = 1e9, far = 0;
     c._starPos = [];
     ecl.forEach(function (e, si) {
-      // VOLUMETRIC ZODIAC: each star sits at its own radial DEPTH, not a single shell.
-      // Only the distance varies — the angular direction (lon+delta, lat) is untouched —
-      // so the figure reads identically from the Earth at origin, yet becomes a true 3D
-      // scatter the moment you fly into it. Deterministic per (constellation, star).
-      var df = 0.88 + 0.62 * hash(ci * 131 + si + 7);   // depth ∈ [0.88 R … 1.50 R]
-      var pos = eclVec(e.lon + delta, e.lat, R * df);
+      // REAL, WIDELY-VARIED DISTANCES: each star at its own depth over a broad log-uniform range → a
+      // genuine volumetric 3-D scatter (no shell). The DIRECTION is exact, so the figure reads perfectly
+      // FROM EARTH (origin) yet becomes a true 3-D structure the instant you fly in. Deterministic.
+      var dist = 300 * Math.pow(10.0, hash(ci * 131 + si + 7));   // depth ∈ [300 … 3000], log-uniform
+      var pos = eclVec(e.lon, e.lat, dist);
       c._starPos[si] = pos;
-      centroid.add(pos);
+      centroid.add(pos); dirSum.add(pos.clone().normalize());
+      if (dist < near) near = dist; if (dist > far) far = dist;
       var node = nodeByStar[si] || null;
       var importance = node ? 1.0 : (inFigure[si] ? 0.7 : 0.35);
       stars.push({ pos: pos, mag: c.stars[si].mag, importance: importance, conIdx: ci, node: node });
     });
     conCentroid[ci] = centroid.multiplyScalar(1 / (ecl.length || 1));
+    conDir[ci] = dirSum.clone().normalize(); conNear[ci] = near; conFar[ci] = far;
   });
 
   /* ---------------- star-embers: ONE Points, deep-ember shader ---------------- */
@@ -133,7 +136,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   var uniforms = {
     uMap: { value: o.tex }, uTime: { value: 0 }, uFusion: { value: 0.52 },
     uPixelRatio: { value: Math.min((typeof devicePixelRatio !== "undefined" ? devicePixelRatio : 1) || 1, mobile ? 1.5 : 2) },
-    uMaxPointSize: { value: mobile ? 7.0 : 10.0 }, uRefDepth: { value: 840.0 }, // dimmer zodiac (owner: too bright) — smaller point cap + shorter ref-depth quiets the star field while keeping the depth cue
+    uMaxPointSize: { value: mobile ? 7.0 : 10.0 }, uRefDepth: { value: 1200.0 }, // ref-depth raised to match the new WIDE star distances (300–3000) so the far figure stars don't shrink to nothing
     uAmplitude: { value: 6.0 },              // near-frozen: figures hold their shape
     uLayerKind: { value: 0.0 }, uClearInner: { value: -2.0 }, uClearOuter: { value: -1.0 }
   };
@@ -570,13 +573,18 @@ export function buildNatalSky(THREE, scene, data, opts) {
     for (var q3 = 0; q3 < np; q3++) wgt[q3] /= wmax;
     var lsort = Float32Array.from(lum); Array.prototype.sort.call(lsort, function (a, b) { return a - b; });
     var lLo = lsort[(np * 0.35) | 0], lHi = lsort[Math.min(np - 1, (np * 0.99) | 0)], lSpan = Math.max(0.001, lHi - lLo);   // auto-levels — the photo's own contrast curve, now applied to the PARTICLES so bright cores blaze and faint gas stays dim (the beauty lives in the grain, not a flat overlay)
-    var N = mobile ? 13000 : 24000, PC = [], CC = [], GP = [], GC = [], placed = 0, guard = 0, lim = N * 45;
+    var N = mobile ? 17000 : 32000, PC = [], CC = [], GP = [], GC = [], placed = 0, guard = 0, lim = N * 45;
     while (placed < N && guard++ < lim) {
       var xi = (rng() * sw) | 0, yi = (rng() * sh) | 0, k = yi * sw + xi;
       if (rng() > wgt[k]) continue;
       var u = (xi + rng()) / sw, v = (yi + rng()) / sh;
       var x = (u - 0.5) * Wu, y = (0.5 - v) * Hu;
-      var z = (zfb(x * 0.02, y * 0.02) * 2 - 1) * Zu * 0.62 + (rng() + rng() - 1) * Zu * 0.5 + (rng() - 0.5) * Zu * 0.14;  // coherent noise + gaussian scatter → a smooth 3-D VOLUME (no shell banding, no thin slab; depth ≈ half the width)
+      // two-depth grain, ALL particles (so they rotate together — no static billboard to fall out of sync):
+      // ~a third form the deep 3-D VOLUME, the rest a NEAR-FLAT recognisable FACE so the photo reads.
+      var deep = rng() < 0.34;
+      var z = deep
+        ? (zfb(x * 0.02, y * 0.02) * 2 - 1) * Zu * 0.55 + (rng() + rng() - 1) * Zu * 0.5 + (rng() - 0.5) * Zu * 0.14
+        : (zfb(x * 0.02, y * 0.02) * 2 - 1) * Zu * 0.12 + (rng() - 0.5) * Zu * 0.06;
       x += (rng() - 0.5) * Wu * 0.02; y += (rng() - 0.5) * Wu * 0.02;
       var i4 = k * 4, r = px[i4] / 255, g = px[i4 + 1] / 255, b = px[i4 + 2] / 255, av = (r + g + b) / 3, sB = 1.5;
       r = Math.max(0, av + (r - av) * sB); g = Math.max(0, av + (g - av) * sB); b = Math.max(0, av + (b - av) * sB);   // vivid saturation lift — recover the photo's rich colour
@@ -588,43 +596,19 @@ export function buildNatalSky(THREE, scene, data, opts) {
       placed++;
     }
     var grp = new T.Group();
-    // (RECOGNISABLE) the nebula's REAL photo — auto-levels contrast-stretched + colour-lifted + radially
-    // masked, a camera-facing additive sprite so you ALWAYS read WHAT it is (Orion, the Pillars, the Ring…).
-    // This is the "3-D sticker": the recognizable face, with the particle VOLUME below wrapped all around it —
-    // the two SUPERIMPOSED (image you can name + real 3-D grain), never a lone flat plane, never a lone blob.
-    (function () {
-      var cap = 360, sc2 = Math.min(1, cap / Math.max(W, H));
-      var sw2 = Math.max(2, Math.round(W * sc2)), sh2 = Math.max(2, Math.round(H * sc2));
-      var cv2 = document.createElement("canvas"); cv2.width = sw2; cv2.height = sh2;
-      var cx2 = cv2.getContext("2d"); cx2.drawImage(img, 0, 0, sw2, sh2);
-      var id2 = cx2.getImageData(0, 0, sw2, sh2), p2 = id2.data, npx2 = sw2 * sh2, srt = new Float32Array(npx2);
-      for (var q2 = 0; q2 < npx2; q2++) srt[q2] = (0.299 * p2[q2 * 4] + 0.587 * p2[q2 * 4 + 1] + 0.114 * p2[q2 * 4 + 2]) / 255;
-      Array.prototype.sort.call(srt, function (a, b) { return a - b; });
-      var lo2 = srt[(npx2 * 0.35) | 0], hi2 = srt[Math.min(npx2 - 1, (npx2 * 0.99) | 0)], span2 = Math.max(0.001, hi2 - lo2);
-      for (var yy = 0; yy < sh2; yy++) for (var xx = 0; xx < sw2; xx++) {
-        var ii = (yy * sw2 + xx) * 4, rr2 = p2[ii] / 255, gg2 = p2[ii + 1] / 255, bb2 = p2[ii + 2] / 255, avg2 = (rr2 + gg2 + bb2) / 3, sbb = 1.55;
-        rr2 = Math.max(0, Math.min(1, avg2 + (rr2 - avg2) * sbb)); gg2 = Math.max(0, Math.min(1, avg2 + (gg2 - avg2) * sbb)); bb2 = Math.max(0, Math.min(1, avg2 + (bb2 - avg2) * sbb));
-        var lm2 = ((0.299 * rr2 + 0.587 * gg2 + 0.114 * bb2) - lo2) / span2; lm2 = lm2 < 0 ? 0 : lm2 > 1 ? 1 : lm2;
-        var boost2 = 0.35 + 1.15 * lm2;
-        p2[ii] = Math.min(255, rr2 * 255 * boost2); p2[ii + 1] = Math.min(255, gg2 * 255 * boost2); p2[ii + 2] = Math.min(255, bb2 * 255 * boost2);
-        var rx = (xx / (sw2 - 1) - 0.5) * 2, ry = (yy / (sh2 - 1) - 0.5) * 2, rad2 = Math.sqrt(rx * rx + ry * ry);
-        p2[ii + 3] = 255 * (1 - Math.max(0, Math.min(1, (rad2 - 0.56) / 0.56)));
-      }
-      cx2.putImageData(id2, 0, 0);
-      var tex = new T.CanvasTexture(cv2); if ("colorSpace" in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
-      var sm = new T.SpriteMaterial({ map: tex, blending: T.AdditiveBlending, transparent: true, depthWrite: false, opacity: d.opacity != null ? d.opacity : 0.85, fog: false });
-      if ("toneMapped" in sm) sm.toneMapped = false;
-      var sprite = new T.Sprite(sm); sprite.scale.set(Wu, Hu, 1); sprite.renderOrder = -1; grp.add(sprite);
-    })();
+    // NO billboard sprite and NO flat plane — the nebula is ONE thing made of particles: a dense, near-flat,
+    // contrast-stretched FACE (recognisable — you can name it) + a deep VOLUME wrapped around it + a lush
+    // glow. All of it is world-fixed, so it all turns together when you orbit — the face can never fall out
+    // of sync with the grain (that was the disharmony). Recognisable + volumetric + harmonious, no sticker.
     var gg = new T.BufferGeometry();
     gg.setAttribute("position", new T.BufferAttribute(new Float32Array(GP), 3));
     gg.setAttribute("color", new T.BufferAttribute(new Float32Array(GC), 3));
-    var gm = new T.PointsMaterial({ map: DSO_SOFT, size: (d.psize || 3.0) * 3.6, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.2, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var gm = new T.PointsMaterial({ map: DSO_SOFT, size: (d.psize || 2.7) * 3.8, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.2, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in gm) gm.toneMapped = false; grp.add(new T.Points(gg, gm));
     var cg2 = new T.BufferGeometry();
     cg2.setAttribute("position", new T.BufferAttribute(new Float32Array(PC), 3));
     cg2.setAttribute("color", new T.BufferAttribute(new Float32Array(CC), 3));
-    var cm = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 3.0, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.62, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var cm = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 2.7, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.66, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in cm) cm.toneMapped = false; grp.add(new T.Points(cg2, cm));
     return grp;
   }
@@ -673,7 +657,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
      every direction and to great depth, so nothing floats in a void — the nebulae are nestled
      among stars, and the eye reads "we are deep inside a galaxy full of stars". Static, one draw. */
   (function buildStarfield() {
-    var N = mobile ? 7000 : 13000, R0 = 150, R1 = 7200;                          // a DEEP field: soft inner edge close in (150, sparse) → NO hard star-free bubble around the solar system, reaching out past the far nebulae (~6800) so they're nestled among stars
+    var N = mobile ? 7000 : 13000, R0 = 110, R1 = 7200;                          // a DEEP VOLUMETRIC field, NOT a shell: stars scattered evenly through all of space from close-in (110) out past the far nebulae (~6800) — no star-free bubble, no boundary, so nothing reads as a球壳
     var rng = gRng(3391), pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
     for (var i = 0; i < N; i++) {
       var uax = rng() * 2 - 1, ph = rng() * Math.PI * 2, ss = Math.sqrt(1 - uax * uax);
@@ -1048,6 +1032,15 @@ export function buildNatalSky(THREE, scene, data, opts) {
     getConCentroid: function (id) {
       var ci = lineByCon[id]; if (ci == null || !conCentroid[ci]) return null;
       return belt.localToWorld(conCentroid[ci].clone());
+    },
+    // framing data for flying to a now-depth-scattered constellation: world-space mean sightline
+    // DIRECTION + the nearest/farthest star depth, so the host can stand IN FRONT of all its stars
+    // (on the Earth→figure line) where the figure still resolves into its shape.
+    getConFrame: function (id) {
+      var ci = lineByCon[id]; if (ci == null || !conCentroid[ci]) return null;
+      var wq = new T.Quaternion(); belt.getWorldQuaternion(wq);
+      var dir = (conDir[ci] || conCentroid[ci].clone().normalize()).clone().applyQuaternion(wq).normalize();
+      return { dir: dir, near: conNear[ci] || 300, far: conFar[ci] || 3000, mid: belt.localToWorld(conCentroid[ci].clone()) };
     },
     onConstellationClick: function (cb) { conClickCb = cb; },
     onNodeClick: function (cb) { nodeClickCb = cb; },

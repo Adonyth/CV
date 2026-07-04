@@ -988,7 +988,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=13").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=62").then(function (mod) {
+      return import("./natal-sky.js?v=63").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1422,14 +1422,21 @@
       /* any constellation becomes the pivot: stand INSIDE the belt looking outward,
          so the Earth, the Sun and the rings are all BEHIND the camera — nothing can veil it */
       function focusConstellation(id, nFrames) {
-        if (!natalSky || !natalSky.getConCentroid) return;
-        var c = natalSky.getConCentroid(id); if (!c) return;
-        var dir = c.clone().normalize();
-        flyTo({
-          camTo: c.clone().sub(dir.multiplyScalar(85)),
-          targetTo: c.clone(), lookAt: c.clone(),
-          frames: nFrames ? Math.round(nFrames * 2.2) : null, fovKick: 5, onDone: null
-        });
+        if (!natalSky) return;
+        var f = natalSky.getConFrame ? natalSky.getConFrame(id) : null;
+        var c = natalSky.getConCentroid ? natalSky.getConCentroid(id) : null;
+        if (f && f.dir) {
+          // the figure's stars are now scattered from f.near…f.far along the Earth→figure sightline.
+          // Stand JUST IN FRONT of the nearest star and look outward, so EVERY star is ahead and the
+          // constellation resolves into its recognisable shape (it only reads from near the origin line).
+          var cd = Math.min((f.near || 300) * 0.7, 250);
+          var camPos = f.dir.clone().multiplyScalar(cd);
+          var target = f.dir.clone().multiplyScalar(cd + 460);
+          flyTo({ camTo: camPos, targetTo: target, lookAt: target, frames: nFrames ? Math.round(nFrames * 2.2) : null, fovKick: 5, onDone: null });
+        } else if (c) {
+          var dir = c.clone().normalize();
+          flyTo({ camTo: c.clone().sub(dir.multiplyScalar(85)), targetTo: c.clone(), lookAt: c.clone(), frames: nFrames ? Math.round(nFrames * 2.2) : null, fovKick: 5, onDone: null });
+        } else return;
         soloBody = "sky"; clearSel();
         natalSky.highlight(id, true); setTimeout(function () { natalSky.highlight(id, false); }, 4200);
       }
@@ -1526,7 +1533,7 @@
         if (soloBody && soloBody !== "dso" && soloBody !== "galcore" && !glideActive() && controls.getRadius() > 130) soloBody = null;
         if ((soloBody === "dso" || soloBody === "galcore") && !glideActive() && controls.getRadius() > 900) soloBody = null;
         // pulled back to galaxy scale (most/all of the galaxy in view) → the solar-system zodiac ring melts away
-        if (natalSky && natalSky.setZodiacFade) { var _zr = controls.getRadius(); natalSky.setZodiacFade((_zr - 1150) / 800); }
+        if (natalSky && natalSky.setZodiacFade) { var _zr = controls.getRadius(); natalSky.setZodiacFade((soloBody === "sky") ? 0 : (_zr - 1150) / 800); }
         // scale LOD: once the whole solar-system orrery (detailed Earth shader, Sun, gear-rings) is a distant
         // speck, stop DRAWING it entirely — nothing to see, and its per-fragment Earth shader is the costliest thing
         if (nyeArmature) { var _farOut = camera.position.length() > 1000 && !controls.isGround(); if (nyeArmature.group.visible === _farOut) nyeArmature.group.visible = !_farOut; }
