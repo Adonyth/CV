@@ -89,7 +89,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // shell, no flat ring), while its OWN stars stay at a similar depth (±18%) so the figure holds its
     // shape and still connects into the recognisable pattern from Earth. (Full per-star true distances
     // shears the lines into unreadable depth-streaks from anywhere but the exact origin — this keeps both.)
-    var conBase = 700 * Math.pow(3.7, hash(ci * 977 + 31));                     // each constellation 700–2600 (scattered wide → volumetric, but none so close it balloons)
+    var conBase = 400 * Math.pow(4.0, hash(ci * 977 + 31));                     // each constellation 400–1600: the near ones read as prominently as before, the far ones recede → real depth scatter, no flat shell
     ecl.forEach(function (e, si) {
       var dist = conBase * (0.94 + 0.12 * hash(ci * 131 + si + 7));             // its stars within ±6% depth → the figure lies nearly flat to the sightline and reads cleanly (no receding beams)
       var pos = eclVec(e.lon, e.lat, dist);
