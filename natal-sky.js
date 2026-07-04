@@ -570,7 +570,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     for (var q3 = 0; q3 < np; q3++) wgt[q3] /= wmax;
     var lsort = Float32Array.from(lum); Array.prototype.sort.call(lsort, function (a, b) { return a - b; });
     var lLo = lsort[(np * 0.35) | 0], lHi = lsort[Math.min(np - 1, (np * 0.99) | 0)], lSpan = Math.max(0.001, lHi - lLo);   // auto-levels — the photo's own contrast curve, now applied to the PARTICLES so bright cores blaze and faint gas stays dim (the beauty lives in the grain, not a flat overlay)
-    var N = mobile ? 20000 : 40000, PC = [], CC = [], GP = [], GC = [], placed = 0, guard = 0, lim = N * 45;
+    var N = mobile ? 13000 : 24000, PC = [], CC = [], GP = [], GC = [], placed = 0, guard = 0, lim = N * 45;
     while (placed < N && guard++ < lim) {
       var xi = (rng() * sw) | 0, yi = (rng() * sh) | 0, k = yi * sw + xi;
       if (rng() > wgt[k]) continue;
@@ -588,9 +588,34 @@ export function buildNatalSky(THREE, scene, data, opts) {
       placed++;
     }
     var grp = new T.Group();
-    // NO flat image sprite/plane — the nebula IS the particles: a lush soft glow layer (continuous gas,
-    // carries the beauty) + a fine crisp grain layer (particle感 + detail + parallax), both coloured by the
-    // photo's own contrast-stretched palette. Recognizable + beautiful + volumetric, with no "sticker" layer.
+    // (RECOGNISABLE) the nebula's REAL photo — auto-levels contrast-stretched + colour-lifted + radially
+    // masked, a camera-facing additive sprite so you ALWAYS read WHAT it is (Orion, the Pillars, the Ring…).
+    // This is the "3-D sticker": the recognizable face, with the particle VOLUME below wrapped all around it —
+    // the two SUPERIMPOSED (image you can name + real 3-D grain), never a lone flat plane, never a lone blob.
+    (function () {
+      var cap = 360, sc2 = Math.min(1, cap / Math.max(W, H));
+      var sw2 = Math.max(2, Math.round(W * sc2)), sh2 = Math.max(2, Math.round(H * sc2));
+      var cv2 = document.createElement("canvas"); cv2.width = sw2; cv2.height = sh2;
+      var cx2 = cv2.getContext("2d"); cx2.drawImage(img, 0, 0, sw2, sh2);
+      var id2 = cx2.getImageData(0, 0, sw2, sh2), p2 = id2.data, npx2 = sw2 * sh2, srt = new Float32Array(npx2);
+      for (var q2 = 0; q2 < npx2; q2++) srt[q2] = (0.299 * p2[q2 * 4] + 0.587 * p2[q2 * 4 + 1] + 0.114 * p2[q2 * 4 + 2]) / 255;
+      Array.prototype.sort.call(srt, function (a, b) { return a - b; });
+      var lo2 = srt[(npx2 * 0.35) | 0], hi2 = srt[Math.min(npx2 - 1, (npx2 * 0.99) | 0)], span2 = Math.max(0.001, hi2 - lo2);
+      for (var yy = 0; yy < sh2; yy++) for (var xx = 0; xx < sw2; xx++) {
+        var ii = (yy * sw2 + xx) * 4, rr2 = p2[ii] / 255, gg2 = p2[ii + 1] / 255, bb2 = p2[ii + 2] / 255, avg2 = (rr2 + gg2 + bb2) / 3, sbb = 1.55;
+        rr2 = Math.max(0, Math.min(1, avg2 + (rr2 - avg2) * sbb)); gg2 = Math.max(0, Math.min(1, avg2 + (gg2 - avg2) * sbb)); bb2 = Math.max(0, Math.min(1, avg2 + (bb2 - avg2) * sbb));
+        var lm2 = ((0.299 * rr2 + 0.587 * gg2 + 0.114 * bb2) - lo2) / span2; lm2 = lm2 < 0 ? 0 : lm2 > 1 ? 1 : lm2;
+        var boost2 = 0.35 + 1.15 * lm2;
+        p2[ii] = Math.min(255, rr2 * 255 * boost2); p2[ii + 1] = Math.min(255, gg2 * 255 * boost2); p2[ii + 2] = Math.min(255, bb2 * 255 * boost2);
+        var rx = (xx / (sw2 - 1) - 0.5) * 2, ry = (yy / (sh2 - 1) - 0.5) * 2, rad2 = Math.sqrt(rx * rx + ry * ry);
+        p2[ii + 3] = 255 * (1 - Math.max(0, Math.min(1, (rad2 - 0.56) / 0.56)));
+      }
+      cx2.putImageData(id2, 0, 0);
+      var tex = new T.CanvasTexture(cv2); if ("colorSpace" in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
+      var sm = new T.SpriteMaterial({ map: tex, blending: T.AdditiveBlending, transparent: true, depthWrite: false, opacity: d.opacity != null ? d.opacity : 0.85, fog: false });
+      if ("toneMapped" in sm) sm.toneMapped = false;
+      var sprite = new T.Sprite(sm); sprite.scale.set(Wu, Hu, 1); sprite.renderOrder = -1; grp.add(sprite);
+    })();
     var gg = new T.BufferGeometry();
     gg.setAttribute("position", new T.BufferAttribute(new Float32Array(GP), 3));
     gg.setAttribute("color", new T.BufferAttribute(new Float32Array(GC), 3));
@@ -648,7 +673,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
      every direction and to great depth, so nothing floats in a void — the nebulae are nestled
      among stars, and the eye reads "we are deep inside a galaxy full of stars". Static, one draw. */
   (function buildStarfield() {
-    var N = mobile ? 7000 : 13000, R0 = 560, R1 = 7200;                          // a DEEP field reaching out past the far nebulae (~6800) so they're nestled among stars, never floating in a void
+    var N = mobile ? 7000 : 13000, R0 = 150, R1 = 7200;                          // a DEEP field: soft inner edge close in (150, sparse) → NO hard star-free bubble around the solar system, reaching out past the far nebulae (~6800) so they're nestled among stars
     var rng = gRng(3391), pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
     for (var i = 0; i < N; i++) {
       var uax = rng() * 2 - 1, ph = rng() * Math.PI * 2, ss = Math.sqrt(1 - uax * uax);
@@ -676,8 +701,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
      the constellations that live nearer than the arm. Built once — zero per-frame cost. -------- */
   var galacticCentre = null, galacticNormal = null, _bhSpin = [];                // exposed for the clickable black-hole nucleus; _bhSpin = accretion discs slowly turned each tick
   (function buildMilkyWayGalaxy() {
-    var Rgal = 2600, N = mobile ? 110000 : 200000;                             // VAST but leaner — a real galaxy the size of the sky; count trimmed for a cooler GPU (the glow underlayer keeps it dense-looking)
-    var Rsun = 0.52 * Rgal, Rin = 340, Rout = 900, hSun = 140;                  // Sun's galactocentric radius; nearly IN the plane so the band WRAPS the whole sky; galaxy fades in gradually (no hard shell)
+    var Rgal = 2600, N = mobile ? 90000 : 160000;                              // VAST but leaner — a real galaxy the size of the sky; count trimmed hard for a cooler GPU (additive overdraw is the cost; the glow underlayer keeps it dense-looking)
+    var Rsun = 0.52 * Rgal, Rin = 200, Rout = 560, hSun = 140;                  // Sun's galactocentric radius; nearly IN the plane so the band WRAPS the whole sky; galaxy fills in CLOSE to the sun (Rin 200) so there's no dark bubble — just a gentle clearing around the planets
     var gcE = raDecToEcl(17.7608, -28.94), npE = raDecToEcl(12.8571, 27.13);    // Sgr A* + galactic north pole
     var w = eclVec(npE.lon, npE.lat, 1).normalize();                            // disc normal (galactic pole)
     var uu = eclVec(gcE.lon, gcE.lat, 1); uu.addScaledVector(w, -uu.dot(w)).normalize();  // in-plane, toward the centre

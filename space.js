@@ -84,7 +84,7 @@
       premultipliedAlpha: false, powerPreference: "high-performance"
     });
     renderer.setClearColor(0x000000, 0);            // transparent — NEVER a second background
-    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, innerWidth < 700 ? 1.3 : 1.5));   // cap DPR well below the Retina 2 → ~half the fragment work every frame (the single biggest heat lever) for a barely-perceptible sharpness change on a starfield
 
     var scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x0b0a09, 0.0018); // fog === body colour --page; no back wall
@@ -988,7 +988,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=13").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=61").then(function (mod) {
+      return import("./natal-sky.js?v=62").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
