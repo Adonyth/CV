@@ -1033,7 +1033,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var gaC = supercluster(new T.Vector3(0.34, 0.58, -0.74), 11000, 2600, 1350, 8, 6600);   // OUR basin: the biggest, brightest, closest node — Laniakea / the Great Attractor
     var gaShell = new T.Mesh(new T.SphereGeometry(1900, 12, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
     gaShell.position.copy(gaC); gaShell.name = "DSOPick_laniakea";
-    gaShell.userData.nyePick = "dso_laniakea"; gaShell.userData.dsoViewDist = 2300; gaShell.userData.dsoFocusMin = 900;   // click dives INTO the core so it fills the frame and the distant galaxy recedes to background
+    gaShell.userData.nyePick = "dso_laniakea"; gaShell.userData.dsoViewDist = 3000; gaShell.userData.dsoFocusMin = 900;
+    gaShell.userData.dsoFromInside = true;   // gaze OUTWARD at the supercluster (Milky Way stays behind the camera → no edge-on bar)
     gaShell.userData.dsoName = { en: "Laniakea · the Great Attractor", zh: "拉尼亚凯亚超星系团 · 巨引源" };
     dsoPickGroup.add(gaShell);
     var wgeo = new T.BufferGeometry();
