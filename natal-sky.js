@@ -1009,21 +1009,31 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // --- the GREAT ATTRACTOR: our own supercluster's basin. One DOMINANT cluster with filaments visibly
     //     streaming into it — the honest "simplified Laniakea" you're meant to notice when you dolly all the
     //     way out. (Laniakea is defined by galaxy in-flow toward this basin; here it reads as convergence.)
-    var gaC = new T.Vector3(0.34, 0.58, -0.74).normalize().multiplyScalar(11800);
-    for (var gac = 0; gac < 2200; gac++) {                                    // the DOMINANT supercluster core — dense + bright so it reads as the one big landmark node even from across the void
-      var gr = Math.pow(wr(), 1.7) * 1250, gu = 2 * wr() - 1, gp = 2 * Math.PI * wr(), gsn = Math.sqrt(1 - gu * gu);
-      add(gaC.x + gr * gsn * Math.cos(gp), gaC.y + gr * gsn * Math.sin(gp), gaC.z + gr * gu, 2, 0.92 + 0.08 * wr());
-    }
-    for (var gf = 0; gf < 8; gf++) {                                          // eight DIFFUSE filaments flowing INTO the basin (soft threads, not solid bars)
-      var fd = new T.Vector3(wG(), wG(), wG()).normalize(), fl = 5200 + wr() * 3400;
-      for (var fp = 0; fp < 560; fp++) {
-        var tf = fp / 559, len = fl * (0.12 + 0.88 * tf), jw = 260 + 720 * tf;   // spread evenly along length + wide transverse scatter → a soft stream
-        add(gaC.x + fd.x * len + wG() * jw, gaC.y + fd.y * len + wG() * jw, gaC.z + fd.z * len + wG() * jw, 1, 0.6 * (1 - tf) + 0.3);
+    // --- DOMINANT SUPERCLUSTER NODES: a few bright clusters strung on converging filaments across the voids.
+    //     Density (not a brightness knob) sets prominence — additive stacking makes the richest core glow most.
+    //     From any zoomed-out orientation you meet glowing nodes on threads over dark voids: the large-scale web.
+    function supercluster(dir, radius, coreN, coreR, nFil, filLen) {
+      var cc = dir.clone().normalize().multiplyScalar(radius);
+      for (var i = 0; i < coreN; i++) {
+        var r = Math.pow(wr(), 1.7) * coreR, u = 2 * wr() - 1, p = 2 * Math.PI * wr(), sn = Math.sqrt(1 - u * u);
+        add(cc.x + r * sn * Math.cos(p), cc.y + r * sn * Math.sin(p), cc.z + r * u, 2, 0.9 + 0.1 * wr());
       }
+      for (var f = 0; f < nFil; f++) {                                        // diffuse filaments flowing INTO the node (soft streams, not solid bars)
+        var fd = new T.Vector3(wG(), wG(), wG()).normalize(), fl = filLen * (0.7 + 0.6 * wr());
+        for (var fp = 0; fp < 460; fp++) {
+          var tf = fp / 459, len = fl * (0.1 + 0.9 * tf), jw = 240 + 660 * tf;
+          add(cc.x + fd.x * len + wG() * jw, cc.y + fd.y * len + wG() * jw, cc.z + fd.z * len + wG() * jw, 1, 0.55 * (1 - tf) + 0.3);
+        }
+      }
+      return cc;
     }
+    supercluster(new T.Vector3(-0.52, 0.30, 0.60), 15800, 820, 1050, 6, 6000);   // three distant superclusters in other directions → the web has many nodes, not one
+    supercluster(new T.Vector3(0.68, -0.46, 0.22), 16800, 780, 1000, 6, 6200);
+    supercluster(new T.Vector3(-0.18, -0.70, -0.52), 14600, 840, 1050, 6, 5800);
+    var gaC = supercluster(new T.Vector3(0.34, 0.58, -0.74), 11000, 2600, 1350, 8, 6600);   // OUR basin: the biggest, brightest, closest node — Laniakea / the Great Attractor
     var gaShell = new T.Mesh(new T.SphereGeometry(1900, 12, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
     gaShell.position.copy(gaC); gaShell.name = "DSOPick_laniakea";
-    gaShell.userData.nyePick = "dso_laniakea"; gaShell.userData.dsoViewDist = 3400; gaShell.userData.dsoFocusMin = 1050;
+    gaShell.userData.nyePick = "dso_laniakea"; gaShell.userData.dsoViewDist = 2300; gaShell.userData.dsoFocusMin = 900;   // click dives INTO the core so it fills the frame and the distant galaxy recedes to background
     gaShell.userData.dsoName = { en: "Laniakea · the Great Attractor", zh: "拉尼亚凯亚超星系团 · 巨引源" };
     dsoPickGroup.add(gaShell);
     var wgeo = new T.BufferGeometry();
