@@ -552,7 +552,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     Array.prototype.sort.call(srt, function (a, b) { return a - b; });
     var lo = srt[(npx * 0.40) | 0], hi = srt[Math.min(npx - 1, (npx * 0.995) | 0)], span = Math.max(0.001, hi - lo);  // per-image auto-levels
     var rng = gRng(((d.seed || 7) * 131 + 7) >>> 0);
-    var dens = d.density != null ? d.density : 0.6, gamma = d.gamma != null ? d.gamma : 0.7, bright = d.bright != null ? d.bright : 1.5;
+    var dens = d.density != null ? d.density : 0.55, gamma = d.gamma != null ? d.gamma : 0.7, bright = d.bright != null ? d.bright : 1.8;
     var Wu = d.size || 160, Hu = Wu * (sh / sw), depth = (d.depth != null ? d.depth : 0.4) * Wu;
     var P = [], C = [];
     for (var y = 0; y < sh; y++) for (var x = 0; x < sw; x++) {
@@ -566,7 +566,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var geo = new T.BufferGeometry();
     geo.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
     geo.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
-    var m = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 3, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: d.opacity != null ? d.opacity : 0.95, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 4, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: d.opacity != null ? d.opacity : 0.95, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     return new T.Points(geo, m);
   }
