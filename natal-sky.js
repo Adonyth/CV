@@ -530,19 +530,19 @@ export function buildNatalSky(THREE, scene, data, opts) {
   var DSO_SOFT = (function () {                  // one soft round star point
     var s = 64, cv = document.createElement("canvas"); cv.width = cv.height = s;
     var cx = cv.getContext("2d"), g = cx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
-    g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(0.35, "rgba(255,255,255,0.5)"); g.addColorStop(1, "rgba(255,255,255,0)");
+    g.addColorStop(0, "rgba(255,255,255,0.92)"); g.addColorStop(0.4, "rgba(255,255,255,0.3)"); g.addColorStop(1, "rgba(255,255,255,0)");   // softer, wider core → points melt into smooth dust, no hot white pinpoints
     cx.fillStyle = g; cx.fillRect(0, 0, s, s);
     var t = new T.CanvasTexture(cv); if ("colorSpace" in t && T.SRGBColorSpace) t.colorSpace = T.SRGBColorSpace;
     return t;
   })();
-  var DSO_RAMP = [[0, [0.06, 0.035, 0.02]], [0.30, [0.42, 0.20, 0.10]], [0.56, [0.878, 0.529, 0.416]], [0.80, [0.910, 0.765, 0.478]], [1.0, [1.0, 0.95, 0.86]]];
+  var DSO_RAMP = [[0, [0.05, 0.03, 0.02]], [0.32, [0.40, 0.17, 0.09]], [0.58, [0.80, 0.42, 0.26]], [0.80, [0.90, 0.66, 0.38]], [1.0, [0.96, 0.80, 0.52]]];   // warm-LOCKED: the top is gold, never white — so additive stacking builds warm light, not silver clip
   function dsoRamp(t) {                          // the scene's warm ember ladder (coral #e0876a, gold #e8c37a)
     for (var i = 1; i < DSO_RAMP.length; i++) { if (t <= DSO_RAMP[i][0]) { var k = (t - DSO_RAMP[i - 1][0]) / (DSO_RAMP[i][0] - DSO_RAMP[i - 1][0]), a = DSO_RAMP[i - 1][1], b = DSO_RAMP[i][1]; return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]; } }
     return DSO_RAMP[4][1];
   }
   function dsoParticles(d, img) {
     var W = img.naturalWidth || img.width, H = img.naturalHeight || img.height;
-    var cap = d.sample || 200, sc = Math.min(1, cap / Math.max(W, H));
+    var cap = d.sample || 230, sc = Math.min(1, cap / Math.max(W, H));
     var sw = Math.max(2, Math.round(W * sc)), sh = Math.max(2, Math.round(H * sc));
     var cv = document.createElement("canvas"); cv.width = sw; cv.height = sh;
     var cx = cv.getContext("2d"); cx.drawImage(img, 0, 0, sw, sh);
@@ -551,24 +551,25 @@ export function buildNatalSky(THREE, scene, data, opts) {
     for (var q = 0; q < npx; q++) { var l0 = (0.299 * px[q * 4] + 0.587 * px[q * 4 + 1] + 0.114 * px[q * 4 + 2]) / 255; lumA[q] = l0; srt[q] = l0; }
     Array.prototype.sort.call(srt, function (a, b) { return a - b; });
     var lo = srt[(npx * 0.40) | 0], hi = srt[Math.min(npx - 1, (npx * 0.995) | 0)], span = Math.max(0.001, hi - lo);  // per-image auto-levels
-    var rng = gRng(((d.seed || 7) * 131 + 7) >>> 0);
-    var dens = d.density != null ? d.density : 0.55, gamma = d.gamma != null ? d.gamma : 0.7, bright = d.bright != null ? d.bright : 1.8;
+    var sd = d.seed; if (sd == null) { sd = 7; for (var si = 0; si < (d.id || "").length; si++) sd = (sd * 33 + d.id.charCodeAt(si)) >>> 0; }  // per-object dithering so no two clouds share a grain pattern
+    var rng = gRng((sd * 131 + 7) >>> 0);
+    var dens = d.density != null ? d.density : 0.62, gamma = d.gamma != null ? d.gamma : 0.72, bright = d.bright != null ? d.bright : 1.05;
     var Wu = d.size || 160, Hu = Wu * (sh / sw), depth = (d.depth != null ? d.depth : 0.4) * Wu;
     var P = [], C = [];
     for (var y = 0; y < sh; y++) for (var x = 0; x < sw; x++) {
       var ln = Math.max(0, Math.min(1, (lumA[y * sw + x] - lo) / span));            // normalised brightness
       var rx = (x / (sw - 1) - 0.5) * 2, ry = (y / (sh - 1) - 0.5) * 2, rad = Math.sqrt(rx * rx + ry * ry);
       var edge = 1 - Math.max(0, Math.min(1, (rad - 0.66) / 0.5));                  // dissolve the frame edge → an organic cloud, not a photo cut-out
-      if (ln <= 0.02 || rng() > dens * Math.min(1, Math.pow(ln, 0.5) * 1.8) * edge) continue;  // density follows brightness AND fades at the rim
+      if (ln <= 0.02 || rng() > dens * Math.min(1, Math.pow(ln, 0.45) * 1.35) * edge) continue;  // flatter brightness-density so bright cores don't pile up and clip; still fades at the rim
       var wx = (x / (sw - 1) - 0.5) * Wu, wy = (0.5 - y / (sh - 1)) * Hu, wz = ((ln - 0.5) * 0.5 + (rng() - 0.5)) * depth;
-      var col = dsoRamp(Math.pow(ln, gamma)), w = 0.45 + 0.55 * ln;                 // dim points for dim regions → contrast
+      var col = dsoRamp(Math.pow(ln, gamma)), w = 0.5 + 0.5 * ln;                   // dim points for dim regions → contrast
       P.push(wx, wy, wz);
       C.push(Math.min(1, col[0] * bright * w), Math.min(1, col[1] * bright * w), Math.min(1, col[2] * bright * w));
     }
     var geo = new T.BufferGeometry();
     geo.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
     geo.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
-    var m = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 4, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: d.opacity != null ? d.opacity : 0.95, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 3.0, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: d.opacity != null ? d.opacity : 0.62, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     return new T.Points(geo, m);
   }
