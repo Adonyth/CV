@@ -994,7 +994,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=14").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=87").then(function (mod) {
+      return import("./natal-sky.js?v=88").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1811,6 +1811,11 @@
         var _farCl = camera.position.length();
         if (_farCl > 350) natalSky.ensureFarLayers();      // galaxy + black hole, once you rise past the constellation sphere toward galactic scale
         if (_farCl > 2200) natalSky.ensureCosmicWeb();      // the cosmic web, only if you truly voyage out to intergalactic distance
+        // SCOPED exponential fog: the "infinite foam receding into black" depth cue. Only the cosmic-web
+        // material opts into fog (everything else is fog:false), and we only arm it out at web scale so the
+        // near solar-system / ground scene is never touched. Toggle with hysteresis to avoid flicker.
+        if (_farCl > 2200 && !scene.fog) scene.fog = new THREE.FogExp2(0x05040a, 0.000115);
+        else if (_farCl < 1900 && scene.fog) scene.fog = null;
       }
       deepFusion.tick(_clk);
       if (nyeArmature) nyeArmature.tick(_clk);

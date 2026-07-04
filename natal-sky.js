@@ -706,6 +706,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     shell.userData.dsoViewDist = Wu * 1.35;                  // stand back far enough to frame the whole cloud
     shell.userData.dsoFocusMin = Math.max(12, Wu * 0.5);     // how close you may pull in to admire it
     shell.userData.dsoName = d.name || null;
+    if (isExternal) shell.userData.dsoFromInside = true;   // gaze OUT at Andromeda from the Milky Way → our galaxy stays behind the camera (no blown-out edge-on bar)
     dsoPickGroup.add(shell);
     var img = new Image();
     img.onload = function () {
@@ -1013,7 +1014,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var g = new T.BufferGeometry();
     g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
     g.setAttribute("color", new T.BufferAttribute(new Float32Array(Cc), 3));
-    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 3.2 : 4.0, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.75, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 2.6 : 3.2, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     andromeda = new T.Points(g, m); andromeda.name = "Andromeda"; andromeda.renderOrder = -4; andromeda.frustumCulled = false;
     belt.add(andromeda);
@@ -1026,8 +1027,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
      between — the real large-scale texture (Voronoi skeleton: cell faces = walls, edges = filaments, verts
      = clusters, interiors = voids). Static, one draw, faded in only when the camera leaves the galaxy. --- */
   function buildCosmicWeb() {
-    var COUNT = mobile ? 42000 : 78000, R_IN = 6200, R_OUT = 20000, NUM_SEEDS = 32;   // FEW, BIG Voronoi cells (not 84 fine ones): from INSIDE the web you need coarse structure — wide dark voids + a handful of prominent walls/filaments/nodes — or it just averages into uniform dust. This is what finally reads as large-scale texture.
-    var WALL_EPS = 0.075, FILA_EPS = 0.115, WALL_KEEP = 0.26;
+    var COUNT = mobile ? 40000 : 72000, R_IN = 6000, R_OUT = 13500, NUM_SEEDS = 22;   // FEWER, BIGGER Voronoi cells → wide dark VOIDS. Camera never reaches the far wall (maxDistance 15000); exp fog eats it → the foam feels boundless.
+    var WALL_EPS = 0.070, FILA_EPS = 0.135, WALL_KEEP = 0.14, NODE_EPS = 0.028;
     var wr = gRng(0x1a91a), wG = function () { return wr() + wr() + wr() - 1.5; };
     var GA = Math.PI * (3 - Math.sqrt(5)), seeds = [];
     for (var si = 0; si < NUM_SEEDS; si++) {
@@ -1044,31 +1045,34 @@ export function buildNatalSky(THREE, scene, data, opts) {
       }
       return [d1, d2, d3];
     }
-    var POS = [], COL = [], kinds = [], tries = 0, lim = COUNT * 30;
-    var cWarm = [1.0, 0.95, 0.85], cGold = [1.0, 0.85, 0.63], cBlue = [0.85, 0.9, 1.0], cNode = [1.0, 0.91, 0.76];
-    function add(px, py, pz, kind, t) {
-      var roll = wr(), r, g2, b;
-      if (kind === 2) { r = cNode[0]; g2 = cNode[1]; b = cNode[2]; }
-      else if (roll < 0.75) { var m = wr() * 0.7; r = cWarm[0] + (cGold[0] - cWarm[0]) * m; g2 = cWarm[1] + (cGold[1] - cWarm[1]) * m; b = cWarm[2] + (cGold[2] - cWarm[2]) * m; }
-      else if (roll < 0.93) { r = cBlue[0]; g2 = cBlue[1]; b = cBlue[2]; }
-      else { r = cWarm[0]; g2 = cWarm[1]; b = cWarm[2]; }
-      var base = kind === 2 ? 1.0 : kind === 1 ? 0.58 : 0.22;   // brighter nodes + filaments, walls still faint → clear filament↔void contrast reads from far out
-      var bright = Math.min(1, base + t * (kind === 2 ? 0.1 : 0.5) * (0.6 + 0.4 * wr()));
-      POS.push(px, py, pz); COL.push(r * bright, g2 * bright, b * bright); kinds.push(kind);
-    }
+    var POS = [], COL = [], tries = 0, lim = COUNT * 40;
+    // BUDGET the population so filaments DOMINATE (with few cells, raw geometry skews wall-heavy)
+    var N_FILA = Math.round(COUNT * 0.70), N_NODE = Math.round(COUNT * 0.20), N_WALL = Math.round(COUNT * 0.08);
+    var N_STRAY = COUNT - N_FILA - N_NODE - N_WALL, nF = 0, nN = 0, nW = 0, nS = 0;
+    // Millennium WARM MONOTONE ramp (ONE hue family — no blue): near-black void → amber → gold → white-hot node core
+    var RAMPW = [[0.00, 0.039, 0.024, 0.012], [0.35, 0.478, 0.290, 0.071], [0.70, 0.878, 0.643, 0.216], [0.90, 1.000, 0.812, 0.420], [1.00, 1.180, 0.953, 0.840]];
+    function rampw(L) { for (var i = 0; i < RAMPW.length - 1; i++) { if (L <= RAMPW[i + 1][0]) { var a = RAMPW[i], b = RAMPW[i + 1], f = (L - a[0]) / (b[0] - a[0]); return [a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f, a[3] + (b[3] - a[3]) * f]; } } return [RAMPW[4][1], RAMPW[4][2], RAMPW[4][3]]; }
+    function pushPt(x, y, z, L, intensity) { var c = rampw(L), b = intensity * (0.75 + 0.5 * wr()); POS.push(x, y, z); COL.push(c[0] * b, c[1] * b, c[2] * b); }
     while (POS.length / 3 < COUNT && tries++ < lim) {
       var rad2 = Math.cbrt(R_IN * R_IN * R_IN + (R_OUT * R_OUT * R_OUT - R_IN * R_IN * R_IN) * wr());
       var ct = 2 * wr() - 1, st = Math.sqrt(Math.max(0, 1 - ct * ct)), ph = 2 * Math.PI * wr();
       var px = rad2 * st * Math.cos(ph), py = rad2 * ct, pz = rad2 * st * Math.sin(ph);
       var nn = nearest3(px, py, pz), gap2 = (nn[1] - nn[0]) / nn[0], gap3 = (nn[2] - nn[0]) / nn[0];
-      var kind = -1, t = 0;
-      if (gap3 < FILA_EPS) { kind = 1; t = 0.55 + 0.45 * (1 - gap3 / FILA_EPS); }
-      else if (gap2 < WALL_EPS) { if (wr() < WALL_KEEP) { kind = 0; t = 0.15 + 0.25 * (1 - gap2 / WALL_EPS); } }
+      var kind = -1, edgeClose = 0;
+      if (gap3 < FILA_EPS) { kind = 1; edgeClose = 1 - gap3 / FILA_EPS; }            // near a Voronoi EDGE → filament
+      else if (gap2 < WALL_EPS && wr() < WALL_KEEP) { kind = 0; }                    // near a FACE → faint wall
+      else if (wr() < 0.006) { kind = 3; }                                            // rare void stray
       if (kind < 0) continue;
-      if (kind === 1 && Math.abs(nn[2] - nn[1]) / nn[0] < 0.03) { kind = 2; t = 1.0; }   // node (Voronoi vertex → cluster)
-      px += wG() * 260; py += wG() * 260; pz += wG() * 260;
-      add(px, py, pz, kind, t);
-      if (kind === 2) { var nb = 42 + (wr() * 78) | 0, sig = 200 + wr() * 240; for (var q = 0; q < nb; q++) add(px + wG() * sig, py + wG() * sig, pz + wG() * sig, 2, 0.85 + 0.15 * wr()); }   // richer + more COMPACT clusters → each Voronoi vertex reads as a glowing galaxy cluster, not a loose speckle
+      if (kind === 1 && Math.abs(nn[2] - nn[1]) / nn[0] < NODE_EPS) kind = 2;         // filament sample at a VERTEX → node cluster
+      if (kind === 1 && nF >= N_FILA) continue;
+      if (kind === 0 && nW >= N_WALL) continue;
+      if (kind === 3 && nS >= N_STRAY) continue;
+      if (kind === 2 && nN >= N_NODE) continue;
+      px += wG() * 240; py += wG() * 240; pz += wG() * 240;
+      if (kind === 2) { var nb = 30 + (wr() * 46 | 0), sig = 170 + wr() * 200; for (var q = 0; q < nb && nN < N_NODE; q++, nN++) pushPt(px + wG() * sig, py + wG() * sig, pz + wG() * sig, 0.90 + 0.10 * wr(), 1.0); }
+      else if (kind === 1) { nF++; pushPt(px, py, pz, 0.30 + 0.25 * edgeClose, 0.55); }
+      else if (kind === 0) { nW++; pushPt(px, py, pz, 0.10, 0.14); }
+      else { nS++; pushPt(px, py, pz, 0.02, 0.10); }
     }
     // --- the GREAT ATTRACTOR: our own supercluster's basin. One DOMINANT cluster with filaments visibly
     //     streaming into it — the honest "simplified Laniakea" you're meant to notice when you dolly all the
@@ -1076,30 +1080,29 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // --- DOMINANT SUPERCLUSTER NODES: a few bright clusters strung on converging filaments across the voids.
     //     Density (not a brightness knob) sets prominence — additive stacking makes the richest core glow most.
     //     From any zoomed-out orientation you meet glowing nodes on threads over dark voids: the large-scale web.
-    function supercluster(dir, radius, coreN, coreR, nFil, filLen) {
+    function supercluster(dir, radius, coreN, coreR, nFil, filLen, converge) {
       var cc = dir.clone().normalize().multiplyScalar(radius);
       for (var i = 0; i < coreN; i++) {
-        var r = Math.pow(wr(), 1.7) * coreR, u = 2 * wr() - 1, p = 2 * Math.PI * wr(), sn = Math.sqrt(1 - u * u);
-        add(cc.x + r * sn * Math.cos(p), cc.y + r * sn * Math.sin(p), cc.z + r * u, 2, 0.9 + 0.1 * wr());
+        var r = Math.pow(wr(), 1.8) * coreR, u = 2 * wr() - 1, p = 2 * Math.PI * wr(), sn = Math.sqrt(1 - u * u);
+        pushPt(cc.x + r * sn * Math.cos(p), cc.y + r * sn * Math.sin(p), cc.z + r * u, 0.90 + 0.10 * wr(), 1.0);
       }
-      for (var f = 0; f < nFil; f++) {                                        // diffuse filaments flowing INTO the node (soft streams, not solid bars)
+      for (var f = 0; f < nFil; f++) {                                        // filaments streaming INTO the node; converge=true brightens toward the core → reads as inflow
         var fd = new T.Vector3(wG(), wG(), wG()).normalize(), fl = filLen * (0.7 + 0.6 * wr());
-        for (var fp = 0; fp < 460; fp++) {
-          var tf = fp / 459, len = fl * (0.1 + 0.9 * tf), jw = 240 + 660 * tf;
-          add(cc.x + fd.x * len + wG() * jw, cc.y + fd.y * len + wG() * jw, cc.z + fd.z * len + wG() * jw, 1, 0.55 * (1 - tf) + 0.3);
+        for (var fp = 0; fp < 420; fp++) {
+          var tf = fp / 419, len = fl * (0.08 + 0.92 * tf), jw = 200 + 560 * tf;
+          var L = converge ? (0.35 + 0.30 * (1 - tf)) : (0.30 + 0.25 * (1 - tf));
+          pushPt(cc.x + fd.x * len + wG() * jw, cc.y + fd.y * len + wG() * jw, cc.z + fd.z * len + wG() * jw, L, 0.5);
         }
       }
       return cc;
     }
-    // five neighbour superclusters RINGING the galaxy (radius ~9800–12200, so from a zoomed-out vantage at
-    // ~13000 several always fall in the forward view around the Milky Way → the web has many nodes, not one)
-    supercluster(new T.Vector3(-0.62, 0.35, 0.70), 10600, 950, 1080, 6, 5800);
-    supercluster(new T.Vector3(0.72, -0.42, 0.30), 11800, 900, 1040, 6, 6000);
-    supercluster(new T.Vector3(-0.25, -0.75, -0.55), 10000, 940, 1080, 6, 5600);
-    supercluster(new T.Vector3(0.55, 0.68, 0.30), 12200, 880, 1040, 6, 6000);
-    supercluster(new T.Vector3(-0.70, -0.10, -0.45), 9800, 950, 1080, 6, 5600);
-    var gaC = supercluster(new T.Vector3(0.34, 0.58, -0.74), 10500, 2800, 1380, 8, 6600);   // OUR basin: the biggest, brightest, closest node — Laniakea / the Great Attractor
-    var gaShell = new T.Mesh(new T.SphereGeometry(1900, 12, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
+    // THREE near neighbours — the far foam does the "many nodes" work; the local patch stays legible
+    supercluster(new T.Vector3(-0.62, 0.35, 0.70), 9200, 700, 900, 5, 5200, false);
+    supercluster(new T.Vector3(0.72, -0.42, 0.30), 10200, 680, 880, 5, 5400, false);
+    supercluster(new T.Vector3(-0.25, -0.75, -0.55), 9000, 700, 900, 5, 5200, false);
+    // OUR BASIN — the Great Attractor: biggest core, most filaments, all CONVERGING. Milky Way (origin) ~9000 away on the rim.
+    var gaC = supercluster(new T.Vector3(0.34, 0.58, -0.74), 9000, 3200, 1250, 10, 6200, true);
+    var gaShell = new T.Mesh(new T.SphereGeometry(2100, 12, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
     gaShell.position.copy(gaC); gaShell.name = "DSOPick_laniakea";
     gaShell.userData.nyePick = "dso_laniakea"; gaShell.userData.dsoViewDist = 3000; gaShell.userData.dsoFocusMin = 900;
     gaShell.userData.dsoFromInside = true;   // gaze OUTWARD at the supercluster (Milky Way stays behind the camera → no edge-on bar)
@@ -1108,7 +1111,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var wgeo = new T.BufferGeometry();
     wgeo.setAttribute("position", new T.BufferAttribute(new Float32Array(POS), 3));
     wgeo.setAttribute("color", new T.BufferAttribute(new Float32Array(COL), 3));
-    var wmat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 40 : 52, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var wmat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 46 : 60, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: true });   // fog ON → distant foam dissolves into black = infinite depth
     if ("toneMapped" in wmat) wmat.toneMapped = false;
     _cosmicWeb = new T.Points(wgeo, wmat); _cosmicWeb.name = "CosmicWeb"; _cosmicWeb.renderOrder = -6; _cosmicWeb.frustumCulled = false; _cosmicWeb.visible = false;
     belt.add(_cosmicWeb);
