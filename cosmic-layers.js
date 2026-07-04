@@ -23,19 +23,19 @@
     { id: "solar",               label: { en: "Solar System",        zh: "太阳系" },       you: { en: "1 AU from the Sun",                 zh: "距太阳 1 天文单位" },
       realScaleLy: 0.0032,   sceneRadius: 3,     camLenPeak: 40,    fadeInStart: -1,    fadeInEnd: -1,    fadeOutStart: 150,   fadeOutEnd: 340,   weAreOnEdge: false },
     { id: "milky-way",           label: { en: "Milky Way",           zh: "银河系" },       you: { en: "Orion Spur, 26 kly out",            zh: "猎户臂，距银心 2.6 万光年" },
-      realScaleLy: 1e5,      sceneRadius: 2600,  camLenPeak: 3600,  fadeInStart: 260,   fadeInEnd: 1400,  fadeOutStart: 4300,  fadeOutEnd: 5400,  weAreOnEdge: true },
+      realScaleLy: 1e5,      sceneRadius: 2600,  camLenPeak: 3500,  fadeInStart: 400,   fadeInEnd: 1600,  fadeOutStart: 3900,  fadeOutEnd: 4900,  weAreOnEdge: true },
     { id: "local-group",         label: { en: "Local Group",         zh: "本星系群" },     you: { en: "the Milky Way lobe",                zh: "银河系一端" },
-      realScaleLy: 1e7,      sceneRadius: 4000,  camLenPeak: 5600,  fadeInStart: 4300,  fadeInEnd: 5400,  fadeOutStart: 6600,  fadeOutEnd: 8000,  weAreOnEdge: false },
+      realScaleLy: 1e7,      sceneRadius: 4000,  camLenPeak: 5400,  fadeInStart: 3900,  fadeInEnd: 4900,  fadeOutStart: 5700,  fadeOutEnd: 6700,  weAreOnEdge: false },
     { id: "local-sheet",         label: { en: "Local Sheet",         zh: "本星系片" },     you: { en: "within the sheet plane",            zh: "位于星系片平面内" },
-      realScaleLy: 2.3e7,    sceneRadius: 5200,  camLenPeak: 8200,  fadeInStart: 6600,  fadeInEnd: 8000,  fadeOutStart: 9400,  fadeOutEnd: 11200, weAreOnEdge: false },
+      realScaleLy: 2.3e7,    sceneRadius: 5200,  camLenPeak: 7000,  fadeInStart: 5700,  fadeInEnd: 6700,  fadeOutStart: 7500,  fadeOutEnd: 8900,  weAreOnEdge: false },
     { id: "virgo-supercluster",  label: { en: "Virgo Supercluster",  zh: "室女超星系团" }, you: { en: "on the outskirts, 54 Mly from Virgo", zh: "外缘，距室女团 5400 万光年" },
-      realScaleLy: 1.1e8,    sceneRadius: 7000,  camLenPeak: 11500, fadeInStart: 9400,  fadeInEnd: 11200, fadeOutStart: 13200, fadeOutEnd: 15600, weAreOnEdge: true },
+      realScaleLy: 1.1e8,    sceneRadius: 7000,  camLenPeak: 9500,  fadeInStart: 7500,  fadeInEnd: 8900,  fadeOutStart: 10200, fadeOutEnd: 12200, weAreOnEdge: true },
     { id: "laniakea",            label: { en: "Laniakea",            zh: "拉尼亚凯亚" },   you: { en: "far edge, near the Perseus–Pisces divide", zh: "外缘，近英仙-双鱼分水岭" },
-      realScaleLy: 5.2e8,    sceneRadius: 9700,  camLenPeak: 16000, fadeInStart: 13200, fadeInEnd: 15600, fadeOutStart: 18400, fadeOutEnd: 22000, weAreOnEdge: true },
+      realScaleLy: 5.2e8,    sceneRadius: 9700,  camLenPeak: 13100, fadeInStart: 10200, fadeInEnd: 12200, fadeOutStart: 14000, fadeOutEnd: 17000, weAreOnEdge: true },
     { id: "cosmic-web",          label: { en: "Cosmic Web",          zh: "宇宙网" },       you: { en: "one basin among many",              zh: "众多流域中的一个" },
-      realScaleLy: 2e9,      sceneRadius: 13500, camLenPeak: 23000, fadeInStart: 18400, fadeInEnd: 22000, fadeOutStart: 27000, fadeOutEnd: 33000, weAreOnEdge: true },
+      realScaleLy: 2e9,      sceneRadius: 13500, camLenPeak: 18200, fadeInStart: 14000, fadeInEnd: 17000, fadeOutStart: 20800, fadeOutEnd: 25000, weAreOnEdge: true },
     { id: "observable-universe", label: { en: "Observable Universe", zh: "可观测宇宙" },   you: { en: "at the centre of your own sphere",  zh: "自身可观测球的中心" },
-      realScaleLy: 9.3e10,   sceneRadius: 19000, camLenPeak: 34000, fadeInStart: 27000, fadeInEnd: 33000, fadeOutStart: -1,    fadeOutEnd: -1,    weAreOnEdge: false }
+      realScaleLy: 9.3e10,   sceneRadius: 19000, camLenPeak: 26000, fadeInStart: 20800, fadeInEnd: 25000, fadeOutStart: -1,    fadeOutEnd: -1,    weAreOnEdge: false }
   ];
 
   var LN = Math.log, MAXCAM = 46000;
