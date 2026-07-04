@@ -840,21 +840,21 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // --- COMPANION GALAXIES the Milky Way is devouring RIGHT NOW (real, ongoing mergers) ---
     // (a) the SAGITTARIUS DWARF — being tidally shredded this epoch: a small OLD-STAR core below the far side
     //     of the disc, trailing a great tidal STREAM that loops the galaxy in a near-polar orbit.
-    var sgrC = C.clone().addScaledVector(uu, -0.32 * Rgal).addScaledVector(w, -0.46 * Rgal);
+    var sgrC = C.clone().addScaledVector(uu, -0.62 * Rgal).addScaledVector(w, -0.3 * Rgal);   // out near the disc edge, only slightly below → a distinct blob, not hidden behind the disc
     for (var sg = 0; sg < 1600; sg++) {
       var sgr = Math.pow(rng(), 1.6) * 0.1 * Rgal, sgu = rng() * 2 - 1, sgp = rng() * Math.PI * 2, sgs = Math.sqrt(1 - sgu * sgu);
       var sgpt = sgrC.clone().addScaledVector(uu, sgr * sgs * Math.cos(sgp) * 1.6).addScaledVector(vv, sgr * sgs * Math.sin(sgp)).addScaledVector(w, sgr * sgu * 0.9);
       push(sgpt, 0.96, 0.79, 0.63, 0.26 + 0.32 * Math.pow(rng(), 2), 0.1);
     }
     for (var ss = 0; ss < 4000; ss++) {                                        // the tidal stream — a bright polar great-loop of pulled-out stars wrapping the disc
-      var phi = rng() * Math.PI * 2, loopR = Rgal * (0.5 + 0.42 * (0.5 + 0.5 * Math.cos(phi)));
+      var phi = rng() * Math.PI * 2, loopR = Rgal * (0.78 + 0.4 * (0.5 + 0.5 * Math.cos(phi)));   // the loop wraps OUTSIDE the disc edge → a clear great ring around the galaxy
       var sp = C.clone().addScaledVector(uu, loopR * Math.cos(phi)).addScaledVector(w, loopR * Math.sin(phi) * 0.92).addScaledVector(vv, G() * (26 + 0.02 * loopR));
       sp.addScaledVector(uu, G() * 42).addScaledVector(w, G() * 42);
       push(sp, 0.94, 0.77, 0.61, (0.1 + 0.16 * Math.pow(rng(), 2)) * (0.45 + 0.55 * Math.abs(Math.sin(phi))), 0.05);
     }
     // (b) the MAGELLANIC CLOUDS — bright irregular satellite galaxies just off the disc: young BLUE stars +
     //     pink HII, trailing the faint Magellanic Stream the Milky Way is stripping from them.
-    var lmc = C.clone().addScaledVector(vv, 0.5 * Rgal).addScaledVector(w, -0.56 * Rgal);
+    var lmc = C.clone().addScaledVector(vv, 1.05 * Rgal).addScaledVector(w, -0.32 * Rgal);   // just BEYOND the disc edge, off to the side → an obvious separate satellite galaxy
     for (var lm = 0; lm < 2600; lm++) {
       var lr = Math.pow(rng(), 1.4) * 0.13 * Rgal, lu = rng() * 2 - 1, lp = rng() * Math.PI * 2, lsn = Math.sqrt(1 - lu * lu);
       var lpt = lmc.clone().addScaledVector(uu, lr * lsn * Math.cos(lp) * 1.8).addScaledVector(vv, lr * lsn * Math.sin(lp)).addScaledVector(w, lr * lu * 0.6);
@@ -948,8 +948,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
      between — the real large-scale texture (Voronoi skeleton: cell faces = walls, edges = filaments, verts
      = clusters, interiors = voids). Static, one draw, faded in only when the camera leaves the galaxy. --- */
   (function buildCosmicWeb() {
-    var COUNT = mobile ? 15000 : 26000, R_IN = 8000, R_OUT = 22000, NUM_SEEDS = 44;
-    var WALL_EPS = 0.06, FILA_EPS = 0.09, WALL_KEEP = 0.2;
+    var COUNT = mobile ? 32000 : 62000, R_IN = 5200, R_OUT = 30000, NUM_SEEDS = 60;   // vast + closer-in so it blooms as you leave the galaxy, ~62k galaxies across the whole observable-universe web
+    var WALL_EPS = 0.06, FILA_EPS = 0.095, WALL_KEEP = 0.22;
     var wr = gRng(0x1a91a), wG = function () { return wr() + wr() + wr() - 1.5; };
     var GA = Math.PI * (3 - Math.sqrt(5)), seeds = [];
     for (var si = 0; si < NUM_SEEDS; si++) {
@@ -974,8 +974,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
       else if (roll < 0.75) { var m = wr() * 0.7; r = cWarm[0] + (cGold[0] - cWarm[0]) * m; g2 = cWarm[1] + (cGold[1] - cWarm[1]) * m; b = cWarm[2] + (cGold[2] - cWarm[2]) * m; }
       else if (roll < 0.93) { r = cBlue[0]; g2 = cBlue[1]; b = cBlue[2]; }
       else { r = cWarm[0]; g2 = cWarm[1]; b = cWarm[2]; }
-      var base = kind === 2 ? 0.9 : kind === 1 ? 0.4 : 0.14;
-      var bright = Math.min(1, base + t * (kind === 2 ? 0.1 : 0.55) * (0.6 + 0.4 * wr()));
+      var base = kind === 2 ? 1.0 : kind === 1 ? 0.58 : 0.22;   // brighter nodes + filaments, walls still faint → clear filament↔void contrast reads from far out
+      var bright = Math.min(1, base + t * (kind === 2 ? 0.1 : 0.5) * (0.6 + 0.4 * wr()));
       POS.push(px, py, pz); COL.push(r * bright, g2 * bright, b * bright); kinds.push(kind);
     }
     while (POS.length / 3 < COUNT && tries++ < lim) {
@@ -995,7 +995,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var wgeo = new T.BufferGeometry();
     wgeo.setAttribute("position", new T.BufferAttribute(new Float32Array(POS), 3));
     wgeo.setAttribute("color", new T.BufferAttribute(new Float32Array(COL), 3));
-    var wmat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 26 : 34, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var wmat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 40 : 52, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in wmat) wmat.toneMapped = false;
     _cosmicWeb = new T.Points(wgeo, wmat); _cosmicWeb.name = "CosmicWeb"; _cosmicWeb.renderOrder = -6; _cosmicWeb.frustumCulled = false; _cosmicWeb.visible = false;
     belt.add(_cosmicWeb);
@@ -1176,8 +1176,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
         var _e = _bhBB[_bb]; _e.u.uTime.value = sec;
         if (o.camera && _e.m.parent) { _e.m.parent.getWorldQuaternion(_bbPQ); o.camera.getWorldQuaternion(_bbCQ); _e.m.quaternion.copy(_bbPQ.invert().multiply(_bbCQ)); }
       }
-      if (_cosmicWeb && o.camera) {                                                 // the cosmic web blooms in only when the camera dollies out past the local star field
-        var _cwo = Math.max(0, Math.min(1, (o.camera.position.length() - 6500) / 4500)) * 0.72;
+      if (_cosmicWeb && o.camera) {                                                 // the cosmic web blooms in as the camera dollies out past the galaxy — earlier + brighter so it's unmissable
+        var _cwo = Math.max(0, Math.min(1, (o.camera.position.length() - 3800) / 5000)) * 0.9;
         if (_cwo > 0.008) { _cosmicWeb.visible = true; _cosmicWeb.material.opacity = _cwo; } else if (_cosmicWeb.visible) { _cosmicWeb.visible = false; }
       }
       if (bloomSprite && bloomT > 0) { bloomT = Math.max(0, bloomT - 0.045); bloomSprite.material.opacity = bloomT * 0.7; if (bloomT === 0) bloomSprite.visible = false; }
