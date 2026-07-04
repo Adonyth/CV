@@ -602,9 +602,16 @@ export function buildNatalSky(THREE, scene, data, opts) {
     return grp;
   }
   var dsoPickGroup = new T.Group(); dsoPickGroup.name = "DeepSkyPicks"; belt.add(dsoPickGroup);
-  (data.deepSky || []).forEach(function (d) {
+  var _dsoCount = (data.deepSky || []).length;
+  (data.deepSky || []).forEach(function (d, idx) {
     if (!d.tex) return;
-    var ecl = raDecToEcl(d.raH, d.decDeg), world = eclVec(ecl.lon, ecl.lat, (d.dist || 900) * 1.7);  // pushed farther out → distinct distant wonders, clear of the galactic core
+    // SPREAD the wonders out so none crowd: each sits at its own DISTANCE (1800→3000, by index) so
+    // even sky-neighbours separate in depth, plus a small golden-angle nudge that fans the clustered
+    // ones (Orion/Horsehead/Crab…) apart across the sky
+    var dist = 1800 + (idx / Math.max(1, _dsoCount - 1)) * 1200;
+    var nud = idx * 2.399963;
+    var ecl = raDecToEcl(d.raH, d.decDeg);
+    var world = eclVec(ecl.lon + Math.cos(nud) * 0.16, ecl.lat + Math.sin(nud) * 0.12, dist);
     var Wu = (d.size || 160) * 1.5;                          // matches the world width in dsoParticles
     // an invisible sphere is the reliable click/hover target — Points raycasting is fickle
     var shell = new T.Mesh(new T.SphereGeometry(Wu * 0.62, 10, 8),
@@ -637,7 +644,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
      every direction and to great depth, so nothing floats in a void — the nebulae are nestled
      among stars, and the eye reads "we are deep inside a galaxy full of stars". Static, one draw. */
   (function buildStarfield() {
-    var N = mobile ? 5000 : 11000, R0 = 540, R1 = 2700;
+    var N = mobile ? 7000 : 15000, R0 = 560, R1 = 3400;
     var rng = gRng(3391), pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
     for (var i = 0; i < N; i++) {
       var uax = rng() * 2 - 1, ph = rng() * Math.PI * 2, ss = Math.sqrt(1 - uax * uax);
@@ -664,8 +671,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
      in one draw call. A local "bubble" is carved out so no galaxy star clutters the planets or
      the constellations that live nearer than the arm. Built once — zero per-frame cost. -------- */
   (function buildMilkyWayGalaxy() {
-    var Rgal = 1900, N = mobile ? 84000 : 190000;                              // BIG so the galaxy is vast and enveloping; dense enough to read as a luminous river of stars
-    var Rsun = 0.55 * Rgal, Rin = 260, Rout = 700, hSun = 110;                  // Sun's galactocentric radius; nearly IN the plane so the band WRAPS the whole sky; galaxy fades in gradually (no hard shell)
+    var Rgal = 2600, N = mobile ? 130000 : 300000;                             // VAST — a real galaxy the size of the sky; dense enough to read as a luminous river of countless stars
+    var Rsun = 0.52 * Rgal, Rin = 340, Rout = 900, hSun = 140;                  // Sun's galactocentric radius; nearly IN the plane so the band WRAPS the whole sky; galaxy fades in gradually (no hard shell)
     var gcE = raDecToEcl(17.7608, -28.94), npE = raDecToEcl(12.8571, 27.13);    // Sgr A* + galactic north pole
     var w = eclVec(npE.lon, npE.lat, 1).normalize();                            // disc normal (galactic pole)
     var uu = eclVec(gcE.lon, gcE.lat, 1); uu.addScaledVector(w, -uu.dot(w)).normalize();  // in-plane, toward the centre
@@ -751,7 +758,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var gg = new T.BufferGeometry();
     gg.setAttribute("position", new T.BufferAttribute(new Float32Array(GP), 3));
     gg.setAttribute("color", new T.BufferAttribute(new Float32Array(GC), 3));
-    var gm = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 9 : 14, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.13, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var gm = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 13 : 20, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.18, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in gm) gm.toneMapped = false;
     var glow = new T.Points(gg, gm); glow.name = "MilkyWayGlow"; glow.renderOrder = -5; glow.frustumCulled = false;
     belt.add(glow);
@@ -759,7 +766,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var g = new T.BufferGeometry();
     g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
     g.setAttribute("color", new T.BufferAttribute(new Float32Array(Cc), 3));
-    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 2.7 : 3.3, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.68, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 2.7 : 3.2, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.74, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     var pts = new T.Points(g, m); pts.name = "MilkyWayGalaxy"; pts.renderOrder = -4; pts.frustumCulled = false;
     belt.add(pts);
