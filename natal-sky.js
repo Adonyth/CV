@@ -546,7 +546,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // (so orbiting reveals parallax — not a flat sticker), colour is hue-normalized + brightness-capped
     // (so additive stacking keeps its hue, not white), and a soft glow underlay binds it into gas.
     var W = img.naturalWidth || img.width, H = img.naturalHeight || img.height;
-    var Wu = (d.size || 160) * 1.8, Hu = Wu * (H / W), Zu = 0.22 * Wu;              // world width/height + a shallower depth slab (relief, not a ball → the image shape reads face-on, still parallaxes)
+    var Wu = (d.size || 160) * 1.8, Hu = Wu * (H / W), Zu = 0.5 * Wu;               // world width/height + a REAL depth (~half the width → a genuine 3-D body, not a thin slab, so it never foreshortens to a line when you orbit)
     var sd = d.seed; if (sd == null) { sd = 7; for (var si = 0; si < (d.id || "").length; si++) sd = (sd * 33 + d.id.charCodeAt(si)) >>> 0; }
     var rng = gRng((sd * 131 + 7) >>> 0), zfb = gFbm((sd * 17 + 3) >>> 0, 8), cfb = gFbm((sd * 29 + 5) >>> 0, 8);
     var wr = 300, sc = Math.min(1, wr / Math.max(W, H));
@@ -574,12 +574,11 @@ export function buildNatalSky(THREE, scene, data, opts) {
       if (rng() > wgt[k]) continue;
       var u = (xi + rng()) / sw, v = (yi + rng()) / sh;
       var x = (u - 0.5) * Wu, y = (0.5 - v) * Hu;
-      var shell = (rng() * 5) | 0;
-      var z = (zfb(x * 0.02, y * 0.02) * 2 - 1) * Zu * 0.6 + (shell / 4 - 0.5) * Zu * 0.55 + (rng() - 0.5) * Zu * 0.12;  // coherent noise + shells → real depth, NOT from luminance
+      var z = (zfb(x * 0.02, y * 0.02) * 2 - 1) * Zu * 0.62 + (rng() + rng() - 1) * Zu * 0.5 + (rng() - 0.5) * Zu * 0.14;  // coherent noise + gaussian scatter → a smooth 3-D VOLUME (no shell banding, no thin slab; depth ≈ half the width)
       x += (rng() - 0.5) * Wu * 0.02; y += (rng() - 0.5) * Wu * 0.02;
       var i4 = k * 4, r = px[i4] / 255, g = px[i4 + 1] / 255, b = px[i4 + 2] / 255, av = (r + g + b) / 3, sB = 1.35;
       r = Math.max(0, av + (r - av) * sB); g = Math.max(0, av + (g - av) * sB); b = Math.max(0, av + (b - av) * sB);   // saturation lift
-      var mxc = Math.max(r, g, b, 1e-3), bright = Math.min(0.85, Math.pow(mxc, 0.62) * 1.05), depthT = z / Zu * 0.5 + 0.5;
+      var mxc = Math.max(r, g, b, 1e-3), bright = Math.min(0.85, Math.pow(mxc, 0.62) * 1.05), depthT = Math.max(0, Math.min(1, z / Zu * 0.45 + 0.5));
       bright *= (0.72 + 0.28 * depthT);                                            // far side dimmer → depth cue
       var jt = 0.9 + 0.2 * rng();
       PC.push(x, y, z); CC.push((r / mxc) * bright * jt, (g / mxc) * bright * jt, (b / mxc) * bright * jt);  // hue kept, brightness capped
@@ -608,9 +607,11 @@ export function buildNatalSky(THREE, scene, data, opts) {
       }
       sctx.putImageData(sid, 0, 0);
       var stex = new T.CanvasTexture(scv); if ("colorSpace" in stex && T.SRGBColorSpace) stex.colorSpace = T.SRGBColorSpace;
-      var smat = new T.SpriteMaterial({ map: stex, blending: T.AdditiveBlending, transparent: true, depthWrite: false, opacity: d.opacity != null ? d.opacity : 0.7, fog: false });
+      var smat = new T.MeshBasicMaterial({ map: stex, blending: T.AdditiveBlending, transparent: true, depthWrite: false, opacity: d.opacity != null ? d.opacity : 0.62, side: T.DoubleSide, fog: false });
       if ("toneMapped" in smat) smat.toneMapped = false;
-      var spr = new T.Sprite(smat); spr.scale.set(Wu, Hu, 1); spr.renderOrder = -3; grp.add(spr);
+      // a WORLD-ORIENTED image plane (NOT a camera-facing billboard), sunk into the MIDDLE of the particle
+      // volume → when you orbit, image + particle body turn together and stay locked, never diverging
+      var spr = new T.Mesh(new T.PlaneGeometry(Wu, Hu), smat); spr.renderOrder = -3; grp.add(spr);
     })();
     var gg = new T.BufferGeometry();                                               // glow underlay — big soft dim points fill the gaps into continuous gas
     gg.setAttribute("position", new T.BufferAttribute(new Float32Array(GP), 3));
@@ -694,7 +695,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
      Logarithmic-spiral arms + oblate bulge + patchy dust, warm ember palette, ~82k static points
      in one draw call. A local "bubble" is carved out so no galaxy star clutters the planets or
      the constellations that live nearer than the arm. Built once — zero per-frame cost. -------- */
-  var galacticCentre = null, galacticNormal = null;                              // exposed for the clickable black-hole nucleus
+  var galacticCentre = null, galacticNormal = null, _bhSpin = [];                // exposed for the clickable black-hole nucleus; _bhSpin = accretion discs slowly turned each tick
   (function buildMilkyWayGalaxy() {
     var Rgal = 2600, N = mobile ? 130000 : 300000;                             // VAST — a real galaxy the size of the sky; dense enough to read as a luminous river of countless stars
     var Rsun = 0.52 * Rgal, Rin = 340, Rout = 900, hSun = 140;                  // Sun's galactocentric radius; nearly IN the plane so the band WRAPS the whole sky; galaxy fades in gradually (no hard shell)
@@ -708,10 +709,12 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var aSpiral = Rgal / Math.exp(bsp * span);                                  // arm inner radius (derived so arms reach the rim)
     var thetaSun = Math.log(Rsun / aSpiral) / bsp, phase0 = Math.PI - thetaSun; // phase arm 0 so it threads the Sun → the Orion Arm
     var rng = gRng(7717), fb = gFbm(4021, 8), fb2 = gFbm(88, 12);
-    // a RICH galaxy palette: gold-white nucleus → amber → coral → rose → mauve/lavender rim
-    var RAMP = [[0, [1.0, 0.95, 0.82]], [0.08, [1.0, 0.85, 0.55]], [0.24, [1.0, 0.66, 0.42]], [0.44, [0.98, 0.5, 0.5]], [0.64, [0.86, 0.42, 0.6]], [1, [0.56, 0.36, 0.66]]];
+    // the REAL Milky Way palette (astrophotography, not the over-processed blue web version): a warm GOLD
+    // nucleus of old Population-II stars ("the colour of lions on the Serengeti") → tan → drifting cool →
+    // faint blue rim. Blue lives ONLY in the young-star arms; the core must never be white.
+    var RAMP = [[0, [1.0, 0.851, 0.627]], [0.08, [0.961, 0.753, 0.478]], [0.2, [0.91, 0.659, 0.376]], [0.35, [0.851, 0.659, 0.471]], [0.5, [0.784, 0.698, 0.604]], [0.65, [0.682, 0.706, 0.769]], [0.8, [0.624, 0.714, 0.839]], [1, [0.561, 0.659, 0.8]]];
     function ramp(f) { var i; for (i = 1; i < RAMP.length; i++) if (f <= RAMP[i][0]) break; if (i >= RAMP.length) i = RAMP.length - 1; var a = RAMP[i - 1], b = RAMP[i], k = (f - a[0]) / ((b[0] - a[0]) || 1); return [a[1][0] + (b[1][0] - a[1][0]) * k, a[1][1] + (b[1][1] - a[1][1]) * k, a[1][2] + (b[1][2] - a[1][2]) * k]; }
-    var COOL = [0.58, 0.74, 1.0], PINK = [1.0, 0.38, 0.72];                      // young blue-white arm stars; magenta HII star-forming knots
+    var COOL = [0.663, 0.769, 0.925], PINK = [0.91, 0.361, 0.541];               // young blue-white O/B arm stars; H-alpha magenta-red HII knots
     function G() { return rng() + rng() + rng() + rng() - 2; }                  // ~N(0, sd≈0.58)
     var P = [], Cc = [], GP = [], GC = [];                                       // star layer + a soft GLOW layer (large faint sprites → smooth luminosity)
     function push(pt, r, g2, b2, amp, glowC) {
@@ -724,7 +727,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
       if (glowC && rng() < glowC) { GP.push(pt.x, pt.y, pt.z); GC.push(cr, cg, cb); }  // a fraction also emit a big soft halo → smooth underglow
     }
     function disk(rr, ang, h) { return C.clone().addScaledVector(uu, rr * Math.cos(ang)).addScaledVector(vv, rr * Math.sin(ang)).addScaledVector(w, h); }
-    var armN = Math.round(N * 0.66), bulgeN = Math.round(N * 0.18), haloN = Math.round(N * 0.10), knotN = N - armN - bulgeN - haloN;
+    var armN = Math.round(N * 0.68), bulgeN = Math.round(N * 0.12), haloN = Math.round(N * 0.12), knotN = N - armN - bulgeN - haloN;   // fewer, dimmer bulge points → the core no longer piles up into an additive white blob
     // --- spiral arms: a thick glowing river with a dust rift, warm→cool colour, blue young stars ---
     for (var i = 0; i < armN; i++) {
       var arm = i % arms;
@@ -742,9 +745,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
       if (rng() > 0.42 + 0.58 * (1 - lane)) continue;                            // drop points in the rift → a real dark gap
       var vert = 0.5 + 0.5 * Math.exp(-(h * h) / (2 * (zsig * 0.72) * (zsig * 0.72)));
       var c = ramp(f), cr = c[0], cg = c[1], cb = c[2];
-      if (rng() < 0.15 * Math.min(1, f * 1.7)) { var tb = 0.4 + 0.6 * rng(); cr = cr * (1 - tb) + COOL[0] * tb; cg = cg * (1 - tb) + COOL[1] * tb; cb = cb * (1 - tb) + COOL[2] * tb; }  // young blue-white stars in the arms
-      var amp = (0.16 + 0.84 * Math.pow(rng(), 2.2)) * Math.min(1.3, dust) * (1 - 0.7 * lane) * vert;
-      push(disk(rr, a2, h), cr, cg, cb, amp, 0.1);
+      if (rng() < 0.24 * Math.min(1, f * 2.0)) { var tb = 0.5 + 0.5 * rng(); cr = cr * (1 - tb) + COOL[0] * tb; cg = cg * (1 - tb) + COOL[1] * tb; cb = cb * (1 - tb) + COOL[2] * tb; }  // young blue-white stars, more of them and bluer toward the outer arms
+      // power-law brightness (heavy dim tail — most points barely glow, a few are bright) × a radial cap so the inner disc can't wash to white
+      var amp = (0.1 + 0.72 * Math.pow(rng(), 2.5)) * Math.min(1.3, dust) * (1 - 0.7 * lane) * vert * (0.62 + 0.38 * Math.min(1, f * 2.2));
+      push(disk(rr, a2, h), cr, cg, cb, amp, 0.08);
     }
     // --- central bulge: a COMPACT, round, luminous GOLD core (the realistic tight nucleus, not a
     //     sprawl that swallows the nearby nebulae); many glow points → a blazing centre ---
@@ -753,7 +757,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var uax = rng() * 2 - 1, ph = rng() * Math.PI * 2, ss = Math.sqrt(1 - uax * uax);
       var bpt = C.clone().addScaledVector(uu, br * ss * Math.cos(ph)).addScaledVector(vv, br * ss * Math.sin(ph)).addScaledVector(w, br * uax * 0.7);
       var bc = ramp(0.04 + 0.24 * (br / (Rgal * 0.15)));
-      push(bpt, bc[0], bc[1], bc[2], 0.24 + 0.3 * Math.pow(rng(), 1.9), 0.18);   // dimmer core — no longer a blinding blob
+      push(bpt, bc[0], bc[1], bc[2], 0.16 + 0.22 * Math.pow(rng(), 2.4), 0.09);  // a warm-gold core held well below white — capped brightness, sparse glow
     }
     // --- faint inter-arm haze + a few globular clumps so the arms float in a glow ---
     var clumpN = Math.round(haloN * 0.2), smoothN = haloN - clumpN;
@@ -784,7 +788,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var gg = new T.BufferGeometry();
     gg.setAttribute("position", new T.BufferAttribute(new Float32Array(GP), 3));
     gg.setAttribute("color", new T.BufferAttribute(new Float32Array(GC), 3));
-    var gm = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 16 : 24, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.26, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var gm = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 16 : 24, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.17, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in gm) gm.toneMapped = false;
     var glow = new T.Points(gg, gm); glow.name = "MilkyWayGlow"; glow.renderOrder = -5; glow.frustumCulled = false;
     belt.add(glow);
@@ -792,7 +796,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var g = new T.BufferGeometry();
     g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
     g.setAttribute("color", new T.BufferAttribute(new Float32Array(Cc), 3));
-    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 2.9 : 3.5, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 2.9 : 3.5, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.6, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     var pts = new T.Points(g, m); pts.name = "MilkyWayGalaxy"; pts.renderOrder = -4; pts.frustumCulled = false;
     belt.add(pts);
@@ -804,25 +808,54 @@ export function buildNatalSky(THREE, scene, data, opts) {
   (function buildGalacticCore() {
     if (!galacticCentre) return;
     var grp = new T.Group(); grp.name = "DSO_galcore"; grp.position.copy(galacticCentre);
-    var bh = new T.Mesh(new T.SphereGeometry(46, 24, 18), new T.MeshBasicMaterial({ color: 0x000000, fog: false }));
-    bh.renderOrder = 1; grp.add(bh);                                            // opaque event horizon → a real dark void
-    var s = 128, rc = document.createElement("canvas"); rc.width = rc.height = s;
-    var rg = rc.getContext("2d"), grd = rg.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
-    grd.addColorStop(0.0, "rgba(0,0,0,0)"); grd.addColorStop(0.34, "rgba(0,0,0,0)");
-    grd.addColorStop(0.40, "rgba(255,190,110,0.85)"); grd.addColorStop(0.48, "rgba(255,242,208,1)");
-    grd.addColorStop(0.58, "rgba(255,150,80,0.7)"); grd.addColorStop(0.8, "rgba(150,72,42,0.16)"); grd.addColorStop(1.0, "rgba(0,0,0,0)");
-    rg.fillStyle = grd; rg.fillRect(0, 0, s, s);
-    var rtex = new T.CanvasTexture(rc); if ("colorSpace" in rtex && T.SRGBColorSpace) rtex.colorSpace = T.SRGBColorSpace;
-    var rm = new T.SpriteMaterial({ map: rtex, blending: T.AdditiveBlending, transparent: true, depthWrite: false, depthTest: false, fog: false });
-    if ("toneMapped" in rm) rm.toneMapped = false;
-    var ring = new T.Sprite(rm); ring.scale.set(250, 250, 1); ring.renderOrder = 3; grp.add(ring);  // accretion disc (transparent centre → the void shows through)
-    var gm2 = new T.SpriteMaterial({ map: DSO_SOFT, color: 0xffd6a0, blending: T.AdditiveBlending, transparent: true, opacity: 0.45, depthWrite: false, depthTest: false, fog: false });
+    // (1) the event horizon — a pure-black unlit sphere that truly OCCLUDES the disc/bulge behind it → reads as a hole, not a planet
+    var bh = new T.Mesh(new T.SphereGeometry(44, 28, 20), new T.MeshBasicMaterial({ color: 0x000000, fog: false }));
+    bh.renderOrder = 1; grp.add(bh);
+    // (2) the ACCRETION DISC — a real tilted world-space ring (foreshortens to a thin ellipse and crosses
+    //     in front of / behind the horizon as you orbit → the 3-D parallax that says "black hole"), painted
+    //     with a gold blackbody ramp + Doppler beaming (one side blazing blue-white, the far side dim-red)
+    var s = 512, dc = document.createElement("canvas"); dc.width = dc.height = s;
+    var dcx = dc.getContext("2d"), imgd = dcx.createImageData(s, s), dp = imgd.data, R = s / 2;
+    var STOP = [[0.0, [255, 246, 230]], [0.15, [255, 217, 160]], [0.4, [255, 179, 71]], [0.7, [255, 122, 47]], [1.0, [194, 42, 8]]];
+    function dramp(t) { var i; for (i = 1; i < STOP.length; i++) if (t <= STOP[i][0]) break; if (i >= STOP.length) i = STOP.length - 1; var a = STOP[i - 1], b = STOP[i], k = (t - a[0]) / ((b[0] - a[0]) || 1); return [a[1][0] + (b[1][0] - a[1][0]) * k, a[1][1] + (b[1][1] - a[1][1]) * k, a[1][2] + (b[1][2] - a[1][2]) * k]; }
+    for (var yy = 0; yy < s; yy++) for (var xx = 0; xx < s; xx++) {
+      var ddx = (xx - R) / R, ddy = (yy - R) / R, rr = Math.sqrt(ddx * ddx + ddy * ddy), ang = Math.atan2(ddy, ddx), o = (yy * s + xx) * 4;
+      if (rr < 0.30 || rr > 1.0) { dp[o + 3] = 0; continue; }
+      var t = (rr - 0.30) / 0.70, col = dramp(t);
+      var env = Math.min(1, (rr - 0.30) / 0.07) * Math.pow(1 - t, 1.35);           // fade in from the inner rim, die out toward the edge
+      var bs = 0.5 + 0.5 * Math.cos(ang), beam = 0.28 + 0.72 * bs;                 // Doppler: bright on the approaching side (ang≈0), dim on the receding side
+      var cb2 = Math.min(255, col[2] + 55 * bs);                                   // approaching side lifts blue-white; receding stays warm
+      dp[o] = col[0]; dp[o + 1] = col[1]; dp[o + 2] = cb2; dp[o + 3] = 255 * Math.min(1, env * beam);
+    }
+    dcx.putImageData(imgd, 0, 0);
+    var dtex = new T.CanvasTexture(dc); if ("colorSpace" in dtex && T.SRGBColorSpace) dtex.colorSpace = T.SRGBColorSpace;
+    var dmat = new T.MeshBasicMaterial({ map: dtex, blending: T.AdditiveBlending, transparent: true, depthWrite: false, side: T.DoubleSide, fog: false });
+    if ("toneMapped" in dmat) dmat.toneMapped = false;
+    var disc = new T.Mesh(new T.RingGeometry(4, 240, 128, 2), dmat); disc.renderOrder = 3;
+    var A = galacticCentre.clone().normalize(), wv = galacticNormal.clone();       // tilt the disc ~62° off the fly-in axis → a graceful ellipse, never edge-on nor flat-on
+    var wp = wv.clone().addScaledVector(A, -wv.dot(A)); if (wp.lengthSq() < 1e-6) wp.set(A.y, -A.x, 0); wp.normalize();
+    var th = 62 * Math.PI / 180, Ndisc = A.clone().multiplyScalar(Math.cos(th)).addScaledVector(wp, Math.sin(th)).normalize();
+    disc.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), Ndisc); grp.add(disc); _bhSpin.push(disc);
+    // (3) the PHOTON RING — a razor-thin blazing blue-white circle hugging the shadow (camera-facing so it
+    //     always rings the void: the single detail that sells the black hole + the lensed over/under halo)
+    var ps = 128, pcv = document.createElement("canvas"); pcv.width = pcv.height = ps;
+    var pgx = pcv.getContext("2d"), pgr = pgx.createRadialGradient(ps / 2, ps / 2, 0, ps / 2, ps / 2, ps / 2);
+    pgr.addColorStop(0.0, "rgba(0,0,0,0)"); pgr.addColorStop(0.34, "rgba(190,220,255,0)");
+    pgr.addColorStop(0.40, "rgba(220,236,255,0.55)"); pgr.addColorStop(0.44, "rgba(248,251,255,1)"); pgr.addColorStop(0.48, "rgba(220,236,255,0.5)");
+    pgr.addColorStop(0.60, "rgba(190,220,255,0)"); pgr.addColorStop(1.0, "rgba(0,0,0,0)");
+    pgx.fillStyle = pgr; pgx.fillRect(0, 0, ps, ps);
+    var ptex = new T.CanvasTexture(pcv); if ("colorSpace" in ptex && T.SRGBColorSpace) ptex.colorSpace = T.SRGBColorSpace;
+    var pmat = new T.SpriteMaterial({ map: ptex, blending: T.AdditiveBlending, transparent: true, depthWrite: false, depthTest: false, fog: false });
+    if ("toneMapped" in pmat) pmat.toneMapped = false;
+    var photon = new T.Sprite(pmat); photon.scale.set(150, 150, 1); photon.renderOrder = 4; grp.add(photon);
+    // (4) the soft warm GLOW — ties it together, readable from across the galaxy
+    var gm2 = new T.SpriteMaterial({ map: DSO_SOFT, color: 0xffcf9a, blending: T.AdditiveBlending, transparent: true, opacity: 0.4, depthWrite: false, depthTest: false, fog: false });
     if ("toneMapped" in gm2) gm2.toneMapped = false;
-    var glow = new T.Sprite(gm2); glow.scale.set(560, 560, 1); glow.renderOrder = 2; grp.add(glow);  // luminous halo, readable from afar
+    var glow = new T.Sprite(gm2); glow.scale.set(640, 640, 1); glow.renderOrder = 2; grp.add(glow);
     belt.add(grp);
     var shell = new T.Mesh(new T.SphereGeometry(210, 12, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
     shell.position.copy(galacticCentre); shell.name = "DSOPick_galcore";
-    shell.userData.nyePick = "dso_galcore"; shell.userData.dsoViewDist = 640; shell.userData.dsoFocusMin = 130;
+    shell.userData.nyePick = "dso_galcore"; shell.userData.dsoViewDist = 600; shell.userData.dsoFocusMin = 120;
     shell.userData.dsoName = { en: "Galactic Centre · Sgr A*", zh: "银心 · 人马座 A*" };
     dsoPickGroup.add(shell);
   })();
@@ -958,7 +991,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   }
 
   /* ---------------- lifecycle ---------------- */
-  var t0 = null, backdropMul = 1, _bdCache = null;
+  var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null;
   function lineOpacities(sec) {
     // entrance pulse: the constellations announce themselves, then settle
     if (t0 === null) t0 = sec;
@@ -967,23 +1000,29 @@ export function buildNatalSky(THREE, scene, data, opts) {
     for (var ci = 0; ci < lineEntries.length; ci++) {
       var e = lineEntries[ci]; if (!e) continue;
       var hl = isLit(ci) ? 1.9 : 1;
-      e.mat.opacity = Math.min(1.0, e.base * (isDark ? 1 : 1.18) * pulse * hl) * backdropMul;
-      if (e.glowMat) e.glowMat.opacity = Math.min(0.68, e.base * 0.42 * pulse * hl) * backdropMul;
+      e.mat.opacity = Math.min(1.0, e.base * (isDark ? 1 : 1.18) * pulse * hl) * backdropMul * zoomMul;
+      if (e.glowMat) e.glowMat.opacity = Math.min(0.68, e.base * 0.42 * pulse * hl) * backdropMul * zoomMul;
     }
   }
   /* when the visitor flies IN to admire one deep-sky wonder, the whole backdrop steps aside
      (constellations, galaxy, starfield fade) so the nebula owns the frame; t: 0 normal → 1 dimmed */
-  function setBackdropDim(t) {
+  function setBackdropDim(t, keepGalaxy) {
     backdropMul = 1 - 0.9 * t;
     if (!_bdCache) {
       _bdCache = [];
       ["Starfield", "MilkyWayGalaxy", "MilkyWayGlow"].forEach(function (nm) {
         var o = group.getObjectByName(nm);
-        if (o && o.material) _bdCache.push({ m: o.material, base: o.material.opacity, keep: nm === "Starfield" ? 0.45 : 0.14 });
+        if (o && o.material) _bdCache.push({ m: o.material, base: o.material.opacity, nm: nm });
       });
-      if (starPoints && starPoints.material) _bdCache.push({ m: starPoints.material, base: starPoints.material.opacity, keep: 0.4 });
+      if (starPoints && starPoints.material) _bdCache.push({ m: starPoints.material, base: starPoints.material.opacity, nm: "natalStars" });
     }
-    for (var i = 0; i < _bdCache.length; i++) { var e = _bdCache[i]; e.m.opacity = e.base * (1 - (1 - e.keep) * t); }
+    for (var i = 0; i < _bdCache.length; i++) {
+      var e = _bdCache[i], gal = (e.nm === "MilkyWayGalaxy" || e.nm === "MilkyWayGlow");
+      // flying to the galactic-centre black hole, the galaxy STAYS (it's the context — the hole lives at its heart);
+      // for a lone nebula the galaxy steps aside too. Constellations + starfield always fade so the wonder owns the frame.
+      var keep = gal ? (keepGalaxy ? 1 : 0.14) : (e.nm === "Starfield" ? 0.45 : 0.4);
+      e.m.opacity = e.base * (1 - (1 - keep) * t);
+    }
   }
   var api = {
     group: group,
@@ -991,6 +1030,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     tick: function (sec) {
       uniforms.uTime.value = sec;
       lineOpacities(sec);
+      for (var _bi = 0; _bi < _bhSpin.length; _bi++) _bhSpin[_bi].rotateZ(0.004);   // the accretion disc slowly turns → orbiting gas
       if (bloomSprite && bloomT > 0) { bloomT = Math.max(0, bloomT - 0.045); bloomSprite.material.opacity = bloomT * 0.7; if (bloomT === 0) bloomSprite.visible = false; }
       updateLabels();
     },
@@ -1043,6 +1083,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // live tuning levers (for judging on the real machine)
     setLineOpacity: function (v) { for (var i = 0; i < lineEntries.length; i++) { var e = lineEntries[i]; if (e) e.base = cons[i].loadBearing ? v : v * 0.48; } },
     setBackdropDim: setBackdropDim,
+    // pulled far enough back that the whole galaxy fills the view → the ecliptic zodiac constellations
+    // (a solar-system-scale ring) melt away: they'd sit jarringly inside a galaxy-scale frame. t: 0 shown → 1 hidden
+    setZodiacFade: function (t) { zoomMul = 1 - Math.max(0, Math.min(1, t)); },
     setStarScale: function (v) { uniforms.uRefDepth.value = 840 * v; },
     stats: { stars: N, segments: totalSegs, dataNodes: nodeIndex.filter(Boolean).length, planets: planetSprites.length, constellations: cons.length },
     dispose: function () {

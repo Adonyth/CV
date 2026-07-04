@@ -988,7 +988,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=13").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=59").then(function (mod) {
+      return import("./natal-sky.js?v=60").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1123,7 +1123,7 @@
 
       /* when the Earth owns the page (close zoom) and the hand hovers it, the
          干支 rings step aside — the globe becomes the sole subject */
-      var ringFadeMats = null, ringFade = 1, soloBody = null, backdropDim = 0;   /* "sun"|"moon": rings step aside entirely; backdropDim eases when admiring a deep-sky wonder */
+      var ringFadeMats = null, ringFade = 1, soloBody = null, backdropDim = 0, _bdGalPrev = false;   /* "sun"|"moon": rings step aside entirely; backdropDim eases when admiring a deep-sky wonder; _bdGalPrev tracks the galactic-centre keep-galaxy mode */
       function collectRingMats() {
         if (ringFadeMats || !nyeArmature) return;
         ringFadeMats = [];
@@ -1136,9 +1136,10 @@
         });
       }
       function applyRingFade() {
-        // admiring one deep-sky wonder → the whole backdrop (constellations, galaxy, starfield) steps aside
-        var wantBD = (soloBody === "dso") ? 1 : 0;
-        if (Math.abs(backdropDim - wantBD) > 0.002) { backdropDim += (wantBD - backdropDim) * 0.06; if (natalSky && natalSky.setBackdropDim) natalSky.setBackdropDim(backdropDim); }
+        // admiring one deep-sky wonder → the backdrop steps aside. For a lone nebula the galaxy fades too;
+        // for the galactic-centre black hole the galaxy STAYS (the hole lives at its heart — keep the context).
+        var isGal = (soloBody === "galcore"), wantBD = (soloBody === "dso" || isGal) ? 1 : 0;
+        if (Math.abs(backdropDim - wantBD) > 0.002 || (wantBD > 0 && isGal !== _bdGalPrev)) { backdropDim += (wantBD - backdropDim) * 0.06; if (natalSky && natalSky.setBackdropDim) natalSky.setBackdropDim(backdropDim, isGal); _bdGalPrev = isGal; }
         if (!nyeArmature) return;
         collectRingMats(); if (!ringFadeMats) return;
         var r = controls.getRadius();
@@ -1483,7 +1484,7 @@
         var obj = (natalSky && natalSky.group.getObjectByName("DSO_" + id)) || shell;
         if (!obj) return;
         var w = obj.getWorldPosition(new THREE.Vector3());
-        soloBody = "dso";
+        soloBody = (id === "galcore") ? "galcore" : "dso";   // the galactic centre keeps its galaxy; a lone nebula owns an empty frame
         clearSel();
         controls.setDistanceLimits(fmin, 3400);
         var outward = w.clone().normalize();
@@ -1521,8 +1522,10 @@
       window.__space.uiTick = function () {
         // zoomed back out BY HAND → the chart reassembles (never mid-flight). A deep-sky wonder is
         // admired from far out (view-dist ~400), so its focus only releases when you truly pull away.
-        if (soloBody && soloBody !== "dso" && !glideActive() && controls.getRadius() > 130) soloBody = null;
-        if (soloBody === "dso" && !glideActive() && controls.getRadius() > 900) soloBody = null;
+        if (soloBody && soloBody !== "dso" && soloBody !== "galcore" && !glideActive() && controls.getRadius() > 130) soloBody = null;
+        if ((soloBody === "dso" || soloBody === "galcore") && !glideActive() && controls.getRadius() > 900) soloBody = null;
+        // pulled back to galaxy scale (most/all of the galaxy in view) → the solar-system zodiac ring melts away
+        if (natalSky && natalSky.setZodiacFade) { var _zr = controls.getRadius(); natalSky.setZodiacFade((_zr - 1150) / 800); }
         if (selStar && starCta) {
           _selV.copy(selStar.world).project(camera);
           if (_selV.z > 1 || Math.abs(_selV.x) > 1.05 || Math.abs(_selV.y) > 1.05) { starCta.classList.remove("is-on"); }
