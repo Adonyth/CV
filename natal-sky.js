@@ -1029,34 +1029,59 @@ export function buildNatalSky(THREE, scene, data, opts) {
   function buildLaniakeaFlow() {
     if (_laniakeaFlow) return;
     var wr = gRng(0x1a71ea), wG = function () { return wr() + wr() + wr() - 1.5; };
-    var F = new T.Vector3(0.30, 0.42, -0.72).normalize().multiplyScalar(2100);   // the Great Attractor — the convergence point (our supercluster's centre of mass)
+    // Built at the LANIAKEA ladder scale (sceneRadius ~9700): the Great Attractor focus sits offset from HOME so
+    // WE (the origin, the camera pivot) sit off the bright focus — on the basin's slope, exactly as refs 1/3 show.
+    var Fdir = new T.Vector3(0.30, 0.42, -0.72).normalize();
+    var F = Fdir.clone().multiplyScalar(3800);   // the Great Attractor — the convergence point of the whole basin
     var swirlAxis = new T.Vector3(0.18, 1, 0.12).normalize();
-    var NLINE = mobile ? 900 : 1600, RAD = 5000;
+    var RAD = 8200, NLINE = mobile ? 1100 : 2200;
+    // three fixed lobe axes bend the spawn shell into the IRREGULAR Tully basin (not a round ball): bulge toward
+    // Virgo + Hydra-Centaurus, pinch at the Perseus-Pisces divide where our edge lies.
+    var AX_VIRGO = eclVec(raDecToEcl(12.442, 12.72), 1).normalize();
+    var AX_CENT = Fdir.clone();
+    var AX_PP = eclVec(raDecToEcl(3.267, 41.5), 1).normalize();
+    function basinLobe(d) { return 0.70 + 0.42 * Math.max(0, d.dot(AX_VIRGO)) + 0.30 * Math.max(0, d.dot(AX_CENT)) - 0.26 * Math.max(0, d.dot(AX_PP)); }
     var P = [], C = [];
+    function pushFlow(x, y, z, br, wf) { P.push(x, y, z); C.push(1.0 * br, (0.80 + 0.18 * wf) * br, (0.40 + 0.48 * wf) * br); }
     for (var s = 0; s < NLINE; s++) {
       var d0 = new T.Vector3(2 * wr() - 1, 2 * wr() - 1, 2 * wr() - 1); if (d0.lengthSq() < 1e-4) d0.set(1, 0, 0); d0.normalize();
-      var pos = F.clone().addScaledVector(d0, RAD * (0.32 + 0.68 * Math.pow(wr(), 0.5)));
-      var steps = 46 + (wr() * 44 | 0), handed = (s % 2 === 0) ? 1 : -1;
+      var pos = F.clone().addScaledVector(d0, RAD * (0.30 + 0.70 * Math.pow(wr(), 0.5)) * basinLobe(d0));
+      var steps = 46 + (wr() * 44 | 0), handed = d0.dot(swirlAxis) > 0 ? 1 : -1;   // coherent comb per hemisphere (refs 1/3), not per-line swirl
       for (var t = 0; t < steps; t++) {
         var toF = new T.Vector3().subVectors(F, pos), dF = toF.length();
-        if (dF < 45) break;
+        if (dF < 80) break;
         toF.multiplyScalar(1 / dF);
         var tang = new T.Vector3().crossVectors(toF, swirlAxis); if (tang.lengthSq() < 1e-4) tang.set(1, 0, 0); tang.normalize();
-        var frac = dF / RAD, stepLen = 26 + 105 * frac;
-        pos.addScaledVector(toF, stepLen).addScaledVector(tang, handed * stepLen * (0.32 + 0.5 * frac));
-        pos.x += wG() * 7; pos.y += wG() * 7; pos.z += wG() * 7;
+        var frac = dF / RAD, stepLen = 48 + 188 * frac;
+        pos.addScaledVector(toF, stepLen).addScaledVector(tang, handed * stepLen * (0.30 + 0.5 * frac));
+        pos.x += wG() * 13; pos.y += wG() * 13; pos.z += wG() * 13;
         var prox = 1 - Math.min(1, frac), br = 0.20 + 1.15 * prox * prox, wf = Math.max(0, prox - 0.5) / 0.5;   // gold → white as it nears the attractor
-        P.push(pos.x, pos.y, pos.z); C.push(1.0 * br, (0.80 + 0.18 * wf) * br, (0.40 + 0.48 * wf) * br);
+        pushFlow(pos.x, pos.y, pos.z, br, wf);
       }
     }
-    for (var m2 = 0; m2 < 60; m2++) {   // US — a warm marker at the origin (we sit on the basin's outer slope)
-      var mr = Math.pow(wr(), 2) * 80, mu = 2 * wr() - 1, mp = 2 * Math.PI * wr(), ms = Math.sqrt(1 - mu * mu);
-      P.push(mr * ms * Math.cos(mp), mr * mu, mr * ms * Math.sin(mp)); C.push(1.05, 0.42, 0.28);
+    // the GREAT-ATTRACTOR convergence NODE — the bright sink every streamline points at (refs 1/3)
+    for (var n = 0; n < (mobile ? 200 : 320); n++) {
+      var nr = Math.pow(wr(), 1.7) * 190, nu = 2 * wr() - 1, np = 2 * Math.PI * wr(), ns = Math.sqrt(1 - nu * nu);
+      pushFlow(F.x + nr * ns * Math.cos(np), F.y + nr * ns * Math.sin(np), F.z + nr * nu, 1.25, 1.0);
+    }
+    // the irregular BASIN RIM — a soft dim-gold dust ribbon at the flow-divide surface, enclosing the flow
+    var NRIM = mobile ? 800 : 1500;
+    for (var r2 = 0; r2 < NRIM; r2++) {
+      var ru = 2 * wr() - 1, rp = 2 * Math.PI * wr(), rs = Math.sqrt(1 - ru * ru);
+      var rd = new T.Vector3(rs * Math.cos(rp), ru, rs * Math.sin(rp));
+      var rr = RAD * basinLobe(rd) * (1.0 + (wr() - 0.5) * 0.06);
+      var rp3 = F.clone().addScaledVector(rd, rr);
+      P.push(rp3.x, rp3.y, rp3.z); C.push(0.34, 0.25, 0.12);   // dim warm gold — the rim is subordinate to the flow
+    }
+    // US — a warm-coral marker at HOME (the camera pivot), on the basin's outer slope near the P-P divide
+    for (var m2 = 0; m2 < 90; m2++) {
+      var mr = Math.pow(wr(), 2) * 210, mu2 = 2 * wr() - 1, mp2 = 2 * Math.PI * wr(), mss = Math.sqrt(1 - mu2 * mu2);
+      P.push(mr * mss * Math.cos(mp2), mr * mu2, mr * mss * Math.sin(mp2)); C.push(1.15, 0.46, 0.30);
     }
     var g = new T.BufferGeometry();
     g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
     g.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
-    var mat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 30 : 42, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var mat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 46 : 64, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in mat) mat.toneMapped = false;
     _laniakeaFlow = new T.Points(g, mat); _laniakeaFlow.name = "LaniakeaFlow"; _laniakeaFlow.renderOrder = -5; _laniakeaFlow.frustumCulled = false; _laniakeaFlow.visible = false;
     belt.add(_laniakeaFlow);
@@ -1341,35 +1366,46 @@ export function buildNatalSky(THREE, scene, data, opts) {
       }
       if (o.camera) {
         var _cl = o.camera.position.length();
-        // TIER 3 — LANIAKEA FLOW BASIN (our supercluster): blooms at the supercluster scale, between the galaxy
-        // and the whole cosmic web (in ~4000-7500, gone by ~9500 as the web takes over).
+        // ===== THE COSMIC-ADDRESS DRIVER owns every scale fade now. One log-space trapezoid per tier
+        //       (window.CosmicLOD); no scattered magic numbers. Weights fall back to the old bands if the
+        //       LOD module ever fails to load, so the scene never goes dark. =====
+        var LOD = window.CosmicLOD, _lg = Math.log(Math.max(1, _cl));
+        var _wMW   = LOD ? LOD.weight(_cl, "milky-way")   : Math.max(0, Math.min(1, (4800 - _cl) / 1400));
+        var _wLG   = LOD ? LOD.weight(_cl, "local-group") : 0;
+        var _wVir  = LOD ? LOD.weight(_cl, "virgo-supercluster") : 0;
+        var _wLani = LOD ? LOD.weight(_cl, "laniakea")    : Math.max(0, Math.min(1, (_cl - 4400) / 1400)) * Math.max(0, Math.min(1, (9600 - _cl) / 1800));
+        var _wWeb  = LOD ? LOD.weight(_cl, "cosmic-web")  : Math.max(0, Math.min(1, (_cl - 8200) / 2600));
+        // TIER — LANIAKEA FLOW BASIN (our supercluster): owns the laniakea tier.
         if (_laniakeaFlow) {
-          var _lfo = Math.max(0, Math.min(1, (_cl - 4400) / 1400)) * Math.max(0, Math.min(1, (9600 - _cl) / 1800)) * 0.95;
-          if (_lfo > 0.008) { _laniakeaFlow.visible = true; _laniakeaFlow.material.opacity = _lfo; } else if (_laniakeaFlow.visible) { _laniakeaFlow.visible = false; }
+          var _lfo = _wLani * 0.95;
+          if (_lfo > 0.006) { _laniakeaFlow.visible = true; _laniakeaFlow.material.opacity = _lfo; } else if (_laniakeaFlow.visible) { _laniakeaFlow.visible = false; }
         }
-        // TIER 4 — the whole COSMIC WEB (universe scale): blooms only once you pull PAST our supercluster, so it
-        // doesn't clash with the flow basin. By here our whole Laniakea has collapsed to one node.
+        // TIER — the whole COSMIC WEB (universe scale): owns the cosmic-web tier; our Laniakea is one node here.
         if (_cosmicWeb) {
-          var _cwo = Math.max(0, Math.min(1, (_cl - 8200) / 2600)) * 0.95;
-          if (_cwo > 0.008) { _cosmicWeb.visible = true; _cosmicWeb.material.opacity = _cwo; } else if (_cosmicWeb.visible) { _cosmicWeb.visible = false; }
+          var _cwo = _wWeb * 0.95;
+          if (_cwo > 0.006) { _cosmicWeb.visible = true; _cosmicWeb.material.opacity = _cwo; } else if (_cosmicWeb.visible) { _cosmicWeb.visible = false; }
         }
-        // STARFIELD recedes at web scale: the uniform local stars would drown the cosmic-web nodes/filaments, so
-        // fade them (full at galaxy scale ≤5500, down to a faint 0.10 by ~10000) → the WARM WEB becomes the star
-        // of the max-zoom view. (× the solo-dim factor so admiring a lone wonder still dims the field.)
+        // STARFIELD (the local night-sky stars) is a MILKY-WAY-and-inward thing: full at the star-chart/galaxy
+        // scale, faded out by the Local Group tier so it never drowns the deep structure. (× solo-dim factor.)
         if (!_sfMat) { var _sfo = group.getObjectByName("Starfield"); if (_sfo && _sfo.material) { _sfMat = _sfo.material; _sfBase = _sfo.material.opacity; } }
-        if (_sfMat) { var _sfScale = Math.max(0.08, Math.min(1, (7000 - _cl) / 3200)); _sfMat.opacity = _sfBase * _sfScale * (1 - 0.55 * _bdT); }
-        // GALAXY recedes at web scale: a whole galaxy is an invisible speck at cosmic-web scale, so the giant
-        // central spiral fades as you pull out (full at galaxy scale ≤6500, faint by ~10500) → the scale finally
-        // reads — the web is VAST and the Milky Way is just ONE tiny node in it (see the MW node in the web).
+        if (_sfMat) { var _sfScale = LOD ? Math.max(0.05, 1 - LOD.smooth(Math.log(2600), Math.log(5400), _lg)) : Math.max(0.08, Math.min(1, (7000 - _cl) / 3200)); _sfMat.opacity = _sfBase * _sfScale * (1 - 0.55 * _bdT); }
+        // GALAXY owns the milky-way tier: it fades IN as you leave the whole-sky (~260) and fades OUT as the
+        // Local Group takes over (~5400), where it collapses to one node. A whole galaxy is a speck beyond that.
         if (!_galMats) { var _g1 = group.getObjectByName("MilkyWayGalaxy"), _g2 = group.getObjectByName("MilkyWayGlow"); if (_g1 && _g2) _galMats = [{ m: _g1.material, base: _g1.material.opacity }, { m: _g2.material, base: _g2.material.opacity }]; }
-        if (_galMats) { var _gScale = Math.max(0, Math.min(1, (4800 - _cl) / 1400)), _gSolo = _keepGal ? 1 : (1 - 0.86 * _bdT); for (var _gi = 0; _gi < _galMats.length; _gi++) _galMats[_gi].m.opacity = _galMats[_gi].base * _gScale * _gSolo; }
-        // LOCAL structures (nebulae, Andromeda, the black hole) VANISH at the supercluster scale — at Laniakea's
-        // ~5,200-galaxy size they are all sub-pixel specks. Hard-hide them so the flow basin owns the frame.
-        if (!_localHide && _cl > 3000) {
-          _localHide = []; var _andO = group.getObjectByName("Andromeda"); if (_andO) _localHide.push(_andO);
-          group.traverse(function (o) { if (o.name && o.name.indexOf("DSO_") === 0) _localHide.push(o); });
+        if (_galMats) { var _gSolo = _keepGal ? 1 : (1 - 0.86 * _bdT); for (var _gi = 0; _gi < _galMats.length; _gi++) _galMats[_gi].m.opacity = _galMats[_gi].base * _wMW * _gSolo; }
+        // LOCAL structures collapse tier by tier: the MW-internal nebulae + black hole vanish once past the
+        // galaxy tier; Andromeda (M31) belongs to the Local Group, so it lingers through that tier and only
+        // goes once we pull out to the supercluster. Nothing hard-cuts — each tracks its own tier's weight.
+        if (!_localHide && _cl > 800) {
+          _localHide = { dso: [], andro: null };
+          var _andO = group.getObjectByName("Andromeda"); if (_andO) _localHide.andro = _andO;
+          group.traverse(function (ob) { if (ob.name && ob.name.indexOf("DSO_") === 0) _localHide.dso.push(ob); });
         }
-        if (_localHide) { var _hl = _cl > 4600; for (var _hi = 0; _hi < _localHide.length; _hi++) _localHide[_hi].visible = !_hl; }
+        if (_localHide) {
+          var _hideDso = _wMW < 0.04;
+          for (var _hi = 0; _hi < _localHide.dso.length; _hi++) _localHide.dso[_hi].visible = !_hideDso;
+          if (_localHide.andro) _localHide.andro.visible = (_wMW > 0.06 || _wLG > 0.02);
+        }
       }
       if (bloomSprite && bloomT > 0) { bloomT = Math.max(0, bloomT - 0.045); bloomSprite.material.opacity = bloomT * 0.7; if (bloomT === 0) bloomSprite.visible = false; }
       updateLabels();
