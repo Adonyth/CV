@@ -90,7 +90,7 @@
     scene.fog = new THREE.FogExp2(0x0b0a09, 0.0018); // fog === body colour --page; no back wall
     // NEVER set scene.background — one black on the page (CSS --page)
 
-    var camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 13000);  // far plane: maxDist 3400 (pull OUT to behold the galaxy) + the vast disc rim (~3950) + far nebulae now pushed to ~6800 + the deep starfield (7200) → nothing clips from any vantage
+    var camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 42000);  // far plane: maxDist 3400 (pull OUT to behold the galaxy) + the vast disc rim (~3950) + far nebulae now pushed to ~6800 + the deep starfield (7200) → nothing clips from any vantage
     /* cosmos: the camera orbits the world with the REAL Nye Clock's premium
        trackball — world-space angular velocity about ANY axis, up-vector riding
        along (ported from nye-clock-bazi.html createPremiumOrbitControls).
@@ -500,7 +500,7 @@
       camera.lookAt(HOME);
       controls = createPremiumOrbitControls(camera, canvas, THREE);
       controls.target.copy(HOME);
-      controls.setDistanceLimits(5.0, 3400);   // 5.0 floor clears the Moon (2.99); 1600 lets you pull all the way back and comfortably frame the whole system + the expanded zodiac shell (R_STAR 410, far stars ~615) in one view
+      controls.setDistanceLimits(5.0, 13000);   // 5.0 floor clears the Moon (2.99); 1600 lets you pull all the way back and comfortably frame the whole system + the expanded zodiac shell (R_STAR 410, far stars ~615) in one view
       controls.setInteractionTuning({ rotateSpeed: 0.00050, dampingFactor: 0.042, zoomStepLn: 0.40, zoomRef: 100, zoomHi: 2.2, zoomEase: 0.18, maxEventDelta: 0.014 });
       canvas.style.opacity = "0.001";
       setTimeout(function () {   // fallback: never leave the visitor in the dark
@@ -994,7 +994,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=13").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=75").then(function (mod) {
+      return import("./natal-sky.js?v=76").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1398,7 +1398,7 @@
         if (!obj) return;
         soloBody = ({ NyeSun: "sun", NyeMoon: "moon", NatalJupiter: "jupiter", NatalSaturn: "saturn", NatalMercury: "mercury", NatalVenus: "venus", NatalMars: "mars", NatalUranus: "uranus", NatalNeptune: "neptune", NatalPluto: "pluto", NatalPlutoMoon: "charon" })[objName] || soloBody;
         clearSel();
-        controls.setDistanceLimits(FOCUS_MIN[objName] || 5.0, 3400);   // AFTER clearSel — clearSel resets the floor to the earth-anchored 5.0; 1600 lets you pull back from any focused body to the full-system overview
+        controls.setDistanceLimits(FOCUS_MIN[objName] || 5.0, 13000);   // AFTER clearSel — clearSel resets the floor to the earth-anchored 5.0; 1600 lets you pull back from any focused body to the full-system overview
         var w = obj.getWorldPosition(new THREE.Vector3());
         /* stand OUTSIDE the body along the Earth→body line, swung aside within the
            gear-ring plane AND lifted above it — the sightline can never pass through
@@ -1453,7 +1453,7 @@
       var selStar = null, starCta = document.getElementById("star-cta");
       function clearSel() {
         selStar = null; if (starCta) starCta.classList.remove("is-on");
-        if (controls) controls.setDistanceLimits(5.0, 3400);   // leaving any body-focus: the earth-anchored floor returns; 1600 keeps the full-system overview reachable
+        if (controls) controls.setDistanceLimits(5.0, 13000);   // leaving any body-focus: the earth-anchored floor returns; 1600 keeps the full-system overview reachable
       }
       window.__space.clearSel = clearSel;
       function openStarDoor() {
@@ -1500,7 +1500,7 @@
         var w = obj.getWorldPosition(new THREE.Vector3());
         soloBody = (id === "galcore") ? "galcore" : "dso";   // the galactic centre keeps its galaxy; a lone nebula owns an empty frame
         clearSel();
-        controls.setDistanceLimits(fmin, 3400);
+        controls.setDistanceLimits(fmin, 13000);
         var outward = w.clone().normalize();
         if (outward.lengthSq() < 1e-9) outward.set(0, 0, 1);
         // approach nearly along the Earth→cloud line so the cloud (which faces home) is seen FACE-ON,

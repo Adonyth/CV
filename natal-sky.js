@@ -748,7 +748,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
      in one draw call. A local "bubble" is carved out so no galaxy star clutters the planets or
      the constellations that live nearer than the arm. Built once — zero per-frame cost. -------- */
   var galacticCentre = null, galacticNormal = null, _bhSpin = [], _bhBB = [];    // exposed for the clickable black-hole nucleus; _bhBB = camera-facing Gargantua quads (billboarded + time-driven each tick)
-  var _bbPQ = new T.Quaternion(), _bbCQ = new T.Quaternion();
+  var _bbPQ = new T.Quaternion(), _bbCQ = new T.Quaternion(), _cosmicWeb = null;
   (function buildMilkyWayGalaxy() {
     var Rgal = 2600, N = mobile ? 78000 : 118000;                              // VAST but leaner — a real galaxy the size of the sky; count trimmed to cut additive-overdraw stutter (the glow underlayer keeps it dense-looking)
     var Rsun = 0.52 * Rgal, Rin = 42, Rout = 150, hSun = 140;                   // Sun's galactocentric radius; the Orion ARM flows right THROUGH the solar system (tiny 42-unit clearing only for the planets themselves) → the sun sits embedded in the arm, not in a carved-out hole that truncates it
@@ -787,8 +787,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var theta = Math.pow(rng(), 1.7) * span;                                  // density front-loaded toward the core
       var rC = aSpiral * Math.exp(bsp * theta);
       var ang = theta + phase0 + arm * (2 * Math.PI / arms);
-      var rsig = 10 + 0.14 * rC;
-      var x = rC * Math.cos(ang) + G() * rsig, z = rC * Math.sin(ang) + G() * rsig;
+      var rsig = 7 + 0.10 * rC;                                                  // tighter transverse scatter → cleaner, more defined sweeping arms with darker inter-arm gaps
+      var tgt = G(); tgt = (tgt < 0 ? -1 : 1) * Math.pow(Math.abs(tgt), 1.35);   // power-law tighten onto the arm ridge (most stars on the arm, a few in the halo skirt)
+      var x = rC * Math.cos(ang) + tgt * rsig, z = rC * Math.sin(ang) + G() * rsig;
       var rr = Math.sqrt(x * x + z * z), a2 = Math.atan2(z, x), f = rr / Rgal;
       var zsig = (120 + 0.108 * rC) * (0.5 + 0.5 * Math.exp(-rC / (Rgal * 0.6)));  // 3× thicker disc — a deep, voluminous band, not a thin ribbon
       var h = G() * zsig;
@@ -818,15 +819,22 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var hr = Math.sqrt(rng()) * Rgal * 1.02, ha = rng() * Math.PI * 2, hc = ramp(hr / Rgal);
       push(disk(hr, ha, G() * (60 + 0.05 * hr)), hc[0], hc[1], hc[2], 0.08 + 0.14 * Math.pow(rng(), 2.4), 0.04);
     }
-    // --- PINK HII star-forming knots strung along the arms: the dramatic colour pops of a real spiral ---
-    var nKnot = 20;
+    // --- PINK HII star-forming knots along the arms: NATURAL complexes, not "20 uniform pink golf balls".
+    //     Many small + a few big (power-law size AND richness), elongated + ragged with diffuse skirts,
+    //     irregularly placed, blended at arm-level glow → real H-alpha regions, no artificial clumping. ---
+    var nKnot = 90;
     for (var kn = 0; kn < nKnot; kn++) {
-      var karm = kn % arms, kth = (0.2 + 0.75 * (kn / nKnot)) * span + (rng() - 0.5) * 0.4;
+      var karm = (rng() < 0.85) ? (kn % arms) : ((kn + 1 + ((rng() * 2) | 0)) % arms);   // mostly on-arm, occasionally off → breaks the 4-fold regularity
+      var kth = (0.15 + 0.8 * rng()) * span;                                             // pure-random θ → no string-of-pearls
       var krC = aSpiral * Math.exp(bsp * kth), kang = kth + phase0 + karm * (2 * Math.PI / arms);
-      var kbase = disk(krC, kang, G() * 30), ks = 26 + rng() * 46;
-      for (var mk = 0; mk < knotN / nKnot; mk++) {
-        var kp = kbase.clone().addScaledVector(uu, G() * ks).addScaledVector(vv, G() * ks).addScaledVector(w, G() * ks * 0.45);
-        push(kp, PINK[0], PINK[1] * (0.8 + 0.3 * rng()), PINK[2] * (0.9 + 0.2 * rng()), (0.4 + 0.55 * Math.pow(rng(), 1.6)), 0.34);
+      var kbase = disk(krC, kang, G() * 30);
+      var ks = 12 + 70 * Math.pow(rng(), 2.4);                                            // power-law sizes: mostly small, a rare large complex
+      var el = 1.6 + rng();                                                              // elongated along the arm, not a round ball
+      var kCount = Math.max(8, Math.round((knotN / nKnot) * 3 * Math.pow(rng(), 2.2)));   // power-law richness: big knots rich, small ones wisps
+      for (var mk = 0; mk < kCount; mk++) {
+        var kp = kbase.clone().addScaledVector(uu, G() * ks * el).addScaledVector(vv, G() * ks / el).addScaledVector(w, G() * ks * 0.35);
+        if (rng() < 0.25) kp.addScaledVector(uu, G() * ks * 1.8).addScaledVector(vv, G() * ks * 1.8);   // a sparse ragged skirt
+        push(kp, PINK[0], PINK[1] * (0.8 + 0.3 * rng()), PINK[2] * (0.9 + 0.2 * rng()), (0.22 + 0.5 * Math.pow(rng(), 2.0)), 0.14);
       }
     }
     // the GLOW underlayer — big soft low-opacity sprites blur into a smooth luminous galaxy beneath the stars
@@ -898,6 +906,64 @@ export function buildNatalSky(THREE, scene, data, opts) {
     shell.userData.nyePick = "dso_galcore"; shell.userData.dsoViewDist = 600; shell.userData.dsoFocusMin = 120;
     shell.userData.dsoName = { en: "Galactic Centre · Sgr A*", zh: "银心 · 人马座 A*" };
     dsoPickGroup.add(shell);
+  })();
+
+  /* ---------------- the LANIAKEA SUPERCLUSTER — the cosmic web, far beyond the local star field. When you
+     dolly WAY out, the ~26k faint galaxies resolve into FILAMENTS + WALLS + dense NODES with empty VOIDS
+     between — the real large-scale texture (Voronoi skeleton: cell faces = walls, edges = filaments, verts
+     = clusters, interiors = voids). Static, one draw, faded in only when the camera leaves the galaxy. --- */
+  (function buildCosmicWeb() {
+    var COUNT = mobile ? 15000 : 26000, R_IN = 8000, R_OUT = 22000, NUM_SEEDS = 44;
+    var WALL_EPS = 0.06, FILA_EPS = 0.09, WALL_KEEP = 0.2;
+    var wr = gRng(0x1a91a), wG = function () { return wr() + wr() + wr() - 1.5; };
+    var GA = Math.PI * (3 - Math.sqrt(5)), seeds = [];
+    for (var si = 0; si < NUM_SEEDS; si++) {
+      var yy = 1 - (si / (NUM_SEEDS - 1)) * 2, rr0 = Math.sqrt(Math.max(0, 1 - yy * yy)), th0 = GA * si;
+      var dir = new T.Vector3(Math.cos(th0) * rr0, yy + wG() * 0.06, Math.sin(th0) * rr0).normalize();
+      var rad = (R_IN + (R_OUT - R_IN) * wr()) * (0.85 + 0.15 * wr());
+      seeds.push(dir.multiplyScalar(rad).add(new T.Vector3(wG(), wG(), wG()).multiplyScalar(1400)));
+    }
+    function nearest3(px, py, pz) {
+      var d1 = 1e18, d2 = 1e18, d3 = 1e18;
+      for (var s = 0; s < seeds.length; s++) {
+        var sd = seeds[s], dx = px - sd.x, dy = py - sd.y, dz = pz - sd.z, d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (d < d1) { d3 = d2; d2 = d1; d1 = d; } else if (d < d2) { d3 = d2; d2 = d; } else if (d < d3) { d3 = d; }
+      }
+      return [d1, d2, d3];
+    }
+    var POS = [], COL = [], kinds = [], tries = 0, lim = COUNT * 30;
+    var cWarm = [1.0, 0.95, 0.85], cGold = [1.0, 0.85, 0.63], cBlue = [0.85, 0.9, 1.0], cNode = [1.0, 0.91, 0.76];
+    function add(px, py, pz, kind, t) {
+      var roll = wr(), r, g2, b;
+      if (kind === 2) { r = cNode[0]; g2 = cNode[1]; b = cNode[2]; }
+      else if (roll < 0.75) { var m = wr() * 0.7; r = cWarm[0] + (cGold[0] - cWarm[0]) * m; g2 = cWarm[1] + (cGold[1] - cWarm[1]) * m; b = cWarm[2] + (cGold[2] - cWarm[2]) * m; }
+      else if (roll < 0.93) { r = cBlue[0]; g2 = cBlue[1]; b = cBlue[2]; }
+      else { r = cWarm[0]; g2 = cWarm[1]; b = cWarm[2]; }
+      var base = kind === 2 ? 0.9 : kind === 1 ? 0.4 : 0.14;
+      var bright = Math.min(1, base + t * (kind === 2 ? 0.1 : 0.55) * (0.6 + 0.4 * wr()));
+      POS.push(px, py, pz); COL.push(r * bright, g2 * bright, b * bright); kinds.push(kind);
+    }
+    while (POS.length / 3 < COUNT && tries++ < lim) {
+      var rad2 = Math.cbrt(R_IN * R_IN * R_IN + (R_OUT * R_OUT * R_OUT - R_IN * R_IN * R_IN) * wr());
+      var ct = 2 * wr() - 1, st = Math.sqrt(Math.max(0, 1 - ct * ct)), ph = 2 * Math.PI * wr();
+      var px = rad2 * st * Math.cos(ph), py = rad2 * ct, pz = rad2 * st * Math.sin(ph);
+      var nn = nearest3(px, py, pz), gap2 = (nn[1] - nn[0]) / nn[0], gap3 = (nn[2] - nn[0]) / nn[0];
+      var kind = -1, t = 0;
+      if (gap3 < FILA_EPS) { kind = 1; t = 0.55 + 0.45 * (1 - gap3 / FILA_EPS); }
+      else if (gap2 < WALL_EPS) { if (wr() < WALL_KEEP) { kind = 0; t = 0.15 + 0.25 * (1 - gap2 / WALL_EPS); } }
+      if (kind < 0) continue;
+      if (kind === 1 && Math.abs(nn[2] - nn[1]) / nn[0] < 0.03) { kind = 2; t = 1.0; }   // node (Voronoi vertex → cluster)
+      px += wG() * 260; py += wG() * 260; pz += wG() * 260;
+      add(px, py, pz, kind, t);
+      if (kind === 2) { var nb = 18 + (wr() * 36) | 0, sig = 360 + wr() * 360; for (var q = 0; q < nb; q++) add(px + wG() * sig, py + wG() * sig, pz + wG() * sig, 2, 0.85 + 0.15 * wr()); }
+    }
+    var wgeo = new T.BufferGeometry();
+    wgeo.setAttribute("position", new T.BufferAttribute(new Float32Array(POS), 3));
+    wgeo.setAttribute("color", new T.BufferAttribute(new Float32Array(COL), 3));
+    var wmat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 26 : 34, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    if ("toneMapped" in wmat) wmat.toneMapped = false;
+    _cosmicWeb = new T.Points(wgeo, wmat); _cosmicWeb.name = "CosmicWeb"; _cosmicWeb.renderOrder = -6; _cosmicWeb.frustumCulled = false; _cosmicWeb.visible = false;
+    belt.add(_cosmicWeb);
   })();
 
   /* ---------------- constellation names: IN-SCENE Songti sprites (same craft as the 干支 glyphs) ---------------- */
@@ -1074,6 +1140,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
       for (var _bb = 0; _bb < _bhBB.length; _bb++) {                                // the Gargantua quad: advance its swirl + billboard it to face the camera
         var _e = _bhBB[_bb]; _e.u.uTime.value = sec;
         if (o.camera && _e.m.parent) { _e.m.parent.getWorldQuaternion(_bbPQ); o.camera.getWorldQuaternion(_bbCQ); _e.m.quaternion.copy(_bbPQ.invert().multiply(_bbCQ)); }
+      }
+      if (_cosmicWeb && o.camera) {                                                 // the cosmic web blooms in only when the camera dollies out past the local star field
+        var _cwo = Math.max(0, Math.min(1, (o.camera.position.length() - 6500) / 4500)) * 0.72;
+        if (_cwo > 0.008) { _cosmicWeb.visible = true; _cosmicWeb.material.opacity = _cwo; } else if (_cosmicWeb.visible) { _cosmicWeb.visible = false; }
       }
       if (bloomSprite && bloomT > 0) { bloomT = Math.max(0, bloomT - 0.045); bloomSprite.material.opacity = bloomT * 0.7; if (bloomT === 0) bloomSprite.visible = false; }
       updateLabels();
