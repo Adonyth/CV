@@ -519,21 +519,39 @@ export function buildNatalSky(THREE, scene, data, opts) {
     belt.add(aura);
   });
 
-  /* ---------------- famous deep-sky objects: the REAL astrophotos, rendered as soft-edged
-     glowing panels that FLOAT at each object's true RA/Dec beyond the zodiac. A radial alpha
-     mask dissolves the frame so there is no "sticker" rectangle — only the nebula glows;
-     additive blending drops the black sky and the real colours read true. Static: one
-     textured plane each, built once from the image and facing the viewer's home — zero
-     per-frame cost. (Point-cloud versions were tried and rejected: additive-summed points
-     wash to white, normal-blended points scatter to sparse dots; only the photograph
-     itself, edge-dissolved and glowing, actually looks like the object.) ---------------- */
-  var DSO_EDGE = (function () {                  // soft radial alpha → the photo's rectangle melts into space
+  /* ---------------- famous deep-sky objects, RE-GRADED into the orrery's own warm ember
+     palette so they belong to this painting instead of reading as pasted-on photographs.
+     A shader keeps only the photo's LUMINANCE (its recognizable shape/structure) and
+     re-colours it through a warm ramp — deep rust → coral → gold → cream, the same
+     gold/coral register as the whole scene; a radial mask dissolves the frame; additive
+     blending turns it into a soft glow. Placed at each object's true RA/Dec beyond the
+     zodiac. Static: one textured plane each, built once, facing the viewer's home — zero
+     per-frame cost. (The raw photographs clashed as a different medium; un-recoloured
+     particle clouds washed to white — the warm-graded glow is what reads as one world.) */
+  var DSO_EDGE = (function () {                  // opaque grayscale radial → sampled (.r) as the soft-edge mask
     var s = 256, cv = document.createElement("canvas"); cv.width = cv.height = s;
-    var cx = cv.getContext("2d"), g = cx.createRadialGradient(s / 2, s / 2, s * 0.16, s / 2, s / 2, s * 0.52);
-    g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(0.7, "rgba(255,255,255,0.82)"); g.addColorStop(1, "rgba(255,255,255,0)");
+    var cx = cv.getContext("2d"), g = cx.createRadialGradient(s / 2, s / 2, s * 0.14, s / 2, s / 2, s * 0.52);
+    g.addColorStop(0, "#ffffff"); g.addColorStop(0.7, "#d0d0d0"); g.addColorStop(1, "#000000");
     cx.fillStyle = g; cx.fillRect(0, 0, s, s);
     return new T.CanvasTexture(cv);
   })();
+  var DSO_VERT = "varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }";
+  var DSO_FRAG = [
+    "uniform sampler2D map; uniform sampler2D edge; uniform float uOpacity; uniform float uGamma; varying vec2 vUv;",
+    "vec3 ramp(float t){",                        // the scene's warm ember ladder (coral #e0876a, gold #e8c37a)
+    "  vec3 c0=vec3(0.06,0.035,0.02), c1=vec3(0.42,0.20,0.10), c2=vec3(0.878,0.529,0.416), c3=vec3(0.910,0.765,0.478), c4=vec3(1.0,0.95,0.86);",
+    "  if(t<0.30) return mix(c0,c1,t/0.30);",
+    "  if(t<0.56) return mix(c1,c2,(t-0.30)/0.26);",
+    "  if(t<0.80) return mix(c2,c3,(t-0.56)/0.24);",
+    "  return mix(c3,c4,(t-0.80)/0.20);",
+    "}",
+    "void main(){",
+    "  float lum=dot(texture2D(map,vUv).rgb, vec3(0.299,0.587,0.114));",   // keep only the shape, discard the raw hue
+    "  float e=texture2D(edge,vUv).r;",
+    "  float l=pow(lum, uGamma);",
+    "  gl_FragColor=vec4(ramp(l), l*e*uOpacity);",  // warm colour, glow weighted by brightness, edge dissolved
+    "}"
+  ].join("\n");
   (data.deepSky || []).forEach(function (d) {
     if (!d.tex) return;
     var ecl = raDecToEcl(d.raH, d.decDeg), world = eclVec(ecl.lon, ecl.lat, d.dist || 900);
@@ -542,15 +560,18 @@ export function buildNatalSky(THREE, scene, data, opts) {
       tex.anisotropy = 4;
       var iw = (tex.image && tex.image.width) || 1, ih = (tex.image && tex.image.height) || 1;
       var W = d.size || 180, H = W * (ih / iw);   // plane keeps the photo's aspect
-      var mat = new T.MeshBasicMaterial({ map: tex, alphaMap: DSO_EDGE, transparent: true,
-        blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide,
-        opacity: d.opacity != null ? d.opacity : 1, fog: false });
-      if ("toneMapped" in mat) mat.toneMapped = false;
+      var mat = new T.ShaderMaterial({
+        uniforms: { map: { value: tex }, edge: { value: DSO_EDGE },
+          uOpacity: { value: d.opacity != null ? d.opacity : 1.9 },
+          uGamma: { value: d.gamma != null ? d.gamma : 0.62 } },
+        vertexShader: DSO_VERT, fragmentShader: DSO_FRAG,
+        transparent: true, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, fog: false
+      });
       var mesh = new T.Mesh(new T.PlaneGeometry(W, H), mat);
       belt.add(mesh);
       mesh.position.copy(world);
       mesh.updateWorldMatrix(true, false);        // so lookAt reads the true world position (incl. belt tilt)
-      mesh.lookAt(0, 0, 0);                        // turn the photo to face the viewer's home at world origin
+      mesh.lookAt(0, 0, 0);                        // turn the panel to face the viewer's home at world origin
       if (d.roll) mesh.rotateZ(d.roll * Math.PI / 180);
       mesh.name = "DSO_" + d.id;
       mesh.renderOrder = -2;                       // the farthest backdrop, painted before the near sky
