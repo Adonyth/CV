@@ -24,6 +24,7 @@ point-cloud "particle portrait" of the object, placed at its real right-ascensio
 | dso-pleiades.jpg | Pleiades (M45) | NASA, ESA, AURA / Caltech, Palomar Observatory | Public Domain |
 | dso-carina.jpg | Carina Nebula (NGC 3372) | NASA, ESA, N. Smith (UC Berkeley) & NOAO / AURA / NSF | Public Domain |
 | dso-helix.jpg | Helix Nebula (NGC 7293) | NASA, NOAO, ESA & the Hubble Helix Nebula Team, M. Meixner (STScI) | Public Domain |
-| dso-milkyway.jpg | Milky Way panorama | ESO / S. Brunier | **CC BY 4.0** |
 
-The **CC BY** works (Andromeda — Adam Evans; Horsehead — ESA/Webb et al.; Lagoon — NOIRLab/N. A. Sharp; Milky Way — ESO/S. Brunier) are used with attribution as above.
+The **CC BY** works (Andromeda — Adam Evans; Horsehead — ESA/Webb et al.; Lagoon — NOIRLab/N. A. Sharp) are used with attribution as above.
+
+The Milky Way itself is **not** an image — the solar system sits inside it, so it is rendered as a large procedural band of warm point-stars laid along the galactic plane (brighter toward the galactic centre in Sagittarius), generated at runtime with no source photograph.

@@ -133,7 +133,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   var uniforms = {
     uMap: { value: o.tex }, uTime: { value: 0 }, uFusion: { value: 0.52 },
     uPixelRatio: { value: Math.min((typeof devicePixelRatio !== "undefined" ? devicePixelRatio : 1) || 1, mobile ? 1.5 : 2) },
-    uMaxPointSize: { value: mobile ? 11.0 : 16.0 }, uRefDepth: { value: 1200.0 }, // lifted with the expanded shell (R_STAR 410): keeps the zodiac prominent from the ground while near stars still read bigger than far ones (the depth cue)
+    uMaxPointSize: { value: mobile ? 7.0 : 10.0 }, uRefDepth: { value: 840.0 }, // dimmer zodiac (owner: too bright) — smaller point cap + shorter ref-depth quiets the star field while keeping the depth cue
     uAmplitude: { value: 6.0 },              // near-frozen: figures hold their shape
     uLayerKind: { value: 0.0 }, uClearInner: { value: -2.0 }, uClearOuter: { value: -1.0 }
   };
@@ -181,7 +181,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     totalSegs += segs.length;
     var lgeo = new T.BufferGeometry();
     lgeo.setAttribute("position", new T.BufferAttribute(new Float32Array(pts), 3));
-    var base = c.loadBearing ? 1.0 : 0.92;
+    var base = c.loadBearing ? 0.50 : 0.42;   // dimmer figure-lines (owner: zodiac too bright); uiTick multiplies this base each frame
     var prx = Math.min((typeof devicePixelRatio !== "undefined" ? devicePixelRatio : 1) || 1, mobile ? 1.5 : 2);
     var mat = new T.PointsMaterial({
       map: o.tex, color: c.loadBearing ? 0xffc79a : 0xf6b088, size: (c.loadBearing ? 7.0 : 5.4) * prx, sizeAttenuation: false,
@@ -557,7 +557,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var P = [], C = [];
     for (var y = 0; y < sh; y++) for (var x = 0; x < sw; x++) {
       var ln = Math.max(0, Math.min(1, (lumA[y * sw + x] - lo) / span));            // normalised brightness
-      if (ln <= 0.02 || rng() > dens * Math.min(1, Math.pow(ln, 0.5) * 1.8)) continue;  // density follows brightness → shape
+      var rx = (x / (sw - 1) - 0.5) * 2, ry = (y / (sh - 1) - 0.5) * 2, rad = Math.sqrt(rx * rx + ry * ry);
+      var edge = 1 - Math.max(0, Math.min(1, (rad - 0.66) / 0.5));                  // dissolve the frame edge → an organic cloud, not a photo cut-out
+      if (ln <= 0.02 || rng() > dens * Math.min(1, Math.pow(ln, 0.5) * 1.8) * edge) continue;  // density follows brightness AND fades at the rim
       var wx = (x / (sw - 1) - 0.5) * Wu, wy = (0.5 - y / (sh - 1)) * Hu, wz = ((ln - 0.5) * 0.5 + (rng() - 0.5)) * depth;
       var col = dsoRamp(Math.pow(ln, gamma)), w = 0.45 + 0.55 * ln;                 // dim points for dim regions → contrast
       P.push(wx, wy, wz);
@@ -588,6 +590,43 @@ export function buildNatalSky(THREE, scene, data, opts) {
     };
     img.src = "data/" + d.tex;
   });
+
+  /* ---------------- the MILKY WAY as ENVIRONMENT, not an object: the whole solar system
+     already sits INSIDE it, so instead of a distant galaxy we lay a great faint BAND of
+     stars along the galactic plane at the far edge of the scene — brighter toward the
+     galactic centre in Sagittarius, patchy with star-clouds — so at any zoom you can tell
+     you are within the galaxy without a jarring galaxy "model" hanging in the void. Static
+     Points, one draw call, built once — zero per-frame cost. ---------------- */
+  (function buildMilkyWay() {
+    var R = 1350, N = mobile ? 3000 : 6000;
+    var gcE = raDecToEcl(17.7608, -28.94), npE = raDecToEcl(12.8571, 27.13);    // galactic centre + north pole
+    var gc = eclVec(gcE.lon, gcE.lat, 1).normalize();
+    var w = eclVec(npE.lon, npE.lat, 1).normalize();                            // the band's normal (galactic pole)
+    var u = gc.clone().addScaledVector(w, -gc.dot(w)).normalize();              // in-plane, toward the centre
+    var v = new T.Vector3().crossVectors(w, u).normalize();
+    var rng = gRng(9137), fb = gFbm(613, 8);
+    var pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
+    for (var i = 0; i < N; i++) {
+      var th = rng() * Math.PI * 2;
+      var phi = ((rng() + rng() + rng()) / 3 - 0.5) * (26 * Math.PI / 180);      // gaussian-ish band latitude, ±~13°
+      var cph = Math.cos(phi), sph = Math.sin(phi);
+      var dir = u.clone().multiplyScalar(cph * Math.cos(th)).addScaledVector(v, cph * Math.sin(th)).addScaledVector(w, sph);
+      var rr = R * (0.9 + rng() * 0.28);
+      pos[i * 3] = dir.x * rr; pos[i * 3 + 1] = dir.y * rr; pos[i * 3 + 2] = dir.z * rr;
+      var toward = Math.cos(th) * 0.5 + 0.5;                                     // 1 toward the galactic centre, 0 away
+      var clump = 0.55 + 0.85 * fb(th * 3.1, phi * 6 + 4);                        // patchy star-clouds
+      var b = (0.055 + 0.20 * Math.pow(toward, 1.6)) * clump * (0.5 + 0.5 * rng());
+      var tint = 0.9 + 0.1 * rng();
+      col[i * 3] = Math.min(1, b * 0.96 * tint); col[i * 3 + 1] = Math.min(1, b * 0.88 * tint); col[i * 3 + 2] = Math.min(1, b * 0.74 * tint);  // warm pale
+    }
+    var g = new T.BufferGeometry();
+    g.setAttribute("position", new T.BufferAttribute(pos, 3));
+    g.setAttribute("color", new T.BufferAttribute(col, 3));
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 4.0 : 5.5, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    if ("toneMapped" in m) m.toneMapped = false;
+    var pts = new T.Points(g, m); pts.name = "MilkyWayBand"; pts.renderOrder = -3; pts.frustumCulled = false;
+    belt.add(pts);
+  })();
 
   /* ---------------- constellation names: IN-SCENE Songti sprites (same craft as the 干支 glyphs) ---------------- */
   function nameTexture(zh, en, key, loc) {
@@ -789,7 +828,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     },
     // live tuning levers (for judging on the real machine)
     setLineOpacity: function (v) { for (var i = 0; i < lineEntries.length; i++) { var e = lineEntries[i]; if (e) e.base = cons[i].loadBearing ? v : v * 0.48; } },
-    setStarScale: function (v) { uniforms.uRefDepth.value = 1200 * v; },
+    setStarScale: function (v) { uniforms.uRefDepth.value = 840 * v; },
     stats: { stars: N, segments: totalSegs, dataNodes: nodeIndex.filter(Boolean).length, planets: planetSprites.length, constellations: cons.length },
     dispose: function () {
       if (onMove) removeEventListener("pointermove", onMove);

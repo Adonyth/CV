@@ -1632,19 +1632,6 @@
    "dist": 850,
    "tex": "dso-helix.jpg",
    "size": 130
-  },
-  {
-   "id": "milkyway",
-   "name": {
-    "en": "Milky Way core",
-    "zh": "银河核心"
-   },
-   "raH": 17.76,
-   "decDeg": -28.94,
-   "dist": 1150,
-   "tex": "dso-milkyway.jpg",
-   "size": 760,
-   "opacity": 0.8
   }
  ]
 }
