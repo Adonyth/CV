@@ -572,14 +572,14 @@ export function buildNatalSky(THREE, scene, data, opts) {
       if (cmax > 1) { cr /= cmax; cg /= cmax; cb /= cmax; }                          // hue-preserving cap: bright cores stay coloured, never wash to white
       P.push(wx, wy, wz);
       C.push(cr, cg, cb);
-      if (ln > 0.12 && rng() < 0.16) { GP.push(wx, wy, wz); GC.push(cr, cg, cb); }   // seed the colour-glow from the brighter regions
+      if (ln > 0.1 && rng() < 0.26) { GP.push(wx, wy, wz); GC.push(cr, cg, cb); }     // seed the colour-glow generously from the brighter regions → a solid luminous cloud
     }
     var grp = new T.Group();
     // a soft coloured GLOW beneath the particles → each nebula reads as a solid luminous cloud, not a wisp
     var gg = new T.BufferGeometry();
     gg.setAttribute("position", new T.BufferAttribute(new Float32Array(GP), 3));
     gg.setAttribute("color", new T.BufferAttribute(new Float32Array(GC), 3));
-    var gm = new T.PointsMaterial({ map: DSO_SOFT, size: (d.psize || 4.8) * 3.6, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.17, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var gm = new T.PointsMaterial({ map: DSO_SOFT, size: (d.psize || 4.8) * 4.4, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.3, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in gm) gm.toneMapped = false;
     grp.add(new T.Points(gg, gm));
     var geo = new T.BufferGeometry();
