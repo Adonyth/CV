@@ -643,11 +643,13 @@
           var bR = lerp(26, 132, Math.pow(shellJitter, 0.6));
           pos[k] = x * bR * 1.15; pos[k + 1] = y * bR * 0.85; pos[k + 2] = z * bR;
         } else if (kind === "far") {
-          var shellR = lerp(285, 405, Math.pow(shellJitter, 0.72)), ob = 0.92 + rnd() * 0.08;
+          // NOT a shell any more — the far embers fill a DEEP VOLUME (200 → 6500), the same space the
+          // starfield / constellations / galaxy / nebulae live in, so there is no "solar-system球壳" and
+          // no empty void beyond it: stars everywhere, all the way out. (This was the real shell all along.)
+          var shellR = COSMOS ? lerp(200, 6500, Math.pow(shellJitter, 0.5)) : lerp(285, 405, Math.pow(shellJitter, 0.72)), ob = 0.92 + rnd() * 0.08;
           pos[k] = x * shellR; pos[k + 1] = y * shellR * ob; pos[k + 2] = z * shellR;
-          // cosmos: two-thirds of the far embers settle into a nebula LANE that hugs the
-          // ecliptic band — the dust and the zodiac share one plane, one weather
-          if (COSMOS && rnd() < 0.66) pos[k + 1] *= 0.32;
+          // a fraction still lean toward the ecliptic band → a faint dust weather in the plane
+          if (COSMOS && rnd() < 0.4) pos[k + 1] *= 0.5;
         } else {
           var hazeR = lerp(42, 190, Math.pow(shellJitter, 0.46)), lobe = 0.72 + 0.28 * Math.sin(theta * 2.0 + y * 4.0);
           pos[k] = x * hazeR * 1.32; pos[k + 1] = y * hazeR * 0.74; pos[k + 2] = z * hazeR * 0.92 + lobe * 28;
@@ -707,7 +709,7 @@
       // cosmos: the ember shell wraps the orrery at the ORIGIN (a sky dome around the world)
       grp.position.set(0, 0, COSMOS ? 0 : -355);
       var farGeo = buildDeepLayerGeometry("far", farCount, 0xC0DE122);
-      var farMat = makeMaterial(0.0, mobile ? 8.0 : 10.0, 330.0, calm ? 74.0 : 96.0);
+      var farMat = makeMaterial(0.0, mobile ? 8.0 : 10.0, COSMOS ? 1900.0 : 330.0, calm ? 74.0 : 96.0);   // ref-depth matched to the deep volumetric spread so near embers are big, far ones fade — a real field, not a shell
       var farShell = new THREE.Points(farGeo, farMat); farShell.frustumCulled = false; grp.add(farShell);
       var nearGeo = null, nearMat = null, nearHaze = null;
       if (nearCount > 0) {
@@ -1535,9 +1537,10 @@
         // the connecting figure LINES only read as a pattern from near Earth; pull out and fly AMONG the stars
         // and they'd shear into distracting streaks — so fade ONLY the lines once you leave the home scale.
         if (natalSky && natalSky.setZodiacFade) natalSky.setZodiacFade((camera.position.length() - 1150) / 800);
-        // scale LOD: once the whole solar-system orrery (detailed Earth shader, Sun, gear-rings) is a distant
-        // speck, stop DRAWING it entirely — nothing to see, and its per-fragment Earth shader is the costliest thing
-        if (nyeArmature) { var _farOut = camera.position.length() > 1000 && !controls.isGround(); if (nyeArmature.group.visible === _farOut) nyeArmature.group.visible = !_farOut; }
+        // the orrery (esp. the SUN) must NEVER hide — it's the anchor you click to fly back to the solar
+        // system. It stays drawn at every scale; the gear-rings fade themselves via ringFade, the Earth is a
+        // cheap speck when tiny, and the Sun's glow keeps it findable from across the galaxy.
+        if (nyeArmature && !nyeArmature.group.visible) nyeArmature.group.visible = true;
         if (selStar && starCta) {
           _selV.copy(selStar.world).project(camera);
           if (_selV.z > 1 || Math.abs(_selV.x) > 1.05 || Math.abs(_selV.y) > 1.05) { starCta.classList.remove("is-on"); }
