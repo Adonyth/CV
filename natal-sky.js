@@ -749,7 +749,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
      the constellations that live nearer than the arm. Built once — zero per-frame cost. -------- */
   var galacticCentre = null, galacticNormal = null, _bhSpin = [], _bhBB = [];    // exposed for the clickable black-hole nucleus; _bhBB = camera-facing Gargantua quads (billboarded + time-driven each tick)
   var _bbPQ = new T.Quaternion(), _bbCQ = new T.Quaternion(), _cosmicWeb = null;
-  (function buildMilkyWayGalaxy() {
+  var _farBuilt = false, _webBuilt = false;   // LAZY-BY-SCALE flags: the galaxy/black-hole and the cosmic web are heavy (~118k + ~100k pts + a 2.3M-iteration web sampler); they build ONLY when the camera actually voyages out to their scale, never at the ground/whole-sky view
+  function buildMilkyWayGalaxy() {
     var Rgal = 2600, N = mobile ? 78000 : 118000;                              // VAST but leaner — a real galaxy the size of the sky; count trimmed to cut additive-overdraw stutter (the glow underlayer keeps it dense-looking)
     var Rsun = 0.52 * Rgal, Rin = 42, Rout = 150, hSun = 140;                   // Sun's galactocentric radius; the Orion ARM flows right THROUGH the solar system (tiny 42-unit clearing only for the planets themselves) → the sun sits embedded in the arm, not in a carved-out hole that truncates it
     var gcE = raDecToEcl(17.7608, -28.94), npE = raDecToEcl(12.8571, 27.13);    // Sgr A* + galactic north pole
@@ -902,12 +903,12 @@ export function buildNatalSky(THREE, scene, data, opts) {
     if ("toneMapped" in m) m.toneMapped = false;
     var pts = new T.Points(g, m); pts.name = "MilkyWayGalaxy"; pts.renderOrder = -4; pts.frustumCulled = false;
     belt.add(pts);
-  })();
+  }
 
   /* ---------------- the GALACTIC CENTRE — a supermassive BLACK HOLE you can fly to: a dark event
      horizon that truly OCCLUDES the bulge stars behind it, ringed by a blazing accretion disc, at the
      heart of the galaxy. Clickable → fly in → it becomes the pivot → admire, like every other wonder. */
-  (function buildGalacticCore() {
+  function buildGalacticCore() {
     if (!galacticCentre) return;
     var grp = new T.Group(); grp.name = "DSO_galcore"; grp.position.copy(galacticCentre);
     // (1) the event horizon — a pure-black unlit sphere that OCCLUDES the galaxy behind it (a real void)
@@ -955,13 +956,13 @@ export function buildNatalSky(THREE, scene, data, opts) {
     shell.userData.nyePick = "dso_galcore"; shell.userData.dsoViewDist = 600; shell.userData.dsoFocusMin = 120;
     shell.userData.dsoName = { en: "Galactic Centre · Sgr A*", zh: "银心 · 人马座 A*" };
     dsoPickGroup.add(shell);
-  })();
+  }
 
   /* ---------------- the LANIAKEA SUPERCLUSTER — the cosmic web, far beyond the local star field. When you
      dolly WAY out, the ~26k faint galaxies resolve into FILAMENTS + WALLS + dense NODES with empty VOIDS
      between — the real large-scale texture (Voronoi skeleton: cell faces = walls, edges = filaments, verts
      = clusters, interiors = voids). Static, one draw, faded in only when the camera leaves the galaxy. --- */
-  (function buildCosmicWeb() {
+  function buildCosmicWeb() {
     var COUNT = mobile ? 42000 : 78000, R_IN = 6200, R_OUT = 20000, NUM_SEEDS = 32;   // FEW, BIG Voronoi cells (not 84 fine ones): from INSIDE the web you need coarse structure — wide dark voids + a handful of prominent walls/filaments/nodes — or it just averages into uniform dust. This is what finally reads as large-scale texture.
     var WALL_EPS = 0.075, FILA_EPS = 0.115, WALL_KEEP = 0.26;
     var wr = gRng(0x1a91a), wG = function () { return wr() + wr() + wr() - 1.5; };
@@ -1048,7 +1049,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     if ("toneMapped" in wmat) wmat.toneMapped = false;
     _cosmicWeb = new T.Points(wgeo, wmat); _cosmicWeb.name = "CosmicWeb"; _cosmicWeb.renderOrder = -6; _cosmicWeb.frustumCulled = false; _cosmicWeb.visible = false;
     belt.add(_cosmicWeb);
-  })();
+  }
 
   /* ---------------- constellation names: IN-SCENE Songti sprites (same craft as the 干支 glyphs) ---------------- */
   function nameTexture(zh, en, key, loc) {
@@ -1219,6 +1220,12 @@ export function buildNatalSky(THREE, scene, data, opts) {
     starPoints: starPoints,
     tick: function (sec) {
       uniforms.uTime.value = sec;
+      // LAZY-BY-SCALE build: the ground & whole-sky views never pay for the far structures. The galaxy +
+      // black hole assemble only once you rise past the constellation sphere; the cosmic web only if you
+      // truly voyage to intergalactic distance (most visits never do → its cost is never incurred).
+      var _cl = o.camera ? o.camera.position.length() : 0;
+      if (!_farBuilt && _cl > 200) { _farBuilt = true; buildMilkyWayGalaxy(); buildGalacticCore(); }
+      if (!_webBuilt && _cl > 2200) { _webBuilt = true; buildCosmicWeb(); }
       lineOpacities(sec);
       for (var _bi = 0; _bi < _bhSpin.length; _bi++) _bhSpin[_bi].rotateZ(0.004);   // (legacy) any spinning disc meshes
       for (var _bb = 0; _bb < _bhBB.length; _bb++) {                                // the Gargantua quad: advance its swirl + billboard it to face the camera

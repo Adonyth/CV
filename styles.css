@@ -437,7 +437,12 @@ body.cosmos .natal-tip{z-index:6;}
 
 .cosmos-legend{position:fixed; left:22px; bottom:20px; z-index:4; display:flex; flex-wrap:wrap; gap:4px 18px; font-family:var(--mono); font-size:11px; letter-spacing:.06em; color:var(--muted); pointer-events:none; max-width:70vw;}
 .cosmos-legend__item{white-space:nowrap;}
-.cosmos-hint{position:fixed; left:50%; transform:translateX(-50%); bottom:18px; z-index:4; font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); pointer-events:none; text-align:center; white-space:nowrap; max-width:96vw; opacity:.85; transition:opacity 1s ease;}
+/* ROOT INVARIANT — never overlap again: the dock owns the very bottom band (bottom:20px, nothing below
+   it); ALL hint text sits in a reserved band strictly ABOVE it (bottom:74px) and grows UPWARD. So no
+   hint line, on any view or screen width, can ever share vertical space with the buttons — the historic
+   whack-a-mole (fix one hint, the other or the mobile value re-collides) is structurally impossible now.
+   cosmos-hint (3D) and ground-hint both use the 74px baseline; only one is ever visible at a time. */
+.cosmos-hint{position:fixed; left:50%; transform:translateX(-50%); bottom:74px; z-index:4; font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); pointer-events:none; text-align:center; white-space:nowrap; max-width:96vw; opacity:.85; transition:opacity 1s ease;}
 .cosmos-hint.is-faded{opacity:0;}
 
 /* flat fallback = a full mobile home. Scrollable, top-aligned, reaches every page. */
@@ -467,8 +472,8 @@ body.is-flat .cosmos-ui{top:18px; right:18px; z-index:9;}
   .cosmos-id{top:14px; left:14px; padding:13px 16px 11px;}
   .cosmos-ui{top:14px; right:14px;}
   .cosmos-legend{display:none;}
-  .cosmos-hint{left:14px; right:14px; transform:none; max-width:none; white-space:normal; text-align:center; bottom:12px;}
-  .cosmos-dock{bottom:58px;}
+  .cosmos-hint{left:14px; right:14px; transform:none; max-width:none; white-space:normal; text-align:center; bottom:76px;}
+  .cosmos-dock{bottom:16px;}
 }
 .cosmos-build{position:fixed; right:22px; bottom:44px; z-index:4; font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--muted); opacity:.55; pointer-events:none;}
 @media(max-width:700px){ .cosmos-build{right:14px; bottom:40px;} }
@@ -512,22 +517,23 @@ body.cosmos #field{z-index:-1; opacity:.62;}
 .cosmos-home:hover{color:var(--accent); border-color:var(--accent);}
 body.is-flat .cosmos-home{display:none !important;}
 @media(max-width:700px){ .cosmos-home{bottom:16px;} }
-/* the bottom dock holds BOTH journey buttons side by side (⌂ base + ✦ whole sky) — raised ABOVE the
-   centered hint line so the two never overlap */
-.cosmos-dock{position:fixed; left:50%; bottom:60px; transform:translateX(-50%); z-index:6;
-  display:flex; gap:10px; pointer-events:none;}
+/* the bottom dock holds BOTH journey buttons side by side (⌂ base + ✦ whole sky), pinned to the very
+   bottom (bottom:20px) with NOTHING below it — the hint text lives in a reserved band above (74px).
+   See the ROOT INVARIANT note on .cosmos-hint. */
+.cosmos-dock{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:6;
+  display:flex; gap:10px; pointer-events:none; flex-wrap:nowrap;}
 .cosmos-dock .cosmos-home{position:static; left:auto; bottom:auto; transform:translateY(8px);}
 .cosmos-dock .cosmos-home.is-on{transform:translateY(0);}
 body.is-flat .cosmos-dock{display:none !important;}
 @media(max-width:700px){ .cosmos-dock{bottom:16px;} }
 /* lying at the base: a quiet line names your place; the chart legend steps aside */
-.ground-hint{position:fixed; left:50%; bottom:72px; transform:translateX(-50%); z-index:6;
+.ground-hint{position:fixed; left:50%; bottom:74px; transform:translateX(-50%); z-index:6;
   font-family:var(--mono); font-size:11.5px; letter-spacing:.1em; color:var(--muted);
   opacity:0; pointer-events:none; transition:opacity .8s ease; text-align:center; max-width:92vw;}
 .ground-hint b{color:#e8c37a; font-weight:500;}
 .ground-hint.is-on{opacity:1;}
 body.on-ground .cosmos-legend, body.on-ground .cosmos-hint{opacity:0 !important; transition:opacity .6s ease;}
-@media(max-width:700px){ .ground-hint{bottom:60px; font-size:10.5px;} }
+@media(max-width:700px){ .ground-hint{bottom:76px; font-size:10.5px;} }
 /* tap-to-enter: the doorway from the simple menu into the 3D world */
 .flat-enter{display:block; width:100%; margin:22px 0 6px; padding:15px 18px; border-radius:14px;
   font-family:var(--mono); font-size:13.5px; letter-spacing:.08em; color:#1a1109; cursor:pointer;

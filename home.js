@@ -40,7 +40,16 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     initLocale();
-    if (read(FIELD_KEY) === "1") applyFieldOff(true);
+    var _fs = read(FIELD_KEY);
+    if (_fs === "1") applyFieldOff(true);
+    else if (_fs !== "0" && document.body.classList.contains("cosmos")) {
+      // the cosmos homepage opens CALM: the 2D particle field is off by default (the 3D IS the site).
+      // Do it directly WITHOUT persisting, so a visitor who explicitly turned it on ("0") keeps it, and
+      // other pages are unaffected. The eye-toggle still works normally.
+      document.body.classList.add("field-off");
+      var _fb0 = document.getElementById("fieldbtn"); if (_fb0) _fb0.setAttribute("aria-pressed", "true");
+      running = false;
+    }
     var ls = document.getElementById("lang-switch");
     if (ls) ls.addEventListener("click", function (e) { var b = e.target.closest("[data-locale]"); if (b) applyLocale(b.getAttribute("data-locale")); });
     var tb = document.getElementById("themebtn");
