@@ -1027,11 +1027,12 @@ export function buildNatalSky(THREE, scene, data, opts) {
      between — the real large-scale texture (Voronoi skeleton: cell faces = walls, edges = filaments, verts
      = clusters, interiors = voids). Static, one draw, faded in only when the camera leaves the galaxy. --- */
   function buildCosmicWeb() {
-    // EXPLICIT node-and-filament GRAPH — NOT statistical Voronoi (which averages into uniform scatter when
-    // seen from inside). Real cluster NODES joined by real filament THREADS over empty VOIDS = the recognizable
-    // Millennium / kitchen-sponge cosmic web. BOUNDED (R_OUT 9500) so you can dolly OUTSIDE it (maxDistance
-    // 15000) and read the whole network as one structure — the way every real cosmic-web image is an external view.
-    var R_IN = 7500, R_OUT = 11000;   // a shell BEYOND the local starfield (R1≈7200) → the web reads on BLACK, not drowned by the uniform stars; the galaxy + local stars stay a bright central ball, the cosmic web wraps around it
+    // SCALE-HONEST cosmic web (the observable-universe foam). UNIT of measure = a supercluster NODE core.
+    // Our ENTIRE local universe — Milky Way + Andromeda + Great Attractor + Laniakea — is now ONE node here (the
+    // giant galaxy spiral has faded into it). The web is FAT filaments (as thick as a node core — "beads on a
+    // string as fat as the beads") joining ~15 supercluster nodes across HUGE voids (~8× a node) that fill ~85%
+    // of the volume. Our node is ORDINARY — one bead among many; Shapley is the big neighbour.
+    var NODE = 460, RMAX = 14000, SPACING = 4600;   // node-core radius (the unit); web extent; min node spacing → a whole void between every pair
     var wr = gRng(0x1a91a), wG = function () { return wr() + wr() + wr() - 1.5; };
     var POS = [], COL = [];
     // Millennium WARM MONOTONE ramp: near-black void → amber filament → gold → white-hot node core
@@ -1039,61 +1040,69 @@ export function buildNatalSky(THREE, scene, data, opts) {
     function rampw(L) { for (var i = 0; i < RAMPW.length - 1; i++) { if (L <= RAMPW[i + 1][0]) { var a = RAMPW[i], b = RAMPW[i + 1], f = (L - a[0]) / (b[0] - a[0]); return [a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f, a[3] + (b[3] - a[3]) * f]; } } return [RAMPW[4][1], RAMPW[4][2], RAMPW[4][3]]; }
     function pushPt(x, y, z, L, intensity) { var c = rampw(L), b = intensity * (0.72 + 0.55 * wr()); POS.push(x, y, z); COL.push(c[0] * b, c[1] * b, c[2] * b); }
 
-    // ---- NODES (galaxy clusters). Node 0 = the MILKY WAY itself at the origin (no cluster drawn there — the
-    //      galaxy IS the node — but filaments still connect to it, so WE SIT ON THE WEB). ----
-    var nodes = [{ p: new T.Vector3(0, 0, 0), mass: 1.15, mw: true }];   // OUR node — at cosmic-web scale the Milky Way is just ONE node (the giant spiral has faded); we sit on the web's outskirts, ~9200 from the Great Attractor
-    var gaC = new T.Vector3(0.34, 0.58, -0.74).normalize().multiplyScalar(9200);   // the Great Attractor — the dominant basin
-    nodes.push({ p: gaC, mass: 2.1, ga: true });
-    var NN = mobile ? 18 : 26;
-    for (var i = 0; i < NN; i++) {
+    // ---- NODES: OUR Laniakea node at the centre (ORDINARY size — we live in a plain knot), a big Shapley
+    //      neighbour, then generic nodes, all kept ≥ SPACING apart so a whole VOID sits between every pair. ----
+    var nodes = [{ p: new T.Vector3(0, 0, 0), mass: 1.0, us: true }];
+    nodes.push({ p: new T.Vector3(0.55, 0.30, 0.62).normalize().multiplyScalar(9400), mass: 1.9, shapley: true });   // Shapley — the biggest nearby supercluster
+    var NTARGET = mobile ? 12 : 15, guard = 0;
+    while (nodes.length < NTARGET && guard++ < 6000) {
       var ict = 2 * wr() - 1, ist = Math.sqrt(1 - ict * ict), iph = 2 * Math.PI * wr();
-      var irad = R_IN + (R_OUT - R_IN) * Math.pow(wr(), 0.85);
-      nodes.push({ p: new T.Vector3(ist * Math.cos(iph) * irad, ict * irad, ist * Math.sin(iph) * irad), mass: 0.5 + 1.1 * Math.pow(wr(), 1.6) });
+      var irad = 3600 + (RMAX - 3600) * Math.pow(wr(), 0.72);
+      var cand = new T.Vector3(ist * Math.cos(iph) * irad, ict * irad, ist * Math.sin(iph) * irad), ok = true;
+      for (var k = 0; k < nodes.length; k++) { if (cand.distanceTo(nodes[k].p) < SPACING) { ok = false; break; } }
+      if (ok) nodes.push({ p: cand, mass: 0.6 + 0.9 * Math.pow(wr(), 1.4) });
     }
 
-    // ---- NODE CLUSTERS: bright, compact glowing knots (the galaxy clusters at the intersections) ----
+    // ---- NODE CORES: bright, compact glowing knots (the superclusters at the web's junctions) ----
     for (var n = 0; n < nodes.length; n++) {
-      var nd = nodes[n];
-      var cn = Math.round((mobile ? 320 : 540) * nd.mass), cr = 230 + 340 * nd.mass;
+      var nd = nodes[n], cn = Math.round((mobile ? 520 : 880) * nd.mass), cr = NODE * (0.55 + 0.5 * nd.mass);
       for (var q = 0; q < cn; q++) {
-        var r = Math.pow(wr(), 2.0) * cr, u = 2 * wr() - 1, pp = 2 * Math.PI * wr(), sn = Math.sqrt(1 - u * u);
-        pushPt(nd.p.x + r * sn * Math.cos(pp), nd.p.y + r * sn * Math.sin(pp), nd.p.z + r * u, 0.90 + 0.10 * wr(), Math.min(1.8, 0.95 + 0.5 * nd.mass));
+        var r = Math.pow(wr(), 1.9) * cr, u = 2 * wr() - 1, pp = 2 * Math.PI * wr(), sn = Math.sqrt(1 - u * u);
+        pushPt(nd.p.x + r * sn * Math.cos(pp), nd.p.y + r * sn * Math.sin(pp), nd.p.z + r * u, 0.90 + 0.10 * wr(), Math.min(1.7, 0.9 + 0.45 * nd.mass));
       }
     }
 
-    // ---- FILAMENTS: join each node to its 2-3 nearest neighbours with an EXPLICIT dense thread that swells in
-    //      the middle and brightens toward the nodes → a glowing strand across the void. Deduplicated edges. ----
-    var edges = {};
+    // ---- FAT FILAMENTS: join each node to its nearest 2-3; a THICK TUBE (radius ≈ a node core, FATTER toward
+    //      each node) of points spread across the cross-section → a glowing strand as thick as the beads. ----
+    var edges = {}, _uX = new T.Vector3(), _vX = new T.Vector3(), _dX = new T.Vector3(), _upA = new T.Vector3(0, 1, 0);
     for (var a = 0; a < nodes.length; a++) {
       var order = [];
       for (var b = 0; b < nodes.length; b++) { if (b !== a) order.push({ b: b, d: nodes[a].p.distanceTo(nodes[b].p) }); }
       order.sort(function (x, y) { return x.d - y.d; });
-      var kconn = 2 + (wr() < 0.45 ? 1 : 0);
+      var kconn = 2 + (wr() < 0.4 ? 1 : 0);
       for (var e = 0; e < Math.min(kconn, order.length); e++) {
         var bb = order[e].b, key = Math.min(a, bb) + "_" + Math.max(a, bb);
         if (edges[key]) continue; edges[key] = true;
         var pA = nodes[a].p, pB = nodes[bb].p, L = pA.distanceTo(pB);
-        if (L > R_OUT * 1.25) continue;   // don't span the whole box with one thread
-        var nPts = Math.max(50, Math.round(L / 6));
-        for (var t = 0; t < nPts; t++) {
-          var f = t / (nPts - 1), swell = 8 + 30 * Math.sin(f * Math.PI);   // thin at the nodes, fat in the middle
-          pushPt(pA.x + (pB.x - pA.x) * f + wG() * swell, pA.y + (pB.y - pA.y) * f + wG() * swell, pA.z + (pB.z - pA.z) * f + wG() * swell, 0.42 + 0.26 * (1 - Math.sin(f * Math.PI)), 0.82);
+        if (L > SPACING * 2.4) continue;   // only bridge genuine neighbours (never a thread across the whole box)
+        _dX.subVectors(pB, pA).multiplyScalar(1 / L);
+        _uX.crossVectors(_dX, _upA); if (_uX.lengthSq() < 1e-4) _uX.set(1, 0, 0); _uX.normalize();
+        _vX.crossVectors(_dX, _uX).normalize();
+        var steps = Math.max(24, Math.round(L / 58)), perStep = mobile ? 20 : 30;
+        for (var t = 0; t < steps; t++) {
+          var f = t / (steps - 1), thick = NODE * (0.75 + 0.6 * Math.abs(Math.cos(f * Math.PI)));   // ≈ node core, fatter toward each node
+          var cx = pA.x + (pB.x - pA.x) * f, cy = pA.y + (pB.y - pA.y) * f, cz = pA.z + (pB.z - pA.z) * f;
+          for (var j = 0; j < perStep; j++) {
+            var rr = Math.pow(wr(), 0.7) * thick, aa = 2 * Math.PI * wr(), oa = rr * Math.cos(aa), ob = rr * Math.sin(aa), oz = wG() * 55;
+            pushPt(cx + _uX.x * oa + _vX.x * ob + _dX.x * oz, cy + _uX.y * oa + _vX.y * ob + _dX.y * oz, cz + _uX.z * oa + _vX.z * ob + _dX.z * oz, 0.30 + 0.16 * Math.abs(Math.cos(f * Math.PI)), 0.42);
+          }
         }
       }
     }
 
-    // ---- a faint 2% sprinkle in the voids (they aren't perfectly empty — a few stray galaxies) ----
-    var strays = mobile ? 900 : 1700;
+    // ---- a faint sprinkle in the voids (they aren't perfectly empty — a few stray galaxies) ----
+    var strays = mobile ? 700 : 1300;
     for (var v = 0; v < strays; v++) {
-      var vr = R_IN + (R_OUT - R_IN) * wr(), vct = 2 * wr() - 1, vst = Math.sqrt(1 - vct * vct), vph = 2 * Math.PI * wr();
-      pushPt(vr * vst * Math.cos(vph), vr * vct, vr * vst * Math.sin(vph), 0.04, 0.12);
+      var vr = 3000 + (RMAX - 3000) * wr(), vct = 2 * wr() - 1, vst = Math.sqrt(1 - vct * vct), vph = 2 * Math.PI * wr();
+      pushPt(vr * vst * Math.cos(vph), vr * vct, vr * vst * Math.sin(vph), 0.035, 0.10);
     }
 
-    var gaShell = new T.Mesh(new T.SphereGeometry(1400, 12, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
-    gaShell.position.copy(gaC); gaShell.name = "DSOPick_laniakea";
-    gaShell.userData.nyePick = "dso_laniakea"; gaShell.userData.dsoViewDist = 2600; gaShell.userData.dsoFocusMin = 800;
-    gaShell.userData.dsoFromInside = true;   // gaze OUTWARD at the basin (Milky Way stays behind the camera → no edge-on bar)
-    gaShell.userData.dsoName = { en: "Laniakea · the Great Attractor", zh: "拉尼亚凯亚超星系团 · 巨引源" };
+    // ---- OUR node IS Laniakea — the Great Attractor & Milky Way are INSIDE it, not separate. Click it to pull
+    //      back and see our whole supercluster as one knot of the web. ----
+    var gaShell = new T.Mesh(new T.SphereGeometry(900, 12, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
+    gaShell.position.set(0, 0, 0); gaShell.name = "DSOPick_laniakea";
+    gaShell.userData.nyePick = "dso_laniakea"; gaShell.userData.dsoViewDist = 6000; gaShell.userData.dsoFocusMin = 1500;
+    gaShell.userData.dsoName = { en: "Laniakea · our supercluster", zh: "拉尼亚凯亚 · 我们的本超星系团" };
     dsoPickGroup.add(gaShell);
     var wgeo = new T.BufferGeometry();
     wgeo.setAttribute("position", new T.BufferAttribute(new Float32Array(POS), 3));

@@ -1962,10 +1962,10 @@
       "status": "published"
     },
     "dso_laniakea": {
-      "titleEn": "Laniakea · the Great Attractor",
-      "titleZh": "拉尼亚凯亚 · 巨引源",
-      "blurbEn": "Our home supercluster (Tully 2014): ~520 million ly across, ~100,000 galaxies, all drifting toward the Great Attractor. The Milky Way sits on its far outskirts.",
-      "blurbZh": "我们所属的超星系团(Tully 2014):跨约5.2亿光年、约十万个星系,全部流向巨引源;银河系位于其外缘。",
+      "titleEn": "Laniakea · our supercluster",
+      "titleZh": "拉尼亚凯亚 · 我们的本超星系团",
+      "blurbEn": "Our home supercluster (Tully 2014) — ~520 million ly across, ~100,000 galaxies. It CONTAINS the Great Attractor (its gravitational centre), the Virgo cluster, and our Local Group. At cosmic-web scale, this whole thing is just ONE knot of the web.",
+      "blurbZh": "我们的本超星系团(Tully 2014)——约5.2亿光年、约十万个星系。它内部包含巨引源(引力中心)、室女座星系团和我们的本星系团。在宇宙网尺度上,这一整片只是网中的一个结点。",
       "links": [],
       "status": "published"
     },
