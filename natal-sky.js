@@ -772,7 +772,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
      in one draw call. A local "bubble" is carved out so no galaxy star clutters the planets or
      the constellations that live nearer than the arm. Built once — zero per-frame cost. -------- */
   var galacticCentre = null, galacticNormal = null, _bhSpin = [], _bhBB = [];    // exposed for the clickable black-hole nucleus; _bhBB = camera-facing Gargantua quads (billboarded + time-driven each tick)
-  var _bbPQ = new T.Quaternion(), _bbCQ = new T.Quaternion(), _cosmicWeb = null;
+  var _bbPQ = new T.Quaternion(), _bbCQ = new T.Quaternion(), _cosmicWeb = null, _laniakeaFlow = null;
   var _farBuilt = false, _webBuilt = false;   // LAZY-BY-SCALE flags: the galaxy/black-hole and the cosmic web are heavy (~118k + ~100k pts + a 2.3M-iteration web sampler); they build ONLY when the camera actually voyages out to their scale, never at the ground/whole-sky view
   function buildMilkyWayGalaxy() {
     var Rgal = GAL_RGAL, N = mobile ? 78000 : 118000;                          // reuse the MODULE-scope galactic frame so nebulae (placed eagerly) and this disc share ONE basis
@@ -1022,6 +1022,46 @@ export function buildNatalSky(THREE, scene, data, opts) {
     if (sh) { sh.userData.dsoViewDist = Rg * 2.4; sh.userData.dsoFocusMin = Rg * 0.5; }
   }
 
+  /* ---------------- LANIAKEA — the Tully 2014 FLOW PORTRAIT: thousands of golden STREAMLINES that all flow &
+     CONVERGE on the Great Attractor (the basin floor), brightening where they bunch, with US (a warm dot) on the
+     outskirts. This is our SUPERCLUSTER seen as a watershed of galaxy-flow — the iconic image. Shown at the
+     supercluster scale, between the galaxy and the whole cosmic web. Lazy, static, one draw. ---------------- */
+  function buildLaniakeaFlow() {
+    if (_laniakeaFlow) return;
+    var wr = gRng(0x1a71ea), wG = function () { return wr() + wr() + wr() - 1.5; };
+    var F = new T.Vector3(0.30, 0.42, -0.72).normalize().multiplyScalar(2100);   // the Great Attractor — the convergence point (our supercluster's centre of mass)
+    var swirlAxis = new T.Vector3(0.18, 1, 0.12).normalize();
+    var NLINE = mobile ? 900 : 1600, RAD = 5000;
+    var P = [], C = [];
+    for (var s = 0; s < NLINE; s++) {
+      var d0 = new T.Vector3(2 * wr() - 1, 2 * wr() - 1, 2 * wr() - 1); if (d0.lengthSq() < 1e-4) d0.set(1, 0, 0); d0.normalize();
+      var pos = F.clone().addScaledVector(d0, RAD * (0.32 + 0.68 * Math.pow(wr(), 0.5)));
+      var steps = 46 + (wr() * 44 | 0), handed = (s % 2 === 0) ? 1 : -1;
+      for (var t = 0; t < steps; t++) {
+        var toF = new T.Vector3().subVectors(F, pos), dF = toF.length();
+        if (dF < 45) break;
+        toF.multiplyScalar(1 / dF);
+        var tang = new T.Vector3().crossVectors(toF, swirlAxis); if (tang.lengthSq() < 1e-4) tang.set(1, 0, 0); tang.normalize();
+        var frac = dF / RAD, stepLen = 26 + 105 * frac;
+        pos.addScaledVector(toF, stepLen).addScaledVector(tang, handed * stepLen * (0.32 + 0.5 * frac));
+        pos.x += wG() * 7; pos.y += wG() * 7; pos.z += wG() * 7;
+        var prox = 1 - Math.min(1, frac), br = 0.10 + 0.72 * prox * prox, wf = Math.max(0, prox - 0.5) / 0.5;   // gold → white as it nears the attractor
+        P.push(pos.x, pos.y, pos.z); C.push(1.0 * br, (0.80 + 0.18 * wf) * br, (0.40 + 0.48 * wf) * br);
+      }
+    }
+    for (var m2 = 0; m2 < 60; m2++) {   // US — a warm marker at the origin (we sit on the basin's outer slope)
+      var mr = Math.pow(wr(), 2) * 80, mu = 2 * wr() - 1, mp = 2 * Math.PI * wr(), ms = Math.sqrt(1 - mu * mu);
+      P.push(mr * ms * Math.cos(mp), mr * mu, mr * ms * Math.sin(mp)); C.push(1.05, 0.42, 0.28);
+    }
+    var g = new T.BufferGeometry();
+    g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
+    g.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
+    var mat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 12 : 16, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    if ("toneMapped" in mat) mat.toneMapped = false;
+    _laniakeaFlow = new T.Points(g, mat); _laniakeaFlow.name = "LaniakeaFlow"; _laniakeaFlow.renderOrder = -5; _laniakeaFlow.frustumCulled = false; _laniakeaFlow.visible = false;
+    belt.add(_laniakeaFlow);
+  }
+
   /* ---------------- the LANIAKEA SUPERCLUSTER — the cosmic web, far beyond the local star field. When you
      dolly WAY out, the ~26k faint galaxies resolve into FILAMENTS + WALLS + dense NODES with empty VOIDS
      between — the real large-scale texture (Voronoi skeleton: cell faces = walls, edges = filaments, verts
@@ -1106,7 +1146,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   // idempotent LAZY-BY-SCALE entry points, called by space.js only on genuine user navigation (never during
   // the auto-entrance) so the ground/whole-sky view is instant & cool and heavy geometry is built on demand.
   function ensureFarLayers() { if (_farBuilt) return; _farBuilt = true; buildMilkyWayGalaxy(); buildGalacticCore(); buildAndromeda(); }   // galaxy MUST precede core (core reads galacticCentre)
-  function ensureCosmicWeb() { if (_webBuilt) return; _webBuilt = true; buildCosmicWeb(); }
+  function ensureCosmicWeb() { if (_webBuilt) return; _webBuilt = true; buildLaniakeaFlow(); buildCosmicWeb(); }   // the Laniakea flow-basin (supercluster scale) + the whole cosmic web (universe scale)
 
   /* ---------------- constellation names: IN-SCENE Songti sprites (same craft as the 干支 glyphs) ---------------- */
   function nameTexture(zh, en, key, loc) {
@@ -1282,20 +1322,28 @@ export function buildNatalSky(THREE, scene, data, opts) {
       }
       if (o.camera) {
         var _cl = o.camera.position.length();
-        if (_cosmicWeb) {                                                            // the cosmic web blooms in as the camera dollies out past the galaxy
-          var _cwo = Math.max(0, Math.min(1, (_cl - 2800) / 3500)) * 0.95;
+        // TIER 3 — LANIAKEA FLOW BASIN (our supercluster): blooms at the supercluster scale, between the galaxy
+        // and the whole cosmic web (in ~4000-7500, gone by ~9500 as the web takes over).
+        if (_laniakeaFlow) {
+          var _lfo = Math.max(0, Math.min(1, (_cl - 3600) / 1200)) * Math.max(0, Math.min(1, (9600 - _cl) / 1800)) * 0.95;
+          if (_lfo > 0.008) { _laniakeaFlow.visible = true; _laniakeaFlow.material.opacity = _lfo; } else if (_laniakeaFlow.visible) { _laniakeaFlow.visible = false; }
+        }
+        // TIER 4 — the whole COSMIC WEB (universe scale): blooms only once you pull PAST our supercluster, so it
+        // doesn't clash with the flow basin. By here our whole Laniakea has collapsed to one node.
+        if (_cosmicWeb) {
+          var _cwo = Math.max(0, Math.min(1, (_cl - 8200) / 2600)) * 0.95;
           if (_cwo > 0.008) { _cosmicWeb.visible = true; _cosmicWeb.material.opacity = _cwo; } else if (_cosmicWeb.visible) { _cosmicWeb.visible = false; }
         }
         // STARFIELD recedes at web scale: the uniform local stars would drown the cosmic-web nodes/filaments, so
         // fade them (full at galaxy scale ≤5500, down to a faint 0.10 by ~10000) → the WARM WEB becomes the star
         // of the max-zoom view. (× the solo-dim factor so admiring a lone wonder still dims the field.)
         if (!_sfMat) { var _sfo = group.getObjectByName("Starfield"); if (_sfo && _sfo.material) { _sfMat = _sfo.material; _sfBase = _sfo.material.opacity; } }
-        if (_sfMat) { var _sfScale = Math.max(0.10, Math.min(1, (10000 - _cl) / 4500)); _sfMat.opacity = _sfBase * _sfScale * (1 - 0.55 * _bdT); }
+        if (_sfMat) { var _sfScale = Math.max(0.10, Math.min(1, (8500 - _cl) / 4000)); _sfMat.opacity = _sfBase * _sfScale * (1 - 0.55 * _bdT); }
         // GALAXY recedes at web scale: a whole galaxy is an invisible speck at cosmic-web scale, so the giant
         // central spiral fades as you pull out (full at galaxy scale ≤6500, faint by ~10500) → the scale finally
         // reads — the web is VAST and the Milky Way is just ONE tiny node in it (see the MW node in the web).
         if (!_galMats) { var _g1 = group.getObjectByName("MilkyWayGalaxy"), _g2 = group.getObjectByName("MilkyWayGlow"); if (_g1 && _g2) _galMats = [{ m: _g1.material, base: _g1.material.opacity }, { m: _g2.material, base: _g2.material.opacity }]; }
-        if (_galMats) { var _gScale = Math.max(0.13, Math.min(1, (10500 - _cl) / 4000)), _gSolo = _keepGal ? 1 : (1 - 0.86 * _bdT); for (var _gi = 0; _gi < _galMats.length; _gi++) _galMats[_gi].m.opacity = _galMats[_gi].base * _gScale * _gSolo; }
+        if (_galMats) { var _gScale = Math.max(0.10, Math.min(1, (6000 - _cl) / 2000)), _gSolo = _keepGal ? 1 : (1 - 0.86 * _bdT); for (var _gi = 0; _gi < _galMats.length; _gi++) _galMats[_gi].m.opacity = _galMats[_gi].base * _gScale * _gSolo; }
       }
       if (bloomSprite && bloomT > 0) { bloomT = Math.max(0, bloomT - 0.045); bloomSprite.material.opacity = bloomT * 0.7; if (bloomT === 0) bloomSprite.visible = false; }
       updateLabels();
