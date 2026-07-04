@@ -841,10 +841,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // (a) the SAGITTARIUS DWARF — being tidally shredded this epoch: a small OLD-STAR core below the far side
     //     of the disc, trailing a great tidal STREAM that loops the galaxy in a near-polar orbit.
     var sgrC = C.clone().addScaledVector(uu, -0.62 * Rgal).addScaledVector(w, -0.3 * Rgal);   // out near the disc edge, only slightly below → a distinct blob, not hidden behind the disc
-    for (var sg = 0; sg < 1600; sg++) {
+    for (var sg = 0; sg < 2400; sg++) {
       var sgr = Math.pow(rng(), 1.6) * 0.1 * Rgal, sgu = rng() * 2 - 1, sgp = rng() * Math.PI * 2, sgs = Math.sqrt(1 - sgu * sgu);
       var sgpt = sgrC.clone().addScaledVector(uu, sgr * sgs * Math.cos(sgp) * 1.6).addScaledVector(vv, sgr * sgs * Math.sin(sgp)).addScaledVector(w, sgr * sgu * 0.9);
-      push(sgpt, 0.96, 0.79, 0.63, 0.26 + 0.32 * Math.pow(rng(), 2), 0.1);
+      push(sgpt, 0.98, 0.82, 0.66, 0.34 + 0.36 * Math.pow(rng(), 2), 0.12);   // brighter old-star core so it's easy to pick out beside the disc
     }
     for (var ss = 0; ss < 4000; ss++) {                                        // the tidal stream — a bright polar great-loop of pulled-out stars wrapping the disc
       var phi = rng() * Math.PI * 2, loopR = Rgal * (0.78 + 0.4 * (0.5 + 0.5 * Math.cos(phi)));   // the loop wraps OUTSIDE the disc edge → a clear great ring around the galaxy
@@ -855,12 +855,12 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // (b) the MAGELLANIC CLOUDS — bright irregular satellite galaxies just off the disc: young BLUE stars +
     //     pink HII, trailing the faint Magellanic Stream the Milky Way is stripping from them.
     var lmc = C.clone().addScaledVector(vv, 1.05 * Rgal).addScaledVector(w, -0.32 * Rgal);   // just BEYOND the disc edge, off to the side → an obvious separate satellite galaxy
-    for (var lm = 0; lm < 2600; lm++) {
+    for (var lm = 0; lm < 3400; lm++) {
       var lr = Math.pow(rng(), 1.4) * 0.13 * Rgal, lu = rng() * 2 - 1, lp = rng() * Math.PI * 2, lsn = Math.sqrt(1 - lu * lu);
       var lpt = lmc.clone().addScaledVector(uu, lr * lsn * Math.cos(lp) * 1.8).addScaledVector(vv, lr * lsn * Math.sin(lp)).addScaledVector(w, lr * lu * 0.6);
-      if (rng() < 0.5) push(lpt, 0.72, 0.82, 1.0, 0.2 + 0.34 * Math.pow(rng(), 2), 0.12);
-      else if (rng() < 0.16) push(lpt, PINK[0], PINK[1], PINK[2], 0.34 + 0.35 * rng(), 0.3);
-      else push(lpt, 0.94, 0.91, 0.86, 0.16 + 0.26 * Math.pow(rng(), 2), 0.1);
+      if (rng() < 0.5) push(lpt, 0.74, 0.84, 1.0, 0.28 + 0.38 * Math.pow(rng(), 2), 0.14);   // young blue stars, brighter so the Cloud is unmistakable
+      else if (rng() < 0.16) push(lpt, PINK[0], PINK[1], PINK[2], 0.4 + 0.36 * rng(), 0.32);
+      else push(lpt, 0.95, 0.92, 0.88, 0.22 + 0.28 * Math.pow(rng(), 2), 0.12);
     }
     var smc = lmc.clone().addScaledVector(uu, -0.22 * Rgal).addScaledVector(vv, -0.07 * Rgal).addScaledVector(w, -0.05 * Rgal);
     for (var sm = 0; sm < 1300; sm++) {
@@ -872,6 +872,20 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var tb = rng(), bp = lmc.clone().lerp(smc, tb).addScaledVector(vv, (0.1 + 0.6 * tb) * Rgal * 0.5).addScaledVector(w, G() * 60).addScaledVector(uu, G() * 60);
       push(bp, 0.7, 0.85, 0.95, 0.03 + 0.05 * Math.pow(rng(), 2), 0.0);
     }
+    // --- make each companion a hover-nameable, clickable landmark (same interaction model as every nebula &
+    //     the black hole): an invisible pick sphere at its centre → hover shows the name, click flies you there ---
+    (function () {
+      function compShell(pos, r, id, en, zh) {
+        var sh = new T.Mesh(new T.SphereGeometry(r, 12, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
+        sh.position.copy(pos); sh.name = "DSOPick_" + id;
+        sh.userData.nyePick = "dso_" + id; sh.userData.dsoViewDist = r * 2.6; sh.userData.dsoFocusMin = r * 0.7;
+        sh.userData.dsoName = { en: en, zh: zh };
+        dsoPickGroup.add(sh);
+      }
+      compShell(lmc, 0.13 * Rgal * 1.35, "lmc", "Large Magellanic Cloud", "大麦哲伦云");
+      compShell(smc, 0.075 * Rgal * 1.5, "smc", "Small Magellanic Cloud", "小麦哲伦云");
+      compShell(sgrC, 0.11 * Rgal, "sgrdwarf", "Sagittarius Dwarf", "人马矮星系");
+    })();
     // the GLOW underlayer — big soft low-opacity sprites blur into a smooth luminous galaxy beneath the stars
     var gg = new T.BufferGeometry();
     gg.setAttribute("position", new T.BufferAttribute(new Float32Array(GP), 3));
@@ -948,8 +962,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
      between — the real large-scale texture (Voronoi skeleton: cell faces = walls, edges = filaments, verts
      = clusters, interiors = voids). Static, one draw, faded in only when the camera leaves the galaxy. --- */
   (function buildCosmicWeb() {
-    var COUNT = mobile ? 32000 : 62000, R_IN = 5200, R_OUT = 30000, NUM_SEEDS = 60;   // vast + closer-in so it blooms as you leave the galaxy, ~62k galaxies across the whole observable-universe web
-    var WALL_EPS = 0.06, FILA_EPS = 0.095, WALL_KEEP = 0.22;
+    var COUNT = mobile ? 42000 : 78000, R_IN = 6200, R_OUT = 20000, NUM_SEEDS = 84;   // a TIGHTER, DENSER band (~4× the per-volume density of the old vast-but-sparse shell) so from inside it finally reads as filaments↔nodes↔voids, not uniform dust
+    var WALL_EPS = 0.055, FILA_EPS = 0.088, WALL_KEEP = 0.18;
     var wr = gRng(0x1a91a), wG = function () { return wr() + wr() + wr() - 1.5; };
     var GA = Math.PI * (3 - Math.sqrt(5)), seeds = [];
     for (var si = 0; si < NUM_SEEDS; si++) {
@@ -990,8 +1004,28 @@ export function buildNatalSky(THREE, scene, data, opts) {
       if (kind === 1 && Math.abs(nn[2] - nn[1]) / nn[0] < 0.03) { kind = 2; t = 1.0; }   // node (Voronoi vertex → cluster)
       px += wG() * 260; py += wG() * 260; pz += wG() * 260;
       add(px, py, pz, kind, t);
-      if (kind === 2) { var nb = 18 + (wr() * 36) | 0, sig = 360 + wr() * 360; for (var q = 0; q < nb; q++) add(px + wG() * sig, py + wG() * sig, pz + wG() * sig, 2, 0.85 + 0.15 * wr()); }
+      if (kind === 2) { var nb = 42 + (wr() * 78) | 0, sig = 200 + wr() * 240; for (var q = 0; q < nb; q++) add(px + wG() * sig, py + wG() * sig, pz + wG() * sig, 2, 0.85 + 0.15 * wr()); }   // richer + more COMPACT clusters → each Voronoi vertex reads as a glowing galaxy cluster, not a loose speckle
     }
+    // --- the GREAT ATTRACTOR: our own supercluster's basin. One DOMINANT cluster with filaments visibly
+    //     streaming into it — the honest "simplified Laniakea" you're meant to notice when you dolly all the
+    //     way out. (Laniakea is defined by galaxy in-flow toward this basin; here it reads as convergence.)
+    var gaC = new T.Vector3(0.34, 0.60, -0.72).normalize().multiplyScalar(13400);
+    for (var gac = 0; gac < 1300; gac++) {                                    // dense, bright supercluster core
+      var gr = Math.pow(wr(), 1.7) * 1050, gu = 2 * wr() - 1, gp = 2 * Math.PI * wr(), gsn = Math.sqrt(1 - gu * gu);
+      add(gaC.x + gr * gsn * Math.cos(gp), gaC.y + gr * gsn * Math.sin(gp), gaC.z + gr * gu, 2, 0.9 + 0.1 * wr());
+    }
+    for (var gf = 0; gf < 7; gf++) {                                          // seven filaments flowing INTO the basin
+      var fd = new T.Vector3(wG(), wG(), wG()).normalize(), fl = 5200 + wr() * 3200;
+      for (var fp = 0; fp < 620; fp++) {
+        var tf = fp / 619, len = fl * Math.pow(tf, 0.82), jw = 150 + 520 * tf;   // thread widens outward from the node
+        add(gaC.x + fd.x * len + wG() * jw, gaC.y + fd.y * len + wG() * jw, gaC.z + fd.z * len + wG() * jw, 1, 0.65 * (1 - tf) + 0.35);
+      }
+    }
+    var gaShell = new T.Mesh(new T.SphereGeometry(1700, 12, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
+    gaShell.position.copy(gaC); gaShell.name = "DSOPick_laniakea";
+    gaShell.userData.nyePick = "dso_laniakea"; gaShell.userData.dsoViewDist = 4400; gaShell.userData.dsoFocusMin = 1300;
+    gaShell.userData.dsoName = { en: "Laniakea · the Great Attractor", zh: "拉尼亚凯亚超星系团 · 巨引源" };
+    dsoPickGroup.add(gaShell);
     var wgeo = new T.BufferGeometry();
     wgeo.setAttribute("position", new T.BufferAttribute(new Float32Array(POS), 3));
     wgeo.setAttribute("color", new T.BufferAttribute(new Float32Array(COL), 3));
