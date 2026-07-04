@@ -1051,16 +1051,17 @@ export function buildNatalSky(THREE, scene, data, opts) {
       if (ok) nodes.push({ p: cand, mass: 0.4 + 0.9 * Math.pow(wr(), 1.7) });
     }
 
-    // ---- NODE CORES: compact bright knots — SMALL, because there are MANY (a fine cobweb, not a few blobs) ----
+    // ---- NODE CORES: bright compact knots — many of them → a fine cobweb of glowing junctions ----
     for (var n = 0; n < nodes.length; n++) {
-      var nd = nodes[n], cn = Math.round((mobile ? 130 : 220) * (0.5 + nd.mass)), cr = 75 + 150 * nd.mass;
+      var nd = nodes[n], cn = Math.round((mobile ? 200 : 340) * (0.6 + nd.mass)), cr = 90 + 195 * nd.mass;
       for (var q = 0; q < cn; q++) {
         var r = Math.pow(wr(), 1.9) * cr, u = 2 * wr() - 1, pp = 2 * Math.PI * wr(), sn = Math.sqrt(1 - u * u);
-        pushPt(nd.p.x + r * sn * Math.cos(pp), nd.p.y + r * sn * Math.sin(pp), nd.p.z + r * u, 0.90 + 0.10 * wr(), Math.min(1.7, 0.85 + 0.5 * nd.mass));
+        pushPt(nd.p.x + r * sn * Math.cos(pp), nd.p.y + r * sn * Math.sin(pp), nd.p.z + r * u, 0.90 + 0.10 * wr(), Math.min(2.0, 1.0 + 0.55 * nd.mass));
       }
     }
 
-    // ---- THIN FILAMENTS: join each node to its nearest 3-5 → an intricate LACEWORK of fine bright threads ----
+    // ---- THIN FILAMENTS: join each node to its nearest 3-5 → an intricate LACEWORK of fine bright threads.
+    //      DENSE points along each thread so it reads as a continuous glowing strand even from far out. ----
     var edges = {};
     for (var a = 0; a < nodes.length; a++) {
       var order = [];
@@ -1072,19 +1073,19 @@ export function buildNatalSky(THREE, scene, data, opts) {
         if (edges[key]) continue; edges[key] = true;
         var pA = nodes[a].p, pB = nodes[bb].p, L = pA.distanceTo(pB);
         if (L > MINSP * 3.2) continue;   // only bridge genuine neighbours → a local lattice, not a mesh across the box
-        var nPts = Math.max(26, Math.round(L / 13));
+        var nPts = Math.max(44, Math.round(L / 8));
         for (var t = 0; t < nPts; t++) {
-          var f = t / (nPts - 1), jit = 14 + 42 * Math.sin(f * Math.PI);   // THIN thread, a touch fuller mid-span
-          pushPt(pA.x + (pB.x - pA.x) * f + wG() * jit, pA.y + (pB.y - pA.y) * f + wG() * jit, pA.z + (pB.z - pA.z) * f + wG() * jit, 0.34 + 0.22 * (1 - Math.sin(f * Math.PI)), 0.62);
+          var f = t / (nPts - 1), jit = 16 + 46 * Math.sin(f * Math.PI);   // THIN thread, a touch fuller mid-span
+          pushPt(pA.x + (pB.x - pA.x) * f + wG() * jit, pA.y + (pB.y - pA.y) * f + wG() * jit, pA.z + (pB.z - pA.z) * f + wG() * jit, 0.42 + 0.24 * (1 - Math.sin(f * Math.PI)), 0.85);
         }
       }
     }
 
-    // ---- faint galaxies dusting the walls & voids (the diffuse haze between the bright threads) ----
-    var strays = mobile ? 1800 : 3200;
+    // ---- a FAINT sprinkle so the voids aren't dead black (but they stay mostly empty — voids dominate) ----
+    var strays = mobile ? 1200 : 2000;
     for (var v = 0; v < strays; v++) {
       var vr = 1600 + (RMAX - 1600) * Math.pow(wr(), 0.5), vct = 2 * wr() - 1, vst = Math.sqrt(1 - vct * vct), vph = 2 * Math.PI * wr();
-      pushPt(vr * vst * Math.cos(vph), vr * vct, vr * vst * Math.sin(vph), 0.05, 0.12);
+      pushPt(vr * vst * Math.cos(vph), vr * vct, vr * vst * Math.sin(vph), 0.05, 0.11);
     }
 
     // ---- OUR node IS Laniakea — the Great Attractor & Milky Way are INSIDE it, not separate. Click it to pull
@@ -1097,7 +1098,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var wgeo = new T.BufferGeometry();
     wgeo.setAttribute("position", new T.BufferAttribute(new Float32Array(POS), 3));
     wgeo.setAttribute("color", new T.BufferAttribute(new Float32Array(COL), 3));
-    var wmat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 42 : 55, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: true });   // small soft points → the FINE lacework reads as thin threads + compact knots, not fat blobs; fog dissolves the far side
+    var wmat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 52 : 70, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: true });   // soft points sized so the FINE lacework reads as continuous thin threads + compact knots from far out; fog dissolves the far side
     if ("toneMapped" in wmat) wmat.toneMapped = false;
     _cosmicWeb = new T.Points(wgeo, wmat); _cosmicWeb.name = "CosmicWeb"; _cosmicWeb.renderOrder = -6; _cosmicWeb.frustumCulled = false; _cosmicWeb.visible = false;
     belt.add(_cosmicWeb);

@@ -996,7 +996,7 @@
     var DOSSIER = {};   // the data-hook registry (keyed by pick-id) → the focus card; blank entries render nothing
     fetch("data/natal-sky.json?v=16").then(function (r) { return r.json(); }).then(function (natalData) {
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=99").then(function (mod) {
+      return import("./natal-sky.js?v=100").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1842,7 +1842,7 @@
         // scale ease it MUCH thinner (0.000115) so the far cosmic-web foam recedes into black yet the near
         // filaments stay bright. Only fog:true materials (the web) respond — the galaxy etc. are fog:false. Ease
         // smoothly (no pop, no nulling the init fog).
-        if (scene.fog) { var _fTgt = _farCl > 2200 ? 0.00006 : 0.0018; scene.fog.density += (_fTgt - scene.fog.density) * 0.08; }
+        if (scene.fog) { var _fTgt = _farCl > 2200 ? 0.00004 : 0.0018; scene.fog.density += (_fTgt - scene.fog.density) * 0.08; }
         // 干支 GEAR-RINGS: solar-system-scale ornament — built ONLY when the visitor enters the orrery band
         // (never at init/ground, never at galaxy scale). The existing ringFade hides them once you pass ~900 out;
         // collectRingMats self-heals to pick up the freshly-built ring materials.
