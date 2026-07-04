@@ -1034,7 +1034,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var Fdir = new T.Vector3(0.30, 0.42, -0.72).normalize();
     var F = Fdir.clone().multiplyScalar(3800);   // the Great Attractor — the convergence point of the whole basin
     var swirlAxis = new T.Vector3(0.18, 1, 0.12).normalize();
-    var RAD = 8200, NLINE = mobile ? 1100 : 2200;
+    var RAD = 8200, NLINE = mobile ? 2200 : 4200;   // dense enough that the streamlines read as combed hair (not sparse threads) when framed from the laniakea tier's distance
     // three fixed lobe axes bend the spawn shell into the IRREGULAR Tully basin (not a round ball): bulge toward
     // Virgo + Hydra-Centaurus, pinch at the Perseus-Pisces divide where our edge lies.
     var AX_VIRGO = eclVec(raDecToEcl(12.442, 12.72), 1).normalize();
@@ -1046,7 +1046,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     for (var s = 0; s < NLINE; s++) {
       var d0 = new T.Vector3(2 * wr() - 1, 2 * wr() - 1, 2 * wr() - 1); if (d0.lengthSq() < 1e-4) d0.set(1, 0, 0); d0.normalize();
       var pos = F.clone().addScaledVector(d0, RAD * (0.30 + 0.70 * Math.pow(wr(), 0.5)) * basinLobe(d0));
-      var steps = 46 + (wr() * 44 | 0), handed = d0.dot(swirlAxis) > 0 ? 1 : -1;   // coherent comb per hemisphere (refs 1/3), not per-line swirl
+      var steps = 58 + (wr() * 54 | 0), handed = d0.dot(swirlAxis) > 0 ? 1 : -1;   // coherent comb per hemisphere (refs 1/3), not per-line swirl; long lines so the hair reads continuous
       for (var t = 0; t < steps; t++) {
         var toF = new T.Vector3().subVectors(F, pos), dF = toF.length();
         if (dF < 80) break;
@@ -1055,7 +1055,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
         var frac = dF / RAD, stepLen = 48 + 188 * frac;
         pos.addScaledVector(toF, stepLen).addScaledVector(tang, handed * stepLen * (0.30 + 0.5 * frac));
         pos.x += wG() * 13; pos.y += wG() * 13; pos.z += wG() * 13;
-        var prox = 1 - Math.min(1, frac), br = 0.36 + 0.95 * prox * prox, wf = Math.max(0, prox - 0.5) / 0.5;   // gold → white as it nears the attractor; rim stays visible (combed hair spans the whole basin, refs 1/3)
+        var prox = 1 - Math.min(1, frac), br = 0.50 + 0.80 * prox * prox, wf = Math.max(0, prox - 0.5) / 0.5;   // gold → white as it nears the attractor; rim stays bright (combed hair spans the whole basin, refs 1/3)
         pushFlow(pos.x, pos.y, pos.z, br, wf);
       }
     }
@@ -1081,7 +1081,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var g = new T.BufferGeometry();
     g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
     g.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
-    var mat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 88 : 122, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: false });   // sized up for the laniakea tier's far framing (camLen ~16000)
+    var mat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 78 : 104, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: false });   // sized for the laniakea tier's framing (camLen ~13100); density carries the read, not raw size
     if ("toneMapped" in mat) mat.toneMapped = false;
     _laniakeaFlow = new T.Points(g, mat); _laniakeaFlow.name = "LaniakeaFlow"; _laniakeaFlow.renderOrder = -5; _laniakeaFlow.frustumCulled = false; _laniakeaFlow.visible = false;
     belt.add(_laniakeaFlow);
