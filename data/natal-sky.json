@@ -1655,5 +1655,487 @@
       "ly": 655,
       "tier": "galactic"
     }
-  ]
+  ],
+  "dossier": {
+    "sun": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "moon": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "mercury": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "venus": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "mars": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "jupiter": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "saturn": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "uranus": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "neptune": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "pluto": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "charon": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "con_capricorn": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "con_leo": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "con_pisces": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "con_cancer": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "con_gemini": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "con_aries": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "con_taurus": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "con_virgo": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "con_libra": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "con_scorpio": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "con_sagittarius": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "con_aquarius": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "dso_pillars": {
+      "titleEn": "Pillars of Creation",
+      "titleZh": "创生之柱",
+      "blurbEn": "Towering columns of gas and dust in the Eagle Nebula (M16), ~5,700–7,000 ly away, where new stars are being born.",
+      "blurbZh": "鹰状星云(M16)中高耸的气体尘埃柱,约5700–7000光年,新恒星正在其中诞生。",
+      "links": [],
+      "status": "published"
+    },
+    "dso_orion": {
+      "titleEn": "Orion Nebula (M42)",
+      "titleZh": "猎户座大星云",
+      "blurbEn": "The nearest large star-forming region, ~1,340 ly away — a stellar nursery visible to the naked eye below Orion's Belt.",
+      "blurbZh": "距地球最近的大型恒星形成区,约1340光年——猎户腰带下方肉眼可见的恒星摇篮。",
+      "links": [],
+      "status": "published"
+    },
+    "dso_rosette": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "dso_andromeda": {
+      "titleEn": "Andromeda Galaxy (M31)",
+      "titleZh": "仙女座星系",
+      "blurbEn": "The nearest major galaxy, ~2.5 million ly away — a spiral on a collision course with the Milky Way in ~4.5 billion years.",
+      "blurbZh": "距银河系最近的大型星系,约250万光年——一个螺旋星系,约45亿年后将与银河系相撞。",
+      "links": [],
+      "status": "published"
+    },
+    "dso_crab": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "dso_horsehead": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "dso_lagoon": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "dso_ring": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "dso_pleiades": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "dso_carina": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "dso_helix": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "dso_lmc": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "dso_smc": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "dso_sgrdwarf": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "dso_galcore": {
+      "titleEn": "Sagittarius A*",
+      "titleZh": "银心 · 人马座A*",
+      "blurbEn": "The Milky Way's central supermassive black hole — ~4.3 million solar masses, ~26,000 ly away, imaged by the Event Horizon Telescope in 2022.",
+      "blurbZh": "银河系中心的超大质量黑洞——约430万倍太阳质量,距地球约2.6万光年,2022年由事件视界望远镜成像。",
+      "links": [],
+      "status": "published"
+    },
+    "dso_laniakea": {
+      "titleEn": "Laniakea · the Great Attractor",
+      "titleZh": "拉尼亚凯亚 · 巨引源",
+      "blurbEn": "Our home supercluster (Tully 2014): ~520 million ly across, ~100,000 galaxies, all drifting toward the Great Attractor. The Milky Way sits on its far outskirts.",
+      "blurbZh": "我们所属的超星系团(Tully 2014):跨约5.2亿光年、约十万个星系,全部流向巨引源;银河系位于其外缘。",
+      "links": [],
+      "status": "published"
+    },
+    "worldmodel": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "ringdown": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "bornNaturalness": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "paperB": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "paperD": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "tachyon": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "paperB2": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "paperA": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "gwPopulation": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "paperC1": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "paperC2": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "cmsJets": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "cnt3omega": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "blazar": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "gammaSpec": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "alpDM": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "maxi": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "toiFlares": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "monopolyRent": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "stackPower": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "cpe": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    }
+  }
 }

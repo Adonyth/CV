@@ -993,8 +993,10 @@
     // the natal sphere holds STILL around the world (the chart is a fact, not weather);
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
-    fetch("data/natal-sky.json?v=14").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=88").then(function (mod) {
+    var DOSSIER = {};   // the data-hook registry (keyed by pick-id) → the focus card; blank entries render nothing
+    fetch("data/natal-sky.json?v=15").then(function (r) { return r.json(); }).then(function (natalData) {
+      DOSSIER = natalData.dossier || {};
+      return import("./natal-sky.js?v=89").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1400,6 +1402,8 @@
         if (!obj) return;
         soloBody = ({ NyeSun: "sun", NyeMoon: "moon", NatalJupiter: "jupiter", NatalSaturn: "saturn", NatalMercury: "mercury", NatalVenus: "venus", NatalMars: "mars", NatalUranus: "uranus", NatalNeptune: "neptune", NatalPluto: "pluto", NatalPlutoMoon: "charon" })[objName] || soloBody;
         clearSel();
+        var _bodyPick = ({ NyeSun: "sun", NyeMoon: "moon", NatalJupiter: "jupiter", NatalSaturn: "saturn", NatalMercury: "mercury", NatalVenus: "venus", NatalMars: "mars", NatalUranus: "uranus", NatalNeptune: "neptune", NatalPluto: "pluto", NatalPlutoMoon: "charon" })[objName];
+        if (_bodyPick) showDossier(_bodyPick, null);   // its dossier (blank now) can be filled later
         controls.setDistanceLimits(FOCUS_MIN[objName] || 5.0, 15000);   // AFTER clearSel — clearSel resets the floor to the earth-anchored 5.0; 1600 lets you pull back from any focused body to the full-system overview
         var w = obj.getWorldPosition(new THREE.Vector3());
         /* stand OUTSIDE the body along the Earth→body line, swung aside within the
@@ -1446,6 +1450,7 @@
           flyTo({ camTo: c.clone().sub(dir.multiplyScalar(85)), targetTo: c.clone(), lookAt: c.clone(), frames: nFrames ? Math.round(nFrames * 2.2) : null, fovKick: 5, onDone: null });
         } else return;
         soloBody = "sky"; clearSel();
+        showDossier("con_" + id, null);
         natalSky.highlight(id, true); setTimeout(function () { natalSky.highlight(id, false); }, 4200);
       }
       window.__space.focusCon = focusConstellation;
@@ -1453,8 +1458,25 @@
       /* the star protocol: first click gives the star the pivot and summons its door;
          the second click (or the door itself) opens it. Nothing navigates by surprise. */
       var selStar = null, starCta = document.getElementById("star-cta");
+      var focusCard = document.getElementById("focus-card");
+      function hideDossier() { if (focusCard) focusCard.classList.remove("is-on"); }
+      function showDossier(id, fallback) {
+        if (!focusCard) return;
+        var d = (DOSSIER && DOSSIER[id]) || null;
+        var nm = fallback || (natalSky && natalSky.getPickName ? natalSky.getPickName(id) : null) || null;
+        var tEn = (d && d.titleEn) || (nm && nm.en) || "";
+        var tZh = (d && d.titleZh) || (nm && nm.zh) || tEn;
+        if (!tEn && !(d && (d.blurbEn || d.blurbZh))) { hideDossier(); return; }   // truly nothing to show → stay invisible (honors the unlabeled-sky decree)
+        var status = d && d.status ? '<span class="focus-card__chip">' + d.status + '</span>' : "";
+        var blurb = d && (d.blurbEn || d.blurbZh) ? '<p class="focus-card__b"><span class="i18n-en">' + (d.blurbEn || "") + '</span><span class="i18n-zh">' + (d.blurbZh || d.blurbEn || "") + '</span></p>' : "";
+        var links = (d && d.links && d.links.length) ? '<div class="focus-card__links">' + d.links.map(function (l) { return '<a href="' + l.href + '" target="_blank" rel="noopener"><span class="i18n-en">' + (l.labelEn || l.href) + ' ↗</span><span class="i18n-zh">' + (l.labelZh || l.labelEn || l.href) + ' ↗</span></a>'; }).join("") + '</div>' : "";
+        focusCard.innerHTML = '<div class="focus-card__h"><span class="i18n-en">' + tEn + '</span><span class="i18n-zh">' + tZh + '</span>' + status + '</div>' + blurb + links;
+        focusCard.classList.add("is-on");
+      }
+      window.__space.showDossier = showDossier;
       function clearSel() {
         selStar = null; if (starCta) starCta.classList.remove("is-on");
+        hideDossier();
         if (controls) controls.setDistanceLimits(5.0, 15000);   // leaving any body-focus: the earth-anchored floor returns; 1600 keeps the full-system overview reachable
       }
       window.__space.clearSel = clearSel;
@@ -1470,6 +1492,7 @@
         // (flyTo departs vertically when starting from the ground — no chain needed)
         if (selStar && selStar.id === info.id) { openStarDoor(); return; }
         selStar = info;
+        showDossier(info.id, { en: info.titleEn, zh: info.titleZh });
         if (starCta) {
           var te = info.titleEn.length > 34 ? info.titleEn.slice(0, 33) + "…" : info.titleEn;
           var tz = info.titleZh.length > 17 ? info.titleZh.slice(0, 16) + "…" : info.titleZh;
@@ -1502,6 +1525,7 @@
         var w = obj.getWorldPosition(new THREE.Vector3());
         soloBody = (id === "galcore") ? "galcore" : "dso";   // the galactic centre keeps its galaxy; a lone nebula owns an empty frame
         clearSel();
+        showDossier("dso_" + id, shell && shell.userData && shell.userData.dsoName);
         controls.setDistanceLimits(fmin, 15000);
         var outward = w.clone().normalize();
         if (outward.lengthSq() < 1e-9) outward.set(0, 0, 1);

@@ -1290,6 +1290,11 @@ export function buildNatalSky(THREE, scene, data, opts) {
     starPoints: starPoints,
     ensureFarLayers: ensureFarLayers,
     ensureCosmicWeb: ensureCosmicWeb,
+    getPickName: function (id) {   // fallback name for the dossier card when a registry entry is blank
+      if (id.indexOf("dso_") === 0) { var s = dsoPickGroup.getObjectByName("DSOPick_" + id.slice(4)); return s && s.userData.dsoName || null; }
+      if (id.indexOf("con_") === 0) { var c = cons.filter(function (k) { return k.id === id.slice(4); })[0]; return c ? (c.name || (c.figureName)) : null; }
+      return null;
+    },
     tick: function (sec) {
       uniforms.uTime.value = sec;
       lineOpacities(sec);
