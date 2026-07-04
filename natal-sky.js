@@ -615,7 +615,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
      in one draw call. A local "bubble" is carved out so no galaxy star clutters the planets or
      the constellations that live nearer than the arm. Built once — zero per-frame cost. -------- */
   (function buildMilkyWayGalaxy() {
-    var Rgal = 1600, N = mobile ? 34000 : 82000;
+    var Rgal = 1600, N = mobile ? 55000 : 120000;                              // dense enough that arms + bulge read as a luminous galaxy, one static draw call
     var Rsun = 0.55 * Rgal, Rhole = 470;                                        // Sun's galactocentric radius; local bubble kept clear
     var gcE = raDecToEcl(17.7608, -28.94), npE = raDecToEcl(12.8571, 27.13);    // Sgr A* + galactic north pole
     var w = eclVec(npE.lon, npE.lat, 1).normalize();                            // disc normal (galactic pole)
@@ -677,7 +677,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var g = new T.BufferGeometry();
     g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
     g.setAttribute("color", new T.BufferAttribute(new Float32Array(Cc), 3));
-    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 2.4 : 3.2, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.82, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    // constant SCREEN-size points (sizeAttenuation off): the galaxy is huge and mostly far, so
+    // attenuation shrinks the bulge/arms to invisibility — constant size keeps it luminous at every zoom
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 1.8 : 2.2, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     var pts = new T.Points(g, m); pts.name = "MilkyWayGalaxy"; pts.renderOrder = -4; pts.frustumCulled = false;
     belt.add(pts);
