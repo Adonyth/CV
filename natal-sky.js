@@ -1055,7 +1055,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
         var frac = dF / RAD, stepLen = 48 + 188 * frac;
         pos.addScaledVector(toF, stepLen).addScaledVector(tang, handed * stepLen * (0.30 + 0.5 * frac));
         pos.x += wG() * 13; pos.y += wG() * 13; pos.z += wG() * 13;
-        var prox = 1 - Math.min(1, frac), br = 0.20 + 1.15 * prox * prox, wf = Math.max(0, prox - 0.5) / 0.5;   // gold → white as it nears the attractor
+        var prox = 1 - Math.min(1, frac), br = 0.36 + 0.95 * prox * prox, wf = Math.max(0, prox - 0.5) / 0.5;   // gold → white as it nears the attractor; rim stays visible (combed hair spans the whole basin, refs 1/3)
         pushFlow(pos.x, pos.y, pos.z, br, wf);
       }
     }
@@ -1081,7 +1081,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var g = new T.BufferGeometry();
     g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
     g.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
-    var mat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 46 : 64, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var mat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 88 : 122, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: false });   // sized up for the laniakea tier's far framing (camLen ~16000)
     if ("toneMapped" in mat) mat.toneMapped = false;
     _laniakeaFlow = new T.Points(g, mat); _laniakeaFlow.name = "LaniakeaFlow"; _laniakeaFlow.renderOrder = -5; _laniakeaFlow.frustumCulled = false; _laniakeaFlow.visible = false;
     belt.add(_laniakeaFlow);
@@ -1471,7 +1471,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     setBackdropDim: setBackdropDim,
     // pulled far enough back that the whole galaxy fills the view → the ecliptic zodiac constellations
     // (a solar-system-scale ring) melt away: they'd sit jarringly inside a galaxy-scale frame. t: 0 shown → 1 hidden
-    setZodiacFade: function (t) { zoomMul = 1 - 0.85 * Math.max(0, Math.min(1, t)); },   // floor 0.15: the figures never vanish ENTIRELY (a faint ghost of the natal sky remains at every scale) — honors "don't hide all the zodiac"
+    setZodiacFade: function (t) { zoomMul = 1 - Math.max(0, Math.min(1, t)); },   // the constellation FIGURE-lines belong to the star-chart scale; they ease fully to 0 once you leave for the galaxy/deep tiers (the constellation STARS stay — they're separate) so nothing clutters the cosmic view
     setStarScale: function (v) { uniforms.uRefDepth.value = 840 * v; },
     stats: { stars: N, segments: totalSegs, dataNodes: nodeIndex.filter(Boolean).length, planets: planetSprites.length, constellations: cons.length },
     dispose: function () {
