@@ -1121,20 +1121,22 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var L = pA.distanceTo(pB), nP = Math.max(18, Math.round(L / dens));
       for (var t = 0; t < nP; t++) { var f = t / (nP - 1), jit = 12 + 34 * Math.sin(f * Math.PI); pushPt(pA.x + (pB.x - pA.x) * f + wG() * jit, pA.y + (pB.y - pA.y) * f + wG() * jit, pA.z + (pB.z - pA.z) * f + wG() * jit, briBase + 0.24 * (1 - Math.sin(f * Math.PI)), inten); }
     }
-    // intra-clump: the internal cobweb of each supercluster — sub-clusters wired to their core (short, brighter)
-    for (var cd = 0; cd < clumps.length; cd++) { var cl = clumps[cd]; if (!cl.nodes) continue; for (var si = 1; si < cl.nodes.length; si++) thread(cl.nodes[0].p, cl.nodes[si].p, 8, 0.44, 0.8); }
-    // inter-clump: long thin filaments strung between neighbouring superclusters over the voids (the great skeleton)
+    // intra-clump: the internal cobweb of each supercluster — sub-clusters wired to their core (short, bright)
+    for (var cd = 0; cd < clumps.length; cd++) { var cl = clumps[cd]; if (!cl.nodes) continue; for (var si = 1; si < cl.nodes.length; si++) thread(cl.nodes[0].p, cl.nodes[si].p, 7, 0.52, 0.95); }
+    // inter-clump: long filaments strung between neighbouring superclusters over the voids (the great skeleton).
+    //      Bright & dense enough to read as continuous luminous strands, so the web is a connected lattice not
+    //      scattered blobs. Each supercluster wires to its nearest 2-3 neighbours.
     var cedges = {};
     for (var ca = 0; ca < clumps.length; ca++) {
       var corder = [];
       for (var cb = 0; cb < clumps.length; cb++) { if (cb !== ca) corder.push({ b: cb, d: clumps[ca].p.distanceTo(clumps[cb].p) }); }
       corder.sort(function (x, y) { return x.d - y.d; });
-      var ckn = 2 + (wr() < 0.45 ? 1 : 0);
+      var ckn = 2 + (wr() < 0.65 ? 1 : 0);
       for (var ce = 0; ce < Math.min(ckn, corder.length); ce++) {
         var cbb = corder[ce].b, ckey = Math.min(ca, cbb) + "_" + Math.max(ca, cbb);
         if (cedges[ckey]) continue; cedges[ckey] = true;
-        if (clumps[ca].p.distanceTo(clumps[cbb].p) > CLUMPSP * 2.8) continue;   // don't bridge across the whole box
-        thread(clumps[ca].p, clumps[cbb].p, 10, 0.24, 0.5);
+        if (clumps[ca].p.distanceTo(clumps[cbb].p) > CLUMPSP * 3.0) continue;   // don't bridge clear across the box
+        thread(clumps[ca].p, clumps[cbb].p, 7, 0.40, 0.72);
       }
     }
 
