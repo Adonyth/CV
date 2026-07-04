@@ -519,63 +519,74 @@ export function buildNatalSky(THREE, scene, data, opts) {
     belt.add(aura);
   });
 
-  /* ---------------- famous deep-sky objects, RE-GRADED into the orrery's own warm ember
-     palette so they belong to this painting instead of reading as pasted-on photographs.
-     A shader keeps only the photo's LUMINANCE (its recognizable shape/structure) and
-     re-colours it through a warm ramp — deep rust → coral → gold → cream, the same
-     gold/coral register as the whole scene; a radial mask dissolves the frame; additive
-     blending turns it into a soft glow. Placed at each object's true RA/Dec beyond the
-     zodiac. Static: one textured plane each, built once, facing the viewer's home — zero
-     per-frame cost. (The raw photographs clashed as a different medium; un-recoloured
-     particle clouds washed to white — the warm-graded glow is what reads as one world.) */
-  var DSO_EDGE = (function () {                  // opaque grayscale radial → sampled (.r) as the soft-edge mask
-    var s = 256, cv = document.createElement("canvas"); cv.width = cv.height = s;
-    var cx = cv.getContext("2d"), g = cx.createRadialGradient(s / 2, s / 2, s * 0.14, s / 2, s / 2, s * 0.52);
-    g.addColorStop(0, "#ffffff"); g.addColorStop(0.7, "#d0d0d0"); g.addColorStop(1, "#000000");
+  /* ---------------- famous deep-sky objects, MODELLED AS WARM STAR-CLOUDS: each real
+     astrophoto is sampled into a genuine 3-D cloud of glowing POINTS — x,y from the photo
+     so the object's shape reads, a z-DEPTH so it has real volume you can fly around (not a
+     flat panel), and every point RE-COLOURED through the scene's own warm ember ramp
+     (rust → coral → gold → cream) so it belongs to this world, not a photograph. Per-image
+     auto-levels + brightness-weighted density carve the structure out so it reads as
+     something built from stars. Built once at load; one Points cloud + one draw call each —
+     zero per-frame cost. ---------------- */
+  var DSO_SOFT = (function () {                  // one soft round star point
+    var s = 64, cv = document.createElement("canvas"); cv.width = cv.height = s;
+    var cx = cv.getContext("2d"), g = cx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(0.35, "rgba(255,255,255,0.5)"); g.addColorStop(1, "rgba(255,255,255,0)");
     cx.fillStyle = g; cx.fillRect(0, 0, s, s);
-    return new T.CanvasTexture(cv);
+    var t = new T.CanvasTexture(cv); if ("colorSpace" in t && T.SRGBColorSpace) t.colorSpace = T.SRGBColorSpace;
+    return t;
   })();
-  var DSO_VERT = "varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }";
-  var DSO_FRAG = [
-    "uniform sampler2D map; uniform sampler2D edge; uniform float uOpacity; uniform float uGamma; varying vec2 vUv;",
-    "vec3 ramp(float t){",                        // the scene's warm ember ladder (coral #e0876a, gold #e8c37a)
-    "  vec3 c0=vec3(0.06,0.035,0.02), c1=vec3(0.42,0.20,0.10), c2=vec3(0.878,0.529,0.416), c3=vec3(0.910,0.765,0.478), c4=vec3(1.0,0.95,0.86);",
-    "  if(t<0.30) return mix(c0,c1,t/0.30);",
-    "  if(t<0.56) return mix(c1,c2,(t-0.30)/0.26);",
-    "  if(t<0.80) return mix(c2,c3,(t-0.56)/0.24);",
-    "  return mix(c3,c4,(t-0.80)/0.20);",
-    "}",
-    "void main(){",
-    "  float lum=dot(texture2D(map,vUv).rgb, vec3(0.299,0.587,0.114));",   // keep only the shape, discard the raw hue
-    "  float e=texture2D(edge,vUv).r;",
-    "  float l=pow(lum, uGamma);",
-    "  gl_FragColor=vec4(ramp(l), l*e*uOpacity);",  // warm colour, glow weighted by brightness, edge dissolved
-    "}"
-  ].join("\n");
+  var DSO_RAMP = [[0, [0.06, 0.035, 0.02]], [0.30, [0.42, 0.20, 0.10]], [0.56, [0.878, 0.529, 0.416]], [0.80, [0.910, 0.765, 0.478]], [1.0, [1.0, 0.95, 0.86]]];
+  function dsoRamp(t) {                          // the scene's warm ember ladder (coral #e0876a, gold #e8c37a)
+    for (var i = 1; i < DSO_RAMP.length; i++) { if (t <= DSO_RAMP[i][0]) { var k = (t - DSO_RAMP[i - 1][0]) / (DSO_RAMP[i][0] - DSO_RAMP[i - 1][0]), a = DSO_RAMP[i - 1][1], b = DSO_RAMP[i][1]; return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]; } }
+    return DSO_RAMP[4][1];
+  }
+  function dsoParticles(d, img) {
+    var W = img.naturalWidth || img.width, H = img.naturalHeight || img.height;
+    var cap = d.sample || 200, sc = Math.min(1, cap / Math.max(W, H));
+    var sw = Math.max(2, Math.round(W * sc)), sh = Math.max(2, Math.round(H * sc));
+    var cv = document.createElement("canvas"); cv.width = sw; cv.height = sh;
+    var cx = cv.getContext("2d"); cx.drawImage(img, 0, 0, sw, sh);
+    var px = cx.getImageData(0, 0, sw, sh).data, npx = sw * sh;
+    var lumA = new Float32Array(npx), srt = new Float32Array(npx);
+    for (var q = 0; q < npx; q++) { var l0 = (0.299 * px[q * 4] + 0.587 * px[q * 4 + 1] + 0.114 * px[q * 4 + 2]) / 255; lumA[q] = l0; srt[q] = l0; }
+    Array.prototype.sort.call(srt, function (a, b) { return a - b; });
+    var lo = srt[(npx * 0.40) | 0], hi = srt[Math.min(npx - 1, (npx * 0.995) | 0)], span = Math.max(0.001, hi - lo);  // per-image auto-levels
+    var rng = gRng(((d.seed || 7) * 131 + 7) >>> 0);
+    var dens = d.density != null ? d.density : 0.6, gamma = d.gamma != null ? d.gamma : 0.7, bright = d.bright != null ? d.bright : 1.5;
+    var Wu = d.size || 160, Hu = Wu * (sh / sw), depth = (d.depth != null ? d.depth : 0.4) * Wu;
+    var P = [], C = [];
+    for (var y = 0; y < sh; y++) for (var x = 0; x < sw; x++) {
+      var ln = Math.max(0, Math.min(1, (lumA[y * sw + x] - lo) / span));            // normalised brightness
+      if (ln <= 0.02 || rng() > dens * Math.min(1, Math.pow(ln, 0.5) * 1.8)) continue;  // density follows brightness → shape
+      var wx = (x / (sw - 1) - 0.5) * Wu, wy = (0.5 - y / (sh - 1)) * Hu, wz = ((ln - 0.5) * 0.5 + (rng() - 0.5)) * depth;
+      var col = dsoRamp(Math.pow(ln, gamma)), w = 0.45 + 0.55 * ln;                 // dim points for dim regions → contrast
+      P.push(wx, wy, wz);
+      C.push(Math.min(1, col[0] * bright * w), Math.min(1, col[1] * bright * w), Math.min(1, col[2] * bright * w));
+    }
+    var geo = new T.BufferGeometry();
+    geo.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
+    geo.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 3, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: d.opacity != null ? d.opacity : 0.95, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    if ("toneMapped" in m) m.toneMapped = false;
+    return new T.Points(geo, m);
+  }
   (data.deepSky || []).forEach(function (d) {
     if (!d.tex) return;
     var ecl = raDecToEcl(d.raH, d.decDeg), world = eclVec(ecl.lon, ecl.lat, d.dist || 900);
-    new T.TextureLoader().load("data/" + d.tex, function (tex) {
-      if ("colorSpace" in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
-      tex.anisotropy = 4;
-      var iw = (tex.image && tex.image.width) || 1, ih = (tex.image && tex.image.height) || 1;
-      var W = d.size || 180, H = W * (ih / iw);   // plane keeps the photo's aspect
-      var mat = new T.ShaderMaterial({
-        uniforms: { map: { value: tex }, edge: { value: DSO_EDGE },
-          uOpacity: { value: d.opacity != null ? d.opacity : 1.9 },
-          uGamma: { value: d.gamma != null ? d.gamma : 0.62 } },
-        vertexShader: DSO_VERT, fragmentShader: DSO_FRAG,
-        transparent: true, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, fog: false
-      });
-      var mesh = new T.Mesh(new T.PlaneGeometry(W, H), mat);
-      belt.add(mesh);
-      mesh.position.copy(world);
-      mesh.updateWorldMatrix(true, false);        // so lookAt reads the true world position (incl. belt tilt)
-      mesh.lookAt(0, 0, 0);                        // turn the panel to face the viewer's home at world origin
-      if (d.roll) mesh.rotateZ(d.roll * Math.PI / 180);
-      mesh.name = "DSO_" + d.id;
-      mesh.renderOrder = -2;                       // the farthest backdrop, painted before the near sky
-    });
+    var img = new Image();
+    img.onload = function () {
+      try {
+        var pts = dsoParticles(d, img);
+        belt.add(pts);
+        pts.position.copy(world);
+        pts.updateWorldMatrix(true, false);       // so lookAt reads the true world position (incl. belt tilt)
+        pts.lookAt(0, 0, 0);                       // the star-cloud's face turns toward the viewer's home; depth runs back
+        if (d.roll) pts.rotateZ(d.roll * Math.PI / 180);
+        pts.name = "DSO_" + d.id;
+        pts.renderOrder = -2;                      // the farthest backdrop, painted before the near sky
+      } catch (e) { if (typeof window !== "undefined" && window.__space) window.__space.dsoError = String(e); }
+    };
+    img.src = "data/" + d.tex;
   });
 
   /* ---------------- constellation names: IN-SCENE Songti sprites (same craft as the 干支 glyphs) ---------------- */
