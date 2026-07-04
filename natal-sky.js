@@ -546,7 +546,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // (so orbiting reveals parallax — not a flat sticker), colour is hue-normalized + brightness-capped
     // (so additive stacking keeps its hue, not white), and a soft glow underlay binds it into gas.
     var W = img.naturalWidth || img.width, H = img.naturalHeight || img.height;
-    var Wu = (d.size || 160) * 1.8, Hu = Wu * (H / W), Zu = 0.36 * Wu;              // world width/height + depth slab
+    var Wu = (d.size || 160) * 1.8, Hu = Wu * (H / W), Zu = 0.22 * Wu;              // world width/height + a shallower depth slab (relief, not a ball → the image shape reads face-on, still parallaxes)
     var sd = d.seed; if (sd == null) { sd = 7; for (var si = 0; si < (d.id || "").length; si++) sd = (sd * 33 + d.id.charCodeAt(si)) >>> 0; }
     var rng = gRng((sd * 131 + 7) >>> 0), zfb = gFbm((sd * 17 + 3) >>> 0, 8), cfb = gFbm((sd * 29 + 5) >>> 0, 8);
     var wr = 300, sc = Math.min(1, wr / Math.max(W, H));
