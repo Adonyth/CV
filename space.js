@@ -84,7 +84,7 @@
       premultipliedAlpha: false, powerPreference: "high-performance"
     });
     renderer.setClearColor(0x000000, 0);            // transparent — NEVER a second background
-    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, innerWidth < 700 ? 1.3 : 1.5));   // cap DPR well below the Retina 2 → ~half the fragment work every frame (the single biggest heat lever) for a barely-perceptible sharpness change on a starfield
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, innerWidth < 700 ? 1.25 : 1.35));   // cap DPR well below the Retina 2 → far less fragment work every frame (a big heat lever) for a barely-perceptible sharpness change on a starfield
 
     var scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x0b0a09, 0.0018); // fog === body colour --page; no back wall
@@ -994,7 +994,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=13").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=72").then(function (mod) {
+      return import("./natal-sky.js?v=73").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1643,10 +1643,15 @@
         /* thermal guard: when the visitor rests, render at half rate — the slow
            drift is indistinguishable at 30fps, the GPU cools. Any touch, glide,
            entrance or stirred dust restores 60fps instantly. */
-        busy = (nowMs - lastTouch < 2500) || glideActive() ||
-                   (!userMoved && nowMs < entranceUntil) ||
-                   deepFusion.uniforms.uPointerAmt.value > 0.05;
-        if (!busy && (frameNo % 10)) { requestAnimationFrame(frame); return; }   // AT REST the scene is fully static → drop to ~6fps; any touch/glide/entrance restores 60fps instantly
+        var glid = glideActive() || (!userMoved && nowMs < entranceUntil);       // choreographed flight → keep it buttery at 60fps
+        busy = (nowMs - lastTouch < 2500) || glid || deepFusion.uniforms.uPointerAmt.value > 0.05;
+        // FRAME-RATE CAP (the big thermal lever): only choreographed flights run at 60fps. Manual orbit/zoom
+        // runs at 30fps (indistinguishable for this slow scene, HALF the GPU) and at rest it idles at ~3fps
+        // on a frozen scene. Any touch instantly restores 30fps; a glide restores 60.
+        if (!glid) {
+          if (busy) { if (frameNo & 1) { requestAnimationFrame(frame); return; } }
+          else if (frameNo % 20) { requestAnimationFrame(frame); return; }
+        }
         // cinematic arrival: dive from deep space and LAND on the Earth — the visitor
         // meets the home world first (its real footprint glowing on it), then rotates to
         // the starfield and pulls out to the whole orrery ("✦ Whole sky" invites it).

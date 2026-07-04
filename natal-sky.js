@@ -705,20 +705,20 @@ export function buildNatalSky(THREE, scene, data, opts) {
      every direction and to great depth, so nothing floats in a void — the nebulae are nestled
      among stars, and the eye reads "we are deep inside a galaxy full of stars". Static, one draw. */
   (function buildStarfield() {
-    var N = mobile ? 26000 : 48000, R0 = 110, R1 = 7200;                         // THE main star layer now (the old R=700 celestial-sphere shell is gone): a DENSE DEEP VOLUMETRIC field — tens of thousands of stars filling ALL of space from close-in out past the far nebulae, evenly scattered, no shell, no bubble, never empty
+    var N = mobile ? 40000 : 78000, R0 = 110, R1 = 7200;                         // THE main star layer now (the old R=700 celestial-sphere shell is gone): a DENSE DEEP VOLUMETRIC field — ~80k stars filling ALL of space from close-in out past the far nebulae, so nothing floats in a void; the 30fps cap pays for the extra points
     var rng = gRng(3391), pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
     for (var i = 0; i < N; i++) {
       var uax = rng() * 2 - 1, ph = rng() * Math.PI * 2, ss = Math.sqrt(1 - uax * uax);
       var rr = R0 + (R1 - R0) * Math.pow(rng(), 0.6);                            // spread through a deep shell so the field has real depth
       pos[i * 3] = ss * Math.cos(ph) * rr; pos[i * 3 + 1] = uax * rr; pos[i * 3 + 2] = ss * Math.sin(ph) * rr;
-      var b = 0.12 + 0.6 * Math.pow(rng(), 2.6);                                 // heavy dim tail — a sky of faint stars with a rare bright one
+      var b = 0.16 + 0.72 * Math.pow(rng(), 2.2);                                // a fuller sky — many faint stars, a good scatter of brighter ones so space reads as truly populated, not empty
       var t = rng();                                                            // colour temperature: mostly white, a few warm, a few cool
       col[i * 3] = Math.min(1, b * (0.95 + 0.2 * t)); col[i * 3 + 1] = Math.min(1, b * 0.96); col[i * 3 + 2] = Math.min(1, b * (0.95 + 0.2 * (1 - t)));
     }
     var g = new T.BufferGeometry();
     g.setAttribute("position", new T.BufferAttribute(pos, 3));
     g.setAttribute("color", new T.BufferAttribute(col, 3));
-    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 1.9 : 2.3, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 2.2 : 2.7, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 1.0, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     var pts = new T.Points(g, m); pts.name = "Starfield"; pts.renderOrder = -5; pts.frustumCulled = false;
     belt.add(pts);
