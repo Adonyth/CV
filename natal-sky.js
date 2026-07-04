@@ -1084,7 +1084,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
           var cx = pA.x + (pB.x - pA.x) * f, cy = pA.y + (pB.y - pA.y) * f, cz = pA.z + (pB.z - pA.z) * f;
           for (var j = 0; j < perStep; j++) {
             var rr = Math.pow(wr(), 0.7) * thick, aa = 2 * Math.PI * wr(), oa = rr * Math.cos(aa), ob = rr * Math.sin(aa), oz = wG() * 55;
-            pushPt(cx + _uX.x * oa + _vX.x * ob + _dX.x * oz, cy + _uX.y * oa + _vX.y * ob + _dX.y * oz, cz + _uX.z * oa + _vX.z * ob + _dX.z * oz, 0.30 + 0.16 * Math.abs(Math.cos(f * Math.PI)), 0.42);
+            pushPt(cx + _uX.x * oa + _vX.x * ob + _dX.x * oz, cy + _uX.y * oa + _vX.y * ob + _dX.y * oz, cz + _uX.z * oa + _vX.z * ob + _dX.z * oz, 0.36 + 0.20 * Math.abs(Math.cos(f * Math.PI)), 0.58);
           }
         }
       }
