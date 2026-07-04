@@ -816,7 +816,11 @@
       sky.add(makeLayer(750, 5.8, 1.0, 0.22, 0.26));     // the bright named-feeling stars
       scene.add(sky);
     }
-    if (COSMOS) buildNightSky();
+    // NOTE: buildNightSky() is a legacy CELESTIAL-SPHERE SHELL — ~10.7k stars pinned at radius 700 — which
+    // was THE "太阳系球壳": from inside it wraps you as "the stars", from outside it's a hard silhouette sphere,
+    // and beyond it only the galaxy shows. In cosmos mode the volumetric starfield + real 3-D galaxy + the
+    // deep-field constellations + the spread embers already fill all of space, so this shell is removed entirely.
+    if (COSMOS && false) buildNightSky();
     resize(); addEventListener("resize", resize);
 
     // theme sync + Codex's light-mode insight: in light theme lower the fusion so it reads luminous, not dusty
@@ -990,7 +994,7 @@
     // the embers drift through it as living dust
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     fetch("data/natal-sky.json?v=13").then(function (r) { return r.json(); }).then(function (natalData) {
-      return import("./natal-sky.js?v=68").then(function (mod) {
+      return import("./natal-sky.js?v=69").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,

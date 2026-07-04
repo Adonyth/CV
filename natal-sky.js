@@ -682,7 +682,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
      every direction and to great depth, so nothing floats in a void — the nebulae are nestled
      among stars, and the eye reads "we are deep inside a galaxy full of stars". Static, one draw. */
   (function buildStarfield() {
-    var N = mobile ? 7000 : 13000, R0 = 110, R1 = 7200;                          // a DEEP VOLUMETRIC field, NOT a shell: stars scattered evenly through all of space from close-in (110) out past the far nebulae (~6800) — no star-free bubble, no boundary, so nothing reads as a球壳
+    var N = mobile ? 11000 : 19000, R0 = 110, R1 = 7200;                         // THE main star layer now (the old R=700 celestial-sphere shell is gone): a DEEP VOLUMETRIC field filling ALL of space from close-in (110) out past the far nebulae — evenly scattered, no shell, no boundary, no bubble
     var rng = gRng(3391), pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
     for (var i = 0; i < N; i++) {
       var uax = rng() * 2 - 1, ph = rng() * Math.PI * 2, ss = Math.sqrt(1 - uax * uax);
@@ -695,7 +695,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var g = new T.BufferGeometry();
     g.setAttribute("position", new T.BufferAttribute(pos, 3));
     g.setAttribute("color", new T.BufferAttribute(col, 3));
-    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 1.4 : 1.7, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.92, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 1.9 : 2.3, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     var pts = new T.Points(g, m); pts.name = "Starfield"; pts.renderOrder = -5; pts.frustumCulled = false;
     belt.add(pts);
