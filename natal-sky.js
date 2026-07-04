@@ -555,7 +555,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var rng = gRng((sd * 131 + 7) >>> 0);
     var dens = d.density != null ? d.density : 0.88, gamma = d.gamma != null ? d.gamma : 0.72, bright = d.bright != null ? d.bright : 1.75;
     var Wu = (d.size || 160) * 1.5, Hu = Wu * (sh / sw), depth = (d.depth != null ? d.depth : 0.4) * Wu;  // ×1.5 world size: the clouds can't be flown into, so they must be big enough to read shape+colour from afar
-    var P = [], C = [];
+    var P = [], C = [], GP = [], GC = [];                                          // star particles + a soft colour-glow layer
     for (var y = 0; y < sh; y++) for (var x = 0; x < sw; x++) {
       var ln = Math.max(0, Math.min(1, (lumA[y * sw + x] - lo) / span));            // normalised brightness
       var rx = (x / (sw - 1) - 0.5) * 2, ry = (y / (sh - 1) - 0.5) * 2, rad = Math.sqrt(rx * rx + ry * ry);
@@ -572,13 +572,23 @@ export function buildNatalSky(THREE, scene, data, opts) {
       if (cmax > 1) { cr /= cmax; cg /= cmax; cb /= cmax; }                          // hue-preserving cap: bright cores stay coloured, never wash to white
       P.push(wx, wy, wz);
       C.push(cr, cg, cb);
+      if (ln > 0.12 && rng() < 0.16) { GP.push(wx, wy, wz); GC.push(cr, cg, cb); }   // seed the colour-glow from the brighter regions
     }
+    var grp = new T.Group();
+    // a soft coloured GLOW beneath the particles → each nebula reads as a solid luminous cloud, not a wisp
+    var gg = new T.BufferGeometry();
+    gg.setAttribute("position", new T.BufferAttribute(new Float32Array(GP), 3));
+    gg.setAttribute("color", new T.BufferAttribute(new Float32Array(GC), 3));
+    var gm = new T.PointsMaterial({ map: DSO_SOFT, size: (d.psize || 4.8) * 3.6, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.17, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    if ("toneMapped" in gm) gm.toneMapped = false;
+    grp.add(new T.Points(gg, gm));
     var geo = new T.BufferGeometry();
     geo.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
     geo.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
     var m = new T.PointsMaterial({ map: DSO_SOFT, size: d.psize || 4.8, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: d.opacity != null ? d.opacity : 0.62, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
-    return new T.Points(geo, m);
+    grp.add(new T.Points(geo, m));
+    return grp;
   }
   var dsoPickGroup = new T.Group(); dsoPickGroup.name = "DeepSkyPicks"; belt.add(dsoPickGroup);
   (data.deepSky || []).forEach(function (d) {
@@ -643,84 +653,101 @@ export function buildNatalSky(THREE, scene, data, opts) {
      in one draw call. A local "bubble" is carved out so no galaxy star clutters the planets or
      the constellations that live nearer than the arm. Built once — zero per-frame cost. -------- */
   (function buildMilkyWayGalaxy() {
-    var Rgal = 1900, N = mobile ? 80000 : 178000;                              // BIG so the galaxy is vast and enveloping; dense enough to read as a luminous river of stars
+    var Rgal = 1900, N = mobile ? 84000 : 190000;                              // BIG so the galaxy is vast and enveloping; dense enough to read as a luminous river of stars
     var Rsun = 0.55 * Rgal, Rin = 260, Rout = 700, hSun = 110;                  // Sun's galactocentric radius; nearly IN the plane so the band WRAPS the whole sky; galaxy fades in gradually (no hard shell)
     var gcE = raDecToEcl(17.7608, -28.94), npE = raDecToEcl(12.8571, 27.13);    // Sgr A* + galactic north pole
     var w = eclVec(npE.lon, npE.lat, 1).normalize();                            // disc normal (galactic pole)
     var uu = eclVec(gcE.lon, gcE.lat, 1); uu.addScaledVector(w, -uu.dot(w)).normalize();  // in-plane, toward the centre
     var vv = new T.Vector3().crossVectors(w, uu).normalize();
-    var C = uu.clone().multiplyScalar(Rsun).addScaledVector(w, -hSun);          // the galactic centre: Rsun toward Sgr and hSun below us → the disc spreads out below the eye
+    var C = uu.clone().multiplyScalar(Rsun).addScaledVector(w, -hSun);          // the galactic centre in scene space
     var arms = 4, bsp = Math.tan(12 * Math.PI / 180), span = 6.6;              // pitch 12°
     var aSpiral = Rgal / Math.exp(bsp * span);                                  // arm inner radius (derived so arms reach the rim)
     var thetaSun = Math.log(Rsun / aSpiral) / bsp, phase0 = Math.PI - thetaSun; // phase arm 0 so it threads the Sun → the Orion Arm
     var rng = gRng(7717), fb = gFbm(4021, 8), fb2 = gFbm(88, 12);
-    var RAMP = [[0, [1.0, 0.93, 0.80]], [0.10, [1.0, 0.82, 0.52]], [0.30, [0.98, 0.6, 0.34]], [0.5, [0.95, 0.45, 0.34]], [0.72, [0.78, 0.32, 0.22]], [1, [0.46, 0.18, 0.16]]];  // warm gold core → coral/rose mid → deep rust rim
+    // a RICH galaxy palette: gold-white nucleus → amber → coral → rose → mauve/lavender rim
+    var RAMP = [[0, [1.0, 0.95, 0.82]], [0.08, [1.0, 0.85, 0.55]], [0.24, [1.0, 0.66, 0.42]], [0.44, [0.98, 0.5, 0.5]], [0.64, [0.86, 0.42, 0.6]], [1, [0.56, 0.36, 0.66]]];
     function ramp(f) { var i; for (i = 1; i < RAMP.length; i++) if (f <= RAMP[i][0]) break; if (i >= RAMP.length) i = RAMP.length - 1; var a = RAMP[i - 1], b = RAMP[i], k = (f - a[0]) / ((b[0] - a[0]) || 1); return [a[1][0] + (b[1][0] - a[1][0]) * k, a[1][1] + (b[1][1] - a[1][1]) * k, a[1][2] + (b[1][2] - a[1][2]) * k]; }
+    var COOL = [0.58, 0.74, 1.0], PINK = [1.0, 0.38, 0.72];                      // young blue-white arm stars; magenta HII star-forming knots
     function G() { return rng() + rng() + rng() + rng() - 2; }                  // ~N(0, sd≈0.58)
-    var P = [], Cc = [];
-    function push(pt, f, bright) {
+    var P = [], Cc = [], GP = [], GC = [];                                       // star layer + a soft GLOW layer (large faint sprites → smooth luminosity)
+    function push(pt, r, g2, b2, amp, glowC) {
       var dd = pt.lengthSq();
       if (dd < Rin * Rin) return;                                               // the immediate solar system stays clear
-      if (dd < Rout * Rout && rng() > (Math.sqrt(dd) - Rin) / (Rout - Rin)) return;  // fade the galaxy IN gradually — no hard spherical shell cutting it off
-      var c = ramp(f < 0 ? 0 : f > 1 ? 1 : f);
-      var r = c[0] * bright, g2 = c[1] * bright, b2 = c[2] * bright, mx = Math.max(r, g2, b2);
-      if (mx > 1) { r /= mx; g2 /= mx; b2 /= mx; }                              // hue-preserving cap: dense regions stay warm, never a flat white
-      P.push(pt.x, pt.y, pt.z);
-      Cc.push(r, g2, b2);
+      if (dd < Rout * Rout && rng() > (Math.sqrt(dd) - Rin) / (Rout - Rin)) return;  // fade the galaxy IN gradually — no hard spherical shell
+      var cr = r * amp, cg = g2 * amp, cb = b2 * amp, mx = Math.max(cr, cg, cb);
+      if (mx > 1) { cr /= mx; cg /= mx; cb /= mx; }                              // hue-preserving cap: bright regions keep their hue, never a flat white
+      P.push(pt.x, pt.y, pt.z); Cc.push(cr, cg, cb);
+      if (glowC && rng() < glowC) { GP.push(pt.x, pt.y, pt.z); GC.push(cr, cg, cb); }  // a fraction also emit a big soft halo → smooth underglow
     }
     function disk(rr, ang, h) { return C.clone().addScaledVector(uu, rr * Math.cos(ang)).addScaledVector(vv, rr * Math.sin(ang)).addScaledVector(w, h); }
-    var armN = Math.round(N * 0.70), bulgeN = Math.round(N * 0.20), haloN = N - armN - bulgeN;
-    // --- spiral arms: a THICK, glowing band (not a hairline), with a dark dust rift threading it ---
+    var armN = Math.round(N * 0.66), bulgeN = Math.round(N * 0.18), haloN = Math.round(N * 0.10), knotN = N - armN - bulgeN - haloN;
+    // --- spiral arms: a thick glowing river with a dust rift, warm→cool colour, blue young stars ---
     for (var i = 0; i < armN; i++) {
       var arm = i % arms;
       var theta = Math.pow(rng(), 1.7) * span;                                  // density front-loaded toward the core
       var rC = aSpiral * Math.exp(bsp * theta);
       var ang = theta + phase0 + arm * (2 * Math.PI / arms);
-      var rsig = 10 + 0.14 * rC;                                                 // arms fan out with radius → soft bands
+      var rsig = 10 + 0.14 * rC;
       var x = rC * Math.cos(ang) + G() * rsig, z = rC * Math.sin(ang) + G() * rsig;
-      var rr = Math.sqrt(x * x + z * z), a2 = Math.atan2(z, x);
-      var zsig = (40 + 0.036 * rC) * (0.5 + 0.5 * Math.exp(-rC / (Rgal * 0.6)));  // MUCH thicker → the band has volume, reads as a glowing river not a white line
+      var rr = Math.sqrt(x * x + z * z), a2 = Math.atan2(z, x), f = rr / Rgal;
+      var zsig = (40 + 0.036 * rC) * (0.5 + 0.5 * Math.exp(-rC / (Rgal * 0.6)));
       var h = G() * zsig;
-      var dust = 0.22 + 1.0 * fb(ang * 1.8, rC * 0.009);                         // patchy star-clouds, strong contrast
-      dust = dust < 0 ? 0 : dust;
-      var laneW = 12 + 0.006 * rC;                                              // the Great Rift: a thin dark dust lane on the midplane
+      var dust = 0.22 + 1.0 * fb(ang * 1.8, rC * 0.009); dust = dust < 0 ? 0 : dust;
+      var laneW = 12 + 0.006 * rC;
       var lane = Math.exp(-(h * h) / (2 * laneW * laneW)) * (0.4 + 0.6 * fb2(ang * 2.2, rC * 0.02));
-      if (rng() > 0.42 + 0.58 * (1 - lane)) continue;                            // drop points in the rift → a real dark gap, not just dim
-      var vert = 0.5 + 0.5 * Math.exp(-(h * h) / (2 * (zsig * 0.72) * (zsig * 0.72)));  // brighter toward the midplane → the band glows and softens at its edges
-      var bright = (0.15 + 0.85 * Math.pow(rng(), 2.3)) * Math.min(1.25, dust) * (1 - 0.7 * lane) * vert;
-      push(disk(rr, a2, h), rr / Rgal, bright);
+      if (rng() > 0.42 + 0.58 * (1 - lane)) continue;                            // drop points in the rift → a real dark gap
+      var vert = 0.5 + 0.5 * Math.exp(-(h * h) / (2 * (zsig * 0.72) * (zsig * 0.72)));
+      var c = ramp(f), cr = c[0], cg = c[1], cb = c[2];
+      if (rng() < 0.15 * Math.min(1, f * 1.7)) { var tb = 0.4 + 0.6 * rng(); cr = cr * (1 - tb) + COOL[0] * tb; cg = cg * (1 - tb) + COOL[1] * tb; cb = cb * (1 - tb) + COOL[2] * tb; }  // young blue-white stars in the arms
+      var amp = (0.16 + 0.84 * Math.pow(rng(), 2.2)) * Math.min(1.3, dust) * (1 - 0.7 * lane) * vert;
+      push(disk(rr, a2, h), cr, cg, cb, amp, 0.1);
     }
-    // --- central bulge: a big, round, luminous warm core (the anchor of the whole galaxy).
-    // spread (pow 1.9, not cubed) + a modest per-point brightness so the dense core stays warm GOLD
-    // instead of additive-stacking to a flat white blob ---
+    // --- central bulge: a big, round, luminous GOLD core (the anchor); many glow points → a blazing nucleus ---
     for (var j = 0; j < bulgeN; j++) {
       var br = Math.pow(rng(), 1.9) * Rgal * 0.28;
       var uax = rng() * 2 - 1, ph = rng() * Math.PI * 2, ss = Math.sqrt(1 - uax * uax);
       var bpt = C.clone().addScaledVector(uu, br * ss * Math.cos(ph)).addScaledVector(vv, br * ss * Math.sin(ph)).addScaledVector(w, br * uax * 0.66);
-      push(bpt, 0.03 + 0.30 * (br / (Rgal * 0.28)), 0.42 + 0.5 * Math.pow(rng(), 1.7));
+      var bc = ramp(0.02 + 0.22 * (br / (Rgal * 0.28)));
+      push(bpt, bc[0], bc[1], bc[2], 0.42 + 0.5 * Math.pow(rng(), 1.7), 0.3);
     }
-    // --- faint inter-arm disc fill + a few globular clumps ---
-    var clumpN = Math.round(haloN * 0.18), smoothN = haloN - clumpN;
+    // --- faint inter-arm haze + a few globular clumps so the arms float in a glow ---
+    var clumpN = Math.round(haloN * 0.2), smoothN = haloN - clumpN;
     for (var k = 0; k < smoothN; k++) {
-      var hr = Math.sqrt(rng()) * Rgal * 1.02, ha = rng() * Math.PI * 2;
-      push(disk(hr, ha, G() * (60 + 0.05 * hr)), hr / Rgal, 0.08 + 0.14 * Math.pow(rng(), 2.4));  // a thick puffy haze between the arms so they float in a glow, not black
+      var hr = Math.sqrt(rng()) * Rgal * 1.02, ha = rng() * Math.PI * 2, hc = ramp(hr / Rgal);
+      push(disk(hr, ha, G() * (60 + 0.05 * hr)), hc[0], hc[1], hc[2], 0.08 + 0.14 * Math.pow(rng(), 2.4), 0.04);
     }
-    for (var cc = 0; cc < 7; cc++) {
-      var clR = Rgal * (0.3 + rng() * 0.7), clA = rng() * Math.PI * 2, clH = (rng() * 2 - 1) * Rgal * 0.22, clS = Rgal * (0.02 + rng() * 0.03);
+    for (var cc = 0; cc < 8; cc++) {
+      var clR = Rgal * (0.3 + rng() * 0.7), clA = rng() * Math.PI * 2, clH = (rng() * 2 - 1) * Rgal * 0.22, clS = Rgal * (0.02 + rng() * 0.03), cclr = ramp(clR / Rgal);
       var base = disk(clR, clA, clH);
-      for (var m2 = 0; m2 < clumpN / 7; m2++) {
+      for (var m2 = 0; m2 < clumpN / 8; m2++) {
         var cp = base.clone().addScaledVector(uu, G() * clS).addScaledVector(vv, G() * clS).addScaledVector(w, G() * clS);
-        push(cp, 0.6 + 0.3 * rng(), 0.28 + 0.3 * Math.pow(rng(), 2));
+        push(cp, cclr[0], cclr[1], cclr[2], 0.28 + 0.3 * Math.pow(rng(), 2), 0.06);
       }
     }
+    // --- PINK HII star-forming knots strung along the arms: the dramatic colour pops of a real spiral ---
+    var nKnot = 20;
+    for (var kn = 0; kn < nKnot; kn++) {
+      var karm = kn % arms, kth = (0.2 + 0.75 * (kn / nKnot)) * span + (rng() - 0.5) * 0.4;
+      var krC = aSpiral * Math.exp(bsp * kth), kang = kth + phase0 + karm * (2 * Math.PI / arms);
+      var kbase = disk(krC, kang, G() * 30), ks = 26 + rng() * 46;
+      for (var mk = 0; mk < knotN / nKnot; mk++) {
+        var kp = kbase.clone().addScaledVector(uu, G() * ks).addScaledVector(vv, G() * ks).addScaledVector(w, G() * ks * 0.45);
+        push(kp, PINK[0], PINK[1] * (0.8 + 0.3 * rng()), PINK[2] * (0.9 + 0.2 * rng()), (0.4 + 0.55 * Math.pow(rng(), 1.6)), 0.34);
+      }
+    }
+    // the GLOW underlayer — big soft low-opacity sprites blur into a smooth luminous galaxy beneath the stars
+    var gg = new T.BufferGeometry();
+    gg.setAttribute("position", new T.BufferAttribute(new Float32Array(GP), 3));
+    gg.setAttribute("color", new T.BufferAttribute(new Float32Array(GC), 3));
+    var gm = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 9 : 14, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.13, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    if ("toneMapped" in gm) gm.toneMapped = false;
+    var glow = new T.Points(gg, gm); glow.name = "MilkyWayGlow"; glow.renderOrder = -5; glow.frustumCulled = false;
+    belt.add(glow);
+    // the STAR layer on top — constant screen-size so the galaxy reads at every zoom
     var g = new T.BufferGeometry();
     g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
     g.setAttribute("color", new T.BufferAttribute(new Float32Array(Cc), 3));
-    // constant SCREEN-size points (sizeAttenuation off): the galaxy is huge and mostly far, so
-    // attenuation shrinks the bulge/arms to invisibility — constant size keeps it luminous at every zoom
-    // bigger, softer, lower-opacity points: in dense regions the soft sprites OVERLAP into a smooth
-    // luminous glow (not discrete speckles); the lower opacity also keeps the bright core warm, not white
-    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 2.7 : 3.4, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.6, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 2.7 : 3.3, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.68, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     var pts = new T.Points(g, m); pts.name = "MilkyWayGalaxy"; pts.renderOrder = -4; pts.frustumCulled = false;
     belt.add(pts);
