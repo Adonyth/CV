@@ -5,40 +5,97 @@
    hold a scale/opacity literal — every fade reads layerWeight(camLen, layer).
 
    The address ladder (Earth → Solar System → Milky Way → Local Group → Local Sheet
-   → Virgo/Local Supercluster → Laniakea → Cosmic Web → Observable Universe) is a
-   CONTINUOUS logarithmic zoom: adjacent tiers overlap so every boundary is a true
-   crossfade, and each child structure collapses to a trackable node of its parent.
+   → Virgo/Local Supercluster → Laniakea → Cosmic Web → Observable Universe →
+   Quantum Fluctuation) is a CONTINUOUS logarithmic zoom. THE CONTINUITY LAW:
+   every tier's fadeOut window IS the next tier's fadeIn window — a strict
+   crossfade, so at any camLen at most two tiers are blending and nothing ever
+   pops. Each child structure collapses into a trackable node of its parent
+   (the collapse() curve below drives the shrink), so the Milky Way never
+   "disappears" — it condenses into the Local Group's node, the Local Group into
+   the Sheet's, Laniakea into one warm knot of the web.
 
-   camLen = camera.position.length() (distance to world origin, natal-sky's `_cl`).
-   camLenPeak ≈ 1.5× that tier's scene radius, so a tier is framed when the camera
-   sits ~1.5 radii out. Bands are placed at the geometric midpoints between peaks.
+   camLen = camera.position.length() (distance to world origin = the Sun/us).
+   camLenPeak ≈ 1.35× that tier's sceneRadius: the tier is perfectly framed when
+   the camera stands ~1.35 radii out.
+
+   realScaleLy = the structure's true radius in light-years (the log-address).
+   sceneRadius = the outer extent of that tier's BUILT geometry (scene units).
+   The scene is a log-compressed universe: true 10^5 ly (galaxy) → 2600 units,
+   true 4.65×10^10 ly (observable) → 56000 units. Ratios between neighbouring
+   tiers are honest in ORDER but compressed in MAGNITUDE — the collapse curves
+   restore the perceptual "powers of ten" feel.
    ========================================================================== */
 (function () {
   "use strict";
 
-  // sceneRadius = outer extent of that tier's built geometry (scene units).
-  // The existing anchors it must honour: Milky Way GAL_RGAL 2600, cosmic web RMAX
-  // 13500. The Laniakea flow + the three middle tiers are (re)built to this ladder.
   var LAYERS = [
-    { id: "solar",               label: { en: "Solar System",        zh: "太阳系" },       you: { en: "1 AU from the Sun",                 zh: "距太阳 1 天文单位" },
-      realScaleLy: 0.0032,   sceneRadius: 3,     camLenPeak: 40,    fadeInStart: -1,    fadeInEnd: -1,    fadeOutStart: 150,   fadeOutEnd: 340,   weAreOnEdge: false },
-    { id: "milky-way",           label: { en: "Milky Way",           zh: "银河系" },       you: { en: "Orion Spur, 26 kly out",            zh: "猎户臂，距银心 2.6 万光年" },
-      realScaleLy: 1e5,      sceneRadius: 2600,  camLenPeak: 3500,  fadeInStart: 400,   fadeInEnd: 1600,  fadeOutStart: 3900,  fadeOutEnd: 4900,  weAreOnEdge: true },
-    { id: "local-group",         label: { en: "Local Group",         zh: "本星系群" },     you: { en: "the Milky Way lobe",                zh: "银河系一端" },
-      realScaleLy: 1e7,      sceneRadius: 4000,  camLenPeak: 5400,  fadeInStart: 3900,  fadeInEnd: 4900,  fadeOutStart: 5700,  fadeOutEnd: 6700,  weAreOnEdge: false },
-    { id: "local-sheet",         label: { en: "Local Sheet",         zh: "本星系片" },     you: { en: "within the sheet plane",            zh: "位于星系片平面内" },
-      realScaleLy: 2.3e7,    sceneRadius: 5200,  camLenPeak: 7000,  fadeInStart: 5700,  fadeInEnd: 6700,  fadeOutStart: 7500,  fadeOutEnd: 8900,  weAreOnEdge: false },
-    { id: "virgo-supercluster",  label: { en: "Virgo Supercluster",  zh: "室女超星系团" }, you: { en: "on the outskirts, 54 Mly from Virgo", zh: "外缘，距室女团 5400 万光年" },
-      realScaleLy: 1.1e8,    sceneRadius: 7000,  camLenPeak: 9500,  fadeInStart: 7500,  fadeInEnd: 8900,  fadeOutStart: 10200, fadeOutEnd: 12200, weAreOnEdge: true },
-    { id: "laniakea",            label: { en: "Laniakea",            zh: "拉尼亚凯亚" },   you: { en: "far edge, near the Perseus–Pisces divide", zh: "外缘，近英仙-双鱼分水岭" },
-      realScaleLy: 5.2e8,    sceneRadius: 9700,  camLenPeak: 13100, fadeInStart: 10200, fadeInEnd: 12200, fadeOutStart: 14000, fadeOutEnd: 17000, weAreOnEdge: true },
-    { id: "cosmic-web",          label: { en: "Cosmic Web",          zh: "宇宙网" },       you: { en: "one basin among many",              zh: "众多流域中的一个" },
-      realScaleLy: 2e9,      sceneRadius: 13500, camLenPeak: 18200, fadeInStart: 14000, fadeInEnd: 17000, fadeOutStart: 20800, fadeOutEnd: 25000, weAreOnEdge: true },
-    { id: "observable-universe", label: { en: "Observable Universe", zh: "可观测宇宙" },   you: { en: "at the centre of your own sphere",  zh: "自身可观测球的中心" },
-      realScaleLy: 9.3e10,   sceneRadius: 19000, camLenPeak: 26000, fadeInStart: 20800, fadeInEnd: 25000, fadeOutStart: -1,    fadeOutEnd: -1,    weAreOnEdge: false }
+    { id: "earth", rail: true,
+      label: { en: "Earth", zh: "地球" },
+      you:   { en: "here", zh: "此地" },
+      realScaleLy: 1.35e-9, sceneRadius: 1, camLenPeak: 8,
+      fadeInStart: -1, fadeInEnd: -1, fadeOutStart: -1, fadeOutEnd: -1, weAreOnEdge: false },
+
+    { id: "solar", rail: true,
+      label: { en: "Solar System", zh: "太阳系" },
+      you:   { en: "1 AU from the Sun", zh: "距太阳 1 天文单位" },
+      realScaleLy: 0.0032, sceneRadius: 3, camLenPeak: 40,
+      fadeInStart: -1, fadeInEnd: -1, fadeOutStart: 150, fadeOutEnd: 340, weAreOnEdge: false },
+
+    // camLen 128 is the "whole sky" star-chart home — the constellation shell; not a rail stop.
+
+    { id: "milky-way", rail: true,
+      label: { en: "Milky Way", zh: "银河系" },
+      you:   { en: "Orion Spur, 26 kly from the core", zh: "猎户臂，距银心 2.6 万光年" },
+      realScaleLy: 5e4, sceneRadius: 2600, camLenPeak: 3500,
+      fadeInStart: 400, fadeInEnd: 1500, fadeOutStart: 5000, fadeOutEnd: 8000, weAreOnEdge: true },
+
+    { id: "local-group", rail: true,
+      label: { en: "Local Group", zh: "本星系群" },
+      you:   { en: "the Milky Way — one of two great spirals", zh: "银河系——两大旋涡之一" },
+      realScaleLy: 5e6, sceneRadius: 6800, camLenPeak: 9200,
+      fadeInStart: 5000, fadeInEnd: 8000, fadeOutStart: 10400, fadeOutEnd: 14200, weAreOnEdge: false },
+
+    // the Local Sheet is a QUIET tier (a passage, not a destination): full scene layer, no rail stop.
+    { id: "local-sheet", rail: false,
+      label: { en: "Local Sheet", zh: "本星系片" },
+      you:   { en: "in the sheet plane, beside the Local Void", zh: "薄片平面内，本地空洞之侧" },
+      realScaleLy: 1.7e7, sceneRadius: 10400, camLenPeak: 14000,
+      fadeInStart: 10400, fadeInEnd: 14200, fadeOutStart: 15800, fadeOutEnd: 21000, weAreOnEdge: true },
+
+    { id: "virgo-supercluster", rail: true,
+      label: { en: "Virgo / Local Supercluster", zh: "室女 · 本超星系团" },
+      you:   { en: "on the outskirts — 54 Mly from Virgo", zh: "外缘——距室女团 5400 万光年" },
+      realScaleLy: 5.5e7, sceneRadius: 15800, camLenPeak: 21300,
+      fadeInStart: 15800, fadeInEnd: 21000, fadeOutStart: 24200, fadeOutEnd: 32000, weAreOnEdge: true },
+
+    { id: "laniakea", rail: true,
+      label: { en: "Laniakea", zh: "拉尼亚凯亚" },
+      you:   { en: "far shore of the basin, near the Perseus–Pisces divide", zh: "流域远岸，近英仙-双鱼分水岭" },
+      realScaleLy: 2.6e8, sceneRadius: 24000, camLenPeak: 32400,
+      fadeInStart: 24200, fadeInEnd: 32000, fadeOutStart: 37000, fadeOutEnd: 48000, weAreOnEdge: true },
+
+    { id: "cosmic-web", rail: true,
+      label: { en: "Cosmic Web", zh: "宇宙网" },
+      you:   { en: "one basin among thousands", zh: "千万流域之一" },
+      realScaleLy: 1e9, sceneRadius: 36500, camLenPeak: 49300,
+      fadeInStart: 37000, fadeInEnd: 48000, fadeOutStart: 56000, fadeOutEnd: 72000, weAreOnEdge: true },
+
+    { id: "observable-universe", rail: true,
+      label: { en: "Observable Universe", zh: "可观测宇宙" },
+      you:   { en: "at the centre of your own horizon", zh: "自身视界的中心" },
+      realScaleLy: 4.65e10, sceneRadius: 56000, camLenPeak: 75000,
+      fadeInStart: 56000, fadeInEnd: 72000, fadeOutStart: 88000, fadeOutEnd: 105000, weAreOnEdge: false },
+
+    // beyond the horizon the address loops: the whole universe is one scintillation
+    // of the grand fluctuation — and a scintillation, focused, is a quark. Scale ends here.
+    { id: "fluctuation", rail: true,
+      label: { en: "Fluctuation", zh: "涨落" },
+      you:   { en: "one scintillation — a universe, a quark", zh: "一次闪烁——一个宇宙，一枚夸克" },
+      realScaleLy: -1, sceneRadius: 118000, camLenPeak: 112000,
+      fadeInStart: 88000, fadeInEnd: 105000, fadeOutStart: -1, fadeOutEnd: -1, weAreOnEdge: false }
   ];
 
-  var LN = Math.log, MAXCAM = 46000;
+  var LN = Math.log, MAXCAM = 118000;
 
   // smoothstep in log-space so a fade at 260→1400 feels identical to one at
   // 18400→22000 (scale-invariant — matches the controls' native ln(r) zoom ease).
@@ -58,6 +115,17 @@
     return w;
   }
 
+  // collapse(camLen, layer) → 1..collapseTo : the CHILD-INTO-PARENT-NODE shrink.
+  // 1 while the tier owns the frame; eases down through its fadeOut window so the
+  // structure visibly CONDENSES into the node its parent tier draws at the same spot.
+  function collapse(camLen, ly, to) {
+    if (ly.fadeOutStart < 0) return 1;
+    var L = LN(Math.max(1e-3, camLen));
+    var t = smooth(LN(ly.fadeOutStart), LN(ly.fadeOutEnd), L);
+    var floor = (to == null ? 0.16 : to);
+    return 1 - (1 - floor) * t;
+  }
+
   // nearest-peak-in-log → the breadcrumb id. Stable (no flicker at a 50/50 crossfade).
   function currentLayerId(camLen) {
     var L = LN(Math.max(1e-3, camLen)), best = LAYERS[0], bd = Infinity;
@@ -70,10 +138,24 @@
 
   function byId(id) { for (var i = 0; i < LAYERS.length; i++) if (LAYERS[i].id === id) return LAYERS[i]; return null; }
   function weight(camLen, id) { var ly = byId(id); return ly ? layerWeight(camLen, ly) : 0; }
+  function collapseOf(camLen, id, to) { var ly = byId(id); return ly ? collapse(camLen, ly, to) : 1; }
+
+  // short scale caption for the rail ticks: "10⁵ ly" style, from realScaleLy
+  var SUP = { "-": "⁻", "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" };
+  function scaleCaption(ly) {
+    if (!ly || ly.realScaleLy == null || ly.realScaleLy <= 0) return "";
+    var e = Math.round(Math.log(ly.realScaleLy) / Math.LN10);
+    var s = String(e).split("").map(function (c) { return SUP[c] || c; }).join("");
+    return "10" + s + " ly";
+  }
 
   window.CosmicLOD = {
     LAYERS: LAYERS, MAXCAM: MAXCAM,
     layerWeight: layerWeight, currentLayerId: currentLayerId,
-    byId: byId, weight: weight, smooth: smooth
+    byId: byId, weight: weight, smooth: smooth,
+    collapse: collapseOf, scaleCaption: scaleCaption
   };
+  /* alias for the ScaleDirector / LODDirector contract in the spatial spec */
+  window.ScaleDirector = window.CosmicLOD;
+  window.LODDirector = window.CosmicLOD;
 })();

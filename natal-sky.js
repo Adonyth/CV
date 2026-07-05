@@ -682,7 +682,83 @@ export function buildNatalSky(THREE, scene, data, opts) {
     return R_NEAR + (R_FAR - R_NEAR) * t;                 // 260 (Pleiades) … 1560 (Carina) from the Sun
   }
   var R_MAGELLANIC = 1.05 * GAL_RIM;                       // 2730 — satellite tier, just beyond the disc edge
-  var R_ANDROMEDA = 2.2 * GAL_RIM;                         // 5720 — its OWN galaxy in the clean gap before the cosmic-web (R_IN 6000)
+  var R_ANDROMEDA = 2.2 * GAL_RIM;                         // 5720 — M31: the Local Group's OTHER great spiral (the LG tier is scaled around this anchor)
+
+  /* ---- THE SUPERGALACTIC FRAME (module scope): the real plane that threads the Local Sheet →
+     the Virgo/Local Supercluster disc → the Hydra–Centaurus spine of Laniakea. One shared basis
+     means those three tiers are VISIBLY the same slab at growing scale — scientific continuity.
+     SG north pole: RA 18.916h, Dec +15.7° (galactic l=47.37°, b=+6.32°). The Local Void lies
+     toward +SG_W (supergalactic north); Virgo lies in-plane along +SG_U. ---- */
+  var _sgpE = raDecToEcl(18.916, 15.709);
+  var SG_W = eclVec(_sgpE.lon, _sgpE.lat, 1).normalize();               // plane normal (toward the Local Void)
+  var _virE = raDecToEcl(12.44, 12.72);                                  // Virgo cluster (M87) — true direction
+  var VIRGO_DIR = eclVec(_virE.lon, _virE.lat, 1).normalize();
+  var SG_U = VIRGO_DIR.clone().addScaledVector(SG_W, -VIRGO_DIR.dot(SG_W)).normalize();   // in-plane, toward Virgo
+  var SG_V = new T.Vector3().crossVectors(SG_W, SG_U).normalize();
+  /* true sky directions of the great landmarks (verified: Norma/GA RA16.25h −60.95°, Shapley
+     RA13.42h −31°, Perseus–Pisces RA1.83h +36°, Coma RA12.99h +27.98°, Hercules RA16.09h +17.75°) */
+  function skyDir(raH, decDeg) { var e = raDecToEcl(raH, decDeg); return eclVec(e.lon, e.lat, 1).normalize(); }
+  var DIR_GA = skyDir(16.25, -60.95), DIR_SHAPLEY = skyDir(13.42, -31.0), DIR_PP = skyDir(1.83, 36.0);
+  var DIR_COMA = skyDir(12.99, 27.98), DIR_HERC = skyDir(16.09, 17.75);
+  /* tier groups (built lazily; every fade is driven by window.CosmicLOD weights in tick) */
+  var tierLG = null, tierSheet = null, tierVirgo = null, tierUniverse = null, quantumFoam = null, universeSpark = null;
+  var _midBuilt = false, _uniBuilt = false;
+  var _tierMats = { lg: [], sheet: [], virgo: [], lani: [], neighbors: [], web: [], obs: [], quant: [] };   // {m, base} pairs per tier — tick multiplies base×weight
+  var _youAnchor = null;
+  function regTier(key, mat, base) { _tierMats[key].push({ m: mat, base: (base != null ? base : mat.opacity) }); mat.opacity = 0; }
+  var _tierPrx = Math.min((typeof devicePixelRatio !== "undefined" ? devicePixelRatio : 1) || 1, mobile ? 1.5 : 2);
+  /* one shared soft-point cloud builder: positions+colors → a registered, weight-driven Points.
+     Default: SCREEN-CONSTANT size (sizeAttenuation false) — world-scale tiers stay readable at camLenPeak. */
+  function tierPoints(key, P, C, sizePx, opt) {
+    opt = opt || {};
+    var g = new T.BufferGeometry();
+    g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
+    g.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
+    var m = new T.PointsMaterial({
+      map: DSO_SOFT, size: sizePx * _tierPrx, sizeAttenuation: opt.attenuate === true,
+      vertexColors: true, transparent: true, opacity: 0, depthWrite: false,
+      blending: T.AdditiveBlending, fog: !!opt.fog
+    });
+    if ("toneMapped" in m) m.toneMapped = false;
+    regTier(key, m, opt.base != null ? opt.base : 1);
+    var pts = new T.Points(g, m); pts.frustumCulled = false; pts.renderOrder = opt.order != null ? opt.order : -5;
+    if (opt.name) pts.name = opt.name;
+    return pts;
+  }
+  /* optional wide under-glow duplicate — reads as filaments / streamlines, not sparse dust */
+  function tierGlow(key, P, C, sizePx, opt) {
+    opt = opt || {};
+    var g = new T.BufferGeometry();
+    g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
+    g.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
+    var m = new T.PointsMaterial({
+      map: DSO_SOFT, size: sizePx * _tierPrx, sizeAttenuation: false,
+      vertexColors: true, transparent: true, opacity: 0, depthWrite: false,
+      blending: T.AdditiveBlending, fog: !!opt.fog
+    });
+    if ("toneMapped" in m) m.toneMapped = false;
+    regTier(key, m, opt.base != null ? opt.base : 0.42);
+    var pts = new T.Points(g, m); pts.frustumCulled = false; pts.renderOrder = (opt.order != null ? opt.order : -5) - 1;
+    if (opt.name) pts.name = opt.name;
+    return pts;
+  }
+  function buildYouAnchor() {
+    if (_youAnchor) return;
+    var cv = document.createElement("canvas"); cv.width = cv.height = 64;
+    var g = cv.getContext("2d");
+    var grd = g.createRadialGradient(32, 32, 0, 32, 32, 28);
+    grd.addColorStop(0, "rgba(255,120,72,0.98)"); grd.addColorStop(0.45, "rgba(255,88,48,0.72)"); grd.addColorStop(1, "rgba(255,60,30,0)");
+    g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
+    g.fillStyle = "rgba(255,240,220,0.95)"; g.beginPath(); g.arc(32, 32, 4.5, 0, Math.PI * 2); g.fill();
+    var tex = new T.CanvasTexture(cv);
+    if ("colorSpace" in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
+    var sm = new T.SpriteMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false, depthTest: false, blending: T.AdditiveBlending, fog: false });
+    if ("toneMapped" in sm) sm.toneMapped = false;
+    _youAnchor = new T.Sprite(sm); _youAnchor.name = "YouAreHereAnchor";
+    _youAnchor.scale.set(mobile ? 16 : 22, mobile ? 16 : 22, 1); _youAnchor.renderOrder = 12; _youAnchor.visible = false;
+    belt.add(_youAnchor);
+  }
+  function gauss(rng) { return rng() + rng() + rng() + rng() - 2; }   // ~N(0, 0.58)
 
   (data.deepSky || []).forEach(function (d, idx) {
     if (!d.tex) return;
@@ -1022,175 +1098,661 @@ export function buildNatalSky(THREE, scene, data, opts) {
     if (sh) { sh.userData.dsoViewDist = Rg * 2.4; sh.userData.dsoFocusMin = Rg * 0.5; }
   }
 
-  /* ---------------- LANIAKEA — the Tully 2014 FLOW PORTRAIT: thousands of golden STREAMLINES that all flow &
-     CONVERGE on the Great Attractor (the basin floor), brightening where they bunch, with US (a warm dot) on the
-     outskirts. This is our SUPERCLUSTER seen as a watershed of galaxy-flow — the iconic image. Shown at the
-     supercluster scale, between the galaxy and the whole cosmic web. Lazy, static, one draw. ---------------- */
+  /* ================================================================================================
+     THE MIDDLE TIERS — Local Group → Local Sheet → Virgo/Local Supercluster. These were the missing
+     rungs of the cosmic address (the ladder used to jump galaxy → Laniakea). Each is built from the
+     REAL geometry: true sky directions, true relative distances (per-tier log-compressed rate), and
+     each embeds the previous tier as a condensing node so the zoom is one continuous address.
+     ================================================================================================ */
+
+  /* ---- helper: a tiny spiral-galaxy node (a few thousand points) — the "collapsed" form a whole
+     galaxy takes when seen at the next tier up. normal = disc plane normal; warm ember palette. ---- */
+  function miniSpiral(P, C, center, normal, Rg, n, seed, warm) {
+    var rng = gRng(seed), arms = 2, bsp = Math.tan(13 * Math.PI / 180), span = 5.2;
+    var aSp = Rg / Math.exp(bsp * span);
+    var uN = new T.Vector3().crossVectors(normal, Math.abs(normal.y) < 0.94 ? new T.Vector3(0, 1, 0) : new T.Vector3(1, 0, 0)).normalize();
+    var vN = new T.Vector3().crossVectors(normal, uN).normalize();
+    for (var i = 0; i < n; i++) {
+      var isBulge = rng() < 0.3;
+      var pt, f;
+      if (isBulge) {
+        var br = Math.pow(rng(), 1.8) * Rg * 0.22, u2 = rng() * 2 - 1, p2 = rng() * Math.PI * 2, s2 = Math.sqrt(1 - u2 * u2);
+        pt = center.clone().addScaledVector(uN, br * s2 * Math.cos(p2)).addScaledVector(vN, br * s2 * Math.sin(p2)).addScaledVector(normal, br * u2 * 0.55);
+        f = 0.1;
+      } else {
+        var arm = i % arms, th = Math.pow(rng(), 1.5) * span, rC = aSp * Math.exp(bsp * th), ang = th + arm * Math.PI;
+        var rs = Rg * 0.045 + rC * 0.09;
+        var x = rC * Math.cos(ang) + gauss(rng) * rs, z = rC * Math.sin(ang) + gauss(rng) * rs;
+        pt = center.clone().addScaledVector(uN, x).addScaledVector(vN, z).addScaledVector(normal, gauss(rng) * Rg * 0.05);
+        f = Math.sqrt(x * x + z * z) / Rg;
+      }
+      var amp = (0.2 + 0.6 * Math.pow(rng(), 2)) * (warm || 1);
+      var cr = 1.0 - 0.42 * f, cg = 0.84 - 0.3 * f, cb = 0.6 - 0.06 * f;   // gold core → cool rim
+      C.push(cr * amp, cg * amp, Math.min(1, cb + 0.3 * f) * amp); P.push(pt.x, pt.y, pt.z);
+    }
+  }
+  /* ---- helper: a small galaxy-group blob (a handful of member galaxies + faint halo) ---- */
+  function groupBlob(P, C, center, r, n, seed, col, bright) {
+    var rng = gRng(seed);
+    for (var i = 0; i < n; i++) {
+      var rr = Math.pow(rng(), 1.5) * r, u2 = rng() * 2 - 1, p2 = rng() * Math.PI * 2, s2 = Math.sqrt(1 - u2 * u2);
+      var amp = (bright || 1) * (0.3 + 0.7 * Math.pow(rng(), 1.8));
+      P.push(center.x + rr * s2 * Math.cos(p2), center.y + rr * s2 * Math.sin(p2), center.z + rr * u2);
+      C.push(col[0] * amp, col[1] * amp, col[2] * amp);
+    }
+  }
+
+  /* ---------------- TIER · LOCAL GROUP (真实: ~10 Mly across; rate ≈2250 units/Mly here).
+     A DUMBBELL of two great spirals — the Milky Way (us, at the origin: the condensed node the
+     118k-point disc collapses into) and Andromeda M31 (the existing 16k-point galaxy at 5720 IS
+     this tier's M31) — plus M33, both satellite swarms and the lonely outer dwarfs, every one at
+     its true direction & compressed true distance. ---------------- */
+  function buildLocalGroup() {
+    tierLG = new T.Group(); tierLG.name = "TierLocalGroup";
+    var P = [], C = [];
+    // the Milky Way, condensed: a small spiral at the origin SHARING the big disc's plane normal
+    // (GAL_W) so the 118k-point galaxy visibly shrinks INTO this node during the crossfade
+    miniSpiral(P, C, new T.Vector3(0, 0, 0), GAL_W, 420, mobile ? 1300 : 2200, 0x3a1f, 1.0);
+    // its satellite swarm: LMC/SMC as tiny warm-blue smudges just off the disc (true dirs)
+    groupBlob(P, C, skyDir(5.4, -69.8).multiplyScalar(390), 60, 60, 0x11a, [0.72, 0.80, 0.98], 0.8);
+    groupBlob(P, C, skyDir(0.88, -72.8).multiplyScalar(470), 42, 34, 0x11b, [0.74, 0.80, 0.95], 0.7);
+    // M33 Triangulum — the third spiral, near M31 (true: 2.73 Mly, just south of Andromeda)
+    miniSpiral(P, C, skyDir(1.564, 30.66).multiplyScalar(6150), new T.Vector3(0.5, 0.72, 0.48).normalize(), 190, mobile ? 420 : 720, 0x33c, 0.85);
+    // M31 ANDROMEDA at this tier's own point-size (the 16k-point galaxy is sized for the in-galaxy
+    // view — its attenuated points fall below a pixel from LG framing distance, so the tier carries
+    // its own brighter proxy at the same seat; the two crossfade in the same window, seamless)
+    var m31 = skyDir(0.712, 41.27).multiplyScalar(R_ANDROMEDA);
+    miniSpiral(P, C, m31, new T.Vector3(0.35, 0.86, 0.37).normalize(), 520, mobile ? 1500 : 2600, 0xa31d, 1.05);
+    groupBlob(P, C, m31.clone().addScaledVector(skyDir(0.7, 40.5), 150), 46, 26, 0x31a, [1.0, 0.86, 0.62], 0.9);
+    groupBlob(P, C, m31.clone().addScaledVector(skyDir(0.65, 41.7), -190), 52, 26, 0x31b, [0.98, 0.85, 0.66], 0.8);
+    groupBlob(P, C, skyDir(0.55, 48.3).multiplyScalar(R_ANDROMEDA * 0.94), 70, 30, 0x31c, [0.95, 0.83, 0.68], 0.65);
+    // the outer dwarfs — faint lone islands at TRUE directions & compressed true distances (×2250/Mly)
+    var DW = [
+      [19.75, -14.8, 3670, "n6822"], [1.08, 2.1, 5350, "ic1613"], [0.03, -15.5, 6600, "wlm"],
+      [23.47, 14.7, 6600, "pegdig"], [9.99, 30.7, 5850, "leoa"], [0.44, -11.0, 5600, "cetus"],
+      [20.78, -12.8, 6600, "aqr"], [22.69, -64.4, 6520, "tucana"], [1.85, -44.4, 3240, "phoenix"],
+      [10.14, 12.3, 1450, "leo1"], [11.22, 22.2, 1300, "leo2"], [17.33, 57.9, 620, "draco"],
+      [15.15, 67.2, 590, "umi"], [1.0, -33.7, 640, "scl-dsph"], [2.66, -34.4, 1050, "fornax-dsph"]
+    ];
+    for (var d2 = 0; d2 < DW.length; d2++) {
+      var e2 = DW[d2];
+      groupBlob(P, C, skyDir(e2[0], e2[1]).multiplyScalar(e2[2]), 34, 9, 0x500 + d2, [0.92, 0.84, 0.72], 0.55);
+    }
+    // the faint tidal BRIDGE hinting the two spirals are bound (they will merge in ~4.5 Gyr)
+    var rngB = gRng(0xb219);
+    for (var b2 = 0; b2 < (mobile ? 130 : 240); b2++) {
+      var tt = rngB(), pB = m31.clone().multiplyScalar(tt);
+      pB.x += gauss(rngB) * 520; pB.y += gauss(rngB) * 520; pB.z += gauss(rngB) * 520;
+      P.push(pB.x, pB.y, pB.z); C.push(0.16, 0.13, 0.10);
+    }
+    tierLG.add(tierPoints("lg", P, C, mobile ? 7.5 : 9.5, { name: "LocalGroupCloud", base: 0.88 }));
+    tierLG.add(tierGlow("lg", P, C, mobile ? 14 : 17, { name: "LocalGroupGlow", base: 0.38 }));
+    // M33 pick (M31 already has its own from the deepSky data)
+    var sh33 = new T.Mesh(new T.SphereGeometry(320, 10, 8), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
+    sh33.position.copy(skyDir(1.564, 30.66).multiplyScalar(6150)); sh33.name = "DSOPick_m33";
+    sh33.userData.nyePick = "dso_m33"; sh33.userData.dsoViewDist = 900; sh33.userData.dsoFocusMin = 260; sh33.userData.dsoMinCam = 2600;
+    sh33.userData.dsoName = { en: "M33 · Triangulum", zh: "M33 · 三角座星系" };
+    dsoPickGroup.add(sh33);
+    tierLG.visible = false; belt.add(tierLG);
+  }
+
+  /* ---------------- TIER · LOCAL SHEET (真实: a 34-Mly-wide, 1.5-Mpc-THIN wall of galaxies in the
+     supergalactic plane — bounded above (+SG_W) by the huge empty LOCAL VOID; ringed by the real
+     "Council of Giants"; the Leo Spur runs on a parallel layer below. Rate ≈612 units/Mly. ------- */
+  function buildLocalSheet() {
+    tierSheet = new T.Group(); tierSheet.name = "TierLocalSheet";
+    var P = [], C = [], rng = gRng(0x5eef);
+    function inPlane(dir, damp) {   // project a true sky direction toward the SG plane (the sheet IS the plane)
+      var d = dir.clone().addScaledVector(SG_W, -dir.dot(SG_W) * (damp == null ? 0.75 : damp));
+      return d.normalize();
+    }
+    // the COUNCIL OF GIANTS — the real ring of bright galaxies encircling the Local Group
+    // (name, RA h, Dec °, true Mly): each a small warm galaxy-blob at its compressed true seat
+    var CG = [
+      ["n253", 0.79, -25.3, 11], ["maffei", 2.60, 59.6, 11], ["ic342", 3.78, 68.1, 11],
+      ["m81", 9.93, 69.07, 12], ["m94", 12.85, 41.12, 15], ["m64", 12.94, 21.68, 16],
+      ["m83", 13.62, -29.87, 16], ["cenA", 13.42, -43.02, 12], ["n4945", 13.09, -49.47, 12],
+      ["circinus", 14.22, -65.34, 14]
+    ];
+    for (var g2 = 0; g2 < CG.length; g2++) {
+      var cgE = CG[g2], seat = inPlane(skyDir(cgE[1], cgE[2])).multiplyScalar(cgE[3] * 612);
+      groupBlob(P, C, seat, 190, mobile ? 16 : 26, 0x700 + g2, [1.0, 0.87, 0.64], 1.0);
+    }
+    // the sheet itself: a THIN diffuse wall of faint galaxies in the SG plane (±~900 = the real 1.5 Mpc),
+    // denser toward the centre (us), fading to the rim; NOTHING above it — that darkness IS the Local Void
+    var NS = mobile ? 2200 : 4200;
+    for (var i = 0; i < NS; i++) {
+      var a2 = rng() * Math.PI * 2, rr = Math.pow(rng(), 0.72) * 10400;
+      var h2 = gauss(rng) * 620;
+      if (h2 > 480) continue;                      // hard ceiling toward the void — the sheet has a clean top
+      var pt = new T.Vector3().addScaledVector(SG_U, rr * Math.cos(a2)).addScaledVector(SG_V, rr * Math.sin(a2)).addScaledVector(SG_W, h2);
+      var amp = 0.22 + 0.5 * Math.pow(rng(), 2.2);
+      P.push(pt.x, pt.y, pt.z); C.push(0.95 * amp, 0.86 * amp, 0.70 * amp);
+    }
+    // the M101 WALL — the one real spur that climbs off the sheet INTO the Local Void
+    var m101dir = inPlane(skyDir(14.05, 54.35), 0.5);
+    for (var m3 = 0; m3 < (mobile ? 120 : 220); m3++) {
+      var tt3 = rng(), base3 = m101dir.clone().multiplyScalar(5200 + 5200 * tt3);
+      base3.addScaledVector(SG_W, tt3 * tt3 * 2900 + gauss(rng) * 260);
+      base3.addScaledVector(SG_V, gauss(rng) * 300);
+      var amp3 = 0.3 + 0.4 * rng();
+      P.push(base3.x, base3.y, base3.z); C.push(0.82 * amp3, 0.76 * amp3, 0.66 * amp3);
+    }
+    // the LEO SPUR — the neighbouring layer BELOW the sheet (real: next wall at negative SGZ)
+    var leoDir = inPlane(skyDir(10.8, 12.0));
+    for (var l3 = 0; l3 < (mobile ? 200 : 380); l3++) {
+      var s3 = (rng() - 0.5) * 2;
+      var pt3 = leoDir.clone().multiplyScalar(7400 + s3 * 3600).addScaledVector(SG_V, gauss(rng) * 1500 + s3 * 900).addScaledVector(SG_W, -1750 + gauss(rng) * 330);
+      var amp4 = 0.2 + 0.32 * Math.pow(rng(), 2);
+      P.push(pt3.x, pt3.y, pt3.z); C.push(0.78 * amp4, 0.72 * amp4, 0.64 * amp4);
+    }
+    // two wispy TENDRILS inside the void (real: the Local Void is not perfectly empty — thin wisps lace it)
+    for (var w3 = 0; w3 < (mobile ? 80 : 150); w3++) {
+      var tw = rng(), dirW = inPlane(skyDir(18.2 + 1.6 * (w3 % 2), 8 + 14 * (w3 % 2)), 0.3);
+      var ptW = dirW.multiplyScalar(3400 + 5800 * tw).addScaledVector(SG_W, 1200 + 3400 * tw + gauss(rng) * 380);
+      var ampW = 0.10 + 0.14 * rng();
+      P.push(ptW.x, ptW.y, ptW.z); C.push(0.62 * ampW, 0.60 * ampW, 0.58 * ampW);
+    }
+    tierSheet.add(tierPoints("sheet", P, C, mobile ? 5.5 : 7, { name: "LocalSheetCloud", base: 0.82 }));
+    tierSheet.add(tierGlow("sheet", P, C, mobile ? 11 : 13.5, { name: "LocalSheetGlow", base: 0.34 }));
+    tierSheet.visible = false; belt.add(tierSheet);
+  }
+
+  /* ---------------- TIER · VIRGO / LOCAL SUPERCLUSTER (真实: a FLAT disc ~110 Mly across in the SG
+     plane, centred on the rich VIRGO CLUSTER 54 Mly away — WE sit on the outskirts, on a minor spur
+     feeding in. Radial "clouds" fan out of Virgo; 98% of the volume is empty. Rate ≈239 units/Mly. - */
+  function buildVirgoSupercluster() {
+    tierVirgo = new T.Group(); tierVirgo.name = "TierVirgo";
+    var P = [], C = [], rng = gRng(0x71c0);
+    var VC = VIRGO_DIR.clone().multiplyScalar(12900);      // the Virgo cluster — the supercluster's heart (54 Mly × 239)
+    // the rich cluster core: ~1300 galaxies swarming in a dense ball + a warm halo
+    var NCOR = mobile ? 520 : 900;
+    for (var i = 0; i < NCOR; i++) {
+      var rr = Math.pow(rng(), 2.1) * 1350, u2 = rng() * 2 - 1, p2 = rng() * Math.PI * 2, s2 = Math.sqrt(1 - u2 * u2);
+      var amp = 0.5 + 0.62 * Math.pow(rng(), 1.6);
+      P.push(VC.x + rr * s2 * Math.cos(p2), VC.y + rr * s2 * Math.sin(p2), VC.z + rr * u2);
+      C.push(1.0 * amp, 0.88 * amp, 0.66 * amp);
+    }
+    // radial CLOUDS/SPURS fanning out of Virgo IN THE PLANE (real: Canes Venatici cloud — the one
+    // we live in — plus Virgo II southern extension, Leo II cloud, Crater cloud)
+    var usDir = VC.clone().negate().normalize();           // from Virgo toward US: the Canes spur (we're ON it)
+    var spurDirs = [
+      usDir,
+      new T.Vector3().addScaledVector(SG_V, -0.86).addScaledVector(SG_U, 0.44).normalize(),   // Virgo II (south)
+      new T.Vector3().addScaledVector(SG_V, 0.72).addScaledVector(SG_U, -0.62).normalize(),   // Leo II cloud
+      new T.Vector3().addScaledVector(SG_U, 0.94).addScaledVector(SG_V, 0.30).normalize()     // toward Hydra (deeper in-plane)
+    ];
+    for (var sp2 = 0; sp2 < spurDirs.length; sp2++) {
+      var sd = spurDirs[sp2].clone().addScaledVector(SG_W, -spurDirs[sp2].dot(SG_W)).normalize();
+      var len = sp2 === 0 ? 13400 : 7200 + rng() * 4200;
+      var NSP = Math.round((mobile ? 260 : 460) * (sp2 === 0 ? 1.25 : 1));
+      for (var q2 = 0; q2 < NSP; q2++) {
+        var tq = Math.pow(rng(), 0.85), wob = Math.sin(tq * 5.2 + sp2 * 2.1) * 620 * tq;
+        var ptq = VC.clone().addScaledVector(sd, tq * len)
+          .addScaledVector(SG_V, wob + gauss(rng) * (300 + 480 * tq))
+          .addScaledVector(SG_U, gauss(rng) * (260 + 420 * tq))
+          .addScaledVector(SG_W, gauss(rng) * 300);
+        var ampq = (0.24 + 0.5 * Math.pow(rng(), 2)) * (1 - 0.35 * tq);
+        P.push(ptq.x, ptq.y, ptq.z); C.push(0.96 * ampq, 0.85 * ampq, 0.68 * ampq);
+      }
+    }
+    // the flat DISC of scattered small groups filling the supercluster plane (thin: ±~1500), sparse —
+    // most of even a supercluster is emptiness; density rises gently toward Virgo
+    var ND = mobile ? 2000 : 3800;
+    for (var d3 = 0; d3 < ND; d3++) {
+      var a3 = rng() * Math.PI * 2, r3 = Math.pow(rng(), 0.62) * 15800;
+      var pt3 = new T.Vector3().addScaledVector(SG_U, r3 * Math.cos(a3)).addScaledVector(SG_V, r3 * Math.sin(a3)).addScaledVector(SG_W, gauss(rng) * 1100);
+      var dV = pt3.distanceTo(VC);
+      if (rng() < 0.5 * Math.min(1, dV / 16000)) continue;             // thin out away from the heart
+      var amp3 = 0.16 + 0.4 * Math.pow(rng(), 2.4) + Math.max(0, 0.3 - dV / 26000);
+      P.push(pt3.x, pt3.y, pt3.z); C.push(0.92 * amp3, 0.84 * amp3, 0.70 * amp3);
+    }
+    // US: the whole Local Sheet condensed to a modest knot at the origin — visibly ON THE EDGE,
+    // 82% of the way out of the disc, hanging off the Canes spur. We are not the centre.
+    groupBlob(P, C, new T.Vector3(0, 0, 0), 560, mobile ? 60 : 100, 0xa5e, [1.0, 0.62, 0.42], 0.85);
+    tierVirgo.add(tierPoints("virgo", P, C, mobile ? 8 : 10, { name: "VirgoSC", base: 0.9 }));
+    tierVirgo.add(tierGlow("virgo", P, C, mobile ? 15 : 18, { name: "VirgoSCGlow", base: 0.36 }));
+    // pick: the Virgo cluster core
+    var shV = new T.Mesh(new T.SphereGeometry(1700, 10, 8), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
+    shV.position.copy(VC); shV.name = "DSOPick_virgo";
+    shV.userData.nyePick = "dso_virgo"; shV.userData.dsoViewDist = 5600; shV.userData.dsoFocusMin = 2200; shV.userData.dsoMinCam = 9000;
+    shV.userData.dsoName = { en: "Virgo Cluster · the supercluster's heart", zh: "室女星系团 · 本超星系团之心" };
+    dsoPickGroup.add(shV);
+    tierVirgo.visible = false; belt.add(tierVirgo);
+  }
+
+  /* ---------------- TIER · LANIAKEA — the Tully 2014 watershed, at TRUE internal scale (52.6 u/Mly):
+     us at the origin, Virgo 2840 in, the GREAT ATTRACTOR (Norma, true RA 16.25h −61°) 12000 out, the
+     basin rim ~14400 (=274 Mly ✓). Thousands of white-gold STREAMLINES comb through the supergalactic
+     slab and converge on the Attractor; the rim is an irregular amber watershed-surface; a coral knot
+     marks US on the far shore by the Perseus–Pisces divide. Beyond it, the neighbour basins wait in
+     cool grey. ---------------- */
   function buildLaniakeaFlow() {
     if (_laniakeaFlow) return;
     var wr = gRng(0x1a71ea), wG = function () { return wr() + wr() + wr() - 1.5; };
-    // Built at the LANIAKEA ladder scale (sceneRadius ~9700): the Great Attractor focus sits offset from HOME so
-    // WE (the origin, the camera pivot) sit off the bright focus — on the basin's slope, exactly as refs 1/3 show.
-    var Fdir = new T.Vector3(0.30, 0.42, -0.72).normalize();
-    var F = Fdir.clone().multiplyScalar(3200);   // the Great Attractor — the convergence point of the whole basin
-    var swirlAxis = new T.Vector3(0.18, 1, 0.12).normalize();
-    var RAD = 6500, NLINE = mobile ? 2200 : 4200;   // a tighter, denser basin so the streamlines read as combed hair (not sparse threads) when framed from the laniakea tier's distance
-    // three fixed lobe axes bend the spawn shell into the IRREGULAR Tully basin (not a round ball): bulge toward
-    // Virgo + Hydra-Centaurus, pinch at the Perseus-Pisces divide where our edge lies.
-    var _evV = raDecToEcl(12.442, 12.72), AX_VIRGO = eclVec(_evV.lon, _evV.lat, 1).normalize();
-    var AX_CENT = Fdir.clone();
-    var _evP = raDecToEcl(3.267, 41.5), AX_PP = eclVec(_evP.lon, _evP.lat, 1).normalize();
-    function basinLobe(d) { return 0.70 + 0.42 * Math.max(0, d.dot(AX_VIRGO)) + 0.30 * Math.max(0, d.dot(AX_CENT)) - 0.26 * Math.max(0, d.dot(AX_PP)); }
+    var F = DIR_GA.clone().multiplyScalar(12000);          // the Great Attractor — the basin's floor (true dir + true 228 Mly)
+    var RAD = 14400, NLINE = mobile ? 1300 : 2400;
+    var VCn = VIRGO_DIR.clone().multiplyScalar(2840);      // Virgo knot: exactly where the collapsing Virgo tier lands (12900×0.22)
+    // irregular basin: bulge toward Virgo/us (the long lobe we live in), pinch at the Perseus–Pisces divide
+    var AX_US = F.clone().negate().normalize();
+    var AX_VIR = VCn.clone().sub(F).normalize();
+    function basinLobe(d) {
+      return 0.74 + 0.34 * Math.max(0, d.dot(AX_VIR)) + 0.20 * Math.max(0, d.dot(AX_US)) * Math.max(0, d.dot(AX_VIR)) * 2.0
+           - 0.22 * Math.max(0, d.dot(DIR_PP)) - 0.10 * Math.max(0, d.dot(SG_W));
+    }
     var P = [], C = [];
-    function pushFlow(x, y, z, br, wf) { P.push(x, y, z); C.push(1.0 * br, (0.80 + 0.18 * wf) * br, (0.40 + 0.48 * wf) * br); }
+    function pushFlow(x, y, z, br, wf) { P.push(x, y, z); C.push(0.98 * br, (0.62 + 0.28 * wf) * br, (0.14 + 0.28 * wf) * br); }
+    var swirlAxis = SG_W;                                   // the comb curls about the supergalactic normal — flow lives in the slab
     for (var s = 0; s < NLINE; s++) {
       var d0 = new T.Vector3(2 * wr() - 1, 2 * wr() - 1, 2 * wr() - 1); if (d0.lengthSq() < 1e-4) d0.set(1, 0, 0); d0.normalize();
+      d0.addScaledVector(SG_W, -0.52 * d0.dot(SG_W)).normalize();       // spawn biased into the slab
       var pos = F.clone().addScaledVector(d0, RAD * (0.30 + 0.70 * Math.pow(wr(), 0.5)) * basinLobe(d0));
-      var steps = 46 + (wr() * 40 | 0), handed = d0.dot(swirlAxis) > 0 ? 1 : -1;   // coherent comb per hemisphere (refs 1/3), not per-line swirl
+      var steps = 24 + (wr() * 16 | 0), handed = d0.dot(SG_W) > 0 ? 1 : -1;
       for (var t = 0; t < steps; t++) {
         var toF = new T.Vector3().subVectors(F, pos), dF = toF.length();
-        if (dF < 200) break;   // stop short of the focus (the GA node fills the core) so points don't pile into one blob
+        if (dF < 900) break;                                // the GA node fills the core
         toF.multiplyScalar(1 / dF);
         var tang = new T.Vector3().crossVectors(toF, swirlAxis); if (tang.lengthSq() < 1e-4) tang.set(1, 0, 0); tang.normalize();
-        var frac = dF / RAD, stepLen = 82 + 42 * frac;   // near-UNIFORM spacing → points spread evenly along the whole line = continuous hair, not a pile-up at the focus
-        pos.addScaledVector(toF, stepLen).addScaledVector(tang, handed * stepLen * (0.30 + 0.5 * frac));
-        pos.x += wG() * 16; pos.y += wG() * 16; pos.z += wG() * 16;
-        var prox = 1 - Math.min(1, frac), br = 0.82 + 0.55 * prox * prox, wf = Math.max(0, prox - 0.5) / 0.5;   // bright gold everywhere → white near the attractor (refs 1/3 are bright combed hair, not dim threads)
+        var frac = dF / RAD, stepLen = 235 + 130 * frac;
+        pos.addScaledVector(toF, stepLen).addScaledVector(tang, handed * stepLen * (0.26 + 0.42 * frac));
+        pos.addScaledVector(SG_W, -pos.clone().sub(F).dot(SG_W) * 0.055);   // the slab keeps combing the flow flat
+        pos.x += wG() * 40; pos.y += wG() * 40; pos.z += wG() * 40;
+        var prox = 1 - Math.min(1, frac), br = 0.60 + 0.72 * prox * prox, wf = Math.max(0, prox - 0.5) / 0.5;
         pushFlow(pos.x, pos.y, pos.z, br, wf);
       }
     }
-    // the GREAT-ATTRACTOR convergence NODE — the bright sink every streamline points at (refs 1/3)
-    for (var n = 0; n < (mobile ? 200 : 320); n++) {
-      var nr = Math.pow(wr(), 1.7) * 190, nu = 2 * wr() - 1, np = 2 * Math.PI * wr(), ns = Math.sqrt(1 - nu * nu);
-      pushFlow(F.x + nr * ns * Math.cos(np), F.y + nr * ns * Math.sin(np), F.z + nr * nu, 1.25, 1.0);
+    // the GREAT-ATTRACTOR sink: a dense white-gold knot, ELONGATED along the slab — the real
+    // Hydra–Centaurus–Norma chain, not a round ball
+    var gaU = new T.Vector3().crossVectors(SG_W, DIR_GA).normalize(), gaV = new T.Vector3().crossVectors(SG_W, gaU).normalize();
+    for (var n = 0; n < (mobile ? 300 : 520); n++) {
+      var nr = Math.pow(wr(), 1.7), u3 = 2 * wr() - 1, p3 = 2 * Math.PI * wr(), s3 = Math.sqrt(1 - u3 * u3);
+      var off = gaU.clone().multiplyScalar(s3 * Math.cos(p3) * nr * 1350)
+        .addScaledVector(gaV, s3 * Math.sin(p3) * nr * 620).addScaledVector(SG_W, u3 * nr * 480);
+      pushFlow(F.x + off.x, F.y + off.y, F.z + off.z, 1.2, 1.0);
     }
-    // the irregular BASIN RIM — a soft dim-gold dust ribbon at the flow-divide surface, enclosing the flow
-    var NRIM = mobile ? 800 : 1500;
+    // VIRGO inside the basin — the knot the collapsed Virgo tier hands over to
+    for (var v2 = 0; v2 < (mobile ? 90 : 150); v2++) {
+      var vr = Math.pow(wr(), 1.8) * 520, vu = 2 * wr() - 1, vp = 2 * Math.PI * wr(), vs = Math.sqrt(1 - vu * vu);
+      pushFlow(VCn.x + vr * vs * Math.cos(vp), VCn.y + vr * vs * Math.sin(vp), VCn.z + vr * vu, 0.95, 0.55);
+    }
+    // US — the warm-coral knot on the basin's far shore (the camera pivot; the "you are here" red dot)
+    for (var m2 = 0; m2 < 110; m2++) {
+      var mr = Math.pow(wr(), 2) * 380, mu2 = 2 * wr() - 1, mp2 = 2 * Math.PI * wr(), mss = Math.sqrt(1 - mu2 * mu2);
+      P.push(mr * mss * Math.cos(mp2), mr * mu2, mr * mss * Math.sin(mp2)); C.push(1.15, 0.46, 0.30);
+    }
+    // a few ESCAPE LINES flowing on beyond the Attractor toward Shapley — our true long-term fate
+    var SHP = DIR_SHAPLEY.clone().multiplyScalar(34200);
+    for (var es = 0; es < (mobile ? 40 : 80); es++) {
+      var ep = F.clone(); ep.x += wG() * 900; ep.y += wG() * 900; ep.z += wG() * 900;
+      var eSteps = 10 + (wr() * 8 | 0);
+      for (var et = 0; et < eSteps; et++) {
+        var toS = new T.Vector3().subVectors(SHP, ep).normalize();
+        ep.addScaledVector(toS, 700); ep.x += wG() * 70; ep.y += wG() * 70; ep.z += wG() * 70;
+        var ebr = 0.22 * (1 - et / eSteps) + 0.05;
+        pushFlow(ep.x, ep.y, ep.z, ebr, 0.2);
+      }
+    }
+    var flowPts = tierPoints("lani", P, C, mobile ? 3.4 : 4.2, { name: "LaniakeaFlow", base: 0.95 });
+    var flowGlow = tierGlow("lani", P, C, mobile ? 7.5 : 9.5, { name: "LaniakeaFlowGlow", base: 0.48 });
+    // the irregular RIM — the watershed surface itself, breathing amber dust…
+    var RP = [], RC = [], NRIM = mobile ? 900 : 1600;
     for (var r2 = 0; r2 < NRIM; r2++) {
       var ru = 2 * wr() - 1, rp = 2 * Math.PI * wr(), rs = Math.sqrt(1 - ru * ru);
       var rd = new T.Vector3(rs * Math.cos(rp), ru, rs * Math.sin(rp));
-      var rr = RAD * basinLobe(rd) * (1.0 + (wr() - 0.5) * 0.06);
-      var rp3 = F.clone().addScaledVector(rd, rr);
-      P.push(rp3.x, rp3.y, rp3.z); C.push(0.34, 0.25, 0.12);   // dim warm gold — the rim is subordinate to the flow
+      var rr2 = RAD * basinLobe(rd) * (1.0 + (wr() - 0.5) * 0.05);
+      var rp3 = F.clone().addScaledVector(rd, rr2);
+      RP.push(rp3.x, rp3.y, rp3.z); RC.push(0.55, 0.32, 0.10);
     }
-    // US — a warm-coral marker at HOME (the camera pivot), on the basin's outer slope near the P-P divide
-    for (var m2 = 0; m2 < 90; m2++) {
-      var mr = Math.pow(wr(), 2) * 210, mu2 = 2 * wr() - 1, mp2 = 2 * Math.PI * wr(), mss = Math.sqrt(1 - mu2 * mu2);
-      P.push(mr * mss * Math.cos(mp2), mr * mu2, mr * mss * Math.sin(mp2)); C.push(1.15, 0.46, 0.30);
+    // …and the iconic ORANGE OUTLINE: the rim's trace along the supergalactic slab (ref image 1)
+    for (var o2 = 0; o2 < (mobile ? 480 : 860); o2++) {
+      var ph2 = (o2 / (mobile ? 480 : 860)) * Math.PI * 2;
+      var rd2 = gaU.clone().multiplyScalar(Math.cos(ph2)).addScaledVector(gaV, Math.sin(ph2));
+      rd2.addScaledVector(SG_W, (wr() - 0.5) * 0.13).normalize();
+      var rr3 = RAD * basinLobe(rd2) * (1.0 + (wr() - 0.5) * 0.035);
+      var rp4 = F.clone().addScaledVector(rd2, rr3);
+      RP.push(rp4.x, rp4.y, rp4.z); RC.push(0.96, 0.58, 0.12);
     }
-    var g = new T.BufferGeometry();
-    g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
-    g.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
-    var mat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 70 : 92, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: false });   // sized so evenly-spaced streamline points just touch into continuous hair at the laniakea tier's framing (camLen ~13100)
-    if ("toneMapped" in mat) mat.toneMapped = false;
-    _laniakeaFlow = new T.Points(g, mat); _laniakeaFlow.name = "LaniakeaFlow"; _laniakeaFlow.renderOrder = -5; _laniakeaFlow.frustumCulled = false; _laniakeaFlow.visible = false;
-    belt.add(_laniakeaFlow);
+    var rimPts = tierPoints("lani", RP, RC, mobile ? 5.5 : 7, { name: "LaniakeaRim", base: 0.62 });
+    var rimGlow = tierGlow("lani", RP, RC, mobile ? 11 : 14, { name: "LaniakeaRimGlow", base: 0.28 });
+    _laniakeaFlow = new T.Group(); _laniakeaFlow.name = "TierLaniakea";
+    _laniakeaFlow.add(flowGlow); _laniakeaFlow.add(flowPts); _laniakeaFlow.add(rimGlow); _laniakeaFlow.add(rimPts);
+    _laniakeaFlow.visible = false; belt.add(_laniakeaFlow);
+    // pick: the Great Attractor / the whole basin
+    var gaShell = new T.Mesh(new T.SphereGeometry(2600, 12, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
+    gaShell.position.copy(F); gaShell.name = "DSOPick_laniakea";
+    gaShell.userData.nyePick = "dso_laniakea"; gaShell.userData.dsoViewDist = 26000; gaShell.userData.dsoFocusMin = 7000; gaShell.userData.dsoMinCam = 15000;
+    gaShell.userData.dsoName = { en: "Laniakea · the Great Attractor", zh: "拉尼亚凯亚 · 巨引源" };
+    dsoPickGroup.add(gaShell);
   }
 
-  /* ---------------- the LANIAKEA SUPERCLUSTER — the cosmic web, far beyond the local star field. When you
-     dolly WAY out, the ~26k faint galaxies resolve into FILAMENTS + WALLS + dense NODES with empty VOIDS
-     between — the real large-scale texture (Voronoi skeleton: cell faces = walls, edges = filaments, verts
-     = clusters, interiors = voids). Static, one draw, faded in only when the camera leaves the galaxy. --- */
+  /* ---------------- the NEIGHBOUR BASINS — Shapley, Coma, Perseus–Pisces, Hercules: the adjacent
+     watersheds, all at TRUE directions & true relative distances (52.6 u/Mly). Cool grey-blue
+     far-context at the Laniakea tier; they persist as the brightest pinned knots of the web. ------- */
+  var _neighborsBuilt = false;
+  function buildNeighborBasins() {
+    if (_neighborsBuilt) return; _neighborsBuilt = true;
+    var grp = new T.Group(); grp.name = "NeighborBasins";
+    var P = [], C = [], rng = gRng(0xe16);
+    var COOL = [0.60, 0.66, 0.78], PALE = [0.78, 0.80, 0.86];
+    // SHAPLEY (650 Mly → 34200): the greatest concentration in the local universe — a rich multi-core swarm
+    var SHP = DIR_SHAPLEY.clone().multiplyScalar(34200);
+    for (var i = 0; i < (mobile ? 700 : 1300); i++) {
+      var sub = (i % 4), subC = SHP.clone().addScaledVector(new T.Vector3(gauss(rng), gauss(rng), gauss(rng)), sub * 900);
+      var rr = Math.pow(rng(), 1.7) * 2600, u2 = rng() * 2 - 1, p2 = rng() * Math.PI * 2, s2 = Math.sqrt(1 - u2 * u2);
+      var amp = 0.5 + 0.6 * Math.pow(rng(), 1.6);
+      P.push(subC.x + rr * s2 * Math.cos(p2), subC.y + rr * s2 * Math.sin(p2), subC.z + rr * u2);
+      C.push(PALE[0] * amp, PALE[1] * amp * 0.98, PALE[2] * amp * 0.9);   // pale warm-white: it outshines every neighbour
+    }
+    // PERSEUS–PISCES (250 Mly → 13150): the great CHAIN just across our divide — a long wall, not a ball
+    var PPC = DIR_PP.clone().multiplyScalar(13150);
+    var ppAxis = new T.Vector3().crossVectors(DIR_PP, SG_W).normalize();
+    for (var pp2 = 0; pp2 < (mobile ? 600 : 1100); pp2++) {
+      var tpp = (rng() - 0.5) * 2;
+      var ppP = PPC.clone().addScaledVector(ppAxis, tpp * 9000 + Math.sin(tpp * 3.1) * 1100)
+        .addScaledVector(SG_W, Math.cos(tpp * 2.2) * 900 + gauss(rng) * 480)
+        .addScaledVector(DIR_PP, gauss(rng) * 620);
+      if (rng() < 0.16) { var kb = Math.pow(rng(), 1.6) * 900; ppP.addScaledVector(new T.Vector3(gauss(rng), gauss(rng), gauss(rng)).normalize(), kb); }
+      var ampp = (0.34 + 0.5 * Math.pow(rng(), 2)) * (1 - 0.4 * Math.abs(tpp));
+      P.push(ppP.x, ppP.y, ppP.z); C.push(COOL[0] * ampp, COOL[1] * ampp, COOL[2] * ampp);
+    }
+    // COMA (330 Mly → 17360): the dense compact cluster anchoring the northern web
+    var CMA = DIR_COMA.clone().multiplyScalar(17360);
+    for (var cm = 0; cm < (mobile ? 320 : 600); cm++) {
+      var cr2 = Math.pow(rng(), 2.0) * 1700, cu = rng() * 2 - 1, cp = rng() * Math.PI * 2, cs = Math.sqrt(1 - cu * cu);
+      var campv = 0.44 + 0.56 * Math.pow(rng(), 1.7);
+      P.push(CMA.x + cr2 * cs * Math.cos(cp), CMA.y + cr2 * cs * Math.sin(cp), CMA.z + cr2 * cu);
+      C.push(PALE[0] * campv * 0.96, PALE[1] * campv * 0.96, PALE[2] * campv);
+    }
+    // HERCULES (500 Mly → 26300): a looser northern swarm
+    var HRC = DIR_HERC.clone().multiplyScalar(26300);
+    for (var hc = 0; hc < (mobile ? 220 : 420); hc++) {
+      var hr2 = Math.pow(rng(), 1.4) * 2400, hu = rng() * 2 - 1, hp = rng() * Math.PI * 2, hs = Math.sqrt(1 - hu * hu);
+      var hampv = 0.3 + 0.42 * Math.pow(rng(), 2);
+      P.push(HRC.x + hr2 * hs * Math.cos(hp), HRC.y + hr2 * hs * Math.sin(hp), HRC.z + hr2 * hu);
+      C.push(COOL[0] * hampv, COOL[1] * hampv, COOL[2] * hampv);
+    }
+    grp.add(tierPoints("neighbors", P, C, mobile ? 6.5 : 8, { name: "NeighborCloud", base: 0.68 }));
+    grp.add(tierGlow("neighbors", P, C, mobile ? 12 : 14.5, { name: "NeighborGlow", base: 0.32 }));
+    grp.visible = false; belt.add(grp);
+    _neighborBasins = grp;
+    // picks for the great neighbours
+    function basinPick(pos, r, id, en, zh, viewDist, minCam) {
+      var sh = new T.Mesh(new T.SphereGeometry(r, 10, 8), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
+      sh.position.copy(pos); sh.name = "DSOPick_" + id;
+      sh.userData.nyePick = "dso_" + id; sh.userData.dsoViewDist = viewDist; sh.userData.dsoFocusMin = r * 1.2; sh.userData.dsoMinCam = minCam;
+      sh.userData.dsoName = { en: en, zh: zh };
+      dsoPickGroup.add(sh);
+    }
+    basinPick(SHP, 3400, "shapley", "Shapley Concentration", "沙普利超星系团", 11000, 18000);
+    basinPick(PPC, 3000, "perseuspisces", "Perseus–Pisces Supercluster", "英仙-双鱼超星系团", 10000, 18000);
+    basinPick(CMA, 2200, "coma", "Coma Cluster", "后发星系团", 7000, 18000);
+  }
+  var _neighborBasins = null;
+
+  /* ---------------- TIER · THE COSMIC WEB — the Millennium lacework, honest to the real geometry:
+     ~120 supercluster NODES (Poisson-spaced, so VOIDS of 100-300 Mly open naturally), wired by
+     bent, tapering FILAMENT threads to their neighbours; a fifth of the node-triangles filled with
+     whisper-faint WALLS; three great voids carved explicitly clean. The user's visual law: filaments
+     in deep slate-grey-blue, cluster nodes in warm white-gold — one substance at two temperatures,
+     never a purple gradient. Our Laniakea = one middling node at the origin; Shapley/Coma/P-P are
+     PINNED at their true seats so the neighbour basins persist seamlessly into the web. ---------------- */
   function buildCosmicWeb() {
-    // The MILLENNIUM-SIMULATION look: a FINE, DENSE, INTRICATE LACEWORK — MANY small bright cluster NODES joined
-    // by THIN bright filament threads into a cobweb, around dark round VOIDS. At this scale (~1 billion ly across
-    // the frame) individual filaments are THIN threads; it's the sheer density + fineness of the lattice that
-    // reads as "the cosmic web." Our ENTIRE local universe (galaxy + Andromeda + Great Attractor + Laniakea) is
-    // ONE ordinary node in it. NOT a few fat tubes.
-    var RMAX = 13500;   // web extent (radius of the observable-universe box we sprinkle superclusters through)
+    var R_IN = 0, RMAX = 36500;
     var wr = gRng(0x1a91a), wG = function () { return wr() + wr() + wr() - 1.5; };
     var POS = [], COL = [];
-    // Millennium WARM MONOTONE ramp: near-black void → amber filament → gold → white-hot node core
-    var RAMPW = [[0.00, 0.045, 0.028, 0.014], [0.35, 0.50, 0.30, 0.075], [0.70, 0.90, 0.66, 0.22], [0.90, 1.00, 0.82, 0.43], [1.00, 1.22, 0.97, 0.86]];
-    function rampw(L) { for (var i = 0; i < RAMPW.length - 1; i++) { if (L <= RAMPW[i + 1][0]) { var a = RAMPW[i], b = RAMPW[i + 1], f = (L - a[0]) / (b[0] - a[0]); return [a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f, a[3] + (b[3] - a[3]) * f]; } } return [RAMPW[4][1], RAMPW[4][2], RAMPW[4][3]]; }
-    function pushPt(x, y, z, L, intensity) { var c = rampw(L), b = intensity * (0.72 + 0.55 * wr()); POS.push(x, y, z); COL.push(c[0] * b, c[1] * b, c[2] * b); }
-
-    // ==== The observable universe is built of SUPERCLUSTERS. Each is a Laniakea — a dense KNOT of galaxy clusters,
-    //      far larger than any galaxy. So the web's bright regions are CLUMPS (a handful of cluster-nodes packed
-    //      tight = one supercluster), scattered across huge voids, and bridged by long thin filaments. OUR clump
-    //      sits at the origin: it IS the Laniakea flow-basin you just pulled back from, now one knot among many. ====
-    var CLUMPSP = 3900, CLUMPR = 1050;
-    var clumps = [{ p: new T.Vector3(0, 0, 0), mass: 1.1 }];                                            // our supercluster = Laniakea
-    clumps.push({ p: new T.Vector3(0.55, 0.28, 0.62).normalize().multiplyScalar(9400), mass: 2.0 });    // Shapley — the great overdensity that dwarfs us
-    var NC = mobile ? 11 : 16, cguard = 0;
-    while (clumps.length < NC && cguard++ < 9000) {
-      var cct = 2 * wr() - 1, cst = Math.sqrt(1 - cct * cct), cph = 2 * Math.PI * wr();
-      var crad = 3600 + (RMAX - 3600) * Math.pow(wr(), 0.62);
-      var ccand = new T.Vector3(cst * Math.cos(cph) * crad, cct * crad, cst * Math.sin(cph) * crad), cok = true;
-      for (var ck = 0; ck < clumps.length; ck++) { if (ccand.distanceTo(clumps[ck].p) < CLUMPSP) { cok = false; break; } }
-      if (cok) clumps.push({ p: ccand, mass: 0.55 + 0.85 * Math.pow(wr(), 1.6) });
+    // two colour families, one material: SLATE filament dust → WARM node fire (L: 0 dust … 1 node-core)
+    function pushPt(x, y, z, L, inten) {
+      var b = inten * (0.7 + 0.5 * wr()), r, g, bl;
+      if (L < 0.55) { var t0 = L / 0.55;       r = 0.26 + 0.24 * t0; g = 0.30 + 0.24 * t0; bl = 0.40 + 0.22 * t0; }   // slate-blue-grey thread dust
+      else          { var t1 = (L - 0.55) / 0.45; r = 0.50 + 0.62 * t1; g = 0.54 + 0.42 * t1; bl = 0.62 - 0.14 * t1; } // → warm white-gold cluster fire
+      POS.push(x, y, z); COL.push(r * b, g * b, bl * b);
     }
-
-    // ---- expand each clump into a tight group of cluster-NODES (a dominant central cluster + satellites) ----
-    var nodes = [];
-    for (var cc = 0; cc < clumps.length; cc++) {
-      var clp = clumps[cc], nInClump = 4 + (wr() * 4 | 0);
-      var core = { p: clp.p.clone(), mass: clp.mass * 1.25, clump: cc }; nodes.push(core); clp.nodes = [core];
-      for (var ci = 0; ci < nInClump; ci++) {
-        var off = new T.Vector3(wG(), wG(), wG()).multiplyScalar(CLUMPR * (0.55 + 0.45 * clp.mass) * (0.35 + 0.65 * wr()));
-        var sub = { p: clp.p.clone().add(off), mass: 0.35 + 0.55 * Math.pow(wr(), 1.6), clump: cc }; nodes.push(sub); clp.nodes.push(sub);
-      }
+    // ---- SEED THE SUPERCLUSTER NODES: Poisson-disc in the sphere; the real landmarks pinned first ----
+    var MINSEP = 4300;
+    var nodes = [
+      { p: new T.Vector3(0, 0, 0),                                mass: 1.0, pin: "laniakea" },
+      { p: DIR_SHAPLEY.clone().multiplyScalar(34200),             mass: 1.9, pin: "shapley" },
+      { p: DIR_PP.clone().multiplyScalar(13150),                  mass: 1.2, pin: "pp" },
+      { p: DIR_COMA.clone().multiplyScalar(17360),                mass: 1.1, pin: "coma" },
+      { p: DIR_HERC.clone().multiplyScalar(26300),                mass: 0.9, pin: "hercules" }
+    ];
+    // three GREAT VOIDS carved explicitly (real: Boötes-class supervoids, 300+ Mly across)
+    var voids = [
+      { p: skyDir(14.5, 46).multiplyScalar(21000), r: 8600 },
+      { p: skyDir(4.6, -18).multiplyScalar(26000), r: 9800 },
+      { p: skyDir(20.9, -30).multiplyScalar(19000), r: 7400 }
+    ];
+    function inVoid(p, shrink) { for (var vi = 0; vi < voids.length; vi++) { if (p.distanceTo(voids[vi].p) < voids[vi].r * (shrink || 1)) return true; } return false; }
+    var guard = 0, NWANT = mobile ? 92 : 138;
+    while (nodes.length < NWANT && guard++ < 30000) {
+      var ct = 2 * wr() - 1, st = Math.sqrt(1 - ct * ct), ph = 2 * Math.PI * wr();
+      var rad = 5200 + (RMAX - 5200) * Math.pow(wr(), 0.72);
+      var cand = new T.Vector3(st * Math.cos(ph) * rad, ct * rad, st * Math.sin(ph) * rad);
+      if (inVoid(cand, 1.0)) continue;
+      var ok = true;
+      for (var ck = 0; ck < nodes.length; ck++) { if (cand.distanceTo(nodes[ck].p) < MINSEP) { ok = false; break; } }
+      if (ok) nodes.push({ p: cand, mass: 0.4 + 0.9 * Math.pow(wr(), 2.2) });
     }
-
-    // ---- NODE CORES: bright compact knots. Clump cores burn brightest → each supercluster reads as a luminous hub ----
+    // ---- NODE FIRES: compact warm knots, richness ∝ mass (the pinned giants blaze) ----
     for (var n = 0; n < nodes.length; n++) {
-      var nd = nodes[n], cn = Math.round((mobile ? 180 : 300) * (0.55 + nd.mass)), cr = 68 + 150 * nd.mass;
+      var nd = nodes[n];
+      if (nd.pin === "shapley" || nd.pin === "pp" || nd.pin === "coma" || nd.pin === "hercules") continue;   // the neighbour-basin clouds already paint these; skip double-painting
+      var cn = Math.round((mobile ? 60 : 100) * (0.4 + nd.mass * nd.mass)), cr = 340 + 620 * nd.mass;
       for (var q = 0; q < cn; q++) {
-        var r = Math.pow(wr(), 1.9) * cr, u = 2 * wr() - 1, pp = 2 * Math.PI * wr(), sn = Math.sqrt(1 - u * u);
-        pushPt(nd.p.x + r * sn * Math.cos(pp), nd.p.y + r * sn * Math.sin(pp), nd.p.z + r * u, 0.90 + 0.10 * wr(), Math.min(2.1, 1.0 + 0.6 * nd.mass));
+        var r = Math.pow(wr(), 2.0) * cr, u = 2 * wr() - 1, pp = 2 * Math.PI * wr(), sn = Math.sqrt(1 - u * u);
+        pushPt(nd.p.x + r * sn * Math.cos(pp), nd.p.y + r * sn * Math.sin(pp), nd.p.z + r * u, 0.72 + 0.28 * wr(), 0.9 + 0.5 * nd.mass);
       }
     }
-
-    // ---- FILAMENTS: a dense THREAD builder shared by intra-clump webs (short) & inter-clump bridges (long thin) ----
-    function thread(pA, pB, dens, briBase, inten) {
-      var L = pA.distanceTo(pB), nP = Math.max(18, Math.round(L / dens));
-      for (var t = 0; t < nP; t++) { var f = t / (nP - 1), jit = 12 + 34 * Math.sin(f * Math.PI); pushPt(pA.x + (pB.x - pA.x) * f + wG() * jit, pA.y + (pB.y - pA.y) * f + wG() * jit, pA.z + (pB.z - pA.z) * f + wG() * jit, briBase + 0.24 * (1 - Math.sin(f * Math.PI)), inten); }
-    }
-    // intra-clump: the internal cobweb of each supercluster — sub-clusters wired to their core (short, bright)
-    for (var cd = 0; cd < clumps.length; cd++) { var cl = clumps[cd]; if (!cl.nodes) continue; for (var si = 1; si < cl.nodes.length; si++) thread(cl.nodes[0].p, cl.nodes[si].p, 7, 0.52, 0.95); }
-    // inter-clump: long filaments strung between neighbouring superclusters over the voids (the great skeleton).
-    //      Bright & dense enough to read as continuous luminous strands, so the web is a connected lattice not
-    //      scattered blobs. Each supercluster wires to its nearest 2-3 neighbours.
-    var cedges = {};
-    for (var ca = 0; ca < clumps.length; ca++) {
-      var corder = [];
-      for (var cb = 0; cb < clumps.length; cb++) { if (cb !== ca) corder.push({ b: cb, d: clumps[ca].p.distanceTo(clumps[cb].p) }); }
-      corder.sort(function (x, y) { return x.d - y.d; });
-      var ckn = 2 + (wr() < 0.65 ? 1 : 0);
-      for (var ce = 0; ce < Math.min(ckn, corder.length); ce++) {
-        var cbb = corder[ce].b, ckey = Math.min(ca, cbb) + "_" + Math.max(ca, cbb);
-        if (cedges[ckey]) continue; cedges[ckey] = true;
-        if (clumps[ca].p.distanceTo(clumps[cbb].p) > CLUMPSP * 3.0) continue;   // don't bridge clear across the box
-        thread(clumps[ca].p, clumps[cbb].p, 7, 0.40, 0.72);
+    // ---- FILAMENTS: each node → its 2-4 nearest neighbours; BENT (one bezier bow per thread) and
+    //      TAPERED (thick+bright at the node mouths, thin+dim mid-span) — the lacework itself ----
+    var edges = {}, epool = [];
+    for (var a2 = 0; a2 < nodes.length; a2++) {
+      var order = [];
+      for (var b2 = 0; b2 < nodes.length; b2++) if (b2 !== a2) order.push({ b: b2, d: nodes[a2].p.distanceTo(nodes[b2].p) });
+      order.sort(function (x, y) { return x.d - y.d; });
+      var kn = 2 + (wr() < 0.55 ? 1 : 0) + (nodes[a2].mass > 1.2 ? 1 : 0);
+      for (var e2 = 0; e2 < Math.min(kn, order.length); e2++) {
+        var bb = order[e2].b, key = Math.min(a2, bb) + "_" + Math.max(a2, bb);
+        if (edges[key]) continue; edges[key] = true;
+        if (order[e2].d > MINSEP * 2.6) continue;
+        epool.push([a2, bb]);
       }
     }
-
-    // ---- a FAINT sprinkle so the voids aren't dead black (but they stay mostly empty — voids dominate) ----
-    var strays = mobile ? 1200 : 2000;
+    for (var ei = 0; ei < epool.length; ei++) {
+      var A = nodes[epool[ei][0]].p, B = nodes[epool[ei][1]].p;
+      var mid = A.clone().add(B).multiplyScalar(0.5);
+      var bow = new T.Vector3(wG(), wG(), wG()).multiplyScalar(A.distanceTo(B) * 0.10); mid.add(bow);
+      if (inVoid(mid, 0.9)) continue;                        // threads may not cross the carved voids
+      var L2 = A.distanceTo(B), nP = Math.max(32, Math.round(L2 / (mobile ? 58 : 42)));
+      for (var t2 = 0; t2 < nP; t2++) {
+        var f = t2 / (nP - 1), omf = 1 - f;
+        var px = omf * omf * A.x + 2 * omf * f * mid.x + f * f * B.x;
+        var py = omf * omf * A.y + 2 * omf * f * mid.y + f * f * B.y;
+        var pz = omf * omf * A.z + 2 * omf * f * mid.z + f * f * B.z;
+        var mouth = 1 - Math.sin(f * Math.PI);               // 1 at the ends, 0 mid-span
+        var jit = 130 + 420 * (1 - mouth);                   // taper: tight at nodes, breathing mid-span
+        px += wG() * jit; py += wG() * jit; pz += wG() * jit;
+        pushPt(px, py, pz, 0.16 + 0.4 * mouth, 0.5 + 0.42 * mouth);
+        if (wr() < 0.24) pushPt(px + wG() * jit * 1.9, py + wG() * jit * 1.9, pz + wG() * jit * 1.9, 0.08, 0.3);   // fuzz skirt
+      }
+    }
+    // ---- WALLS: a fifth of the node-triangles filled with whisper-faint sheets (cell faces) ----
+    var wallN = 0;
+    for (var ei2 = 0; ei2 < epool.length && wallN < (mobile ? 8 : 15); ei2++) {
+      var i0 = epool[ei2][0], j0 = epool[ei2][1];
+      if (wr() > 0.3) continue;
+      for (var k0 = 0; k0 < nodes.length; k0++) {
+        if (k0 === i0 || k0 === j0) continue;
+        if (edges[Math.min(i0, k0) + "_" + Math.max(i0, k0)] && edges[Math.min(j0, k0) + "_" + Math.max(j0, k0)]) {
+          var NW = mobile ? 120 : 210;
+          for (var w2 = 0; w2 < NW; w2++) {
+            var r1 = wr(), r2 = wr(); if (r1 + r2 > 1) { r1 = 1 - r1; r2 = 1 - r2; }
+            var wx = nodes[i0].p.x + r1 * (nodes[j0].p.x - nodes[i0].p.x) + r2 * (nodes[k0].p.x - nodes[i0].p.x) + wG() * 300;
+            var wy = nodes[i0].p.y + r1 * (nodes[j0].p.y - nodes[i0].p.y) + r2 * (nodes[k0].p.y - nodes[i0].p.y) + wG() * 300;
+            var wz = nodes[i0].p.z + r1 * (nodes[j0].p.z - nodes[i0].p.z) + r2 * (nodes[k0].p.z - nodes[i0].p.z) + wG() * 300;
+            if (!inVoid(new T.Vector3(wx, wy, wz), 0.9)) pushPt(wx, wy, wz, 0.05, 0.22);
+          }
+          wallN++; break;
+        }
+      }
+    }
+    // ---- the faintest field sprinkle (never inside the carved voids — those stay CLEAN dark) ----
+    var strays = mobile ? 900 : 1600;
     for (var v = 0; v < strays; v++) {
-      var vr = 1600 + (RMAX - 1600) * Math.pow(wr(), 0.5), vct = 2 * wr() - 1, vst = Math.sqrt(1 - vct * vct), vph = 2 * Math.PI * wr();
-      pushPt(vr * vst * Math.cos(vph), vr * vct, vr * vst * Math.sin(vph), 0.05, 0.11);
+      var vr = 5000 + (RMAX - 5000) * Math.pow(wr(), 0.5), vct = 2 * wr() - 1, vst = Math.sqrt(1 - vct * vct), vph = 2 * Math.PI * wr();
+      var sx = vr * vst * Math.cos(vph), sy = vr * vct, sz = vr * vst * Math.sin(vph);
+      if (inVoid(new T.Vector3(sx, sy, sz), 1.0)) continue;
+      pushPt(sx, sy, sz, 0.04, 0.16);
     }
-
-    // ---- OUR node IS Laniakea — the Great Attractor & Milky Way are INSIDE it, not separate. Click it to pull
-    //      back and see our whole supercluster as one knot of the web. ----
-    var gaShell = new T.Mesh(new T.SphereGeometry(1200, 12, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
-    gaShell.position.copy(new T.Vector3(0.30, 0.42, -0.72).normalize().multiplyScalar(2100)); gaShell.name = "DSOPick_laniakea";   // the Great Attractor convergence, so clicking frames the flow basin
-    gaShell.userData.nyePick = "dso_laniakea"; gaShell.userData.dsoViewDist = 4400; gaShell.userData.dsoFocusMin = 1500;
-    gaShell.userData.dsoName = { en: "Laniakea · our supercluster", zh: "拉尼亚凯亚 · 我们的本超星系团" };
-    dsoPickGroup.add(gaShell);
-    var wgeo = new T.BufferGeometry();
-    wgeo.setAttribute("position", new T.BufferAttribute(new Float32Array(POS), 3));
-    wgeo.setAttribute("color", new T.BufferAttribute(new Float32Array(COL), 3));
-    var wmat = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 52 : 70, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: true });   // soft points sized so the FINE lacework reads as continuous thin threads + compact knots from far out; fog dissolves the far side
-    if ("toneMapped" in wmat) wmat.toneMapped = false;
-    _cosmicWeb = new T.Points(wgeo, wmat); _cosmicWeb.name = "CosmicWeb"; _cosmicWeb.renderOrder = -6; _cosmicWeb.frustumCulled = false; _cosmicWeb.visible = false;
-    belt.add(_cosmicWeb);
+    // ---- OUR node: Laniakea condensed — a small golden basin-swirl at the origin, streamlines
+    //      compressed to a whorl so "the flow you just left" is recognisably THIS dot of the web ----
+    for (var lk = 0; lk < (mobile ? 260 : 420); lk++) {
+      var lt = wr(), lang = lt * 4.2 * Math.PI, lr = 180 + 1450 * lt;
+      var lp = new T.Vector3().addScaledVector(SG_U, Math.cos(lang) * lr).addScaledVector(SG_V, Math.sin(lang) * lr).addScaledVector(SG_W, gauss(gRng(lk)) * 190);
+      lp.addScaledVector(DIR_GA, lt * 620);
+      pushPt(lp.x, lp.y, lp.z, 0.62 + 0.3 * (1 - lt), 0.85);
+    }
+    _cosmicWeb = new T.Group(); _cosmicWeb.name = "TierCosmicWeb";
+    _cosmicWeb.add(tierPoints("web", POS, COL, mobile ? 2.6 : 3.2, { name: "CosmicWebCloud", base: 0.92, fog: true }));
+    _cosmicWeb.add(tierGlow("web", POS, COL, mobile ? 5.2 : 6.4, { name: "CosmicWebGlow", base: 0.38, fog: true }));
+    _cosmicWeb.visible = false; belt.add(_cosmicWeb);
   }
+
+  /* ---------------- TIER · OBSERVABLE UNIVERSE — beyond the mapped web the lattice CONTINUES but
+     evens out (the real "End of Greatness": at gigalight-year scales the foam is statistically
+     uniform), receding to the faint spherical CMB HORIZON — the wall of first light, drawn as a
+     breathing temperature-speckle shell. We are the exact centre of this sphere, and only of this
+     sphere: every observer owns one. ---------------- */
+  function buildObservableUniverse() {
+    tierUniverse = new T.Group(); tierUniverse.name = "TierObservable";
+    var rng = gRng(0x0b5e);
+    // (a) the FAR FOAM: tiny uniform web-froth from the mapped web's rim out toward the horizon —
+    //     no landmark nodes out here, just the same lattice fabric repeating smaller and fainter
+    var P = [], C = [], NF = mobile ? 12000 : 22000;
+    var CELL = 4600;   // froth cell size: continues the inner web's texture, unresolved
+    for (var i = 0; i < NF; i++) {
+      var ct = 2 * rng() - 1, st = Math.sqrt(1 - ct * ct), ph = 2 * Math.PI * rng();
+      var rr = 30000 + (52000 - 30000) * Math.pow(rng(), 0.8);
+      var p = new T.Vector3(st * Math.cos(ph) * rr, ct * rr, st * Math.sin(ph) * rr);
+      // cheap cellular sharpening: snap a fraction of points toward their froth-cell edge → faint net, not noise
+      var cx2 = Math.round(p.x / CELL) * CELL, cy2 = Math.round(p.y / CELL) * CELL, cz2 = Math.round(p.z / CELL) * CELL;
+      var toC = new T.Vector3(cx2 - p.x, cy2 - p.y, cz2 - p.z);
+      p.addScaledVector(toC, -0.55 * rng());                 // push AWAY from cell centres → onto the walls
+      var amp = 0.10 + 0.22 * Math.pow(rng(), 2.6);
+      P.push(p.x, p.y, p.z); C.push(0.46 * amp, 0.50 * amp, 0.58 * amp);
+    }
+    tierUniverse.add(tierPoints("obs", P, C, mobile ? 2.6 : 3.2, { name: "FarFoam", base: 0.95, fog: false }));
+    tierUniverse.add(tierGlow("obs", P, C, mobile ? 5.2 : 6.5, { name: "FarFoamGlow", base: 0.42, fog: false }));
+    // (b) the CMB HORIZON: a vast shell of first light — fbm temperature speckle (Planck's mottling,
+    //     desaturated into this site's ember palette), faint, seen from inside OR outside.
+    var CMBR = 56000;
+    var cmbUnif = { uTime: { value: 0 }, uOp: { value: 0 } };
+    var cmbMat = new T.ShaderMaterial({
+      uniforms: cmbUnif,
+      vertexShader: [
+        "varying vec3 vP; varying vec3 vN;",
+        "void main(){ vP=position; vN=normalize(normalMatrix*normal);",
+        "  gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }"
+      ].join("\n"),
+      fragmentShader: [
+        "precision highp float; varying vec3 vP; varying vec3 vN; uniform float uTime; uniform float uOp;",
+        "float h(vec3 q){ return fract(sin(dot(q,vec3(127.1,311.7,74.7)))*43758.5453); }",
+        "float n3(vec3 q){ vec3 i=floor(q), f=fract(q); f=f*f*(3.0-2.0*f);",
+        "  float a=mix(mix(h(i),h(i+vec3(1,0,0)),f.x), mix(h(i+vec3(0,1,0)),h(i+vec3(1,1,0)),f.x), f.y);",
+        "  float b=mix(mix(h(i+vec3(0,0,1)),h(i+vec3(1,0,1)),f.x), mix(h(i+vec3(0,1,1)),h(i+vec3(1,1,1)),f.x), f.y);",
+        "  return mix(a,b,f.z); }",
+        "void main(){",
+        "  vec3 d=normalize(vP);",
+        "  float t=n3(d*9.0)*0.55+n3(d*23.0)*0.30+n3(d*52.0)*0.15;",                     // multi-scale temperature mottling
+        "  t=t+0.045*sin(uTime*0.11+d.x*7.0);",                                          // the horizon breathes, barely
+        "  vec3 cold=vec3(0.10,0.055,0.05), hot=vec3(0.55,0.26,0.12);",                  // ember palette, never blue
+        "  vec3 col=mix(cold,hot,smoothstep(0.28,0.75,t));",
+        "  col+=vec3(0.25,0.12,0.05)*smoothstep(0.82,0.98,t);",                           // rare hot flecks
+        "  gl_FragColor=vec4(col, uOp*(0.5+0.5*t));",
+        "}"
+      ].join("\n"),
+      transparent: true, depthWrite: false, side: T.BackSide, blending: T.AdditiveBlending, fog: false
+    });
+    var cmb = new T.Mesh(new T.SphereGeometry(CMBR, 48, 32), cmbMat);
+    cmb.name = "CMBHorizon"; cmb.renderOrder = -8; cmb.frustumCulled = false;
+    tierUniverse.add(cmb);
+    // seen from OUTSIDE (the fluctuation tier): the same shell, front faces, dimmer — "the universe, an orb"
+    var cmbOut = new T.Mesh(new T.SphereGeometry(CMBR, 48, 32), cmbMat.clone());
+    cmbOut.material.side = T.FrontSide; cmbOut.name = "CMBHorizonOut"; cmbOut.renderOrder = -8; cmbOut.frustumCulled = false;
+    tierUniverse.add(cmbOut);
+    _cmbUnifs = [cmbUnif, cmbOut.material.uniforms];
+    tierUniverse.visible = false; belt.add(tierUniverse);
+  }
+  var _cmbUnifs = null;
+
+  /* ---------------- TIER · THE FLUCTUATION — past the horizon the address LOOPS. The whole
+     observable universe shrinks to one warm mote adrift in a field of stochastic QUANTUM
+     SCINTILLATIONS — sparse sparks that flicker in and out of existence (Sovereign Scintillation
+     over Grand Fluctuation). Zoom on: every spark is a universe; focused, a spark is a quark.
+     The scale ends here, folded back on itself. ---------------- */
+  function buildQuantumFoam() {
+    var N = mobile ? 6000 : 11000, rng = gRng(0x9f0a);
+    var pos = new Float32Array(N * 3), ph = new Float32Array(N), sp = new Float32Array(N), am = new Float32Array(N);
+    for (var i = 0; i < N; i++) {
+      var u2 = rng() * 2 - 1, p2 = rng() * Math.PI * 2, s2 = Math.sqrt(1 - u2 * u2);
+      var rr = 26000 + (118000 - 26000) * Math.pow(rng(), 0.62);
+      pos[i * 3] = s2 * Math.cos(p2) * rr; pos[i * 3 + 1] = u2 * rr; pos[i * 3 + 2] = s2 * Math.sin(p2) * rr;
+      ph[i] = rng() * Math.PI * 2; sp[i] = 0.4 + 2.6 * Math.pow(rng(), 2.0); am[i] = 0.25 + 0.75 * Math.pow(rng(), 1.7);
+    }
+    var g = new T.BufferGeometry();
+    g.setAttribute("position", new T.BufferAttribute(pos, 3));
+    g.setAttribute("aPhase", new T.BufferAttribute(ph, 1));
+    g.setAttribute("aSpeed", new T.BufferAttribute(sp, 1));
+    g.setAttribute("aAmp", new T.BufferAttribute(am, 1));
+    var unif = { uTime: { value: 0 }, uOp: { value: 0 }, uPx: { value: Math.min((typeof devicePixelRatio !== "undefined" ? devicePixelRatio : 1) || 1, 1.5) } };
+    var mat = new T.ShaderMaterial({
+      uniforms: unif,
+      vertexShader: [
+        "attribute float aPhase; attribute float aSpeed; attribute float aAmp;",
+        "uniform float uTime; uniform float uPx; varying float vTw;",
+        "void main(){",
+        "  float tw=0.5+0.5*sin(uTime*aSpeed+aPhase);",
+        "  tw=pow(tw,3.0);",                                                             // mostly dark, brief blinks — stochastic, not sinusoidal-looking
+        "  vTw=tw*aAmp;",
+        "  vec4 mv=modelViewMatrix*vec4(position,1.0);",
+        "  gl_PointSize=(1.6+3.4*vTw)*uPx;",
+        "  gl_Position=projectionMatrix*mv;",
+        "}"
+      ].join("\n"),
+      fragmentShader: [
+        "precision mediump float; varying float vTw; uniform float uOp;",
+        "void main(){",
+        "  vec2 q=gl_PointCoord-0.5; float d=length(q);",
+        "  float a=smoothstep(0.5,0.06,d)*vTw*uOp;",
+        "  vec3 warm=mix(vec3(0.72,0.62,0.52), vec3(1.0,0.93,0.80), vTw);",              // ember-white sparks
+        "  gl_FragColor=vec4(warm*a, a);",
+        "}"
+      ].join("\n"),
+      transparent: true, depthWrite: false, blending: T.AdditiveBlending, fog: false
+    });
+    quantumFoam = new T.Points(g, mat); quantumFoam.name = "QuantumFoam"; quantumFoam.renderOrder = -9;
+    quantumFoam.frustumCulled = false; quantumFoam.visible = false;
+    _quantumUnif = unif;
+    belt.add(quantumFoam);
+    // THE SPARK AT THE CENTRE: the whole observable universe, now one scintillation among the many —
+    // and, looked at the other way, one quark. A slightly warmer, steadier mote at the origin.
+    var sg = new T.BufferGeometry();
+    sg.setAttribute("position", new T.BufferAttribute(new Float32Array([0, 0, 0]), 3));
+    sg.setAttribute("aPhase", new T.BufferAttribute(new Float32Array([0]), 1));
+    sg.setAttribute("aSpeed", new T.BufferAttribute(new Float32Array([0.9]), 1));
+    sg.setAttribute("aAmp", new T.BufferAttribute(new Float32Array([1.6]), 1));
+    universeSpark = new T.Points(sg, mat);
+    universeSpark.name = "UniverseSpark"; universeSpark.renderOrder = -7; universeSpark.frustumCulled = false; universeSpark.visible = false;
+    belt.add(universeSpark);
+  }
+  var _quantumUnif = null;
+
   // idempotent LAZY-BY-SCALE entry points, called by space.js only on genuine user navigation (never during
   // the auto-entrance) so the ground/whole-sky view is instant & cool and heavy geometry is built on demand.
   function ensureFarLayers() { if (_farBuilt) return; _farBuilt = true; buildMilkyWayGalaxy(); buildGalacticCore(); buildAndromeda(); }   // galaxy MUST precede core (core reads galacticCentre)
-  function ensureCosmicWeb() { if (_webBuilt) return; _webBuilt = true; buildLaniakeaFlow(); buildCosmicWeb(); }   // the Laniakea flow-basin (supercluster scale) + the whole cosmic web (universe scale)
+  function ensureMidLayers() { if (_midBuilt) return; _midBuilt = true; buildLocalGroup(); buildLocalSheet(); buildVirgoSupercluster(); buildYouAnchor(); }   // the three middle rungs of the address: LG → Sheet → Virgo
+  function ensureCosmicWeb() { if (_webBuilt) return; _webBuilt = true; buildLaniakeaFlow(); buildNeighborBasins(); buildCosmicWeb(); }    // the Laniakea flow-basin + neighbour basins + the whole web
+  function ensureUniverse() { if (_uniBuilt) return; _uniBuilt = true; buildObservableUniverse(); buildQuantumFoam(); }                     // far foam + CMB horizon + the quantum scintillation field
 
   /* ---------------- constellation names: IN-SCENE Songti sprites (same craft as the 干支 glyphs) ---------------- */
   function nameTexture(zh, en, key, loc) {
@@ -1323,7 +1885,17 @@ export function buildNatalSky(THREE, scene, data, opts) {
   }
 
   /* ---------------- lifecycle ---------------- */
-  var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null, _sfMat = null, _sfBase = 1, _bdT = 0, _keepGal = false, _galMats = null, _localHide = null, _nsMat = null, _nsBase = 1;
+  var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null, _sfMat = null, _sfBase = 1, _bdT = 0, _keepGal = false, _galMats = null, _localHide = null, _nsMat = null, _nsBase = 1, _lhTries = 0;
+  // drives every registered material of one tier: opacity = base × effectiveWeight; ghostW keeps
+  // collapsed parent nodes visible (continuity law) when a deeper tier owns the frame.
+  function driveTier(key, grp2, w2, ghostW) {
+    var eff = w2 > 0.018 ? w2 : Math.max(w2, (ghostW || 0) * 0.42);
+    var list = _tierMats[key], on = eff > 0.004;
+    if (grp2) grp2.visible = on;
+    if (!on) return;
+    var dim = w2 > 0.018 ? 1 : 0.55;
+    for (var q2 = 0; q2 < list.length; q2++) list[q2].m.opacity = list[q2].base * eff * dim;
+  }
   function lineOpacities(sec) {
     // entrance pulse: the constellations announce themselves, then settle
     if (t0 === null) t0 = sec;
@@ -1350,7 +1922,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
     group: group,
     starPoints: starPoints,
     ensureFarLayers: ensureFarLayers,
+    ensureMidLayers: ensureMidLayers,
     ensureCosmicWeb: ensureCosmicWeb,
+    ensureUniverse: ensureUniverse,
     getPickName: function (id) {   // fallback name for the dossier card when a registry entry is blank
       if (id.indexOf("dso_") === 0) { var s = dsoPickGroup.getObjectByName("DSOPick_" + id.slice(4)); return s && s.userData.dsoName || null; }
       if (id.indexOf("con_") === 0) { var c = cons.filter(function (k) { return k.id === id.slice(4); })[0]; return c ? (c.name || (c.figureName)) : null; }
@@ -1370,20 +1944,50 @@ export function buildNatalSky(THREE, scene, data, opts) {
         //       (window.CosmicLOD); no scattered magic numbers. Weights fall back to the old bands if the
         //       LOD module ever fails to load, so the scene never goes dark. =====
         var LOD = window.CosmicLOD, _lg = Math.log(Math.max(1, _cl));
-        var _wMW   = LOD ? LOD.weight(_cl, "milky-way")   : Math.max(0, Math.min(1, (4800 - _cl) / 1400));
-        var _wLG   = LOD ? LOD.weight(_cl, "local-group") : 0;
-        var _wVir  = LOD ? LOD.weight(_cl, "virgo-supercluster") : 0;
-        var _wLani = LOD ? LOD.weight(_cl, "laniakea")    : Math.max(0, Math.min(1, (_cl - 4400) / 1400)) * Math.max(0, Math.min(1, (9600 - _cl) / 1800));
-        var _wWeb  = LOD ? LOD.weight(_cl, "cosmic-web")  : Math.max(0, Math.min(1, (_cl - 8200) / 2600));
-        // TIER — LANIAKEA FLOW BASIN (our supercluster): owns the laniakea tier.
-        if (_laniakeaFlow) {
-          var _lfo = _wLani * 0.95;
-          if (_lfo > 0.006) { _laniakeaFlow.visible = true; _laniakeaFlow.material.opacity = _lfo; } else if (_laniakeaFlow.visible) { _laniakeaFlow.visible = false; }
+        var _wMW    = LOD ? LOD.weight(_cl, "milky-way")           : Math.max(0, Math.min(1, (4800 - _cl) / 1400));
+        var _wLG    = LOD ? LOD.weight(_cl, "local-group")         : 0;
+        var _wSheet = LOD ? LOD.weight(_cl, "local-sheet")         : 0;
+        var _wVir   = LOD ? LOD.weight(_cl, "virgo-supercluster")  : 0;
+        var _wLani  = LOD ? LOD.weight(_cl, "laniakea")            : Math.max(0, Math.min(1, (_cl - 4400) / 1400)) * Math.max(0, Math.min(1, (9600 - _cl) / 1800));
+        var _wWeb   = LOD ? LOD.weight(_cl, "cosmic-web")          : Math.max(0, Math.min(1, (_cl - 8200) / 2600));
+        var _wObs   = LOD ? LOD.weight(_cl, "observable-universe") : 0;
+        var _wQnt   = LOD ? LOD.weight(_cl, "fluctuation")         : 0;
+        // ghost context: parent tiers stay as faint trackable nodes while deeper tiers dominate
+        var _gLG  = Math.max(_wVir, _wLani, _wWeb, _wObs);
+        var _gSh  = Math.max(_wVir, _wLani, _wWeb);
+        var _gVir = Math.max(_wLani, _wWeb, _wObs * 0.6);
+        var _gLan = Math.max(_wWeb, _wObs * 0.55);
+        driveTier("lg",    tierLG,       _wLG,  _gLG);
+        driveTier("sheet", tierSheet,    _wSheet, _gSh);
+        driveTier("virgo", tierVirgo,    _wVir, _gVir);
+        driveTier("lani",  _laniakeaFlow, _wLani, _gLan);
+        driveTier("web",   _cosmicWeb,   _wWeb, Math.max(_wObs * 0.22, _wQnt * 0.12));
+        driveTier("neighbors", _neighborBasins, Math.max(_wLani * 0.85, _wWeb, _wObs * 0.35));
+        // OBSERVABLE UNIVERSE: the far foam fades with its tier; the CMB horizon shell persists into
+        // the fluctuation tier (seen from OUTSIDE it becomes "the universe, an orb" — one scintillation)
+        driveTier("obs", tierUniverse, Math.max(_wObs, _wQnt * 0.5));
+        if (_cmbUnifs) {
+          _cmbUnifs[0].uOp.value = 0.42 * _wObs;                                  // inside: the faint wall of first light
+          _cmbUnifs[1].uOp.value = Math.max(0.14 * _wObs, 0.38 * _wQnt);          // outside: the whole universe as a warm mote
+          _cmbUnifs[0].uTime.value = sec; _cmbUnifs[1].uTime.value = sec;
         }
-        // TIER — the whole COSMIC WEB (universe scale): owns the cosmic-web tier; our Laniakea is one node here.
-        if (_cosmicWeb) {
-          var _cwo = _wWeb * 0.95;
-          if (_cwo > 0.006) { _cosmicWeb.visible = true; _cosmicWeb.material.opacity = _cwo; } else if (_cosmicWeb.visible) { _cosmicWeb.visible = false; }
+        // THE FLUCTUATION: stochastic quantum scintillations — the scale's outer loop
+        if (quantumFoam) {
+          var _qOn = _wQnt > 0.004;
+          quantumFoam.visible = _qOn; if (universeSpark) universeSpark.visible = _qOn;
+          if (_qOn && _quantumUnif) { _quantumUnif.uOp.value = _wQnt; _quantumUnif.uTime.value = sec; }
+        }
+        // COLLAPSE CURVES — the continuity law in action: each tier SHRINKS through its fade-out
+        // window so it visibly condenses into the node its parent draws at the same seat.
+        if (LOD) {
+          var _cMW = LOD.collapse(_cl, "milky-way", 0.16);      // 2600 → 416: the disc condenses onto the LG tier's spiral node (R 420)
+          var _cLG = LOD.collapse(_cl, "local-group", 0.2);     // M31 5720 → 1144: the dumbbell folds into the Sheet's central knot
+          var _cVir = LOD.collapse(_cl, "virgo-supercluster", 0.22);   // Virgo core 12900 → 2838: lands EXACTLY on Laniakea's Virgo knot (2840)
+          var _cLani = LOD.collapse(_cl, "laniakea", 0.12);     // GA 12000 → 1440: the basin folds into the web's origin whorl (~1450)
+          if (tierLG && tierLG.visible) tierLG.scale.setScalar(_cLG);
+          if (tierSheet && tierSheet.visible) tierSheet.scale.setScalar(LOD.collapse(_cl, "local-sheet", 0.25));
+          if (tierVirgo && tierVirgo.visible) tierVirgo.scale.setScalar(_cVir);
+          if (_laniakeaFlow && _laniakeaFlow.visible) _laniakeaFlow.scale.setScalar(_cLani);
         }
         // STARFIELD (the local night-sky stars) is a MILKY-WAY-and-inward thing: full at the star-chart/galaxy
         // scale, faded out by the Local Group tier so it never drowns the deep structure. (× solo-dim factor.)
@@ -1393,22 +1997,80 @@ export function buildNatalSky(THREE, scene, data, opts) {
         // by the Local Group tier so the intergalactic structure (flow, web) reads clean; they return on the way in.
         if (!_nsMat) { var _nso = group.getObjectByName("natalStars"); if (_nso && _nso.material) { _nsMat = _nso.material; _nsBase = _nso.material.opacity; } }
         if (_nsMat) { var _nsScale = LOD ? (1 - LOD.smooth(Math.log(3200), Math.log(6000), _lg)) : 1; _nsMat.opacity = _nsBase * _nsScale * (1 - 0.6 * _bdT); }
-        // GALAXY owns the milky-way tier: it fades IN as you leave the whole-sky (~260) and fades OUT as the
-        // Local Group takes over (~5400), where it collapses to one node. A whole galaxy is a speck beyond that.
-        if (!_galMats) { var _g1 = group.getObjectByName("MilkyWayGalaxy"), _g2 = group.getObjectByName("MilkyWayGlow"); if (_g1 && _g2) _galMats = [{ m: _g1.material, base: _g1.material.opacity }, { m: _g2.material, base: _g2.material.opacity }]; }
-        if (_galMats) { var _gSolo = _keepGal ? 1 : (1 - 0.86 * _bdT); for (var _gi = 0; _gi < _galMats.length; _gi++) _galMats[_gi].m.opacity = _galMats[_gi].base * _wMW * _gSolo; }
-        // LOCAL structures collapse tier by tier: the MW-internal nebulae + black hole vanish once past the
-        // galaxy tier; Andromeda (M31) belongs to the Local Group, so it lingers through that tier and only
-        // goes once we pull out to the supercluster. Nothing hard-cuts — each tracks its own tier's weight.
-        if (!_localHide && _cl > 800) {
-          _localHide = { dso: [], andro: null };
-          var _andO = group.getObjectByName("Andromeda"); if (_andO) _localHide.andro = _andO;
-          group.traverse(function (ob) { if (ob.name && ob.name.indexOf("DSO_") === 0) _localHide.dso.push(ob); });
+        // GALAXY owns the milky-way tier: it fades IN as you leave the whole-sky (~260); through its fade-out
+        // window it CONTRACTS (scale → 0.16) while dimming, condensing onto the Local Group's spiral node —
+        // never a disappearance, always a condensation. Fully faded → visible=false (the 118k points unload).
+        if (!_galMats) {
+          var _g1 = group.getObjectByName("MilkyWayGalaxy"), _g2 = group.getObjectByName("MilkyWayGlow");
+          if (_g1 && _g2) _galMats = [{ o: _g1, m: _g1.material, base: _g1.material.opacity }, { o: _g2, m: _g2.material, base: _g2.material.opacity }];
+        }
+        if (_galMats) {
+          var _gSolo = _keepGal ? 1 : (1 - 0.86 * _bdT);
+          var _mwGhost = Math.max(_wMW, _wLG * 0.55, _gLG * 0.24);
+          var _gOn = _mwGhost > 0.004;
+          for (var _gi = 0; _gi < _galMats.length; _gi++) {
+            var _ge = _galMats[_gi];
+            _ge.o.visible = _gOn;
+            if (_gOn) {
+              var _gDim = _wMW > 0.018 ? 1 : 0.48;
+              _ge.m.opacity = _ge.base * _mwGhost * _gSolo * _gDim;
+              if (LOD) _ge.o.scale.setScalar(LOD.collapse(_cl, "milky-way", 0.16));
+            }
+          }
+        }
+        // LOCAL structures collapse tier by tier. The MW-internal nebulae + black hole now FADE with the
+        // galaxy tier (opacity × weight — no hard pop) and ride its contraction; Andromeda (M31) belongs to
+        // BOTH the galaxy sky and the Local Group, so it lingers through that tier and contracts with it.
+        if (_cl > 800 && (!_localHide || (_localHide.dso.length < _dsoCount && ++_lhTries % 90 === 0))) {
+          // INCREMENTAL collect — nebula images load async, so late arrivals must still join the
+          // scale-fade. Only never-seen objects are added (their opacity is still pristine base;
+          // re-reading an already-faded material would bake the fade into its base — the old trap).
+          if (!_localHide) _localHide = { dso: [], andro: null, androBase: 0.5 };
+          if (!_localHide.andro) {
+            var _andO = group.getObjectByName("Andromeda");
+            if (_andO) { _localHide.andro = _andO; _localHide.androBase = _andO.material.opacity; }
+          }
+          group.traverse(function (ob) {
+            if (ob.userData && ob.userData._lodSeen) return;
+            if (ob.name && ob.name.indexOf("DSO_") === 0 && ob.name !== "DSO_galcore") {
+              ob.userData._lodSeen = true;
+              var mats = [];
+              ob.traverse(function (ch) { if (ch.material && ch.material.opacity != null) mats.push({ m: ch.material, base: ch.material.opacity }); });
+              _localHide.dso.push({ o: ob, mats: mats, basePos: ob.position.clone() });
+            }
+            if (ob.name === "DSO_galcore" && !_localHide.core) { ob.userData._lodSeen = true; _localHide.core = { o: ob, basePos: ob.position.clone() }; }
+          });
         }
         if (_localHide) {
-          var _hideDso = _wMW < 0.04;
-          for (var _hi = 0; _hi < _localHide.dso.length; _hi++) _localHide.dso[_hi].visible = !_hideDso;
-          if (_localHide.andro) _localHide.andro.visible = (_wMW > 0.06 || _wLG > 0.02);
+          var _dsoW = Math.min(1, _wMW * 1.3), _dsoOn = _dsoW > 0.01;
+          var _cMW2 = LOD ? LOD.collapse(_cl, "milky-way", 0.16) : 1;
+          for (var _hi = 0; _hi < _localHide.dso.length; _hi++) {
+            var _de = _localHide.dso[_hi];
+            _de.o.visible = _dsoOn;
+            if (_dsoOn) {
+              for (var _mi = 0; _mi < _de.mats.length; _mi++) _de.mats[_mi].m.opacity = _de.mats[_mi].base * _dsoW;
+              _de.o.position.copy(_de.basePos).multiplyScalar(_cMW2);   // nebulae ride the disc's contraction
+              _de.o.scale.setScalar(_cMW2);
+            }
+          }
+          if (_localHide.core) {   // the black hole rides the contraction too (it IS the galactic centre)
+            _localHide.core.o.visible = _wMW > 0.01;
+            _localHide.core.o.position.copy(_localHide.core.basePos).multiplyScalar(_cMW2);
+            _localHide.core.o.scale.setScalar(_cMW2);
+          }
+          if (_localHide.andro) {
+            var _aW = Math.max(_wMW, _wLG, _gLG * 0.35);
+            _localHide.andro.visible = _aW > 0.01;
+            _localHide.andro.material.opacity = _localHide.androBase * _aW * (_wLG > 0.018 ? 1 : 0.55);
+            if (LOD) _localHide.andro.scale.setScalar(LOD.collapse(_cl, "local-group", 0.2));   // M31 contracts WITH the Local Group fold
+          }
+        }
+        // persistent 3D anchor — the coral "you are here" mote, trackable through every parent tier
+        if (_youAnchor) {
+          var _yaW = Math.max(_wLG, _wSheet, _wVir, _wLani, _wWeb, _wObs * 0.5);
+          var _yaOn = _cl > 4200 && _yaW > 0.03;
+          _youAnchor.visible = _yaOn;
+          if (_yaOn) _youAnchor.material.opacity = Math.min(1, 0.28 + _yaW * 0.72);
         }
       }
       if (bloomSprite && bloomT > 0) { bloomT = Math.max(0, bloomT - 0.045); bloomSprite.material.opacity = bloomT * 0.7; if (bloomT === 0) bloomSprite.visible = false; }

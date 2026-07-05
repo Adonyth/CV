@@ -1,5 +1,6 @@
 .DS_Store
 *.log
+node_modules/
 
 # local agent tooling & private working notes — never publish
 .wolf/

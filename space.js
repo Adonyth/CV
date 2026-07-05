@@ -26,6 +26,7 @@
       var c = document.createElement("canvas");
       var gl = c.getContext("webgl2") || c.getContext("webgl");
       if (!gl) return false;
+      if (/[?&]forcegl\b/.test(location.search)) return true;   // verification override (Playwright/CI): accept software GL; real visitors never carry this param
       var dbg = gl.getExtension("WEBGL_debug_renderer_info");
       if (dbg) {
         var r = (gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || "").toLowerCase();
@@ -90,7 +91,7 @@
     scene.fog = new THREE.FogExp2(0x0b0a09, 0.0018); // fog === body colour --page; no back wall
     // NEVER set scene.background — one black on the page (CSS --page)
 
-    var camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 55000);  // far plane: maxDist 3400 (pull OUT to behold the galaxy) + the vast disc rim (~3950) + far nebulae now pushed to ~6800 + the deep starfield (7200) → nothing clips from any vantage
+    var camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 200000);  // far plane: MAXCAM 118000 (the fluctuation tier) + the CMB horizon shell on the far side (56000) → 174000; headroom to 200000 so nothing ever clips. All far-tier materials are additive + depthWrite:false, so the huge near/far ratio costs no z-fighting
     /* cosmos: the camera orbits the world with the REAL Nye Clock's premium
        trackball — world-space angular velocity about ANY axis, up-vector riding
        along (ported from nye-clock-bazi.html createPremiumOrbitControls).
@@ -996,7 +997,7 @@
     var DOSSIER = {};   // the data-hook registry (keyed by pick-id) → the focus card; blank entries render nothing
     fetch("data/natal-sky.json?v=16").then(function (r) { return r.json(); }).then(function (natalData) {
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=109").then(function (mod) {
+      return import("./natal-sky.js?v=112").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1404,7 +1405,7 @@
         clearSel();
         var _bodyPick = ({ NyeSun: "sun", NyeMoon: "moon", NatalJupiter: "jupiter", NatalSaturn: "saturn", NatalMercury: "mercury", NatalVenus: "venus", NatalMars: "mars", NatalUranus: "uranus", NatalNeptune: "neptune", NatalPluto: "pluto", NatalPlutoMoon: "charon" })[objName];
         if (_bodyPick) showDossier(_bodyPick, null);   // its dossier (blank now) can be filled later
-        controls.setDistanceLimits(FOCUS_MIN[objName] || 5.0, 15000);   // AFTER clearSel — clearSel resets the floor to the earth-anchored 5.0; 1600 lets you pull back from any focused body to the full-system overview
+        controls.setDistanceLimits(FOCUS_MIN[objName] || 5.0, 15000);   // AFTER clearSel — clearSel resets the floor to the earth-anchored 5.0; 15000 lets you pull back from any focused body to the full-system overview
         var w = obj.getWorldPosition(new THREE.Vector3());
         /* stand OUTSIDE the body along the Earth→body line, swung aside within the
            gear-ring plane AND lifted above it — the sightline can never pass through
@@ -1526,7 +1527,7 @@
         soloBody = (id === "galcore") ? "galcore" : "dso";   // the galactic centre keeps its galaxy; a lone nebula owns an empty frame
         clearSel();
         showDossier("dso_" + id, shell && shell.userData && shell.userData.dsoName);
-        controls.setDistanceLimits(fmin, 15000);
+        controls.setDistanceLimits(fmin, Math.max(15000, vd * 1.6));   // far basins (Virgo/GA/Shapley…) are admired from supercluster distances — the ceiling must clear their viewDist
         var outward = w.clone().normalize();
         if (outward.lengthSq() < 1e-9) outward.set(0, 0, 1);
         // approach nearly along the Earth→cloud line so the cloud (which faces home) is seen FACE-ON,
@@ -1576,13 +1577,45 @@
       }
       if (railEl && LOD) {
         LOD.LAYERS.forEach(function (ly) {
+          if (ly.rail === false) return;                     // quiet tiers (the Local Sheet) are scene layers, not rail stops
+          var cap = LOD.scaleCaption ? LOD.scaleCaption(ly) : "";
           var it = document.createElement("div"); it.className = "cosmos-rail__i"; it.dataset.id = ly.id;
-          it.innerHTML = '<span class="cosmos-rail__l"><span class="i18n-en">' + ly.label.en + '</span><span class="i18n-zh">' + ly.label.zh + '</span></span><span class="cosmos-rail__t"></span>';
+          it.innerHTML = '<span class="cosmos-rail__l"><span class="i18n-en">' + ly.label.en + '</span><span class="i18n-zh">' + ly.label.zh + '</span>' +
+            (cap ? '<span class="cosmos-rail__s">' + cap + '</span>' : "") + '</span><span class="cosmos-rail__t"></span>';
           it.addEventListener("click", function () { flyToScale(ly.camLenPeak); });
           railEl.appendChild(it); railItems.push(it);
         });
       }
+      // nearest RAIL stop in log-space (currentLayerId may name a quiet tier like the Local Sheet;
+      // the rail then highlights its nearest listed neighbour, so the address never goes blank)
+      function railCurrentId(cl2) {
+        var L2 = Math.log(Math.max(1e-3, cl2)), best = null, bd = Infinity;
+        for (var i2 = 0; i2 < LOD.LAYERS.length; i2++) {
+          var ly2 = LOD.LAYERS[i2]; if (ly2.rail === false) continue;
+          var d2 = Math.abs(L2 - Math.log(ly2.camLenPeak));
+          if (d2 < bd) { bd = d2; best = ly2; }
+        }
+        return best ? best.id : null;
+      }
       window.__space.flyToScale = flyToScale;
+      /* headless-verification hook: jump straight to a scale (no glide) so screenshots can sample
+         every tier deterministically. Counts as genuine navigation (userMoved) so lazy layers build. */
+      window.__space.teleport = function (r) {
+        userMoved = true; clearSel(); soloBody = null;
+        glide.frames = 0; glide.param = null;
+        if (controls.isGround()) { controls.exitGroundMode(); groundHint(false); }
+        var dir = camera.position.clone(); if (dir.lengthSq() < 1e-6) dir.set(0.42, 0.26, 0.88);
+        dir.normalize();
+        camera.position.copy(dir.multiplyScalar(r));
+        controls.target.set(0, 0, 0);
+        if (controls.setRadius) controls.setRadius(r);
+      };
+      /* ---- YOU ARE HERE: a persistent spatial anchor. From the Local Group out, the origin (the Sun,
+              the Milky Way, us) is marked by a small coral dot + a whisper of address text that names
+              what "here" means at the current tier. It is projected every frame, so it rides the world
+              through every rotation and zoom — you can always find yourself. ---- */
+      var youEl = document.getElementById("you-are-here"), _youV = new THREE.Vector3(), _youTier = null;
+      var quantumEl = document.getElementById("quantum-note");
 
       window.__space.uiTick = function () {
         // zoomed back out BY HAND → the chart reassembles (never mid-flight). A deep-sky wonder is
@@ -1618,12 +1651,38 @@
           var offGround = !controls.isGround();
           railEl.classList.toggle("is-on", offGround && !!natalSky && userMoved);
           if (offGround) {
-            var curId = LOD.currentLayerId(camera.position.length());
+            var curId = railCurrentId(camera.position.length());
             if (curId !== _railCur) {
               _railCur = curId;
               for (var ri = 0; ri < railItems.length; ri++) railItems[ri].classList.toggle("is-cur", railItems[ri].dataset.id === curId);
             }
           }
+        }
+        // YOU ARE HERE — the origin, projected; visible from the moment "here" stops filling the frame
+        if (youEl && LOD) {
+          var _yCl = camera.position.length();
+          var _yOn = !controls.isGround() && userMoved && _yCl > 900 && !glideActive();
+          if (_yOn) {
+            _youV.set(0, 0, 0).project(camera);
+            if (_youV.z > 1 || Math.abs(_youV.x) > 0.96 || Math.abs(_youV.y) > 0.94) _yOn = false;
+            else {
+              youEl.style.left = ((_youV.x * 0.5 + 0.5) * innerWidth) + "px";
+              youEl.style.top = ((-_youV.y * 0.5 + 0.5) * innerHeight) + "px";
+              var _yTier = LOD.currentLayerId(_yCl);
+              if (_yTier !== _youTier) {
+                _youTier = _yTier;
+                var _yLy = LOD.byId(_yTier), _yEn = youEl.querySelector(".i18n-en"), _yZh = youEl.querySelector(".i18n-zh");
+                if (_yLy && _yEn && _yZh) { _yEn.textContent = "you are here · " + _yLy.you.en; _yZh.textContent = "你在这里 · " + _yLy.you.zh; }
+              }
+            }
+          }
+          youEl.classList.toggle("is-on", _yOn);
+        }
+        // THE FLUCTUATION's whisper — one line, only at the loop's end, linking to the book it echoes
+        if (quantumEl && LOD) {
+          var _qW = LOD.weight(camera.position.length(), "fluctuation");
+          quantumEl.style.opacity = (_qW * 0.9).toFixed(3);
+          quantumEl.style.pointerEvents = _qW > 0.5 ? "auto" : "none";
         }
       };
 
@@ -1874,13 +1933,19 @@
       if (userMoved) {
         var _farCl = camera.position.length();
         if (natalSky && _farCl > 350) natalSky.ensureFarLayers();      // galaxy + black hole, once you rise past the constellation sphere toward galactic scale
-        if (natalSky && natalSky.ensureMidLayers && _farCl > 3800) natalSky.ensureMidLayers();   // Local Group / Local Sheet / Virgo supercluster, as you climb past the galaxy tier
-        if (natalSky && _farCl > 7000) natalSky.ensureCosmicWeb();      // the Laniakea flow basin + cosmic web + horizon, as you approach the supercluster scale
+        if (natalSky && natalSky.ensureMidLayers && _farCl > 3200) natalSky.ensureMidLayers();   // Local Group / Local Sheet / Virgo supercluster: built just before the LG crossfade begins (fadeIn 5000)
+        if (natalSky && _farCl > 12000) natalSky.ensureCosmicWeb();     // the Laniakea flow basin + neighbour basins + the whole web (fadeIn 24200 — built well ahead)
+        if (natalSky && natalSky.ensureUniverse && _farCl > 30000) natalSky.ensureUniverse();   // far foam + CMB horizon + quantum scintillation field (fadeIn 56000)
         // FOG DENSITY by scale: the scene keeps its near-field fog (0.0018, the "no back wall" look); at web
-        // scale ease it MUCH thinner (0.000115) so the far cosmic-web foam recedes into black yet the near
-        // filaments stay bright. Only fog:true materials (the web) respond — the galaxy etc. are fog:false. Ease
-        // smoothly (no pop, no nulling the init fog).
-        if (scene.fog) { var _fTgt = _farCl > 11000 ? 0.00004 : 0.0018; scene.fog.density += (_fTgt - scene.fog.density) * 0.08; }
+        // scale ease it MUCH thinner so the 36500-radius lattice's far side dissolves into black rather than
+        // clipping (0.75/36500 ≈ 0.00002 → half-lost at the rim). Only fog:true materials (the web) respond —
+        // the galaxy etc. are fog:false. Ease smoothly (no pop, no nulling the init fog).
+        if (scene.fog) { var _fTgt = _farCl > 11000 ? 0.00002 : 0.0018; scene.fog.density += (_fTgt - scene.fog.density) * 0.08; }
+        // deep embers are a near-field ornament — fade them out once intergalactic tiers own the frame
+        if (deepFusion && deepFusion.group && window.CosmicLOD) {
+          var _embFade = _farCl < 5500 ? 1 : Math.max(0, 1 - window.CosmicLOD.smooth(Math.log(5500), Math.log(16000), Math.log(_farCl)));
+          deepFusion.group.visible = _embFade > 0.04;
+        }
         // 干支 GEAR-RINGS: solar-system-scale ornament — built ONLY when the visitor enters the orrery band
         // (never at init/ground, never at galaxy scale). The existing ringFade hides them once you pass ~900 out;
         // collectRingMats self-heals to pick up the freshly-built ring materials.

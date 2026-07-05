@@ -497,7 +497,30 @@ body.is-flat .cosmos-ui{top:18px; right:18px; z-index:9;}
 .cosmos-rail__i.is-cur .cosmos-rail__l{opacity:1; transform:none; color:#e8c37a;}
 .cosmos-rail__i.is-cur .cosmos-rail__t{width:30px; background:#e8c37a;}
 body.is-flat .cosmos-rail, body.on-ground .cosmos-rail{opacity:0 !important; pointer-events:none !important;}
-@media(max-width:700px){ .cosmos-rail{right:11px;} .cosmos-rail__l{font-size:9px;} .cosmos-rail__t{width:11px;} .cosmos-rail__i:hover .cosmos-rail__t{width:18px;} }
+.cosmos-rail__s{display:block; font-family:var(--mono); font-size:8.5px; letter-spacing:.06em; color:var(--muted); opacity:.55; text-align:right; margin-top:1px;}
+@media(max-width:700px){ .cosmos-rail{right:11px;} .cosmos-rail__l{font-size:9px;} .cosmos-rail__t{width:11px;} .cosmos-rail__i:hover .cosmos-rail__t{width:18px;} .cosmos-rail__s{display:none;} }
+
+/* YOU ARE HERE — the persistent anchor riding the origin's screen projection. A breathing coral
+   dot; the address whisper sits beside it. Never interactive — it is a fact, not a button. */
+.you-are-here{position:fixed; left:-100px; top:-100px; z-index:5; pointer-events:none;
+  display:flex; align-items:center; gap:7px; transform:translate(-4px,-50%);
+  opacity:0; transition:opacity .8s ease;}
+.you-are-here.is-on{opacity:1;}
+.you-are-here__dot{width:7px; height:7px; border-radius:50%; flex:none;
+  background:#e0876a; box-shadow:0 0 8px 2px rgba(224,135,106,.55);
+  animation:yah-breathe 3.2s ease-in-out infinite;}
+@keyframes yah-breathe{0%,100%{transform:scale(1); opacity:.95;} 50%{transform:scale(1.35); opacity:.6;}}
+.you-are-here__l{font-family:var(--mono); font-size:10px; letter-spacing:.07em; color:var(--muted);
+  white-space:nowrap; text-shadow:0 1px 6px rgba(0,0,0,.8);}
+@media(prefers-reduced-motion:reduce){ .you-are-here__dot{animation:none;} }
+
+/* the FLUCTUATION's whisper — one centred line at the loop's end; a doorway to the book */
+.quantum-note{position:fixed; left:50%; bottom:15vh; transform:translateX(-50%); z-index:5;
+  font-family:var(--serif); font-size:14.5px; letter-spacing:.04em; font-style:italic;
+  color:#cbb89a; text-decoration:none; text-align:center; text-shadow:0 1px 10px rgba(0,0,0,.9);
+  transition:color .4s ease; max-width:82vw;}
+.quantum-note:hover{color:#e8c37a;}
+@media(max-width:700px){ .quantum-note{font-size:12px; bottom:18vh;} }
 /* THE fix: author display:flex was defeating the hidden attribute — the "flat fallback"
    was an invisible full-viewport wall over every machine, eating all pointer input */
 .cosmos-flat[hidden]{display:none !important;}
