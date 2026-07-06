@@ -5,19 +5,25 @@ import { chromium, devices } from "playwright";
 import { mkdirSync } from "fs";
 
 const MODE = process.argv[2] || "desktop";
+const ONLY = process.argv[3] || "";
 const OUT = `.wolf/tier-shots/${MODE}`;
 mkdirSync(OUT, { recursive: true });
 
 const TIERS = [
-  ["milky-way", 3500],
-  ["local-group", 9200],
-  ["local-sheet", 14000],
-  ["virgo", 21300],
-  ["laniakea", 32400],
-  ["cosmic-web", 49300],
-  ["observable", 75000],
-  ["fluctuation", 112000]
+  ["milky-way", "milky-way", 3500],
+  ["local-group", "local-group", 9200],
+  ["local-sheet", "local-sheet", 14000],
+  ["virgo", "virgo-supercluster", 21300],
+  ["laniakea", "laniakea", 32400],
+  ["cosmic-web", "cosmic-web", 49300],
+  ["observable", "observable-universe", 75000],
+  ["beyond-horizon", "fluctuation", 112000]
 ];
+const RUN_TIERS = ONLY ? TIERS.filter(([name, id]) => name === ONLY || id === ONLY) : TIERS;
+if (!RUN_TIERS.length) {
+  console.error(`Unknown tier '${ONLY}'. Known tiers: ${TIERS.map(([name]) => name).join(", ")}`);
+  process.exit(1);
+}
 
 const browser = await chromium.launch({
   headless: true,
@@ -51,9 +57,14 @@ if (boot.err) console.log("BOOT-ERR:", boot.err);
 if (boot.tier === "flat") console.log("WARN: flat tier — 3D skipped");
 console.log("cosmos ready tier=" + boot.tier);
 
-for (const [name, peak] of TIERS) {
+for (const [name, expectedTier, peak] of RUN_TIERS) {
   await page.evaluate((r) => { window.__space.teleport(r); }, peak);
-  for (let i = 0; i < 8; i++) await page.evaluate(() => window.__space.pump(8));
+  for (let i = 0; i < 20; i++) await page.evaluate(() => window.__space.pump(8));
+  await page.waitForFunction((id) => {
+    const cur = document.querySelector(".cosmos-rail__i.is-cur");
+    return cur && cur.dataset.id === id;
+  }, expectedTier, { timeout: 60000 });
+  await page.waitForTimeout(380);
   const state = await page.evaluate(() => {
     const s = window.__space;
     return {

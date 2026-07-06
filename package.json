@@ -1,0 +1,24 @@
+{
+  "name": "academic-cv-site",
+  "version": "1.0.0",
+  "description": "本目录为纯静态页面，可直接部署到任意静态托管，无需构建步骤。",
+  "main": "clock-view.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Adonyth/CV.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Adonyth/CV/issues"
+  },
+  "homepage": "https://github.com/Adonyth/CV#readme",
+  "devDependencies": {
+    "playwright": "^1.61.1"
+  }
+}

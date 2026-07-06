@@ -1,15 +1,13 @@
 /* ============================================================================
    cosmic-layers.js — THE SINGLE SOURCE OF SCALE TRUTH for the cosmic-address zoom.
    Loaded as a plain global (window.CosmicLOD) BEFORE space.js so both space.js and
-   natal-sky.js read the same layer table + driver. Nothing else in the scene may
-   hold a scale/opacity literal — every fade reads layerWeight(camLen, layer).
+   natal-sky.js read the same layer table + driver.
 
    The address ladder (Earth → Solar System → Milky Way → Local Group → Local Sheet
    → Virgo/Local Supercluster → Laniakea → Cosmic Web → Observable Universe →
-   Quantum Fluctuation) is a CONTINUOUS logarithmic zoom. THE CONTINUITY LAW:
-   every tier's fadeOut window IS the next tier's fadeIn window — a strict
-   crossfade, so at any camLen at most two tiers are blending and nothing ever
-   pops. Each child structure collapses into a trackable node of its parent
+   Beyond Observable Horizon) is a CONTINUOUS logarithmic zoom. THE CONTINUITY LAW:
+   each tier has a generous overlap window with its parent, but opacity is not
+   used as the transition. Each child structure collapses into a trackable node of its parent
    (the collapse() curve below drives the shrink), so the Milky Way never
    "disappears" — it condenses into the Local Group's node, the Local Group into
    the Sheet's, Laniakea into one warm knot of the web.
@@ -55,8 +53,9 @@
       realScaleLy: 5e6, sceneRadius: 6800, camLenPeak: 9200,
       fadeInStart: 5000, fadeInEnd: 8000, fadeOutStart: 10400, fadeOutEnd: 14200, weAreOnEdge: false },
 
-    // the Local Sheet is a QUIET tier (a passage, not a destination): full scene layer, no rail stop.
-    { id: "local-sheet", rail: false,
+    // the Local Sheet is a full address rung: subtle in the scene, but named on
+    // the rail so the Virgo handoff never reads as a blank scale.
+    { id: "local-sheet", rail: true,
       label: { en: "Local Sheet", zh: "本星系片" },
       you:   { en: "in the sheet plane, beside the Local Void", zh: "薄片平面内，本地空洞之侧" },
       realScaleLy: 1.7e7, sceneRadius: 10400, camLenPeak: 14000,
@@ -86,11 +85,12 @@
       realScaleLy: 4.65e10, sceneRadius: 56000, camLenPeak: 75000,
       fadeInStart: 56000, fadeInEnd: 72000, fadeOutStart: 88000, fadeOutEnd: 105000, weAreOnEdge: false },
 
-    // beyond the horizon the address loops: the whole universe is one scintillation
-    // of the grand fluctuation — and a scintillation, focused, is a quark. Scale ends here.
+    // Beyond the observable horizon is not a mapped astronomical structure. Keep the
+    // implementation id stable for camera/test code, but present it as an honest
+    // boundary: unobserved, not a quark/universe loop.
     { id: "fluctuation", rail: true,
-      label: { en: "Fluctuation", zh: "涨落" },
-      you:   { en: "one scintillation — a universe, a quark", zh: "一次闪烁——一个宇宙，一枚夸克" },
+      label: { en: "Beyond Horizon", zh: "视界之外" },
+      you:   { en: "unobserved; no mapped structure", zh: "未观测；不绘制结构" },
       realScaleLy: -1, sceneRadius: 118000, camLenPeak: 112000,
       fadeInStart: 88000, fadeInEnd: 105000, fadeOutStart: -1, fadeOutEnd: -1, weAreOnEdge: false }
   ];
@@ -106,13 +106,14 @@
     return t * t * (3 - 2 * t);
   }
 
-  // layerWeight(camLen, layer) → 0..1 : a smoothstep TRAPEZOID in log(camLen).
-  // This is THE driver. Every opacity/scale/detail in the whole cosmos reads it.
+  // layerWeight(camLen, layer) -> 0|1 : a hard scale-presence gate. It is NOT
+  // an opacity weight. Tier transitions must be true geometric zoom/collapse,
+  // never fade-in/fade-out.
   function layerWeight(camLen, ly) {
-    var L = LN(Math.max(1e-3, camLen)), w = 1;
-    if (ly.fadeInStart >= 0)  w *= smooth(LN(ly.fadeInStart),  LN(ly.fadeInEnd),  L);
-    if (ly.fadeOutStart >= 0) w *= (1 - smooth(LN(ly.fadeOutStart), LN(ly.fadeOutEnd), L));
-    return w;
+    var r = Math.max(1e-3, camLen);
+    if (ly.fadeInStart >= 0 && r < ly.fadeInStart) return 0;
+    if (ly.fadeOutEnd >= 0 && r > ly.fadeOutEnd) return 0;
+    return 1;
   }
 
   // collapse(camLen, layer) → 1..collapseTo : the CHILD-INTO-PARENT-NODE shrink.

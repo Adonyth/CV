@@ -469,8 +469,9 @@ body.is-flat .cosmos-ui{top:18px; right:18px; z-index:9;}
 .flat-menu a.flat-cv{color:var(--accent-deep); margin-top:8px; border-bottom:none;}
 .flat-note{font-family:var(--mono); font-size:11px; letter-spacing:.05em; color:var(--muted); line-height:1.7; opacity:.8;}
 @media(max-width:700px){
-  .cosmos-id{top:14px; left:14px; padding:13px 16px 11px;}
-  .cosmos-ui{top:14px; right:14px;}
+  .cosmos-id{top:14px; left:14px; right:14px; max-width:none; padding:70px 16px 13px;}
+  .cosmos-name{font-size:clamp(1.45rem,7.6vw,2rem); margin-top:0;}
+  .cosmos-ui{top:20px; right:20px; transform:scale(.88); transform-origin:top right;}
   .cosmos-legend{display:none;}
   .cosmos-hint{left:14px; right:14px; transform:none; max-width:none; white-space:normal; text-align:center; bottom:76px;}
   .cosmos-dock{bottom:16px;}
@@ -489,8 +490,8 @@ body.is-flat .cosmos-ui{top:18px; right:18px; z-index:9;}
   pointer-events:auto; cursor:pointer; padding:3.5px 0; opacity:.42; transition:opacity .3s ease;}
 .cosmos-rail__i:hover{opacity:.95;}
 .cosmos-rail__l{font-family:var(--mono); font-size:10.5px; letter-spacing:.07em; color:var(--muted);
-  white-space:nowrap; opacity:0; transform:translateX(6px); transition:color .3s ease, opacity .3s ease, transform .3s ease;}
-.cosmos-rail__t{width:15px; height:1px; background:var(--muted); flex:none; transition:width .3s ease, background .3s ease;}
+  white-space:nowrap; opacity:0; transform:translateX(6px); transition:none;}
+.cosmos-rail__t{width:15px; height:1px; background:var(--muted); flex:none; transition:none;}
 .cosmos-rail__i:hover .cosmos-rail__l{opacity:1; transform:none;}
 .cosmos-rail__i:hover .cosmos-rail__t{width:25px; background:var(--accent);}
 .cosmos-rail__i.is-cur{opacity:1;}
@@ -499,20 +500,6 @@ body.is-flat .cosmos-ui{top:18px; right:18px; z-index:9;}
 body.is-flat .cosmos-rail, body.on-ground .cosmos-rail{opacity:0 !important; pointer-events:none !important;}
 .cosmos-rail__s{display:block; font-family:var(--mono); font-size:8.5px; letter-spacing:.06em; color:var(--muted); opacity:.55; text-align:right; margin-top:1px;}
 @media(max-width:700px){ .cosmos-rail{right:11px;} .cosmos-rail__l{font-size:9px;} .cosmos-rail__t{width:11px;} .cosmos-rail__i:hover .cosmos-rail__t{width:18px;} .cosmos-rail__s{display:none;} }
-
-/* YOU ARE HERE — the persistent anchor riding the origin's screen projection. A breathing coral
-   dot; the address whisper sits beside it. Never interactive — it is a fact, not a button. */
-.you-are-here{position:fixed; left:-100px; top:-100px; z-index:5; pointer-events:none;
-  display:flex; align-items:center; gap:7px; transform:translate(-4px,-50%);
-  opacity:0; transition:opacity .8s ease;}
-.you-are-here.is-on{opacity:1;}
-.you-are-here__dot{width:7px; height:7px; border-radius:50%; flex:none;
-  background:#e0876a; box-shadow:0 0 8px 2px rgba(224,135,106,.55);
-  animation:yah-breathe 3.2s ease-in-out infinite;}
-@keyframes yah-breathe{0%,100%{transform:scale(1); opacity:.95;} 50%{transform:scale(1.35); opacity:.6;}}
-.you-are-here__l{font-family:var(--mono); font-size:10px; letter-spacing:.07em; color:var(--muted);
-  white-space:nowrap; text-shadow:0 1px 6px rgba(0,0,0,.8);}
-@media(prefers-reduced-motion:reduce){ .you-are-here__dot{animation:none;} }
 
 /* the FLUCTUATION's whisper — one centred line at the loop's end; a doorway to the book */
 .quantum-note{position:fixed; left:50%; bottom:15vh; transform:translateX(-50%); z-index:5;
@@ -543,6 +530,7 @@ body.cosmos #field{opacity:.42; -webkit-mask-image:none; mask-image:none;}
 /* build 16 — the 2D field IS the far cosmos: it moves BELOW the 3D stage, so the
    Sun, Earth, Moon and gears naturally occlude the star-dust behind them */
 body.cosmos #field{z-index:-1; opacity:.62;}
+body.cosmos.on-ground #field{z-index:2; opacity:.24 !important;}
 /* build 26 — the Earth's doorway + the leave-for-the-map fade */
 .earth-cta{position:fixed; z-index:6; transform:translate(-50%,-100%); display:none;
   font-family:var(--mono); font-size:12.5px; letter-spacing:.06em; color:var(--ink); cursor:pointer;
@@ -586,6 +574,7 @@ body.is-flat .cosmos-home{display:none !important;}
 .cosmos-dock .cosmos-home.is-on{transform:translateY(0);}
 body.is-flat .cosmos-dock{display:none !important;}
 @media(max-width:700px){ .cosmos-dock{bottom:16px;} }
+@media(max-width:700px){ body.is-mobile-3d .cosmos-dock{left:auto; right:14px; transform:none; gap:6px;} }
 /* lying at the base: a quiet line names your place; the chart legend steps aside */
 .ground-hint{position:fixed; left:50%; bottom:74px; transform:translateX(-50%); z-index:6;
   font-family:var(--mono); font-size:11.5px; letter-spacing:.1em; color:var(--muted);
@@ -642,4 +631,95 @@ body.to-map .cosmos-legend, body.to-map .cosmos-hint{opacity:0 !important; trans
   body.is-mobile-3d .cosmos-nav{display:flex; flex-wrap:wrap; justify-content:center; gap:6px;
     left:50%; right:auto; transform:translateX(-50%); top:auto; bottom:104px; max-width:96vw;}
   body.is-mobile-3d .cosmos-nav__kids{top:auto; bottom:100%; padding-top:0; padding-bottom:10px;}
+}
+
+/* build 162 — cosmos visual refinement: restrained instrument chrome over the live model.
+   These are atmospheric / UI passes only; the astronomical scale driver and 3D geometry remain untouched. */
+body.cosmos{
+  background:
+    radial-gradient(120% 90% at 50% 42%, rgba(15,13,11,0) 0%, rgba(8,7,6,.26) 62%, rgba(0,0,0,.70) 100%),
+    #030302;
+}
+body.cosmos::before{
+  content:""; position:fixed; inset:0; z-index:3; pointer-events:none;
+  background:
+    linear-gradient(to bottom, rgba(0,0,0,.18), transparent 18%, transparent 78%, rgba(0,0,0,.26)),
+    radial-gradient(105% 94% at 50% 47%, transparent 42%, rgba(0,0,0,.16) 100%);
+}
+body.cosmos::after{
+  content:""; position:fixed; inset:0; z-index:3; pointer-events:none; opacity:.018;
+  background-image:var(--grain); background-size:140px 140px; mix-blend-mode:screen;
+}
+body.cosmos.on-ground::after{
+  opacity:.22;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(255,250,234,.88) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 66% 28%, rgba(210,226,255,.74) 0 1px, transparent 1.7px),
+    radial-gradient(circle at 37% 64%, rgba(255,226,184,.70) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 84% 72%, rgba(255,255,255,.62) 0 .8px, transparent 1.5px),
+    var(--grain);
+  background-size:420px 310px, 310px 230px, 500px 380px, 260px 190px, 140px 140px;
+  background-position:0 0, 90px 40px, -40px 80px, 25px 15px, 0 0;
+}
+body.cosmos .cosmos-name{
+  font-size:2rem; letter-spacing:0; font-variation-settings:"opsz" 48;
+  text-shadow:0 1px 0 rgba(255,255,255,.05), 0 18px 42px rgba(0,0,0,.58);
+}
+body.cosmos .cosmos-id{
+  border:1px solid rgba(255,255,255,.13);
+  background:linear-gradient(180deg, rgba(22,20,18,.66), rgba(8,7,6,.48));
+  -webkit-backdrop-filter:blur(18px) saturate(1.18); backdrop-filter:blur(18px) saturate(1.18);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 18px 54px -26px rgba(0,0,0,.86), 0 0 0 1px rgba(224,135,106,.045);
+}
+body.cosmos .cosmos-ui,
+body.cosmos .cosmos-nav button,
+body.cosmos .cosmos-nav a,
+body.cosmos .cosmos-home,
+body.cosmos .earth-cta,
+body.cosmos .focus-card,
+body.cosmos .natal-tip,
+body.cosmos.is-mobile-3d .exit3d{
+  border-color:rgba(255,255,255,.14);
+  background:linear-gradient(180deg, rgba(18,16,14,.70), rgba(8,7,6,.48));
+  -webkit-backdrop-filter:blur(14px) saturate(1.18); backdrop-filter:blur(14px) saturate(1.18);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 16px 44px -26px rgba(0,0,0,.88);
+}
+body.cosmos .cosmos-nav button,
+body.cosmos .cosmos-nav a,
+body.cosmos .cosmos-links,
+body.cosmos .cosmos-hint,
+body.cosmos .ground-hint,
+body.cosmos .cosmos-rail__l,
+body.cosmos .cosmos-build,
+body.cosmos .earth-cta,
+body.cosmos .focus-card,
+body.cosmos .cosmos-home{
+  letter-spacing:0;
+}
+body.cosmos .cosmos-nav button:hover,
+body.cosmos .cosmos-nav a:hover,
+body.cosmos .cosmos-home:hover,
+body.cosmos .earth-cta:hover{
+  color:#f0b08e; border-color:rgba(224,135,106,.58);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14), 0 18px 52px -25px rgba(0,0,0,.9), 0 0 26px -15px rgba(224,135,106,.52);
+}
+body.cosmos .lang button[aria-pressed="true"]{background:linear-gradient(135deg,#ee9a7b,#d87455); color:#fff;}
+body.cosmos .iconbtn{background:rgba(255,255,255,.025);}
+body.cosmos .focus-card{
+  max-width:360px; border-color:rgba(232,195,122,.18); padding:15px 17px;
+}
+body.cosmos .focus-card__h{letter-spacing:0; color:#f6ede1;}
+body.cosmos .focus-card__b{color:#d7cab8;}
+body.cosmos .focus-card__links a:hover{text-decoration:none; color:#f2b08d;}
+body.cosmos .cosmos-rail{filter:drop-shadow(0 14px 34px rgba(0,0,0,.52));}
+body.cosmos .cosmos-rail__i{opacity:.34;}
+body.cosmos .cosmos-rail__l{color:rgba(214,204,188,.62);}
+body.cosmos .cosmos-rail__t{background:rgba(214,204,188,.42);}
+body.cosmos .cosmos-rail__i.is-cur .cosmos-rail__l{color:#e8c37a; text-shadow:0 0 14px rgba(232,195,122,.24);}
+body.cosmos .cosmos-hint,
+body.cosmos .ground-hint,
+body.cosmos .cosmos-build{color:rgba(205,194,178,.58); text-shadow:0 10px 30px rgba(0,0,0,.85);}
+@media(max-width:700px){
+  body.cosmos .cosmos-name{font-size:1.65rem;}
+  body.cosmos::after{opacity:.018;}
 }

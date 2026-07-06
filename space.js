@@ -91,7 +91,7 @@
     scene.fog = new THREE.FogExp2(0x0b0a09, 0.0018); // fog === body colour --page; no back wall
     // NEVER set scene.background — one black on the page (CSS --page)
 
-    var camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 200000);  // far plane: MAXCAM 118000 (the fluctuation tier) + the CMB horizon shell on the far side (56000) → 174000; headroom to 200000 so nothing ever clips. All far-tier materials are additive + depthWrite:false, so the huge near/far ratio costs no z-fighting
+    var camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 200000);  // far plane: MAXCAM 118000 (beyond-horizon tier) + the CMB horizon shell on the far side (56000) → 174000; headroom to 200000 so nothing ever clips. All far-tier materials are additive + depthWrite:false, so the huge near/far ratio costs no z-fighting
     /* cosmos: the camera orbits the world with the REAL Nye Clock's premium
        trackball — world-space angular velocity about ANY axis, up-vector riding
        along (ported from nye-clock-bazi.html createPremiumOrbitControls).
@@ -101,17 +101,17 @@
       var minDistance = 8, maxDistance = 340;
       var angVel = new T3.Vector3();
       var tmpPull = new T3.Vector3(0, 0.22, 1);
-      var rotateSpeed = 0.00032, maxEventDelta = 0.008, dampingFactor = 0.036, zoomStep = 0.031, pinchGamma = 0.79;
+      var rotateSpeed = 0.00032, maxEventDelta = 0.008, dampingFactor = 0.032, zoomStep = 0.031, pinchGamma = 0.79;
       // ---- silky log-space zoom (geometric glide) ----
       // the wheel accumulates a TARGET radius in ln-space (so N notches in then N out return to
       // the exact start radius); update() eases the live radius toward it every frame — scale-
       // invariant (same feel near the Earth and far out), magnitude-aware, damped, clip-proof.
       var zoomTarget = -1;        // desired radius; -1 = unseeded → adopt the live radius on first use
       var externalDrive = false;  // true while an entrance/glide owns the radius this frame (don't ease)
-      var zoomStepLn = 0.40;      // ln(r) shift per one firm scroll unit (≈ one mouse-wheel notch)
-      var zoomRef = 100;          // px-equivalent that counts as 1.0 firm unit
-      var zoomHi = 2.2;           // per-EVENT upper clamp on units (anti-fling); no lower floor
-      var zoomEase = 0.18;        // per-frame log-space easing coefficient (critically-damped feel)
+      var zoomStepLn = 0.34;      // ln(r) shift per one firm scroll unit (≈ one mouse-wheel notch)
+      var zoomRef = 118;          // px-equivalent that counts as 1.0 firm unit
+      var zoomHi = 1.85;          // per-EVENT upper clamp on units (anti-fling); no lower floor
+      var zoomEase = 0.215;       // per-frame log-space easing coefficient (critically-damped feel)
       /* ---- GROUND MODE (the base 根据地): lying at a place on the Earth, looking up ----
          The camera stands ON the globe; drag = look around the sky (yaw/pitch, first person),
          wheel/pinch OUT = lift off (handled by the onLiftoff callback the page provides).
@@ -264,6 +264,7 @@
       }
       function onMove(e) {
         if (!(e.pointerId in activePointers)) { return; }
+        lastTouch = performance.now(); userMoved = true;
         activePointers[e.pointerId] = { x: e.clientX, y: e.clientY };
         if (pinchActive) {
           if (groundMode) {   // any pinch on the ground = lift off toward space
@@ -341,9 +342,18 @@
        handed to the 2D star-sky so BOTH layers turn as ONE celestial sphere */
     var _refFar = null, _refPrev = { x: 0, y: 0, ok: false };
     var HOME = new THREE.Vector3(0, 0, 0), UP_Y = new THREE.Vector3(0, 1, 0);
+    var ECL_TILT = 23.4392911 * Math.PI / 180;
+    function skyDirWorld(raH, decDeg, r) {
+      var a = raH * 15 * Math.PI / 180, d = decDeg * Math.PI / 180;
+      var lon = Math.atan2(Math.sin(a) * Math.cos(ECL_TILT) + Math.tan(d) * Math.sin(ECL_TILT), Math.cos(a));
+      var lat = Math.asin(Math.sin(d) * Math.cos(ECL_TILT) - Math.cos(d) * Math.sin(ECL_TILT) * Math.sin(a));
+      return new THREE.Vector3((r || 1) * Math.cos(lat) * Math.cos(lon), (r || 1) * Math.sin(lat), (r || 1) * Math.cos(lat) * Math.sin(lon))
+        .applyAxisAngle(new THREE.Vector3(1, 0, 0), ECL_TILT);
+    }
     var lastTouch = 0, userMoved = false, entranceUntil = 0;
     var glide = { frames: 0, axis: null, step: 0, distTarget: 0, param: null };
     function glideActive() { return glide.frames > 0 || !!glide.param; }
+    var easeAddressPivot = function () {};
     /* ===== choreographed flight (the game-camera): direction nlerp + LOG-radius =====
        Launches and landings follow an authored curve instead of a raw lerp: radius is
        interpolated in ln-space (equal time = equal RATIO — a rocket's accelerating rise,
@@ -425,7 +435,7 @@
        cached) and the site OPENS lying on the ground at that spot, looking up at the
        natal sky. Everything else — lift-off, tours, the whole orrery — starts from there. */
     var DEFAULT_BASE = { lat: 41.824, lon: -71.4128, city: "Providence" };   // the author's home, if the visitor can't be placed
-    var baseGeo = null, groundEntered = false, tryGroundEntrance = null, groundDome = null;
+    var baseGeo = null, groundEntered = false, tryGroundEntrance = null, groundDome = null, groundStars = null;
     var groundDimTarget = 0, _earthUni = null;   // eased toward the target every frame in the frame loop
     /* the ground-view ATMOSPHERE: a warm band of light hugging the horizon all around
        the base — additive, baked once per landing, zero per-frame cost */
@@ -448,20 +458,74 @@
       var tex = new THREE.CanvasTexture(c);
       groundDome = new THREE.Mesh(
         new THREE.SphereGeometry(40, 32, 24),
-        new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.BackSide, depthWrite: false, blending: THREE.AdditiveBlending })
+        new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.BackSide, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, fog: false })
       );
       groundDome.name = "GroundHorizonDome";
       groundDome.position.copy(pos);
       groundDome.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal);
       groundDome.renderOrder = 1;
       scene.add(groundDome);
+      var east = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), normal);
+      if (east.lengthSq() < 1e-6) east.set(1, 0, 0);
+      east.normalize();
+      var north = new THREE.Vector3().crossVectors(normal, east).normalize();
+      var gc = document.createElement("canvas"); gc.width = gc.height = 32;
+      var gx = gc.getContext("2d"), gg = gx.createRadialGradient(16, 16, 0, 16, 16, 16);
+      gg.addColorStop(0, "rgba(255,255,255,1)");
+      gg.addColorStop(0.28, "rgba(255,244,224,.72)");
+      gg.addColorStop(0.72, "rgba(255,220,176,.10)");
+      gg.addColorStop(1, "rgba(255,220,176,0)");
+      gx.fillStyle = gg; gx.fillRect(0, 0, 32, 32);
+      var starTex = new THREE.CanvasTexture(gc);
+      var n = MOBILE ? 560 : 1200, gp = new Float32Array(n * 3), gc2 = new Float32Array(n * 3);
+      var seed = 0x91ab7;
+      function grndRand() {
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+        return seed / 4294967296;
+      }
+      for (var si = 0; si < n; si++) {
+        var az = grndRand() * Math.PI * 2;
+        var alt = 0.18 + Math.pow(grndRand(), 0.72) * 1.24;
+        var ca = Math.cos(alt), sa = Math.sin(alt);
+        var rSky = 34 + grndRand() * 4;
+        var v = new THREE.Vector3()
+          .addScaledVector(north, Math.cos(az) * ca)
+          .addScaledVector(east, Math.sin(az) * ca)
+          .addScaledVector(normal, sa)
+          .normalize();
+        var pk = si * 3;
+        gp[pk] = pos.x + v.x * rSky; gp[pk + 1] = pos.y + v.y * rSky; gp[pk + 2] = pos.z + v.z * rSky;
+        var temp = grndRand(), lum = 0.32 + 0.68 * Math.pow(grndRand(), 3.2);
+        var cr = temp < 0.72 ? 1.0 : temp < 0.9 ? 0.80 : 1.0;
+        var cg = temp < 0.72 ? 0.96 : temp < 0.9 ? 0.88 : 0.74;
+        var cb = temp < 0.72 ? 0.88 : temp < 0.9 ? 1.0 : 0.55;
+        gc2[pk] = cr * lum; gc2[pk + 1] = cg * lum; gc2[pk + 2] = cb * lum;
+      }
+      var sg = new THREE.BufferGeometry();
+      sg.setAttribute("position", new THREE.BufferAttribute(gp, 3));
+      sg.setAttribute("color", new THREE.BufferAttribute(gc2, 3));
+      groundStars = new THREE.Points(sg, new THREE.PointsMaterial({
+        map: starTex, size: (MOBILE ? 3.1 : 3.8) * Math.min(devicePixelRatio || 1, 1.6),
+        sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.86,
+        depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, fog: false
+      }));
+      if ("toneMapped" in groundStars.material) groundStars.material.toneMapped = false;
+      groundStars.name = "GroundSkyStars"; groundStars.frustumCulled = false; groundStars.renderOrder = 3;
+      scene.add(groundStars);
     }
     function removeGroundDome() {
-      if (!groundDome) return;
-      scene.remove(groundDome);
-      if (groundDome.material.map) groundDome.material.map.dispose();
-      groundDome.material.dispose(); groundDome.geometry.dispose();
-      groundDome = null;
+      if (groundDome) {
+        scene.remove(groundDome);
+        if (groundDome.material.map) groundDome.material.map.dispose();
+        groundDome.material.dispose(); groundDome.geometry.dispose();
+        groundDome = null;
+      }
+      if (groundStars) {
+        scene.remove(groundStars);
+        if (groundStars.material.map) groundStars.material.map.dispose();
+        groundStars.material.dispose(); groundStars.geometry.dispose();
+        groundStars = null;
+      }
     }
     function fetchBase() {
       function viaIpwho() {
@@ -502,7 +566,7 @@
       controls = createPremiumOrbitControls(camera, canvas, THREE);
       controls.target.copy(HOME);
       controls.setDistanceLimits(5.0, (window.CosmicLOD ? window.CosmicLOD.MAXCAM : 46000));   // 5.0 floor clears the Moon (2.99); ceiling widened to the cosmic-address MAXCAM (46000) so the log zoom reaches the observable-universe tier
-      controls.setInteractionTuning({ rotateSpeed: 0.00050, dampingFactor: 0.042, zoomStepLn: 0.40, zoomRef: 100, zoomHi: 2.2, zoomEase: 0.18, maxEventDelta: 0.014 });
+      controls.setInteractionTuning({ rotateSpeed: 0.00046, dampingFactor: 0.032, zoomStepLn: 0.34, zoomRef: 118, zoomHi: 1.85, zoomEase: 0.215, maxEventDelta: 0.012 });
       canvas.style.opacity = "0.001";
       setTimeout(function () {   // fallback: never leave the visitor in the dark
         if (!groundEntered) {
@@ -820,7 +884,7 @@
     // NOTE: buildNightSky() is a legacy CELESTIAL-SPHERE SHELL — ~10.7k stars pinned at radius 700 — which
     // was THE "太阳系球壳": from inside it wraps you as "the stars", from outside it's a hard silhouette sphere,
     // and beyond it only the galaxy shows. In cosmos mode the volumetric starfield + real 3-D galaxy + the
-    // deep-field constellations + the spread embers already fill all of space, so this shell is removed entirely.
+    // apparent-sky constellation annotation + the spread embers already fill the near sky, so this shell is removed entirely.
     if (COSMOS && false) buildNightSky();
     resize(); addEventListener("resize", resize);
 
@@ -934,7 +998,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=34").then(function (mod) {
+    import("./nye-armature.js?v=36").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -997,7 +1061,7 @@
     var DOSSIER = {};   // the data-hook registry (keyed by pick-id) → the focus card; blank entries render nothing
     fetch("data/natal-sky.json?v=16").then(function (r) { return r.json(); }).then(function (natalData) {
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=112").then(function (mod) {
+      return import("./natal-sky.js?v=120").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1044,6 +1108,13 @@
         if (!sunCta) return;
         if (on) { if (sunCtaOffT) { clearTimeout(sunCtaOffT); sunCtaOffT = null; } if (!sunCtaOn) { sunCtaOn = true; sunCta.classList.add("is-on"); } }
         else if (sunCtaOn && !sunCtaOffT) sunCtaOffT = setTimeout(function () { sunCtaOffT = null; sunCtaOn = false; sunCta.classList.remove("is-on"); }, 240);
+      }
+      function dsoPickInScale(owner) {
+        var ud = owner && owner.userData; if (!ud) return true;
+        var cl = camera.position.length();
+        if (ud.dsoMinCam && cl < ud.dsoMinCam) return false;
+        if (isFinite(ud.dsoMaxCam) && cl > ud.dsoMaxCam) return false;
+        return true;
       }
       function updateCta(e) {
         if (!earthCta || !nyeArmature) return;
@@ -1108,7 +1179,10 @@
               if (gp === "jupiter" || gp === "saturn") { overClickable = true; break; }
             }
           }
-          if (!overClickable && natalSky.dsoPicks && _ctaRay.intersectObject(natalSky.dsoPicks, true).length) overClickable = true;   // a deep-sky wonder under the hand
+          if (!overClickable && natalSky.dsoPicks) {
+            var dh = _ctaRay.intersectObject(natalSky.dsoPicks, true);
+            for (var dhi = 0; dhi < dh.length; dhi++) { if (dsoPickInScale(dh[dhi].object)) { overClickable = true; break; } }
+          }   // a deep-sky wonder under the hand, but only at its real scale
           if (!overClickable && natalSky.conPicks && _ctaRay.intersectObject(natalSky.conPicks, true).length) overClickable = true;   // a constellation under the hand
           if (!overClickable && natalSky.isOverInteractive && natalSky.isOverInteractive(e.clientX, e.clientY)) overClickable = true;
         }
@@ -1223,7 +1297,7 @@
         if (best) {
           aim = {
             yaw: Math.atan2(best.dot(east), best.dot(north)),
-            pitch: Math.max(1.32, Math.min(1.5, Math.asin(Math.max(-1, Math.min(1, best.dot(nrm)))) + 0.9))   // wake gazing UP near the local zenith — "lying at your base, looking up at your natal sky." A lower gaze opens onto the dark near-horizon band (empty since the 2D field was retired); the glowing horizon still rims the very bottom of frame
+            pitch: Math.max(0.46, Math.min(1.28, Math.asin(Math.max(-1, Math.min(1, best.dot(nrm)))) + 0.10))  // aim at the visible Moon/constellation itself, not past it into an empty zenith
           };
         }
         controls.setGroundMode({
@@ -1567,14 +1641,75 @@
       /* ---- THE COSMIC ADDRESS RAIL: built once from window.CosmicLOD, highlighted per-frame
               from camLen. Clicking a tier flies the camera to that scale (its camLenPeak). ---- */
       var LOD = window.CosmicLOD, railEl = document.getElementById("cosmos-rail"), railItems = [], _railCur = null;
+      function fallbackScaleTarget(id, peak) {
+        if (id === "local-group") return skyDirWorld(0.712, 41.27, 5720 * 0.36);
+        if (id === "virgo-supercluster") return skyDirWorld(12.44, 12.72, 4600);
+        if (id === "laniakea") return skyDirWorld(16.25, -60.95, 5000);
+        if (id === "cosmic-web") {
+          var cLan = LOD && LOD.collapse ? LOD.collapse(peak || 49300, "laniakea", 0.12) : 0.12;
+          return skyDirWorld(16.25, -60.95, 12000 * cLan);
+        }
+        return HOME.clone();
+      }
+      function targetForScale(peak) {
+        var id = LOD && LOD.currentLayerId ? LOD.currentLayerId(peak) : null;
+        if (natalSky && natalSky.scaleTarget) {
+          var st = natalSky.scaleTarget(id, peak);
+          if (st) return st.clone ? st.clone() : new THREE.Vector3(st.x || 0, st.y || 0, st.z || 0);
+        }
+        return fallbackScaleTarget(id, peak);
+      }
+      function cameraOnScaleSphere(target, dir, scale) {
+        var r = Math.max(0.001, scale || 1);
+        var p = target && target.clone ? target.clone() : HOME.clone();
+        var d = dir && dir.clone ? dir.clone() : new THREE.Vector3(0.42, 0.26, 0.88);
+        if (d.lengthSq() < 1e-8) d.set(0.42, 0.26, 0.88);
+        d.normalize();
+        var pd = p.dot(d), disc = pd * pd + r * r - p.lengthSq();
+        if (!isFinite(disc) || disc < 1e-6) return d.multiplyScalar(r);
+        var rootDisc = Math.sqrt(disc);
+        var dist = -pd + rootDisc;
+        if (!isFinite(dist) || dist < 0.001) dist = -pd - rootDisc;
+        if (!isFinite(dist) || dist < 0.001) return d.multiplyScalar(r);
+        return p.add(d.multiplyScalar(dist));
+      }
       function flyToScale(peak) {
         userMoved = true; clearSel(); soloBody = null;
         if (controls.isGround()) { controls.exitGroundMode(); groundHint(false); }
-        var dir = camera.position.clone(); if (dir.lengthSq() < 1e-6) dir.set(0.42, 0.26, 0.88);
+        var target = targetForScale(peak);
+        var dir = camera.position.clone().sub(controls.target || HOME); if (dir.lengthSq() < 1e-6) dir.set(0.42, 0.26, 0.88);
         dir.normalize();
         var frames = Math.round(120 + Math.abs(Math.log(peak / Math.max(1, camera.position.length()))) * 90);
-        paramGlide({ camTo: dir.multiplyScalar(peak), targetTo: HOME.clone(), frames: Math.min(360, frames), ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 4, onDone: null });
+        paramGlide({ camTo: cameraOnScaleSphere(target, dir, peak), targetTo: target, frames: Math.min(360, frames), ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 4, onDone: null });
       }
+      easeAddressPivot = function () {
+        if (!LOD || !LOD.weight || !natalSky || !userMoved || controls.isGround() || glideActive() || soloBody || ptrDown || panOn) return;
+        var cl = camera.position.length();
+        var wLG = LOD.weight(cl, "local-group"), wSheet = LOD.weight(cl, "local-sheet"), wVir = LOD.weight(cl, "virgo-supercluster"), wLani = LOD.weight(cl, "laniakea"), wWeb = LOD.weight(cl, "cosmic-web");
+        var target = null, rate = 0;
+        if (wLG > 0.04 && cl >= 4300 && cl <= 12200) {
+          target = targetForScale(cl);
+          rate = 0.016 * wLG;
+        } else if (wSheet > 0.035 && cl >= 11200 && cl <= 15400) {
+          target = HOME.clone();
+          rate = 0.018 * wSheet;
+        } else if (wVir > 0.035 && cl >= 19800 && cl <= 23200) {
+          target = targetForScale(cl);
+          rate = 0.007 * wVir;
+        } else if (wLani > 0.04 && cl >= 28600 && cl <= 35400) {
+          target = targetForScale(cl);
+          rate = 0.0045 * wLani;
+        } else if (wWeb > 0.04 && cl >= 39000 && cl <= 52000) {
+          target = targetForScale(cl);
+          rate = 0.0038 * wWeb;
+        }
+        if (!target || rate <= 0) return;
+        var delta = target.sub(controls.target);
+        if (delta.lengthSq() < 1e-4) return;
+        delta.multiplyScalar(rate);
+        controls.target.add(delta);
+        camera.position.add(delta);
+      };
       if (railEl && LOD) {
         LOD.LAYERS.forEach(function (ly) {
           if (ly.rail === false) return;                     // quiet tiers (the Local Sheet) are scene layers, not rail stops
@@ -1602,19 +1737,21 @@
          every tier deterministically. Counts as genuine navigation (userMoved) so lazy layers build. */
       window.__space.teleport = function (r) {
         userMoved = true; clearSel(); soloBody = null;
-        glide.frames = 0; glide.param = null;
+        groundEntered = true; tryGroundEntrance = null;
+        glide.frames = 0; glide.param = null; glide.camTo = null; glide.targetTo = null;
+        glide.axis = null; glide.step = 0; glide.distTarget = 0; glide.onDone = null;
         if (controls.isGround()) { controls.exitGroundMode(); groundHint(false); }
-        var dir = camera.position.clone(); if (dir.lengthSq() < 1e-6) dir.set(0.42, 0.26, 0.88);
+        var target = targetForScale(r);
+        var dir = camera.position.clone().sub(controls.target || HOME); if (dir.lengthSq() < 1e-6) dir.set(0.42, 0.26, 0.88);
         dir.normalize();
-        camera.position.copy(dir.multiplyScalar(r));
-        controls.target.set(0, 0, 0);
-        if (controls.setRadius) controls.setRadius(r);
+        var camTo = cameraOnScaleSphere(target, dir, r);
+        var orbitRadius = Math.max(0.006, camTo.distanceTo(target));
+        if (controls.setDistanceLimits) controls.setDistanceLimits(0.006, Math.max(340, orbitRadius * 1.18));
+        camera.position.copy(camTo);
+        controls.target.copy(target);
+        if (controls.setRadius) controls.setRadius(orbitRadius);
+        if (window.__space.uiTick) window.__space.uiTick();
       };
-      /* ---- YOU ARE HERE: a persistent spatial anchor. From the Local Group out, the origin (the Sun,
-              the Milky Way, us) is marked by a small coral dot + a whisper of address text that names
-              what "here" means at the current tier. It is projected every frame, so it rides the world
-              through every rotation and zoom — you can always find yourself. ---- */
-      var youEl = document.getElementById("you-are-here"), _youV = new THREE.Vector3(), _youTier = null;
       var quantumEl = document.getElementById("quantum-note");
 
       window.__space.uiTick = function () {
@@ -1622,10 +1759,8 @@
         // admired from far out (view-dist ~400), so its focus only releases when you truly pull away.
         if (soloBody && soloBody !== "dso" && soloBody !== "galcore" && !glideActive() && controls.getRadius() > 130) soloBody = null;
         if ((soloBody === "dso" || soloBody === "galcore") && !glideActive() && controls.getRadius() > 900) soloBody = null;
-        // the constellations are genuine deep-field objects now — they must NOT vanish when you zoom out.
-        // Keep the figures fully lit at every scale; only ease them off at the very edge of the world (past
-        // all the nebulae) so the extreme long-shot doesn't clutter. (user: don't hide the zodiac on zoom.)
-        if (natalSky && natalSky.setZodiacFade) natalSky.setZodiacFade((camera.position.length() - 800) / 1800);   // the busy zodiac FIGURE-LINES recede as you leave the star-chart scale (full at whole-sky ~128, faint ghosts by galaxy scale ~2600) so the galaxy + nebulae read clean; the constellation STARS stay
+        // constellations are apparent Earth-sky annotations, not physical 3-D galaxy structures.
+        if (natalSky && natalSky.setZodiacFade) natalSky.setZodiacFade(camera.position.length() >= 1300 ? 1 : 0);
         // the orrery (esp. the SUN) must NEVER hide — it's the anchor you click to fly back to the solar
         // system. It stays drawn at every scale; the gear-rings fade themselves via ringFade, the Earth is a
         // cheap speck when tiny, and the Sun's glow keeps it findable from across the galaxy.
@@ -1658,26 +1793,6 @@
             }
           }
         }
-        // YOU ARE HERE — the origin, projected; visible from the moment "here" stops filling the frame
-        if (youEl && LOD) {
-          var _yCl = camera.position.length();
-          var _yOn = !controls.isGround() && userMoved && _yCl > 900 && !glideActive();
-          if (_yOn) {
-            _youV.set(0, 0, 0).project(camera);
-            if (_youV.z > 1 || Math.abs(_youV.x) > 0.96 || Math.abs(_youV.y) > 0.94) _yOn = false;
-            else {
-              youEl.style.left = ((_youV.x * 0.5 + 0.5) * innerWidth) + "px";
-              youEl.style.top = ((-_youV.y * 0.5 + 0.5) * innerHeight) + "px";
-              var _yTier = LOD.currentLayerId(_yCl);
-              if (_yTier !== _youTier) {
-                _youTier = _yTier;
-                var _yLy = LOD.byId(_yTier), _yEn = youEl.querySelector(".i18n-en"), _yZh = youEl.querySelector(".i18n-zh");
-                if (_yLy && _yEn && _yZh) { _yEn.textContent = "you are here · " + _yLy.you.en; _yZh.textContent = "你在这里 · " + _yLy.you.zh; }
-              }
-            }
-          }
-          youEl.classList.toggle("is-on", _yOn);
-        }
         // THE FLUCTUATION's whisper — one line, only at the loop's end, linking to the book it echoes
         if (quantumEl && LOD) {
           var _qW = LOD.weight(camera.position.length(), "fluctuation");
@@ -1701,11 +1816,15 @@
         hits.sort(function (h1, h2) { return h1.distance - h2.distance; });
         for (var i = 0; i < hits.length; i++) {
           if (hits[i].object.name === "NyeEarthPickShell") continue;   // the oversized shell is not the globe
-          var pick = null, o = hits[i].object;
-          while (o && !pick) { pick = o.userData && o.userData.nyePick; o = o.parent; }
+          var pick = null, o = hits[i].object, pickOwner = null;
+          while (o && !pick) {
+            if (o.userData && o.userData.nyePick) { pick = o.userData.nyePick; pickOwner = o; }
+            o = o.parent;
+          }
           var isDso = pick && pick.indexOf && pick.indexOf("dso_") === 0;
           var isCon = pick && pick.indexOf && pick.indexOf("con_") === 0;
           if (!isDso && !isCon && pick !== "sun" && pick !== "moon" && pick !== "earth" && pick !== "jupiter" && pick !== "saturn" && pick !== "beacon" && pick !== "mercury" && pick !== "venus" && pick !== "mars" && pick !== "uranus" && pick !== "neptune" && pick !== "pluto" && pick !== "charon") continue;   // glyphs never swallow a click
+          if (isDso && !dsoPickInScale(pickOwner)) continue;
           if (pick === "beacon") {                       // the beacon is the door home
             // on the ground the camera sits INSIDE the beacon's pick bubble (and the
             // raycaster ignores visible=false) — look PAST it to the real target
@@ -1765,14 +1884,15 @@
         /* thermal guard: when the visitor rests, render at half rate — the slow
            drift is indistinguishable at 30fps, the GPU cools. Any touch, glide,
            entrance or stirred dust restores 60fps instantly. */
+        var inputAge = nowMs - lastTouch;
         var glid = glideActive() || (!userMoved && nowMs < entranceUntil);       // choreographed flight → keep it buttery at 60fps
-        busy = (nowMs - lastTouch < 2500) || glid || deepFusion.uniforms.uPointerAmt.value > 0.05;
-        // FRAME-RATE CAP (the big thermal lever): only choreographed flights run at 60fps. Manual orbit/zoom
-        // runs at 30fps (indistinguishable for this slow scene, HALF the GPU) and at rest it idles at ~3fps
-        // on a frozen scene. Any touch instantly restores 30fps; a glide restores 60.
+        var freshInput = inputAge < 1150 || ptrDown || panOn;
+        busy = freshInput || (inputAge < 3600) || glid || deepFusion.uniforms.uPointerAmt.value > 0.05;
+        // FRAME-RATE CAP (the big thermal lever): active hand motion and choreographed flights run at
+        // full refresh; the inertial tail drops to half-rate, and true rest idles cold on a frozen scene.
         if (!glid) {
-          if (busy) { if (frameNo & 1) { requestAnimationFrame(frame); return; } }
-          else if (frameNo % 20) { requestAnimationFrame(frame); return; }
+          if (!freshInput && busy) { if (frameNo & 1) { requestAnimationFrame(frame); return; } }
+          else if (!busy && frameNo % 24) { requestAnimationFrame(frame); return; }
         }
         // cinematic arrival: dive from deep space and LAND on the Earth — the visitor
         // meets the home world first (its real footprint glowing on it), then rotates to
@@ -1872,6 +1992,7 @@
         // the horizon glow dissolves behind you as you climb
         if (groundDome && !controls.isGround()) {
           groundDome.material.opacity *= 0.94;
+          if (groundStars && groundStars.material) groundStars.material.opacity *= 0.90;
           if (groundDome.material.opacity < 0.02) removeGroundDome();
         }
         // the ground-night dimmer: eases the earth shader toward its target (ground=night)
@@ -1884,6 +2005,7 @@
         // otherwise the wheel's log-target owns it. Recomputed every frame, so it clears cleanly.
         controls.setExternalDrive(glideActive() || (!userMoved && nowMs < entranceUntil));
         controls.update();
+        easeAddressPivot();
         if (!beltCentered && natalSky && nyeArmature) {   // one-shot: the WHOLE planetary system (planets + belt) orbits the SUN, not the Earth
           var _bodies = natalSky.group.getObjectByName("NatalBodies");
           var _sunM = nyeArmature.group.getObjectByName("NyeSunCore");
@@ -1912,7 +2034,7 @@
           // the 2D breath-dust is a FAR-VIEW veil only. On the ground it must vanish —
           // it painted a milky wash over the whole night sky (in ground mode getRadius()
           // is the 400-away gaze point, which drove the veil to maximum brightness).
-          if (controls.isGround()) fieldEl2.style.opacity = "0.04";
+          if (controls.isGround()) fieldEl2.style.opacity = "0.14";
           else {
             var rr2 = controls.getRadius();
             fieldEl2.style.opacity = (0.5 + 0.28 * Math.max(0, Math.min(1, (rr2 - 90) / 320))).toFixed(2);
@@ -1935,7 +2057,7 @@
         if (natalSky && _farCl > 350) natalSky.ensureFarLayers();      // galaxy + black hole, once you rise past the constellation sphere toward galactic scale
         if (natalSky && natalSky.ensureMidLayers && _farCl > 3200) natalSky.ensureMidLayers();   // Local Group / Local Sheet / Virgo supercluster: built just before the LG crossfade begins (fadeIn 5000)
         if (natalSky && _farCl > 12000) natalSky.ensureCosmicWeb();     // the Laniakea flow basin + neighbour basins + the whole web (fadeIn 24200 — built well ahead)
-        if (natalSky && natalSky.ensureUniverse && _farCl > 30000) natalSky.ensureUniverse();   // far foam + CMB horizon + quantum scintillation field (fadeIn 56000)
+        if (natalSky && natalSky.ensureUniverse && _farCl > 30000) natalSky.ensureUniverse();   // far foam + CMB horizon + unobserved-boundary cue (active from 56000)
         // FOG DENSITY by scale: the scene keeps its near-field fog (0.0018, the "no back wall" look); at web
         // scale ease it MUCH thinner so the 36500-radius lattice's far side dissolves into black rather than
         // clipping (0.75/36500 ≈ 0.00002 → half-lost at the rim). Only fog:true materials (the web) respond —
@@ -1952,7 +2074,7 @@
         if (nyeArmature && nyeArmature.buildRings && _farCl > 18 && _farCl < 800 && !nyeArmature.hasRings()) nyeArmature.buildRings();
         // UNLOAD the inner solar system at galaxy scale (the Sun always persists): hide Moon/atmosphere/footprint
         // and the outer planets once you leave the solar system, so nothing paints overdraw at the wrong scale.
-        if (nyeArmature && nyeArmature.setInnerDetail) nyeArmature.setInnerDetail(_farCl < 400);
+        if (nyeArmature && nyeArmature.setInnerDetail) nyeArmature.setInnerDetail(_farCl < 400, _farCl < 7800);
         if (natalSky && natalSky.bodyGroup) natalSky.bodyGroup.visible = (_farCl < 400);
       }
       deepFusion.tick(_clk);

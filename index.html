@@ -25,7 +25,7 @@
       href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=37" />
+    <link rel="stylesheet" href="styles.css?v=42" />
     <link rel="stylesheet" href="craft.css?v=2" />
     <script>
       (function () {
@@ -148,25 +148,16 @@
         <span class="i18n-en">✦ Whole sky</span><span class="i18n-zh">✦ 星盘全景</span>
       </button>
     </div>
-    <!-- the COSMIC ADDRESS rail: a continuous scale breadcrumb Earth → Observable Universe → Fluctuation.
+    <!-- the COSMIC ADDRESS rail: a continuous scale breadcrumb Earth → Observable Universe → beyond the observable horizon.
          Populated from window.CosmicLOD.LAYERS by space.js; current tier highlighted from
          camLen; clicking a tier flies the camera to that scale. Minimal by design. -->
     <nav id="cosmos-rail" class="cosmos-rail no-print" aria-label="Cosmic address"></nav>
 
-    <!-- YOU ARE HERE — the persistent spatial anchor: a coral dot pinned to the origin (the Sun,
-         the Milky Way, us), projected by space.js at every tier from the Local Group outward.
-         Its whisper of text names what "here" means at the current scale. -->
-    <div id="you-are-here" class="you-are-here no-print" aria-hidden="true">
-      <span class="you-are-here__dot"></span>
-      <span class="you-are-here__l"><span class="i18n-en">you are here</span><span class="i18n-zh">你在这里</span></span>
+    <!-- Past the observable horizon there is no mapped sky; keep this as a boundary note, not a cosmology claim. -->
+    <div id="quantum-note" class="quantum-note no-print" style="opacity:0; pointer-events:none">
+      <span class="i18n-en">beyond this horizon is unobserved · no mapped structure is shown</span>
+      <span class="i18n-zh">此视界之外尚不可观测 · 不绘制为真实结构</span>
     </div>
-
-    <!-- the FLUCTUATION's whisper — appears only past the observable horizon, where the whole
-         universe becomes one scintillation; links to the book whose cosmology this is -->
-    <a id="quantum-note" class="quantum-note no-print" href="books/sovereign.html" style="opacity:0; pointer-events:none">
-      <span class="i18n-en">every scintillation a universe · every universe a quark — the scale loops here</span>
-      <span class="i18n-zh">每一次闪烁都是一个宇宙 · 每个宇宙终是一枚夸克——尺度在此循环</span>
-    </a>
 
     <!-- mobile-3D only: the way back to the simple menu -->
     <button id="exit3d" class="exit3d no-print" type="button">
@@ -196,7 +187,7 @@
     <aside id="focus-card" class="focus-card no-print" aria-live="polite"></aside>
 
     <!-- visible build stamp — so "which version am I seeing" is never a mystery again -->
-    <div class="cosmos-build no-print" aria-hidden="true">build 161 · 07-04</div>
+    <div class="cosmos-build no-print" aria-hidden="true">build 165 · 07-05</div>
 
     <!-- fallback when 3D is gated off (mobile / low power / reduced motion):
          a full, tappable mobile home that reaches every page -->
@@ -257,7 +248,7 @@
     <script src="home.js?v=6" defer></script>
     <script src="magnet.js?v=1" defer></script>
     <script src="craft.js?v=1" defer></script>
-    <script src="cosmic-layers.js?v=4"></script>
-    <script type="module" src="space.js?v=175"></script>
+    <script src="cosmic-layers.js?v=5"></script>
+    <script type="module" src="space.js?v=186"></script>
   </body>
 </html>

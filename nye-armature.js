@@ -187,7 +187,7 @@ export function mountNyeArmature(THREE, scene, opts) {
   dayClockOrbitPlaneGroup.worldToLocal(moonInDayPlane);
   const moonOrbitAngle = Math.atan2(moonInDayPlane.y, moonInDayPlane.x);
   dayGear.branchSwivel.rotation.z = moonOrbitAngle - PILLARS.day.branchIndex * (TAU / 12);
-  dayGear.stemSwivel.rotation.z = moonOrbitAngle - (PILLARS.day.stemIndex + 0.5) * (TAU / 10);
+  dayGear.stemSwivel.rotation.z = moonOrbitAngle - PILLARS.day.stemIndex * (TAU / 10);
   placeLabel(dayGear.label, earthRadiusVis * 10.2, moonOrbitAngle + 0.22, 0.16);   // label rides out with the ring
   gearMotions.push({ target: dayGear.stemSwivel, base: dayGear.stemSwivel.rotation.z, speed: -0.0012 });
   gearMotions.push({ target: dayGear.branchSwivel, base: dayGear.branchSwivel.rotation.z, speed: 0.0010 });
@@ -255,9 +255,16 @@ export function mountNyeArmature(THREE, scene, opts) {
     markSubtree(group, { nyeArmature: true });
   }
 
-  // hide the Moon + Earth's expensive skin (atmosphere shells, footprint overdraw) at galaxy scale; the Sun
-  // is never touched here → it persists at every scale, as required.
-  function setInnerDetail(on) {
+  // Hide close Earth/Moon detail at galaxy scale. The Sun is the physical anchor of
+  // the full address chain, so it must survive until it becomes sub-pixel by scale.
+  function setInnerDetail(on, sunOn) {
+    var keepSun = sunOn !== false;
+    ["NyeSunCore", "NyeSunRim", "NyeSunCorona1", "NyeSunCorona2", "NyeSunCorona3", "NyeSunCorona4", "NyeSunSpark", "NyeSunStreak"].forEach(function (nm) {
+      var obj = group.getObjectByName(nm); if (obj) obj.visible = keepSun;
+    });
+    ["NyeEarthMesh"].forEach(function (nm) {
+      var obj = group.getObjectByName(nm); if (obj) obj.visible = on;
+    });
     if (moon && moon.mesh) moon.mesh.visible = on;
     var a1 = group.getObjectByName("NyeEarthAtmosphere"); if (a1) a1.visible = on;
     var a2 = group.getObjectByName("NyeEarthOuterHaze"); if (a2) a2.visible = on;
