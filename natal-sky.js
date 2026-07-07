@@ -745,25 +745,35 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // REAL positions, so pulling the camera back IS the rigid zoom: Laniakea shrinks into one basin among
     // its true neighbours (Coma, Perseus-Pisces, Shapley…) which together ARE the cosmic web. No fade, no
     // pop, no procedural invention. Colour is baked from real local galaxy density (node→filament→void).
-    var gx = o.galXYZ, gc = o.galRGB;
-    if (gx && gc && gx.length >= 3) {
-      var NG = (gx.length / 3) | 0;
+    var axx=AX.x,axy=AX.y,axz=AX.z, ayx=AY.x,ayy=AY.y,ayz=AY.z, azx=AZ.x,azy=AZ.y,azz=AZ.z;
+    // shared builder: int16 SG-Mpc positions + uint8 rgb → one rigid Points layer
+    function buildLayer(xyz, rgb, sizePx, op, name, order) {
+      if (!xyz || !rgb || xyz.length < 3) return null;
+      var NG = (xyz.length / 3) | 0;
       var pos = new Float32Array(NG * 3), col = new Float32Array(NG * 3);
-      var axx=AX.x,axy=AX.y,axz=AX.z, ayx=AY.x,ayy=AY.y,ayz=AY.z, azx=AZ.x,azy=AZ.y,azz=AZ.z;
       for (var i = 0; i < NG; i++) {
-        var sx = gx[i*3]*0.125, sy = gx[i*3+1]*0.125, sz = gx[i*3+2]*0.125;   // int16/8 = Mpc
+        var sx = xyz[i*3]*0.125, sy = xyz[i*3+1]*0.125, sz = xyz[i*3+2]*0.125;   // int16/8 = Mpc
         pos[i*3]   = K*(sx*axx + sy*ayx + sz*azx);
         pos[i*3+1] = K*(sx*axy + sy*ayy + sz*azy);
         pos[i*3+2] = K*(sx*axz + sy*ayz + sz*azz);
-        col[i*3]=gc[i*3]/255; col[i*3+1]=gc[i*3+1]/255; col[i*3+2]=gc[i*3+2]/255;
+        col[i*3]=rgb[i*3]/255; col[i*3+1]=rgb[i*3+1]/255; col[i*3+2]=rgb[i*3+2]/255;
       }
-      var geo = new T.BufferGeometry();
-      geo.setAttribute("position", new T.BufferAttribute(pos,3));
-      geo.setAttribute("color", new T.BufferAttribute(col,3));
-      var m = new T.PointsMaterial({ map: tex, size: (mobile?1.7:2.2)*_tierPrx, sizeAttenuation: false,
-        vertexColors: true, transparent: true, opacity: 1.0, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+      var g = new T.BufferGeometry();
+      g.setAttribute("position", new T.BufferAttribute(pos,3));
+      g.setAttribute("color", new T.BufferAttribute(col,3));
+      var m = new T.PointsMaterial({ map: tex, size: sizePx*_tierPrx, sizeAttenuation: false,
+        vertexColors: true, transparent: true, opacity: op, depthWrite: false, blending: T.AdditiveBlending, fog: false });
       if ("toneMapped" in m) m.toneMapped = false;
-      var pts = new T.Points(geo, m); pts.name = "LargeScaleStructure"; pts.frustumCulled = false; belt.add(pts);
+      var p = new T.Points(g, m); p.name = name; p.frustumCulled = false; if (order != null) p.renderOrder = order; belt.add(p);
+      return p;
+    }
+    if (o.galXYZ && o.galRGB && o.galXYZ.length >= 3) {
+      // the galaxy field (real 2MRS) — the photographic backdrop
+      buildLayer(o.galXYZ, o.galRGB, mobile?1.7:2.2, 1.0, "LargeScaleStructure", -3);
+      // the WEB LINES overlay — real filament skeleton (density-peak bridges) + Laniakea flow
+      // streamlines to the Great Attractor. Slightly larger + brighter so the NET and the FLOW
+      // read as the recognizable cosmic-web / Tully-Laniakea signatures.
+      buildLayer(o.webXYZ, o.webRGB, mobile?1.9:2.6, 1.0, "CosmicWebLines", -2);
       return;
     }
 
@@ -2558,13 +2568,18 @@ export function buildNatalSky(THREE, scene, data, opts) {
           // then HANDS OFF: once we are past the Local Group tier (Sheet/Virgo/Laniakea/Web/…) the
           // disc must NOT persist as a lone bright node at the origin — that node was piling up with
           // every other origin-centred structure into the blown-white "galaxy eats Laniakea" blob.
-          var _gOn = LOD ? (LOD.weight(_cl, "milky-way") > 0) : (_cl < 8000);
+          // RECEDE, don't pop: keep the disc drawn while it SHRINKS toward a speck at the origin (via
+          // collapse), so it leaves the frame by getting far/small — real perspective — not by an
+          // opacity hard-cut. Only feather opacity once it is a sub-pixel speck past the Local Sheet.
+          var _gOn = LOD ? (_cl < 15000) : (_cl < 8000);
+          var _gScale = LOD ? LOD.collapse(_cl, "milky-way", 0.05) : 1;
+          var _gTail = LOD ? (1 - LOD.smooth(12500, 15000, _cl)) : 1;
           for (var _gi = 0; _gi < _galMats.length; _gi++) {
             var _ge = _galMats[_gi];
             _ge.o.visible = _gOn;
             if (_gOn) {
-              _ge.m.opacity = _ge.base * _gSolo;
-              if (LOD) _ge.o.scale.setScalar(LOD.collapse(_cl, "milky-way", 0.09));
+              _ge.m.opacity = _ge.base * _gSolo * _gTail;
+              _ge.o.scale.setScalar(_gScale);
             }
           }
         }

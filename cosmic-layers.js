@@ -120,7 +120,17 @@
   // 1 while the tier owns the frame; eases down through its fadeOut window so the
   // structure visibly CONDENSES into the node its parent tier draws at the same spot.
   function collapse(camLen, ly, to) {
-    return 1;   // [2026-07-07 RIGID ZOOM: no per-frame collapse deformation — structures hold scale 1.0; perspective (camera dolly) handles apparent size. The fade windows still gate which tier owns the frame, preventing doubling/clutter.]
+    // [2026-07-07] The LARGE-SCALE-STRUCTURE tiers stay RIGID (=1): apparent size is handled purely by
+    // the camera dolly through one fixed real cloud. The ONE exception is the Milky-Way galaxy tier —
+    // the detailed spiral is drawn ~170,000× too big for the real (linear-Mpc) galaxy field, so as you
+    // zoom out past the galaxy it must SHRINK toward a point, RECEDING by perspective into the field
+    // (where the MW is one speck at the origin) rather than opacity-popping out. This is the honest
+    // powers-of-ten seam between "one galaxy" and "the whole local universe".
+    if (ly && ly.id === "milky-way") {
+      var lo = 5000, hi = 13000, t = (to != null ? to : 0.06);
+      return 1 - (1 - t) * smooth(lo, hi, camLen);   // 1 → t across the MW→LSS handoff
+    }
+    return 1;
   }
 
   // nearest-peak-in-log → the breadcrumb id. Stable (no flicker at a 50/50 crossfade).

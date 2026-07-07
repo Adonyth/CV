@@ -1063,19 +1063,24 @@
     Promise.all([
       fetch("data/natal-sky.json?v=16").then(function (r) { return r.json(); }),
       fetch("data/large-scale.json?v=1").then(function (r) { return r.json(); }).catch(function () { return null; }),
-      fetch("data/galaxies_xyz" + _galSfx + ".i16?v=1").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; }),
-      fetch("data/galaxies_rgb" + _galSfx + ".u8?v=1").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; })
+      fetch("data/galaxies_xyz" + _galSfx + ".i16?v=2").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; }),
+      fetch("data/galaxies_rgb" + _galSfx + ".u8?v=2").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; }),
+      fetch("data/weblines_xyz" + _galSfx + ".i16?v=2").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; }),
+      fetch("data/weblines_rgb" + _galSfx + ".u8?v=2").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; })
     ]).then(function (arr) {
       var natalData = arr[0], lssData = arr[1];
       var galXYZ = arr[2] ? new Int16Array(arr[2]) : null;
       var galRGB = arr[3] ? new Uint8Array(arr[3]) : null;
+      var webXYZ = arr[4] ? new Int16Array(arr[4]) : null;
+      var webRGB = arr[5] ? new Uint8Array(arr[5]) : null;
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=126").then(function (mod) {
+      return import("./natal-sky.js?v=127").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
           mobile: MOBILE, calm: (TIER !== "full"),
-          camera: camera, interactive: true, lss: lssData, galXYZ: galXYZ, galRGB: galRGB
+          camera: camera, interactive: true, lss: lssData,
+          galXYZ: galXYZ, galRGB: galRGB, webXYZ: webXYZ, webRGB: webRGB
         });
         natalSky.applyTheme(root.getAttribute("data-theme") === "dark");
         window.__space.natal = natalSky;
