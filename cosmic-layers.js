@@ -50,7 +50,7 @@
     { id: "local-group", rail: true,
       label: { en: "Local Group", zh: "本星系群" },
       you:   { en: "the Milky Way — one of two great spirals", zh: "银河系——两大旋涡之一" },
-      realScaleLy: 5e6, sceneRadius: 6800, camLenPeak: 9200,
+      realScaleLy: 5e6, sceneRadius: 6800, camLenPeak: 6000,
       fadeInStart: 5000, fadeInEnd: 8000, fadeOutStart: 10400, fadeOutEnd: 14200, weAreOnEdge: false },
 
     // the Local Sheet is a full address rung: subtle in the scene, but named on
@@ -58,25 +58,25 @@
     { id: "local-sheet", rail: true,
       label: { en: "Local Sheet", zh: "本星系片" },
       you:   { en: "in the sheet plane, beside the Local Void", zh: "薄片平面内，本地空洞之侧" },
-      realScaleLy: 1.7e7, sceneRadius: 10400, camLenPeak: 14000,
+      realScaleLy: 1.7e7, sceneRadius: 10400, camLenPeak: 9000,
       fadeInStart: 10400, fadeInEnd: 14200, fadeOutStart: 15800, fadeOutEnd: 21000, weAreOnEdge: true },
 
     { id: "virgo-supercluster", rail: true,
       label: { en: "Virgo / Local Supercluster", zh: "室女 · 本超星系团" },
       you:   { en: "on the outskirts — 54 Mly from Virgo", zh: "外缘——距室女团 5400 万光年" },
-      realScaleLy: 5.5e7, sceneRadius: 15800, camLenPeak: 21300,
+      realScaleLy: 5.5e7, sceneRadius: 15800, camLenPeak: 13000,
       fadeInStart: 15800, fadeInEnd: 21000, fadeOutStart: 24200, fadeOutEnd: 32000, weAreOnEdge: true },
 
     { id: "laniakea", rail: true,
       label: { en: "Laniakea", zh: "拉尼亚凯亚" },
       you:   { en: "far shore of the basin, near the Perseus–Pisces divide", zh: "流域远岸，近英仙-双鱼分水岭" },
-      realScaleLy: 2.6e8, sceneRadius: 24000, camLenPeak: 32400,
+      realScaleLy: 2.6e8, sceneRadius: 24000, camLenPeak: 22000,
       fadeInStart: 24200, fadeInEnd: 32000, fadeOutStart: 37000, fadeOutEnd: 48000, weAreOnEdge: true },
 
     { id: "cosmic-web", rail: true,
       label: { en: "Cosmic Web", zh: "宇宙网" },
       you:   { en: "one basin among thousands", zh: "千万流域之一" },
-      realScaleLy: 1e9, sceneRadius: 36500, camLenPeak: 49300,
+      realScaleLy: 1e9, sceneRadius: 36500, camLenPeak: 72000,
       fadeInStart: 37000, fadeInEnd: 48000, fadeOutStart: 56000, fadeOutEnd: 72000, weAreOnEdge: true },
 
     { id: "observable-universe", rail: true,
