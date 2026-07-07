@@ -734,10 +734,16 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var AY = SG_U.clone().multiplyScalar(sU).addScaledVector(SG_V,  cU);   // scene dir of +SGY
     var AZ = SG_W;                                                          // scene dir of +SGZ (SG north)
     // soft round galaxy sprite (white core → warm halo)
-    var cv = document.createElement("canvas"); cv.width = cv.height = 64;
-    var gg = cv.getContext("2d"), gr = gg.createRadialGradient(32,32,0,32,32,32);
-    gr.addColorStop(0,"rgba(255,255,255,1)"); gr.addColorStop(0.35,"rgba(255,244,224,0.6)"); gr.addColorStop(1,"rgba(255,226,196,0)");
-    gg.fillStyle = gr; gg.fillRect(0,0,64,64);
+    // smooth gaussian-falloff sprite (bright pinpoint core → soft wide halo) so galaxies read as refined
+    // glowing points, not hard dots; a 128px texture keeps the falloff clean when magnified.
+    var cv = document.createElement("canvas"); cv.width = cv.height = 128;
+    var gg = cv.getContext("2d"), gr = gg.createRadialGradient(64,64,0,64,64,64);
+    gr.addColorStop(0.00,"rgba(255,255,255,1)");
+    gr.addColorStop(0.14,"rgba(255,251,240,0.88)");
+    gr.addColorStop(0.34,"rgba(255,242,220,0.40)");
+    gr.addColorStop(0.62,"rgba(255,230,202,0.12)");
+    gr.addColorStop(1.00,"rgba(255,222,192,0)");
+    gg.fillStyle = gr; gg.fillRect(0,0,128,128);
     var tex = new T.CanvasTexture(cv); if ("colorSpace" in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
 
     // ===== REAL galaxy field — 2MRS (≈43k observed galaxies) in supergalactic Mpc, ONE rigid cloud. =====
@@ -767,19 +773,23 @@ export function buildNatalSky(THREE, scene, data, opts) {
       function mat(px, o2){ var m = new T.PointsMaterial({ map: tex, size: px*_tierPrx, sizeAttenuation: false,
         vertexColors: true, transparent: true, opacity: o2, depthWrite: false, blending: T.AdditiveBlending, fog: false });
         if ("toneMapped" in m) m.toneMapped = false; return m; }
-      if (glowPx) {   // soft density-field glow, drawn first (behind)
-        var pg = new T.Points(g, mat(glowPx, glowOp || 0.12)); pg.name = name+"Glow"; pg.frustumCulled = false;
-        pg.renderOrder = (order != null ? order : -3) - 1; belt.add(pg);
+      var base = (order != null ? order : -3);
+      // TWO bloom-halo tiers (medium + wide-soft), drawn behind the sharp core, give a smooth cinematic
+      // glow: dense nodes/filaments bloom, empty voids stay black. This is fake-bloom via additive sprites
+      // (no post-processing pass) — refined look at ~zero extra pipeline cost.
+      if (glowPx) {
+        var pg2 = new T.Points(g, mat(glowPx*2.15, (glowOp||0.12)*0.5)); pg2.name = name+"Glow2"; pg2.frustumCulled = false; pg2.renderOrder = base - 2; belt.add(pg2);
+        var pg = new T.Points(g, mat(glowPx, glowOp || 0.12)); pg.name = name+"Glow"; pg.frustumCulled = false; pg.renderOrder = base - 1; belt.add(pg);
       }
       var p = new T.Points(g, mat(sizePx, op)); p.name = name; p.frustumCulled = false; if (order != null) p.renderOrder = order; belt.add(p);
       return p;
     }
     if (o.galXYZ && o.galRGB && o.galXYZ.length >= 3) {
-      // the galaxy field (real 2MRS) — sharp points + a soft density glow that reads as the web's net
-      buildLayer(o.galXYZ, o.galRGB, mobile?1.5:1.9, 1.0, "LargeScaleStructure", -3, mobile?5:7, 0.10);
+      // the galaxy field (real 2MRS) — crisp bright cores + soft bloom halos = a refined glowing web
+      buildLayer(o.galXYZ, o.galRGB, mobile?1.6:2.0, 1.0, "LargeScaleStructure", -3, mobile?5:6, 0.13);
       // the WEB LINES overlay — real MST filament skeleton + Laniakea flow streamlines to the Great
-      // Attractor. Brighter + a light glow so the NET and the FLOW read as the recognizable signatures.
-      buildLayer(o.webXYZ, o.webRGB, mobile?1.9:2.5, 1.0, "CosmicWebLines", -2, mobile?4:5, 0.14);
+      // Attractor. Crisp core + halo so the NET and the FLOW read as the recognizable signatures.
+      buildLayer(o.webXYZ, o.webRGB, mobile?1.9:2.5, 1.0, "CosmicWebLines", -2, mobile?4:5, 0.17);
       return;
     }
 
@@ -2474,19 +2484,12 @@ export function buildNatalSky(THREE, scene, data, opts) {
       return null;
     },
     scaleTarget: function (id, peak) {
-      // Frame the REAL large-scale structure: the camera looks toward the mass. We (MW) are at the
-      // origin on Laniakea's outskirts, so the basin sits off toward the Great Attractor — the camera
-      // must drift toward it (physically: our galaxy IS falling toward the GA / CMB dipole).
-      function world(v) { return belt.localToWorld(v.clone()); }
-      var K = 200, sglV = 102.88 * Math.PI / 180, cU = Math.cos(sglV), sU = Math.sin(sglV);
-      var AX = SG_U.clone().multiplyScalar(cU).addScaledVector(SG_V, -sU);
-      var AY = SG_U.clone().multiplyScalar(sU).addScaledVector(SG_V, cU);
-      function sgp(x, y, z) { return AX.clone().multiplyScalar(x).addScaledVector(AY, y).addScaledVector(SG_W, z).multiplyScalar(K); }
-      var GA = sgp(-66.8, -9.5, 8.3), VIR = sgp(-3.7, 16.1, -0.7);   // Norma(GA) + Virgo, true positions
-      if (id === "local-group") return world(VIR.clone().multiplyScalar(0.2));
-      if (id === "local-sheet" || id === "virgo-supercluster") return world(VIR.clone());
-      if (id === "laniakea") return world(GA.clone().multiplyScalar(0.55));                 // basin centroid, us→GA
-      if (id === "cosmic-web" || id === "observable-universe" || id === "fluctuation") return world(GA.clone().multiplyScalar(0.35));
+      // RIGID ROTATION: the camera orbits the ORIGIN at every large-scale-structure tier. The real 2MRS
+      // galaxy distribution is centred on US — the mass centroid of galaxies within every tier radius is
+      // within ~6 Mpc of the origin (we sit INSIDE the supercluster; galaxies surround us). Orbiting the
+      // origin means camLen (= camera→origin distance) EQUALS the orbit radius, so it stays constant while
+      // rotating → no zoom during rotation, and the field stays centred + same-size. (Off-centre dense
+      // features like the Great Attractor keep honest 3-D perspective — that is correct, not a bug.)
       return new T.Vector3(0, 0, 0);
     },
     tick: function (sec) {
