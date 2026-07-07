@@ -727,73 +727,63 @@ export function buildNatalSky(THREE, scene, data, opts) {
      clusters while the web IS Laniakea among its real neighbours. K = scene units / Mpc. */
   var _lssBuilt = false;
   function buildLargeScaleStructure(LSS) {
-    if (_lssBuilt || !LSS) return; _lssBuilt = true;
-    var K = 200, rng = gRng(0x1a5e0);
+    if (_lssBuilt) return; _lssBuilt = true;
+    var K = 200;
     var sglV = 102.88 * Math.PI / 180, cU = Math.cos(sglV), sU = Math.sin(sglV);
     var AX = SG_U.clone().multiplyScalar(cU).addScaledVector(SG_V, -sU);   // scene dir of +SGX
     var AY = SG_U.clone().multiplyScalar(sU).addScaledVector(SG_V,  cU);   // scene dir of +SGY
     var AZ = SG_W;                                                          // scene dir of +SGZ (SG north)
-    function P3(sg) { return AX.clone().multiplyScalar(sg[0]).addScaledVector(AY, sg[1]).addScaledVector(AZ, sg[2]).multiplyScalar(K); }
-    function g3() { return rng() + rng() + rng() - 1.5; }
-    function ru() { var v = new T.Vector3(g3(), g3(), g3()), l = v.length(); return l > 1e-4 ? v.multiplyScalar(1 / l) : new T.Vector3(0, 1, 0); }
+    // soft round galaxy sprite (white core → warm halo)
     var cv = document.createElement("canvas"); cv.width = cv.height = 64;
     var gg = cv.getContext("2d"), gr = gg.createRadialGradient(32,32,0,32,32,32);
-    gr.addColorStop(0,"rgba(255,236,210,1)"); gr.addColorStop(0.4,"rgba(255,150,96,0.55)"); gr.addColorStop(1,"rgba(255,110,60,0)");
+    gr.addColorStop(0,"rgba(255,255,255,1)"); gr.addColorStop(0.35,"rgba(255,244,224,0.6)"); gr.addColorStop(1,"rgba(255,226,196,0)");
     gg.fillStyle = gr; gg.fillRect(0,0,64,64);
     var tex = new T.CanvasTexture(cv); if ("colorSpace" in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
-    var P = [], C = [];
-    function push(v, br) { P.push(v.x, v.y, v.z); var a = Math.min(1, br); C.push(1.5*a, (0.92+0.2*br)*a, (0.55+0.18*br)*a); }
-    var idx = { "local-group": new T.Vector3(0,0,0) };
-    LSS.clusters.forEach(function(c){ idx[c.id] = P3(c.sg); });
-    LSS.superclusters.forEach(function(s){ if (!idx[s.id]) idx[s.id] = P3(s.sg); });
-    // CLUSTER cores (dense, bright) — the web's knots
-    LSS.clusters.forEach(function(c){
-      var center = idx[c.id], sigma = K * (0.8 + 1.8*c.rich), n = Math.round(120 + 260*c.rich);
-      for (var i=0;i<n;i++){ var r = Math.pow(rng(),0.55)*sigma; var v = center.clone().add(ru().multiplyScalar(r)); push(v, (0.65+0.55*c.rich)*(0.55+0.6*(1-r/sigma))); }
-    });
-    // SUPERCLUSTER diffuse fields (the galaxy halos that fill each supercluster region — dense enough
-    // to read as a coherent structure, not a handful of dots). Space between the knots is never empty.
-    LSS.superclusters.forEach(function(s){
-      var center = idx[s.id], sigma = K * (3.5 + 6*s.rich), n = Math.round(420 + 680*s.rich);
-      for (var i=0;i<n;i++){ var r = Math.pow(rng(),0.7)*sigma; var v = center.clone().add(ru().multiplyScalar(r)); push(v, 0.30*s.rich*(0.45+0.65*(1-r/sigma))); }
-    });
-    // FILAMENTS — the cosmic-web strands (node→node with lateral jitter, thicker mid-strand). These
-    // are the bridges that make the larger scale genuinely COMPOSED of the smaller nodes in true relation.
-    LSS.filaments.forEach(function(f){
-      var a = idx[f[0]], b = idx[f[1]]; if (!a || !b) return;
-      var len = a.distanceTo(b), steps = Math.max(12, Math.round(len/(K*2))), lat = K*1.15;
-      for (var t=0;t<=steps;t++){ var f2=t/steps, base=a.clone().lerp(b,f2), edge=4*f2*(1-f2);
-        for (var j=0;j<5;j++){ var v=base.clone().add(new T.Vector3(g3(),g3(),g3()).multiplyScalar(lat*(0.35+edge))); push(v, 0.22*(0.5+edge)); } }
-    });
-    // INTERGALACTIC MEDIUM — a faint, sparse volumetric fill across the whole bounded region so cosmic
-    // space is continuous, never pure void. Density falls toward the edges (a soft warm-hydrogen sea).
-    var _br = 0; for (var _k in idx) { var _d = idx[_k].length(); if (_d > _br) _br = _d; }
-    _br = _br * 1.05 || K * 60;
-    for (var i=0;i<2600;i++){ var dir = ru(), rr = Math.pow(rng(),0.62)*_br; var v = dir.multiplyScalar(rr);
-      var fall = 0.5 + 0.5*(1 - rr/_br); push(v, 0.045*fall); }
-    // SCREEN-CONSTANT points (sizeAttenuation:false): each galaxy-speck holds a fixed pixel size at
-    // every scale. Rigid-body zoom comes from the WORLD-FIXED positions + camera dolly (the structure
-    // grows on screen as you approach because its points spread across more pixels), NOT from per-point
-    // growth. Per-point attenuation (sizeAttenuation:true or a /z shader) blows sprites up to
-    // screen-filling quads that crash software WebGL — the web-3d rule: LSS speck size is constant.
-    function lssMat(sizePx, op) {
-      var m = new T.PointsMaterial({ map: tex, size: sizePx * _tierPrx, sizeAttenuation: false,
-        vertexColors: true, transparent: true, opacity: op, depthWrite: false, blending: T.AdditiveBlending, fog: false });
-      if ("toneMapped" in m) m.toneMapped = false; return m;
+
+    // ===== REAL galaxy field — 2MRS (≈43k observed galaxies) in supergalactic Mpc, ONE rigid cloud. =====
+    // The nested hierarchy (galaxies→clusters→superclusters→Laniakea→web) and EVERY peer structure are
+    // REAL positions, so pulling the camera back IS the rigid zoom: Laniakea shrinks into one basin among
+    // its true neighbours (Coma, Perseus-Pisces, Shapley…) which together ARE the cosmic web. No fade, no
+    // pop, no procedural invention. Colour is baked from real local galaxy density (node→filament→void).
+    var gx = o.galXYZ, gc = o.galRGB;
+    if (gx && gc && gx.length >= 3) {
+      var NG = (gx.length / 3) | 0;
+      var pos = new Float32Array(NG * 3), col = new Float32Array(NG * 3);
+      var axx=AX.x,axy=AX.y,axz=AX.z, ayx=AY.x,ayy=AY.y,ayz=AY.z, azx=AZ.x,azy=AZ.y,azz=AZ.z;
+      for (var i = 0; i < NG; i++) {
+        var sx = gx[i*3]*0.125, sy = gx[i*3+1]*0.125, sz = gx[i*3+2]*0.125;   // int16/8 = Mpc
+        pos[i*3]   = K*(sx*axx + sy*ayx + sz*azx);
+        pos[i*3+1] = K*(sx*axy + sy*ayy + sz*azy);
+        pos[i*3+2] = K*(sx*axz + sy*ayz + sz*azz);
+        col[i*3]=gc[i*3]/255; col[i*3+1]=gc[i*3+1]/255; col[i*3+2]=gc[i*3+2]/255;
+      }
+      var geo = new T.BufferGeometry();
+      geo.setAttribute("position", new T.BufferAttribute(pos,3));
+      geo.setAttribute("color", new T.BufferAttribute(col,3));
+      var m = new T.PointsMaterial({ map: tex, size: (mobile?1.7:2.2)*_tierPrx, sizeAttenuation: false,
+        vertexColors: true, transparent: true, opacity: 1.0, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+      if ("toneMapped" in m) m.toneMapped = false;
+      var pts = new T.Points(geo, m); pts.name = "LargeScaleStructure"; pts.frustumCulled = false; belt.add(pts);
+      return;
     }
+
+    // ---- fallback: sparse procedural skeleton (only if the real galaxy binary failed to load) ----
+    if (!LSS) return;
+    var rng = gRng(0x1a5e0);
+    function P3(sg) { return AX.clone().multiplyScalar(sg[0]).addScaledVector(AY, sg[1]).addScaledVector(AZ, sg[2]).multiplyScalar(K); }
+    function ru() { var v = new T.Vector3(rng()+rng()+rng()-1.5, rng()+rng()+rng()-1.5, rng()+rng()+rng()-1.5), l = v.length(); return l > 1e-4 ? v.multiplyScalar(1/l) : new T.Vector3(0,1,0); }
+    var P = [], C = [];
+    function push(v, br){ P.push(v.x,v.y,v.z); var a=Math.min(1,br); C.push(1.5*a,(0.92+0.2*br)*a,(0.55+0.18*br)*a); }
+    (LSS.clusters||[]).forEach(function(c){ var center=P3(c.sg), sigma=K*(0.8+1.8*c.rich), n=Math.round(120+260*c.rich);
+      for (var i=0;i<n;i++){ var r=Math.pow(rng(),0.55)*sigma; push(center.clone().add(ru().multiplyScalar(r)), (0.65+0.55*c.rich)*(0.55+0.6*(1-r/sigma))); } });
+    (LSS.superclusters||[]).forEach(function(s){ var center=P3(s.sg), sigma=K*(3.5+6*s.rich), n=Math.round(420+680*s.rich);
+      for (var i=0;i<n;i++){ var r=Math.pow(rng(),0.7)*sigma; push(center.clone().add(ru().multiplyScalar(r)), 0.30*s.rich*(0.45+0.65*(1-r/sigma))); } });
     var geo = new T.BufferGeometry();
     geo.setAttribute("position", new T.Float32BufferAttribute(P,3));
     geo.setAttribute("color", new T.Float32BufferAttribute(C,3));
-    var pts = new T.Points(geo, lssMat(mobile?1.7:2.2, 0.9)); pts.name = "LargeScaleStructure"; pts.frustumCulled = false; belt.add(pts);
-    // LANIAKEA FLOW — velocity streamlines converging on the Great Attractor (Norma)
-    var GA = idx["norma"], FP = [], FC = [];
-    (LSS.flow.focusFrom||[]).forEach(function(id){ var start = idx[id]; if (!start||!GA) return;
-      for (var s=0;s<10;s++){ var pos = start.clone().add(new T.Vector3(g3(),g3(),g3()).multiplyScalar(K*3));
-        for (var t=0;t<22;t++){ var toGA = GA.clone().sub(pos), d = toGA.length(); if (d<K*2) break; toGA.multiplyScalar(1/d);
-          pos.addScaledVector(toGA, d*0.14).add(new T.Vector3(g3(),g3(),g3()).multiplyScalar(K*0.5));
-          var br = 0.10*(1 - t/22*0.6); FP.push(pos.x,pos.y,pos.z); FC.push(0.85*br,0.6*br,0.42*br); } } });
-    var fgeo = new T.BufferGeometry(); fgeo.setAttribute("position", new T.Float32BufferAttribute(FP,3)); fgeo.setAttribute("color", new T.Float32BufferAttribute(FC,3));
-    var flow = new T.Points(fgeo, lssMat(mobile?1.1:1.5, 0.8)); flow.name = "LaniakeaFlow2"; flow.frustumCulled = false; belt.add(flow);
+    var m = new T.PointsMaterial({ map: tex, size: (mobile?1.7:2.2)*_tierPrx, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    if ("toneMapped" in m) m.toneMapped = false;
+    var pts = new T.Points(geo, m); pts.name = "LargeScaleStructure"; pts.frustumCulled = false; belt.add(pts);
   }
 
   /* tier groups (built lazily; every fade is driven by window.CosmicLOD weights in tick) */
