@@ -45,33 +45,33 @@
       label: { en: "Milky Way", zh: "银河系" },
       you:   { en: "Orion Spur, 26 kly from the core", zh: "猎户臂，距银心 2.6 万光年" },
       realScaleLy: 5e4, sceneRadius: 2600, camLenPeak: 3500,
-      fadeInStart: 400, fadeInEnd: 1500, fadeOutStart: 5000, fadeOutEnd: 8000, weAreOnEdge: true },
+      fadeInStart: 400, fadeInEnd: 1500, fadeOutStart: 4000, fadeOutEnd: 6800, weAreOnEdge: true },
 
     { id: "local-group", rail: true,
       label: { en: "Local Group", zh: "本星系群" },
       you:   { en: "the Milky Way — one of two great spirals", zh: "银河系——两大旋涡之一" },
-      realScaleLy: 5e6, sceneRadius: 6800, camLenPeak: 6000,
-      fadeInStart: 5000, fadeInEnd: 8000, fadeOutStart: 10400, fadeOutEnd: 14200, weAreOnEdge: false },
+      realScaleLy: 5e6, sceneRadius: 6800, camLenPeak: 3700,
+      fadeInStart: 3300, fadeInEnd: 3700, fadeOutStart: 3900, fadeOutEnd: 4400, weAreOnEdge: false },
 
     // the Local Sheet is a full address rung: subtle in the scene, but named on
     // the rail so the Virgo handoff never reads as a blank scale.
     { id: "local-sheet", rail: true,
       label: { en: "Local Sheet", zh: "本星系片" },
       you:   { en: "in the sheet plane, beside the Local Void", zh: "薄片平面内，本地空洞之侧" },
-      realScaleLy: 1.7e7, sceneRadius: 10400, camLenPeak: 9000,
-      fadeInStart: 10400, fadeInEnd: 14200, fadeOutStart: 15800, fadeOutEnd: 21000, weAreOnEdge: true },
+      realScaleLy: 1.7e7, sceneRadius: 10400, camLenPeak: 4100,
+      fadeInStart: 3900, fadeInEnd: 4100, fadeOutStart: 4300, fadeOutEnd: 4800, weAreOnEdge: true },
 
     { id: "virgo-supercluster", rail: true,
       label: { en: "Virgo / Local Supercluster", zh: "室女 · 本超星系团" },
       you:   { en: "on the outskirts — 54 Mly from Virgo", zh: "外缘——距室女团 5400 万光年" },
-      realScaleLy: 5.5e7, sceneRadius: 15800, camLenPeak: 13000,
-      fadeInStart: 15800, fadeInEnd: 21000, fadeOutStart: 24200, fadeOutEnd: 32000, weAreOnEdge: true },
+      realScaleLy: 5.5e7, sceneRadius: 15800, camLenPeak: 4500,
+      fadeInStart: 4200, fadeInEnd: 4700, fadeOutStart: 9000, fadeOutEnd: 14000, weAreOnEdge: true },
 
     { id: "laniakea", rail: true,
       label: { en: "Laniakea", zh: "拉尼亚凯亚" },
       you:   { en: "far shore of the basin, near the Perseus–Pisces divide", zh: "流域远岸，近英仙-双鱼分水岭" },
       realScaleLy: 2.6e8, sceneRadius: 24000, camLenPeak: 22000,
-      fadeInStart: 24200, fadeInEnd: 32000, fadeOutStart: 37000, fadeOutEnd: 48000, weAreOnEdge: true },
+      fadeInStart: 6000, fadeInEnd: 10000, fadeOutStart: 37000, fadeOutEnd: 48000, weAreOnEdge: true },
 
     { id: "cosmic-web", rail: true,
       label: { en: "Cosmic Web", zh: "宇宙网" },
@@ -127,8 +127,8 @@
     // (where the MW is one speck at the origin) rather than opacity-popping out. This is the honest
     // powers-of-ten seam between "one galaxy" and "the whole local universe".
     if (ly && ly.id === "milky-way") {
-      var lo = 5000, hi = 13000, t = (to != null ? to : 0.06);
-      return 1 - (1 - t) * smooth(lo, hi, camLen);   // 1 → t across the MW→LSS handoff
+      var lo = 3900, hi = 6800, t = (to != null ? to : 0.06);
+      return 1 - (1 - t) * smooth(lo, hi, camLen);   // 1 → t across the MW→LSS handoff (near-tier band)
     }
     return 1;
   }

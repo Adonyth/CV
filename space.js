@@ -1063,10 +1063,10 @@
     Promise.all([
       fetch("data/natal-sky.json?v=16").then(function (r) { return r.json(); }),
       fetch("data/large-scale.json?v=1").then(function (r) { return r.json(); }).catch(function () { return null; }),
-      fetch("data/galaxies_xyz" + _galSfx + ".i16?v=2").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; }),
-      fetch("data/galaxies_rgb" + _galSfx + ".u8?v=2").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; }),
-      fetch("data/weblines_xyz" + _galSfx + ".i16?v=2").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; }),
-      fetch("data/weblines_rgb" + _galSfx + ".u8?v=2").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; })
+      fetch("data/galaxies_xyz" + _galSfx + ".i16?v=3").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; }),
+      fetch("data/galaxies_rgb" + _galSfx + ".u8?v=3").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; }),
+      fetch("data/weblines_xyz" + _galSfx + ".i16?v=3").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; }),
+      fetch("data/weblines_rgb" + _galSfx + ".u8?v=3").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; })
     ]).then(function (arr) {
       var natalData = arr[0], lssData = arr[1];
       var galXYZ = arr[2] ? new Int16Array(arr[2]) : null;
@@ -1074,7 +1074,7 @@
       var webXYZ = arr[4] ? new Int16Array(arr[4]) : null;
       var webRGB = arr[5] ? new Uint8Array(arr[5]) : null;
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=127").then(function (mod) {
+      return import("./natal-sky.js?v=128").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1767,6 +1767,7 @@
         if (window.__space.uiTick) window.__space.uiTick();
       };
       var quantumEl = document.getElementById("quantum-note");
+      var dataNoteEl = document.getElementById("cosmos-data-note");
 
       window.__space.uiTick = function () {
         // zoomed back out BY HAND → the chart reassembles (never mid-flight). A deep-sky wonder is
@@ -1812,6 +1813,13 @@
           var _qW = LOD.weight(camera.position.length(), "fluctuation");
           quantumEl.style.opacity = (_qW * 0.9).toFixed(3);
           quantumEl.style.pointerEvents = _qW > 0.5 ? "auto" : "none";
+        }
+        // data-provenance note: fade in across the large-scale-structure scales (Virgo-SC → Cosmic Web),
+        // so the 2MRS real-galaxy field is honestly labelled; hidden near the ground and past the horizon.
+        if (dataNoteEl && LOD) {
+          var _dcl = camera.position.length();
+          var _dW = LOD.smooth(4200, 6000, _dcl) * (1 - LOD.smooth(80000, 95000, _dcl));
+          dataNoteEl.style.opacity = (_dW * 0.62).toFixed(3);
         }
       };
 

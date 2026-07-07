@@ -746,8 +746,11 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // its true neighbours (Coma, Perseus-Pisces, Shapley…) which together ARE the cosmic web. No fade, no
     // pop, no procedural invention. Colour is baked from real local galaxy density (node→filament→void).
     var axx=AX.x,axy=AX.y,axz=AX.z, ayx=AY.x,ayy=AY.y,ayz=AY.z, azx=AZ.x,azy=AZ.y,azz=AZ.z;
-    // shared builder: int16 SG-Mpc positions + uint8 rgb → one rigid Points layer
-    function buildLayer(xyz, rgb, sizePx, op, name, order) {
+    // shared builder: int16 SG-Mpc positions + uint8 rgb → one rigid Points layer.
+    // glowPx>0 adds a SECOND Points from the SAME geometry with a big, dim, additive sprite: overlapping
+    // galaxies accumulate → a soft continuous density glow (the DTFE/Millennium "net" look) behind the
+    // sharp points. Dense nodes+filaments bloom; empty voids stay black. Returns the geometry for reuse.
+    function buildLayer(xyz, rgb, sizePx, op, name, order, glowPx, glowOp) {
       if (!xyz || !rgb || xyz.length < 3) return null;
       var NG = (xyz.length / 3) | 0;
       var pos = new Float32Array(NG * 3), col = new Float32Array(NG * 3);
@@ -761,19 +764,22 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var g = new T.BufferGeometry();
       g.setAttribute("position", new T.BufferAttribute(pos,3));
       g.setAttribute("color", new T.BufferAttribute(col,3));
-      var m = new T.PointsMaterial({ map: tex, size: sizePx*_tierPrx, sizeAttenuation: false,
-        vertexColors: true, transparent: true, opacity: op, depthWrite: false, blending: T.AdditiveBlending, fog: false });
-      if ("toneMapped" in m) m.toneMapped = false;
-      var p = new T.Points(g, m); p.name = name; p.frustumCulled = false; if (order != null) p.renderOrder = order; belt.add(p);
+      function mat(px, o2){ var m = new T.PointsMaterial({ map: tex, size: px*_tierPrx, sizeAttenuation: false,
+        vertexColors: true, transparent: true, opacity: o2, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+        if ("toneMapped" in m) m.toneMapped = false; return m; }
+      if (glowPx) {   // soft density-field glow, drawn first (behind)
+        var pg = new T.Points(g, mat(glowPx, glowOp || 0.12)); pg.name = name+"Glow"; pg.frustumCulled = false;
+        pg.renderOrder = (order != null ? order : -3) - 1; belt.add(pg);
+      }
+      var p = new T.Points(g, mat(sizePx, op)); p.name = name; p.frustumCulled = false; if (order != null) p.renderOrder = order; belt.add(p);
       return p;
     }
     if (o.galXYZ && o.galRGB && o.galXYZ.length >= 3) {
-      // the galaxy field (real 2MRS) — the photographic backdrop
-      buildLayer(o.galXYZ, o.galRGB, mobile?1.7:2.2, 1.0, "LargeScaleStructure", -3);
-      // the WEB LINES overlay — real filament skeleton (density-peak bridges) + Laniakea flow
-      // streamlines to the Great Attractor. Slightly larger + brighter so the NET and the FLOW
-      // read as the recognizable cosmic-web / Tully-Laniakea signatures.
-      buildLayer(o.webXYZ, o.webRGB, mobile?1.9:2.6, 1.0, "CosmicWebLines", -2);
+      // the galaxy field (real 2MRS) — sharp points + a soft density glow that reads as the web's net
+      buildLayer(o.galXYZ, o.galRGB, mobile?1.5:1.9, 1.0, "LargeScaleStructure", -3, mobile?5:7, 0.10);
+      // the WEB LINES overlay — real MST filament skeleton + Laniakea flow streamlines to the Great
+      // Attractor. Brighter + a light glow so the NET and the FLOW read as the recognizable signatures.
+      buildLayer(o.webXYZ, o.webRGB, mobile?1.9:2.5, 1.0, "CosmicWebLines", -2, mobile?4:5, 0.14);
       return;
     }
 
