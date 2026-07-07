@@ -717,6 +717,77 @@ export function buildNatalSky(THREE, scene, data, opts) {
   function skyDir(raH, decDeg) { var e = raDecToEcl(raH, decDeg); return eclVec(e.lon, e.lat, 1).normalize(); }
   var DIR_GA = skyDir(16.25, -60.95), DIR_SHAPLEY = skyDir(13.42, -31.0), DIR_PP = skyDir(1.83, 36.0);
   var DIR_COMA = skyDir(12.99, 27.98), DIR_HERC = skyDir(16.09, 17.75);
+
+  /* ===================== REAL LARGE-SCALE STRUCTURE (ONE fixed model) =====================
+     The local universe in TRUE supergalactic coordinates (data/large-scale.json, validated
+     vs Tully 2014 / Dupuy 2023 / NED). Clusters = dense cores; superclusters = diffuse galaxy
+     fields; filaments = the cosmic-web strands; the Laniakea flow converges on the Great
+     Attractor (Norma). Built ONCE; the camera dollies THROUGH it — structures grow/recede by
+     pure perspective (rigid), always nested (continuous), and Laniakea literally IS its member
+     clusters while the web IS Laniakea among its real neighbours. K = scene units / Mpc. */
+  var _lssBuilt = false;
+  function buildLargeScaleStructure(LSS) {
+    if (_lssBuilt || !LSS) return; _lssBuilt = true;
+    var K = 200, rng = gRng(0x1a5e0);
+    var sglV = 102.88 * Math.PI / 180, cU = Math.cos(sglV), sU = Math.sin(sglV);
+    var AX = SG_U.clone().multiplyScalar(cU).addScaledVector(SG_V, -sU);   // scene dir of +SGX
+    var AY = SG_U.clone().multiplyScalar(sU).addScaledVector(SG_V,  cU);   // scene dir of +SGY
+    var AZ = SG_W;                                                          // scene dir of +SGZ (SG north)
+    function P3(sg) { return AX.clone().multiplyScalar(sg[0]).addScaledVector(AY, sg[1]).addScaledVector(AZ, sg[2]).multiplyScalar(K); }
+    function g3() { return rng() + rng() + rng() - 1.5; }
+    function ru() { var v = new T.Vector3(g3(), g3(), g3()), l = v.length(); return l > 1e-4 ? v.multiplyScalar(1 / l) : new T.Vector3(0, 1, 0); }
+    var cv = document.createElement("canvas"); cv.width = cv.height = 64;
+    var gg = cv.getContext("2d"), gr = gg.createRadialGradient(32,32,0,32,32,32);
+    gr.addColorStop(0,"rgba(255,236,210,1)"); gr.addColorStop(0.4,"rgba(255,150,96,0.55)"); gr.addColorStop(1,"rgba(255,110,60,0)");
+    gg.fillStyle = gr; gg.fillRect(0,0,64,64);
+    var tex = new T.CanvasTexture(cv); if ("colorSpace" in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
+    var P = [], C = [];
+    function push(v, br) { P.push(v.x, v.y, v.z); var a = Math.min(1, br); C.push(0.9*a, (0.56+0.16*br)*a, (0.34+0.14*br)*a); }
+    var idx = { "local-group": new T.Vector3(0,0,0) };
+    LSS.clusters.forEach(function(c){ idx[c.id] = P3(c.sg); });
+    LSS.superclusters.forEach(function(s){ if (!idx[s.id]) idx[s.id] = P3(s.sg); });
+    // CLUSTER cores (dense, bright)
+    LSS.clusters.forEach(function(c){
+      var center = idx[c.id], sigma = K * (0.8 + 1.8*c.rich), n = Math.round(90 + 220*c.rich);
+      for (var i=0;i<n;i++){ var r = Math.pow(rng(),0.55)*sigma; var v = center.clone().add(ru().multiplyScalar(r)); push(v, (0.6+0.5*c.rich)*(0.55+0.6*(1-r/sigma))); }
+    });
+    // SUPERCLUSTER diffuse fields (wide, faint — galaxies between the clusters)
+    LSS.superclusters.forEach(function(s){
+      var center = idx[s.id], sigma = K * (5 + 10*s.rich), n = Math.round(120*s.rich);
+      for (var i=0;i<n;i++){ var r = Math.pow(rng(),0.7)*sigma; var v = center.clone().add(ru().multiplyScalar(r)); push(v, 0.22*s.rich*(0.5+0.6*(1-r/sigma))); }
+    });
+    // FILAMENTS — the cosmic-web strands (node→node with lateral jitter, thicker mid-strand)
+    LSS.filaments.forEach(function(f){
+      var a = idx[f[0]], b = idx[f[1]]; if (!a || !b) return;
+      var len = a.distanceTo(b), steps = Math.max(8, Math.round(len/(K*3))), lat = K*1.4;
+      for (var t=0;t<=steps;t++){ var f2=t/steps, base=a.clone().lerp(b,f2), edge=4*f2*(1-f2);
+        for (var j=0;j<3;j++){ var v=base.clone().add(new T.Vector3(g3(),g3(),g3()).multiplyScalar(lat*(0.4+edge))); push(v, 0.14*(0.5+edge)); } }
+    });
+    // CLAMPED perspective-attenuation shader: points shrink/grow with distance (real dolly) but the
+    // size is CLAMPED so it never blows up to a screen-filling sprite (which crashes software WebGL
+    // and over-draws on any GPU). This is the web-3d rule: attenuation with a hard px ceiling.
+    var VSH = "attribute vec3 aCol; varying vec3 vC; uniform float uSize,uScale,uMin,uMax; void main(){ vC=aCol; vec4 mv=modelViewMatrix*vec4(position,1.0); gl_Position=projectionMatrix*mv; float z=max(1.0,-mv.z); gl_PointSize=clamp(uSize*uScale/z, uMin, uMax); }";
+    var FSH = "uniform sampler2D uTex; uniform float uOp; varying vec3 vC; void main(){ vec4 t=texture2D(uTex,gl_PointCoord); gl_FragColor=vec4(vC*uOp,1.0)*t; }";
+    function lssMat(baseSize, op, maxPx) {
+      var m = new T.ShaderMaterial({ uniforms: { uTex:{value:tex}, uSize:{value:baseSize}, uScale:{value:520}, uMin:{value:1.0}, uMax:{value:maxPx}, uOp:{value:op} },
+        vertexShader: VSH, fragmentShader: FSH, transparent:true, depthWrite:false, blending:T.AdditiveBlending });
+      if ("toneMapped" in m) m.toneMapped = false; return m;
+    }
+    var geo = new T.BufferGeometry();
+    geo.setAttribute("position", new T.Float32BufferAttribute(P,3));
+    geo.setAttribute("aCol", new T.Float32BufferAttribute(C,3));
+    var pts = new T.Points(geo, lssMat(mobile?1.4:2.0, 0.9, mobile?30:52)); pts.name = "LargeScaleStructure"; pts.frustumCulled = false; belt.add(pts);
+    // LANIAKEA FLOW — velocity streamlines converging on the Great Attractor (Norma)
+    var GA = idx["norma"], FP = [], FC = [];
+    (LSS.flow.focusFrom||[]).forEach(function(id){ var start = idx[id]; if (!start||!GA) return;
+      for (var s=0;s<10;s++){ var pos = start.clone().add(new T.Vector3(g3(),g3(),g3()).multiplyScalar(K*3));
+        for (var t=0;t<22;t++){ var toGA = GA.clone().sub(pos), d = toGA.length(); if (d<K*2) break; toGA.multiplyScalar(1/d);
+          pos.addScaledVector(toGA, d*0.14).add(new T.Vector3(g3(),g3(),g3()).multiplyScalar(K*0.5));
+          var br = 0.10*(1 - t/22*0.6); FP.push(pos.x,pos.y,pos.z); FC.push(0.85*br,0.6*br,0.42*br); } } });
+    var fgeo = new T.BufferGeometry(); fgeo.setAttribute("position", new T.Float32BufferAttribute(FP,3)); fgeo.setAttribute("aCol", new T.Float32BufferAttribute(FC,3));
+    var flow = new T.Points(fgeo, lssMat(mobile?0.9:1.3, 0.8, mobile?18:30)); flow.name = "LaniakeaFlow2"; flow.frustumCulled = false; belt.add(flow);
+  }
+
   /* tier groups (built lazily; every fade is driven by window.CosmicLOD weights in tick) */
   var tierLG = null, tierSheet = null, tierVirgo = null, tierUniverse = null, beyondHorizonField = null, universeSpark = null;
   var _midBuilt = false, _uniBuilt = false;
@@ -2194,9 +2265,12 @@ export function buildNatalSky(THREE, scene, data, opts) {
   // idempotent LAZY-BY-SCALE entry points, called by space.js only on genuine user navigation (never during
   // the auto-entrance) so the ground/whole-sky view is instant & cool and heavy geometry is built on demand.
   function ensureFarLayers() { if (_farBuilt) return; _farBuilt = true; buildMilkyWayGalaxy(); buildGalacticCore(); buildAndromeda(); }   // galaxy MUST precede core (core reads galacticCentre)
-  function ensureMidLayers() { if (_midBuilt) return; _midBuilt = true; buildLocalGroup(); buildLocalSheet(); buildVirgoSupercluster(); }   // the three middle rungs of the address: LG → Sheet → Virgo
-  function ensureCosmicWeb() { if (_webBuilt) return; _webBuilt = true; buildLaniakeaFlow(); buildNeighborBasins(); buildCosmicWeb(); }    // the Laniakea flow-basin + neighbour basins + the whole web
-  function ensureUniverse() { if (_uniBuilt) return; _uniBuilt = true; buildObservableUniverse(); buildBeyondHorizonBoundary(); }          // far foam + CMB horizon + unobserved-boundary cue
+  // [2026-07-07] the old per-tier builders (LG/Sheet/Virgo + Laniakea/Neighbor/Web blobs) are REPLACED
+  // by ONE fixed real-coordinate structure (buildLargeScaleStructure). Camera dollies through it =
+  // rigid + continuous + real. ensureMid/Web both build the SAME model once (guarded).
+  function ensureMidLayers() { if (_midBuilt) return; _midBuilt = true; buildLargeScaleStructure(o.lss); }
+  function ensureCosmicWeb() { if (_webBuilt) return; _webBuilt = true; buildLargeScaleStructure(o.lss); }
+  function ensureUniverse() { if (_uniBuilt) return; _uniBuilt = true; buildObservableUniverse(); buildBeyondHorizonBoundary(); }          // CMB horizon shell (the outer boundary beyond the mapped structure)
 
   /* ---------------- constellation names: IN-SCENE Songti sprites (same craft as the 干支 glyphs) ---------------- */
   function nameTexture(zh, en, key, loc) {
@@ -2491,7 +2565,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
           // then HANDS OFF: once we are past the Local Group tier (Sheet/Virgo/Laniakea/Web/…) the
           // disc must NOT persist as a lone bright node at the origin — that node was piling up with
           // every other origin-centred structure into the blown-white "galaxy eats Laniakea" blob.
-          var _gOn = LOD ? (LOD.weight(_cl, "milky-way") > 0 || LOD.weight(_cl, "local-group") > 0) : (_cl < 14200);
+          var _gOn = LOD ? (LOD.weight(_cl, "milky-way") > 0) : (_cl < 8000);
           for (var _gi = 0; _gi < _galMats.length; _gi++) {
             var _ge = _galMats[_gi];
             _ge.o.visible = _gOn;

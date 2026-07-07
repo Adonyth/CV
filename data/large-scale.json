@@ -1,0 +1,52 @@
+{
+  "_note": "Real local large-scale structure in SUPERGALACTIC CARTESIAN Mpc (SGX,SGY,SGZ), Milky Way at origin. Sources: Tully 2014 (Laniakea), Dupuy & Courtois 2023 (basin attractors, [DUPUY]), Kashibadze 2020 (Virgo), NED/Wikipedia cluster distances. Converter validated against Virgo (exact). scale k (scene units per Mpc) applied at build time. richness = relative visual mass (blob brightness/size/count). Built ONCE as one fixed model; camera dollies through it = rigid continuous zoom.",
+  "clusters": [
+    { "id": "virgo",     "name": {"en":"Virgo Cluster","zh":"室女团"},        "sg": [-3.7, 16.1, -0.7],   "rich": 1.0,  "of": "virgo-sc" },
+    { "id": "ursa-major","name": {"en":"Ursa Major","zh":"大熊群"},           "sg": [7.6, 17.0, 0.8],     "rich": 0.35, "of": "virgo-sc" },
+    { "id": "leo",       "name": {"en":"Leo Group","zh":"狮子群"},            "sg": [-0.7, 9.8, -4.9],    "rich": 0.3,  "of": "virgo-sc" },
+    { "id": "fornax",    "name": {"en":"Fornax Cluster","zh":"天炉团"},        "sg": [-1.8, -14.0, -12.7], "rich": 0.5,  "of": "virgo-sc" },
+    { "id": "eridanus",  "name": {"en":"Eridanus","zh":"波江群"},             "sg": [4.5, -16.1, -15.8],  "rich": 0.35, "of": "virgo-sc" },
+    { "id": "centaurus", "name": {"en":"Centaurus Cluster","zh":"半人马团"},   "sg": [-43.1, 18.8, -9.5],  "rich": 0.8,  "of": "hydra-cen" },
+    { "id": "hydra",     "name": {"en":"Hydra Cluster","zh":"长蛇团"},        "sg": [-30.1, 25.8, -30.5], "rich": 0.6,  "of": "hydra-cen" },
+    { "id": "antlia",    "name": {"en":"Antlia Cluster","zh":"唧筒团"},        "sg": [-27.3, 16.2, -25.2], "rich": 0.4,  "of": "hydra-cen" },
+    { "id": "norma",     "name": {"en":"Norma (Great Attractor)","zh":"矩尺团·大引力吸引子"}, "sg": [-66.8, -9.5, 8.3], "rich": 1.25, "of": "great-attractor" },
+    { "id": "pavo",      "name": {"en":"Pavo II","zh":"孔雀团"},              "sg": [-57.5, -27.6, 12.4], "rich": 0.5,  "of": "pavo-indus" },
+    { "id": "coma",      "name": {"en":"Coma Cluster","zh":"后发团"},         "sg": [0.7, 98.0, 14.3],    "rich": 1.05, "of": "coma-sc" },
+    { "id": "leo-cl",    "name": {"en":"Leo Cluster A1367","zh":"狮子团"},     "sg": [-3.5, 90.4, -17.0],  "rich": 0.55, "of": "coma-sc" },
+    { "id": "perseus",   "name": {"en":"Perseus Cluster","zh":"英仙团"},       "sg": [68.2, -14.7, -17.7], "rich": 0.9,  "of": "perseus-pisces" },
+    { "id": "hercules",  "name": {"en":"Hercules Cluster","zh":"武仙团"},      "sg": [-30.1, 96.3, 117.6], "rich": 0.7,  "of": "hercules-sc" },
+    { "id": "shapley",   "name": {"en":"Shapley Concentration","zh":"沙普利集中"}, "sg": [-175.4, 105.9, -4.9], "rich": 1.35, "of": "shapley-sc" }
+  ],
+  "superclusters": [
+    { "id": "laniakea",        "name": {"en":"Laniakea (flow focus)","zh":"拉尼亚凯亚·流场焦点"}, "sg": [-88.6, -11.4, 55.7], "rich": 1.0, "focus": true, "note": "[DUPUY] gravitational focus of the whole Laniakea basin" },
+    { "id": "virgo-sc",        "name": {"en":"Virgo / Local SC","zh":"室女·本超星系团"},   "sg": [-3.7, 16.1, -0.7],   "rich": 1.0,  "laniakea": true },
+    { "id": "hydra-cen",       "name": {"en":"Hydra-Centaurus","zh":"长蛇-半人马"},      "sg": [-45.0, 19.2, -10.3], "rich": 1.0,  "laniakea": true },
+    { "id": "great-attractor", "name": {"en":"Great Attractor / Norma","zh":"大引力吸引子·矩尺"}, "sg": [-66.8, -9.5, 8.3], "rich": 1.2, "laniakea": true },
+    { "id": "pavo-indus",      "name": {"en":"Pavo-Indus","zh":"孔雀-印第安"},          "sg": [-57.5, -27.6, 12.4], "rich": 0.7,  "laniakea": true },
+    { "id": "perseus-pisces",  "name": {"en":"Perseus-Pisces SC","zh":"英仙-双鱼超团"},   "sg": [67.1, -32.9, -44.3], "rich": 1.1, "focus": true, "note": "[DUPUY] neighbor across the divide (+SGX)" },
+    { "id": "coma-sc",         "name": {"en":"Coma SC","zh":"后发超团"},              "sg": [0.7, 98.9, 14.5],    "rich": 1.05 },
+    { "id": "hercules-sc",     "name": {"en":"Hercules SC","zh":"武仙超团"},           "sg": [-55.7, 100.0, 111.4],"rich": 1.0, "focus": true, "note": "[DUPUY]" },
+    { "id": "shapley-sc",      "name": {"en":"Shapley SC","zh":"沙普利超团"},          "sg": [-201.4, 88.6, -22.9],"rich": 1.5, "focus": true, "note": "[DUPUY] dominant regional attractor" },
+    { "id": "sculptor-sc",     "name": {"en":"Sculptor / Pisces-Cetus","zh":"玉夫-双鱼鲸鱼"}, "sg": [-3.4, -129.6, -9.3], "rich": 1.1, "est": true },
+    { "id": "corona-b",        "name": {"en":"Corona Borealis SC","zh":"北冕超团"},     "sg": [-13.1, 230.9, 191.1],"rich": 0.9, "est": true },
+    { "id": "horologium",      "name": {"en":"Horologium-Reticulum","zh":"时钟-网罟"},   "sg": [-73.9, -167.3, -122.2],"rich": 1.2, "est": true },
+    { "id": "ursa-major-sc",   "name": {"en":"Ursa Major SC","zh":"大熊超团"},         "sg": [36.8, 65.0, 6.8],    "rich": 0.7, "est": true },
+    { "id": "bootes-sc",       "name": {"en":"Bootes SC","zh":"牧夫超团"},             "sg": [68.3, 208.3, 130.4], "rich": 0.7, "est": true }
+  ],
+  "voids": [
+    { "id": "local-void",    "name": {"en":"Local Void","zh":"本地空洞"},        "sg": [-3.1, -9.1, 23.1],   "r": 30, "note": "MW on its rim, opens to +SGZ" },
+    { "id": "sculptor-void", "name": {"en":"Sculptor Void","zh":"玉夫空洞"},      "sg": [-8.0, -69.5, -1.3],  "r": 45 },
+    { "id": "bootes-void",   "name": {"en":"Bootes Void","zh":"牧夫空洞"},        "sg": [57.6, 174.9, 111.0], "r": 60, "note": "the Great Nothing" },
+    { "id": "capricornus-void","name": {"en":"Capricornus Void","zh":"摩羯空洞"},  "sg": [-16.0, -52.7, 58.0], "r": 40 }
+  ],
+  "filaments": [
+    ["local-group","virgo"], ["virgo","ursa-major"], ["virgo","leo"], ["virgo","fornax"], ["fornax","eridanus"],
+    ["virgo","centaurus"], ["centaurus","hydra"], ["hydra","antlia"], ["centaurus","norma"], ["antlia","norma"],
+    ["norma","pavo"], ["norma","shapley"], ["centaurus","shapley"],
+    ["virgo","coma"], ["coma","leo-cl"], ["coma","hercules"], ["coma","bootes-sc"],
+    ["local-group","perseus"], ["perseus","fornax"],
+    ["virgo","ursa-major-sc"], ["coma","corona-b"], ["norma","horologium"], ["pavo","sculptor-sc"]
+  ],
+  "flow": { "focusFrom": ["virgo","centaurus","hydra","antlia","pavo","local-group"], "focusTo": "norma", "deepTo": "shapley",
+    "_note": "Tully-2014 velocity streamlines: peculiar-velocity flow within Laniakea converges on the Great Attractor (Norma), then the whole basin drifts toward Shapley. Streamlines from each member toward Norma; the watershed boundary is where flow diverges toward Perseus-Pisces instead." }
+}
