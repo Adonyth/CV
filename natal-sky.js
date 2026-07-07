@@ -1630,8 +1630,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
         pushFlow(ep.x, ep.y, ep.z, ebr, 0.2);
       }
     }
-    var flowPts = tierPoints("lani", P, C, mobile ? 2.15 : 2.48, { name: "LaniakeaFlow", base: 0.42 });
-    var flowGlow = tierGlow("lani", P, C, mobile ? 2.75 : 3.25, { name: "LaniakeaFlowGlow", base: 0.020 });
+    var flowPts = tierPoints("lani", P, C, mobile ? 2.15 : 2.48, { name: "LaniakeaFlow", base: 0.48 });
+    var flowGlow = tierGlow("lani", P, C, mobile ? 2.75 : 3.25, { name: "LaniakeaFlowGlow", base: 0.026 });
     // the irregular WATERSHED VOLUME — dim boundary dust at many depths, not a 2D orange map outline.
     var RP = [], RC = [], NRIM = mobile ? 900 : 1600;
     for (var r2 = 0; r2 < NRIM; r2++) {
@@ -1645,8 +1645,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
         RP.push(inner.x, inner.y, inner.z); RC.push(0.12, 0.11, 0.08);
       }
     }
-    var rimPts = tierPoints("lani", RP, RC, mobile ? 2.0 : 2.35, { name: "LaniakeaRim", base: 0.13 });
-    var rimGlow = tierGlow("lani", RP, RC, mobile ? 2.9 : 3.35, { name: "LaniakeaRimGlow", base: 0.014 });
+    var rimPts = tierPoints("lani", RP, RC, mobile ? 2.0 : 2.35, { name: "LaniakeaRim", base: 0.28 });
+    var rimGlow = tierGlow("lani", RP, RC, mobile ? 2.9 : 3.35, { name: "LaniakeaRimGlow", base: 0.024 });
     _laniakeaFlow = new T.Group(); _laniakeaFlow.name = "TierLaniakea";
     _laniakeaFlow.add(flowGlow); _laniakeaFlow.add(flowPts); _laniakeaFlow.add(rimGlow); _laniakeaFlow.add(rimPts);
     _laniakeaFlow.visible = false; belt.add(_laniakeaFlow);
@@ -2487,7 +2487,11 @@ export function buildNatalSky(THREE, scene, data, opts) {
         }
         if (_galMats) {
           var _gSolo = _keepGal ? 1 : (1 - 0.94 * _bdT);
-          var _gOn = true;
+          // The galaxy contracts into the Local Group's Milky-Way node through the MW→LG window,
+          // then HANDS OFF: once we are past the Local Group tier (Sheet/Virgo/Laniakea/Web/…) the
+          // disc must NOT persist as a lone bright node at the origin — that node was piling up with
+          // every other origin-centred structure into the blown-white "galaxy eats Laniakea" blob.
+          var _gOn = LOD ? (LOD.weight(_cl, "milky-way") > 0 || LOD.weight(_cl, "local-group") > 0) : (_cl < 14200);
           for (var _gi = 0; _gi < _galMats.length; _gi++) {
             var _ge = _galMats[_gi];
             _ge.o.visible = _gOn;
