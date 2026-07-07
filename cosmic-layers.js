@@ -120,11 +120,7 @@
   // 1 while the tier owns the frame; eases down through its fadeOut window so the
   // structure visibly CONDENSES into the node its parent tier draws at the same spot.
   function collapse(camLen, ly, to) {
-    if (ly.fadeOutStart < 0) return 1;
-    var L = LN(Math.max(1e-3, camLen));
-    var t = smooth(LN(ly.fadeOutStart), LN(ly.fadeOutEnd), L);
-    var floor = (to == null ? 0.16 : to);
-    return 1 - (1 - floor) * t;
+    return 1;   // [2026-07-07 RIGID ZOOM: no per-frame collapse deformation — structures hold scale 1.0; perspective (camera dolly) handles apparent size. The fade windows still gate which tier owns the frame, preventing doubling/clutter.]
   }
 
   // nearest-peak-in-log → the breadcrumb id. Stable (no flicker at a 50/50 crossfade).
