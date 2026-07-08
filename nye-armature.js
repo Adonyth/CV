@@ -337,6 +337,13 @@ export function mountNyeArmature(THREE, scene, opts) {
        The rings are STATIC by decree (四柱 stay aligned forever). */
     earth.uniforms.uTime.value = t;
     if (baseMarker) baseMarker.material.opacity = 0.72 + 0.28 * Math.sin(t * 2.4);   // the beacon breathes
+    // gentle LIFE (alignment-safe: brightness only, never rotation — the 四柱 stay frozen & aligned):
+    // the Sun's corona breathes slowly, so the frozen birth-instant orrery no longer reads as dead.
+    for (var _ci = 0; _ci < coronaLayers.length; _ci++) {
+      var _cm = coronaLayers[_ci].mesh; if (!_cm || !_cm.material) continue;
+      if (_cm.userData._baseOp == null) _cm.userData._baseOp = _cm.material.opacity;
+      _cm.material.opacity = _cm.userData._baseOp * (0.80 + 0.20 * Math.sin(t * 0.55 + _ci * 1.3));
+    }
   }
 
   function dispose() {

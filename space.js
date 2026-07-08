@@ -927,12 +927,30 @@
         var sunDir = sunObj.getWorldPosition(new THREE.Vector3()).normalize();
         var sunTarget = natalSky.getPlanetDir("sun");
         if (!sunTarget) return;
-        var q = new THREE.Quaternion().setFromUnitVectors(sunDir, sunTarget);
+        var moonDir = moonObj ? moonObj.getWorldPosition(new THREE.Vector3()).normalize() : null;
+        var moonTarget = natalSky.getPlanetDir("moon");
+        var q;
+        if (moonDir && moonTarget) {
+          // TRIAD alignment: one rigid rotation that lands the Sun on Capricornus AND the Moon on Leo.
+          // A single setFromUnitVectors(sun) leaves a free spin about the Sun axis, so the Moon drifts off
+          // Leo. Build an orthonormal triad from (Sun, Moon) in each frame and map orrery→natal-sky.
+          var bO = new THREE.Vector3().crossVectors(sunDir, moonDir);
+          if (bO.lengthSq() < 1e-8) bO.set(0, 1, 0); bO.normalize();
+          var cO = new THREE.Vector3().crossVectors(sunDir, bO).normalize();
+          var bN = new THREE.Vector3().crossVectors(sunTarget, moonTarget);
+          if (bN.lengthSq() < 1e-8) bN.set(0, 1, 0); bN.normalize();
+          var cN = new THREE.Vector3().crossVectors(sunTarget, bN).normalize();
+          var Mo = new THREE.Matrix4().makeBasis(sunDir.clone(), bO, cO);
+          var Mn = new THREE.Matrix4().makeBasis(sunTarget.clone(), bN, cN);
+          var Rm = new THREE.Matrix4().multiplyMatrices(Mn, Mo.clone().transpose());
+          q = new THREE.Quaternion().setFromRotationMatrix(Rm);
+        } else {
+          q = new THREE.Quaternion().setFromUnitVectors(sunDir, sunTarget);
+        }
         nyeArmature.group.quaternion.premultiply(q);
         nyeArmature.group.updateMatrixWorld(true);
         var sunNow = sunObj.getWorldPosition(new THREE.Vector3()).normalize();
         var moonNow = moonObj ? moonObj.getWorldPosition(new THREE.Vector3()).normalize() : null;
-        var moonTarget = natalSky.getPlanetDir("moon");
         window.__space.align = {
           sunDot: +sunNow.dot(sunTarget).toFixed(4),
           moonDot: moonNow && moonTarget ? +moonNow.dot(moonTarget).toFixed(4) : null
@@ -2100,6 +2118,10 @@
         if (natalSky && natalSky.bodyGroup) natalSky.bodyGroup.visible = (_farCl < 400);
       }
       deepFusion.tick(_clk);
+      // gentle LIFE: the deep-space ember background drifts very slowly (ambient motion at the far
+      // scales). Alignment-safe — it is not the orrery or the natal sky, so the 四柱 / Sun→Capricorn /
+      // Moon→Leo stay put. Absolute-time driven so it stays smooth under the idle frame governor.
+      if (deepFusion && deepFusion.group) deepFusion.group.rotation.y = _clk * 0.006;
       if (nyeArmature) nyeArmature.tick(_clk);
       if (natalSky) natalSky.tick(_clk);
       renderer.render(scene, camera);
