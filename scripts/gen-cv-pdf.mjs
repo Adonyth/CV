@@ -1,0 +1,10 @@
+import { chromium } from "playwright";
+const b=await chromium.launch();const p=await b.newPage();
+p.on("pageerror",e=>console.log("PE:",e.message.slice(0,90)));
+await p.goto("http://127.0.0.1:8123/cv.html",{waitUntil:"networkidle",timeout:60000});
+await p.emulateMedia({media:"print"});
+await p.waitForTimeout(500);
+await p.screenshot({path:"/tmp/cv-print.png",fullPage:true});
+await p.pdf({path:"cv.pdf",format:"A4",printBackground:true,margin:{top:"14mm",bottom:"14mm",left:"14mm",right:"14mm"}});
+await b.close();
+console.log("cv.pdf + cv-print.png written");
