@@ -14,6 +14,7 @@ STATIC = [
     ("journey.html",   "0.7", "yearly"),
     ("footprint.html", "0.6", "yearly"),
     ("music.html",     "0.5", "yearly"),
+    ("updates.html",   "0.7", "weekly"),
 ]
 CONTENT_DIRS = ["research", "humanities", "books", "products"]
 EXCLUDE = {"nye-clock-backdrop.html", "nye-clock-bazi.html"}

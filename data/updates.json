@@ -1,0 +1,23 @@
+{
+  "_note": "Dated activity feed. Newest first. date=YYYY-MM-DD (or YYYY-MM / YYYY). href optional (a page on this site or an external link). Add a line when a preprint goes out, a talk is accepted, a product ships, a chapter lands. Then run: python3 scripts/gen-rss.py",
+  "updates": [
+    {
+      "date": "2026-07",
+      "en": "Paper D — half-line free fermions: local CAR & modular scaling with a type-forced obstruction — submission package ready (AHP).",
+      "zh": "论文 D —— 半线自由费米子的局域模流标度与类型强制障碍 —— AHP 投稿包就绪。",
+      "href": "/research/paperD.html"
+    },
+    {
+      "date": "2026",
+      "en": "An Invitation After Abundance reaches ~1,164 pages — publish-ready.",
+      "zh": "《An Invitation After Abundance》达约 1,164 页，具备出版条件。",
+      "href": "/books/invitation.html"
+    },
+    {
+      "date": "2023",
+      "en": "Blazar jet-formation work (BP/BZ fitting, UCL) accepted at CONF-CIAP 2023.",
+      "zh": "耀变体喷流形成机制工作（BP/BZ 拟合，UCL）被 CONF-CIAP 2023 录用。",
+      "href": "/research/blazar.html"
+    }
+  ]
+}

@@ -11,6 +11,7 @@
     { t: "Journey · education & path", z: "履历 · 求学之路", h: "/journey.html", g: "page" },
     { t: "Footprint · places", z: "足迹 · 去过的地方", h: "/footprint.html", g: "page" },
     { t: "Music", z: "音乐", h: "/music.html", g: "page" },
+    { t: "Latest · recent activity", z: "近况 · 近期动态", h: "/updates.html", g: "page" },
     { t: "Omytea", z: "Omytea", h: "/products/omytea.html", g: "making" },
     { t: "Nye Clock", z: "弐时仪", h: "/products/nyeclock.html", g: "making" },
     { t: "Curriculum Vitae", z: "完整履历", h: "/cv.html", g: "cv" }

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel>
+  <title>Jiaxuan Chen · 陈嘉轩 — Latest</title>
+  <link>https://cv-2ad.pages.dev/updates.html</link>
+  <description>Recent preprints, talks, products, and writing.</description>
+  <language>en</language>
+  <atom:link xmlns:atom="http://www.w3.org/2005/Atom" href="https://cv-2ad.pages.dev/updates.xml" rel="self" type="application/rss+xml"/>
+    <item>
+      <title>Paper D — half-line free fermions: local CAR &amp; modular scaling with a type-forced obstruction — submission package ready (AHP).</title>
+      <link>https://cv-2ad.pages.dev/research/paperD.html</link>
+      <guid isPermaLink="false">2026-07-41432</guid>
+      <pubDate>Wed, 01 Jul 2026 00:00:00 +0000</pubDate>
+      <description>Paper D — half-line free fermions: local CAR &amp; modular scaling with a type-forced obstruction — submission package ready (AHP). · 论文 D —— 半线自由费米子的局域模流标度与类型强制障碍 —— AHP 投稿包就绪。</description>
+    </item>
+    <item>
+      <title>An Invitation After Abundance reaches ~1,164 pages — publish-ready.</title>
+      <link>https://cv-2ad.pages.dev/books/invitation.html</link>
+      <guid isPermaLink="false">2026-82178</guid>
+      <pubDate>Thu, 01 Jan 2026 00:00:00 +0000</pubDate>
+      <description>An Invitation After Abundance reaches ~1,164 pages — publish-ready. · 《An Invitation After Abundance》达约 1,164 页，具备出版条件。</description>
+    </item>
+    <item>
+      <title>Blazar jet-formation work (BP/BZ fitting, UCL) accepted at CONF-CIAP 2023.</title>
+      <link>https://cv-2ad.pages.dev/research/blazar.html</link>
+      <guid isPermaLink="false">2023-5320</guid>
+      <pubDate>Sun, 01 Jan 2023 00:00:00 +0000</pubDate>
+      <description>Blazar jet-formation work (BP/BZ fitting, UCL) accepted at CONF-CIAP 2023. · 耀变体喷流形成机制工作（BP/BZ 拟合，UCL）被 CONF-CIAP 2023 录用。</description>
+    </item>
+</channel></rss>
