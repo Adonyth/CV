@@ -760,6 +760,18 @@ export function mountNyeArmature(THREE, scene, opts) {
       // from any angle — even the night side the entrance lands on — without killing day/night.
       "  surface+=alb*pow(max(dot(N,V),0.0),1.25)*(0.05+0.15*terminator);",   // night ground stays NIGHT (faint moonlit fill); the day side keeps its readable lift
       "  surface*=mix(1.0,0.12,uGroundDim);",   // on the ground the world sleeps — and blooms back as you climb into the light
+      // --- base-view near ground (A): a matte mineral grain so the floor reads as a real
+      //     surface under your back, + a crisp warm airglow line at the TRUE geometric limb.
+      //     Everything is multiplied by uGroundDim, so when not lying at the base (uGroundDim=0)
+      //     this is an EXACT no-op — the space / orrery view is byte-identical. ---
+      "  float gDim=uGroundDim;",
+      "  float camD=length(cameraPosition-vWp);",
+      "  float nearF=1.0-smoothstep(0.02,0.14,camD);",                              // strongest in the mid-field toward the horizon
+      "  float grain=efbm(vUv*820.0)*0.7+en(vUv*2600.0)*0.3;",
+      "  surface=mix(surface,surface*(0.30+0.55*grain),gDim*nearF);",              // matte soil/stone, not a smooth ball
+      "  surface+=vec3(0.95,0.78,0.55)*pow(grain,7.0)*0.02*gDim*nearF;",           // rare warm dust glints
+      "  float graze=1.0-abs(dot(N,V));",
+      "  surface+=vec3(1.0,0.60,0.40)*smoothstep(0.984,0.999,graze)*0.40*gDim;",   // the horizon LINE itself burns warm
       "  float fres=pow(1.0-max(dot(N,V),0.0),3.2);",
       "  float atGate=smoothstep(0.12,0.55,terminator);",
       "  vec3 atmoDayC=vec3(0.16,0.48,0.98)*fres*0.52*atGate;",

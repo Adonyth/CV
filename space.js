@@ -436,7 +436,7 @@
        natal sky. Everything else — lift-off, tours, the whole orrery — starts from there. */
     var DEFAULT_BASE = { lat: 41.824, lon: -71.4128, city: "Providence" };   // the author's home, if the visitor can't be placed
     var baseGeo = null, groundEntered = false, tryGroundEntrance = null, groundDome = null, groundStars = null;
-    var groundDimTarget = 0, _earthUni = null;   // eased toward the target every frame in the frame loop
+    var groundDimTarget = 0, _earthUni = null, _traceMat = null;   // eased toward the target every frame in the frame loop
     /* the ground-view ATMOSPHERE: a warm band of light hugging the horizon all around
        the base — additive, baked once per landing, zero per-frame cost */
     function makeGroundDome(pos, normal) {
@@ -1004,6 +1004,7 @@
           var rr = earthMesh.geometry.parameters.radius * 1.006;
           var traceMat = new THREE.MeshBasicMaterial({ map: tex2, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.95 });
           if ("toneMapped" in traceMat) traceMat.toneMapped = false;
+          _traceMat = traceMat;   // the ground-dim ease attenuates this so the footprint fades to an intimate underfoot glow (A)
           var trace = new THREE.Mesh(new THREE.SphereGeometry(rr, 96, 96), traceMat);
           trace.name = "FootprintTrace";
           earthMesh.add(trace);          // child of the rotating Earth → trace stays glued to the continents
@@ -1016,7 +1017,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=36").then(function (mod) {
+    import("./nye-armature.js?v=37").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -2040,7 +2041,12 @@
           var _em = nyeArmature.group.getObjectByName("NyeEarthMesh");
           if (_em && _em.material.uniforms && _em.material.uniforms.uGroundDim) _earthUni = _em.material.uniforms;
         }
-        if (_earthUni) _earthUni.uGroundDim.value += (groundDimTarget - _earthUni.uGroundDim.value) * 0.035;
+        if (_earthUni) {
+          _earthUni.uGroundDim.value += (groundDimTarget - _earthUni.uGroundDim.value) * 0.035;
+          // the REAL footprint blazes at 0.95 in space, fades to ~0.17 when lying at the base — an
+          // owner-local visitor genuinely rests on the owner's real roads (A). Exact 0.95 when gDim=0.
+          if (_traceMat) _traceMat.opacity = 0.95 * (1.0 - 0.82 * _earthUni.uGroundDim.value);
+        }
         // the entrance/glide owns the radius this frame → update() must NOT ease against it;
         // otherwise the wheel's log-target owns it. Recomputed every frame, so it clears cleanly.
         controls.setExternalDrive(glideActive() || (!userMoved && nowMs < entranceUntil));
