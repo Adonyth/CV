@@ -569,7 +569,7 @@
       var em = nyeArmature.group.getObjectByName("NyeEarthMesh"); if (!em) return;
       em.updateWorldMatrix(true, false);
       var M = em.matrixWorld, ctr = new THREE.Vector3().setFromMatrixPosition(M), lv = new THREE.Vector3();
-      var N = MOBILE ? 96 : 144, SPAN = 11.0, DEG = Math.PI / 180;
+      var N = MOBILE ? 132 : 200, SPAN = 11.0, DEG = Math.PI / 180;   // denser grid → smoother ridgelines (same real data, finer sampling)
       var cl = Math.max(0.30, Math.cos(geo.lat * DEG));
       var pos = new Float32Array(N * N * 3), up = new Float32Array(N * N * 3), uvs = new Float32Array(N * N * 2);
       var k = 0, k2 = 0;
@@ -608,17 +608,19 @@
           "varying vec3 vN; varying vec3 vUp; varying vec3 vWp; varying vec2 vUv; uniform float uFade;\n" +
           "float th(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\n" +
           "float tn(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.0-2.0*f);\n" +
-          "  return mix(mix(th(i),th(i+vec2(1,0)),u.x),mix(th(i+vec2(0,1)),th(i+vec2(1,1)),u.x),u.y);}\n" +
-          "float tf(vec2 p){float v=0.0,a=0.5;for(int i=0;i<3;i++){v+=a*tn(p);p*=2.1;a*=0.5;}return v;}\n" +
+          "  return mix(mix(th(i),th(i+vec2(1.0,0.0)),u.x),mix(th(i+vec2(0.0,1.0)),th(i+vec2(1.0,1.0)),u.x),u.y);}\n" +
+          "float tf(vec2 p){float v=0.0,a=0.5;for(int i=0;i<5;i++){v+=a*tn(p);p*=2.03;a*=0.5;}return v;}\n" +
           "void main(){\n" +
           "  vec3 N=normalize(vN), up=normalize(vUp); N=(dot(N,up)<0.0)?-N:N;\n" +   // outward, winding-independent
           "  float sky=max(dot(N,up),0.0), slope=clamp(1.0-dot(N,up),0.0,1.0);\n" +
-          "  vec3 col=vec3(0.018,0.015,0.012);\n" +                 // near-black warm ground
-          "  col+=vec3(0.05,0.06,0.09)*sky*0.45;\n" +               // cool starlit fill on flats
-          "  col+=vec3(0.95,0.58,0.36)*slope*0.13;\n" +             // warm airglow catches slopes/ridges
-          "  float g=tf(vUv*260.0)*0.7+tn(vUv*900.0)*0.3; col*=0.55+0.6*g;\n" +   // micro grain
+          "  float rough=tf(vUv*340.0);\n" +                        // low-freq surface variation breaks the CG uniformity
+          "  vec3 col=vec3(0.020,0.016,0.013);\n" +                 // near-black warm ground
+          "  col+=vec3(0.05,0.06,0.09)*sky*0.42;\n" +              // cool starlit fill on flats
+          "  col+=vec3(0.95,0.58,0.36)*slope*(0.09+0.07*rough);\n" +  // warm airglow on slopes — VARIED, not a flat sheen
+          "  float g=tf(vUv*1400.0)*0.5+tn(vUv*5200.0)*0.28+0.22;\n" +  // fine multi-scale grain (sub-km)
+          "  col*=0.6+0.5*g;\n" +
           "  float d=length(cameraPosition-vWp), haze=smoothstep(0.03,0.13,d);\n" +
-          "  col=mix(col,vec3(0.85,0.42,0.22)*0.5,haze*0.7);\n" +   // aerial perspective → distant ranges melt into the horizon glow
+          "  col=mix(col,vec3(0.85,0.42,0.22)*0.5,haze*0.72);\n" +  // aerial perspective → distant ranges melt into the horizon glow
           "  gl_FragColor=vec4(col*uFade,1.0);\n" +
           "}"
       });
