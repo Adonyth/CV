@@ -609,16 +609,23 @@
           "float th(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\n" +
           "float tn(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.0-2.0*f);\n" +
           "  return mix(mix(th(i),th(i+vec2(1.0,0.0)),u.x),mix(th(i+vec2(0.0,1.0)),th(i+vec2(1.0,1.0)),u.x),u.y);}\n" +
-          "float tf(vec2 p){float v=0.0,a=0.5;for(int i=0;i<5;i++){v+=a*tn(p);p*=2.03;a*=0.5;}return v;}\n" +
+          "float fbm(vec2 p){float v=0.0,a=0.5;for(int i=0;i<6;i++){v+=a*tn(p);p=p*2.04+vec2(3.1,1.7);a*=0.5;}return v;}\n" +
           "void main(){\n" +
           "  vec3 N=normalize(vN), up=normalize(vUp); N=(dot(N,up)<0.0)?-N:N;\n" +   // outward, winding-independent
-          "  float sky=max(dot(N,up),0.0), slope=clamp(1.0-dot(N,up),0.0,1.0);\n" +
-          "  float rough=tf(vUv*340.0);\n" +                        // low-freq surface variation breaks the CG uniformity
-          "  vec3 col=vec3(0.020,0.016,0.013);\n" +                 // near-black warm ground
-          "  col+=vec3(0.05,0.06,0.09)*sky*0.42;\n" +              // cool starlit fill on flats
-          "  col+=vec3(0.95,0.58,0.36)*slope*(0.09+0.07*rough);\n" +  // warm airglow on slopes — VARIED, not a flat sheen
-          "  float g=tf(vUv*1400.0)*0.5+tn(vUv*5200.0)*0.28+0.22;\n" +  // fine multi-scale grain (sub-km)
-          "  col*=0.6+0.5*g;\n" +
+          // surface tangent frame (approx) for bump — light must catch fine relief, not a flat sheen
+          "  vec3 east=normalize(cross(vec3(0.0,1.0,0.0),up)); if(dot(east,east)<0.5) east=vec3(1.0,0.0,0.0);\n" +
+          "  vec3 north=normalize(cross(up,east));\n" +
+          // multi-octave BUMP: tilt the normal by a height-field gradient → rock/soil texture in the light
+          // (no fake landforms — the SILHOUETTE stays real ETOPO; this only adds surface relief to shading)
+          "  vec2 P=vUv*520.0; float e=0.9;\n" +
+          "  float h0=fbm(P), hx=fbm(P+vec2(e,0.0)), hy=fbm(P+vec2(0.0,e));\n" +
+          "  vec3 Nb=normalize(N - (east*(hx-h0)+north*(hy-h0))*3.6);\n" +
+          "  float sky=max(dot(Nb,up),0.0), slope=clamp(1.0-dot(Nb,up),0.0,1.0);\n" +
+          "  float ao=0.55+0.9*smoothstep(0.25,0.72,h0);\n" +       // fake cavity/ridge occlusion: crevices dark, ridges catch light
+          "  vec3 col=vec3(0.022,0.018,0.014)*ao;\n" +              // near-black warm ground, depth from AO
+          "  col+=vec3(0.05,0.06,0.09)*sky*0.40;\n" +              // cool starlit fill on flats
+          "  col+=vec3(0.95,0.58,0.36)*slope*(0.10+0.10*fbm(P*0.12));\n" +  // warm airglow on slopes — varied
+          "  float g=fbm(P*4.0)*0.30+0.16; col*=0.7+0.5*g;\n" +    // fine grain
           "  float d=length(cameraPosition-vWp), haze=smoothstep(0.03,0.13,d);\n" +
           "  col=mix(col,vec3(0.85,0.42,0.22)*0.5,haze*0.72);\n" +  // aerial perspective → distant ranges melt into the horizon glow
           "  gl_FragColor=vec4(col*uFade,1.0);\n" +
