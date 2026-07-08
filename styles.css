@@ -448,7 +448,10 @@ body.cosmos .natal-tip{z-index:6;}
 /* flat fallback = a full mobile home. Scrollable, top-aligned, reaches every page. */
 .cosmos-flat{position:fixed; inset:0; z-index:8; overflow-y:auto; -webkit-overflow-scrolling:touch;
   display:flex; flex-direction:column; gap:26px; padding:78px 26px 56px;
-  color:var(--body); font-family:var(--serif); background:var(--page);}
+  color:var(--body); font-family:var(--serif);
+  /* a whisper of the cosmos' warmth over the opaque page — a frozen, motion-free
+     equivalent of the sky for reduced-motion / low-power visitors (P1-2). */
+  background:radial-gradient(130% 62% at 50% -12%, rgba(224,135,106,.09), transparent 58%), var(--page);}
 /* when the flat menu is up, the floating orrery chrome would only clutter — retire it
    (the field toggle is meaningless with no particle field to toggle) */
 body.is-flat .cosmos-id, body.is-flat .cosmos-legend, body.is-flat .cosmos-hint, body.is-flat .cosmos-build,
@@ -723,3 +726,77 @@ body.cosmos .cosmos-build{color:rgba(205,194,178,.58); text-shadow:0 10px 30px r
   body.cosmos .cosmos-name{font-size:1.65rem;}
   body.cosmos::after{opacity:.018;}
 }
+
+/* ============================================================
+   WAYFINDING LAYER (menu.js) — a plain-language index + first-load fork
+   layered OVER the living orrery. Pure chrome: no scene object is touched.
+   Everything here is scoped to body.cosmos / body.index-open so no other
+   page inherits it. See menu.js for the behaviour.
+   ============================================================ */
+
+/* the "☰ Index / 目录" pill lives among the top-right controls */
+.uipill{font-family:var(--mono); font-size:11.5px; letter-spacing:.06em; color:var(--body);
+  background:rgba(255,255,255,.03); border:1px solid var(--hairline); border-radius:999px;
+  padding:7px 13px; cursor:pointer; white-space:nowrap; line-height:1;
+  transition:color .2s, border-color .2s, background .2s;}
+.uipill:hover{color:var(--ink); border-color:var(--ink);}
+body.cosmos .uipill:hover{color:#f0b08e; border-color:rgba(224,135,106,.58);}
+body.is-flat #indexbtn{display:none !important;}          /* flat tier: the list already IS the page */
+@media(max-width:700px){ #indexbtn{display:none;} }        /* mobile reaches the list via ✕ simple view */
+
+/* screen-reader helper + a keyboard skip-link into the index */
+.sr-only{position:absolute!important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
+  clip:rect(0,0,0,0); white-space:nowrap; border:0;}
+
+/* ---- the INDEX overlay: reveal the existing #cosmos-flat as a dark scrim over the sky ---- */
+body.index-open{overflow:hidden;}                          /* freeze the scene scroll behind the sheet */
+body.index-open #cosmos-flat{
+  z-index:40; inset:0; padding:60px 26px 72px;
+  background:rgba(8,7,6,.90);
+  -webkit-backdrop-filter:blur(16px) saturate(1.08); backdrop-filter:blur(16px) saturate(1.08);
+  animation:index-in .28s var(--ease-out) both;
+}
+@keyframes index-in{ from{opacity:0} to{opacity:1} }
+body.index-open #cosmos-flat > *{ width:100%; max-width:720px; margin-inline:auto; }
+/* the sky behind is always dark, so force the light-text palette regardless of day/night theme */
+body.index-open .flat-name,
+body.index-open .flat-name span[lang="zh"]{ color:#f4ecdf; }
+body.index-open .flat-contact a{ color:#cbb89f; border-color:rgba(255,255,255,.16); }
+body.index-open .flat-menu{ border-color:rgba(255,255,255,.10); }
+body.index-open .flat-menu a{ color:#f0e7d8; border-bottom-color:rgba(255,255,255,.07); }
+body.index-open .flat-menu a:hover{ color:#f0b08e; }
+body.index-open .flat-group{ color:#e8c37a; }
+body.index-open .flat-menu a.flat-cv{ color:#ec9376; }
+/* these two belong to the mobile flat page, not the desktop overlay — retire them here */
+body.index-open .flat-enter, body.index-open .flat-note{ display:none; }
+
+/* the ✕ close control: only present while the index is open as an overlay */
+.flat-close{display:none;}
+body.index-open .flat-close{
+  display:inline-flex; align-items:center; gap:7px; align-self:flex-end;
+  position:sticky; top:-4px; margin:0 0 -14px auto;
+  font-family:var(--mono); font-size:12px; letter-spacing:.06em; color:#cbb89f;
+  background:rgba(20,17,14,.7); border:1px solid rgba(224,150,90,.24); border-radius:999px;
+  padding:9px 15px; cursor:pointer; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+  transition:color .2s, border-color .2s;}
+body.index-open .flat-close:hover{ color:#f4ecdf; border-color:#c9975f; }
+
+/* ---- the one-time first-load FORK (built by menu.js) ---- */
+.cosmos-fork{position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center;
+  padding:24px; background:rgba(6,5,4,.42); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
+  animation:index-in .4s var(--ease-out) both;}
+.fork-card{width:min(440px,94vw); text-align:center;
+  background:linear-gradient(180deg, rgba(22,20,18,.92), rgba(10,9,8,.9));
+  border:1px solid rgba(224,150,90,.22); border-radius:18px; padding:30px 28px 24px;
+  box-shadow:0 40px 90px -30px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.08);}
+.fork-lead{font-family:var(--serif); font-size:19px; line-height:1.45; color:#f4ecdf; margin:0 0 22px;}
+.fork-btns{display:flex; flex-direction:column; gap:11px;}
+.fork-go{font-family:var(--mono); font-size:13.5px; letter-spacing:.06em; color:#1a1109; cursor:pointer;
+  background:linear-gradient(135deg, #e8c37a, #e0876a); border:none; border-radius:12px; padding:14px 18px;}
+.fork-go:hover{filter:brightness(1.06);}
+.fork-alt{font-family:var(--mono); font-size:13px; letter-spacing:.04em; color:#d7c8b0; cursor:pointer;
+  background:transparent; border:1px solid rgba(255,255,255,.16); border-radius:12px; padding:12px 18px;
+  transition:color .2s, border-color .2s;}
+.fork-alt:hover{color:#f4ecdf; border-color:#c9975f;}
+.fork-note{font-family:var(--mono); font-size:11px; letter-spacing:.04em; color:#8f8067; line-height:1.7; margin:18px 0 0;}
+@media(max-width:700px){ .fork-lead{font-size:17px;} }

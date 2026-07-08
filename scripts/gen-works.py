@@ -5,11 +5,12 @@ books/<id>.html and the three index pages (research.html, humanities.html,
 books.html), all in the journey.html family style. Static output, no runtime.
 Run from the repo root:  python3 scripts/gen-works.py
 """
-import json, pathlib, html
+import json, pathlib, html, urllib.parse
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DATA = json.load(open(ROOT / "data" / "works.json", encoding="utf-8"))["works"]
-BUILD = "build 69 · 07-03"
+BUILD = "build 70 · 07-08"
+EMAIL = "jiaxuan_chen1@alumni.brown.edu"
 
 CLS = {
     "research":   {"dir": "research",   "index": "research.html",
@@ -393,6 +394,9 @@ def paper_block(w):
     if w.get("doi"):   btns.append(f'<a href="https://doi.org/{html.escape(w["doi"])}" target="_blank" rel="noopener" data-magnet>DOI ↗</a>')
     for l in (w.get("links") or []):
         btns.append(f'<a href="{l["href"]}" target="_blank" rel="noopener" data-magnet>{html.escape(l["label"])}</a>')
+    # contact the author about THIS work — completes read → cite → contact on every page
+    subj = urllib.parse.quote("Re: " + w["title"]["en"])
+    btns.append(f'<a href="mailto:{EMAIL}?subject={subj}" data-magnet>{bi("Email the author ↗", "邮件联系作者 ↗")}</a>')
     cite = ('<button class="cite" type="button" data-magnet '
             "onclick=\"var p=this.parentNode.querySelector('.bibtex');if(navigator.clipboard)navigator.clipboard.writeText(p.textContent);"
             "var e=this.querySelector('.i18n-en'),z=this.querySelector('.i18n-zh'),oe=e.textContent,oz=z.textContent;"
@@ -435,7 +439,9 @@ for cls, items in BY_CLS.items():
         pager = (f'<nav class="pager" aria-label="Within {c["en"]}">'
                  f'{pager_link(prev_w, "prev", "⟵ Previous", "⟵ 上一篇")}'
                  f'{pager_link(next_w, "next", "Next ⟶", "下一篇 ⟶")}</nav>')
-        body = chrome([("index.html", "星盘 · Orrery")], depth=1) + f"""
+        # breadcrumb: ⟵ Orrery (the whole sky) · ⟵ this category (opens the home index at its group)
+        body = chrome([("index.html", "星盘 · Orrery"),
+                       (f"index.html#index-{cls}", f'{c["zh"]} · {c["en"]}')], depth=1) + f"""
   <main>
     <div class="eyebrow">{bi(c["eyebrow_en"], c["eyebrow_zh"])}</div>
     <h1>{bi(html.escape(w["title"]["en"]), html.escape(w["title"]["zh"]))}</h1>
