@@ -402,6 +402,16 @@ def paper_block(w):
     return ('<div class="links paper">' + "".join(btns) + cite +
             f'<pre class="bibtex" hidden>{html.escape(bibtex(w))}</pre></div>')
 
+def demo_block(w):
+    """A work may carry an interactive figure: works.json "demo":"<name>" → mount div + /demos/<name>.js.
+    This is the 'play with it, don't only read about it' layer — real, client-side research widgets."""
+    d = w.get("demo")
+    if not d:
+        return ""
+    d = _re.sub(r"[^a-z0-9_-]", "", str(d).lower())
+    return (f'<div class="demo-embed" data-demo="{d}"></div>'
+            f'<script src="/demos/{d}.js" defer></script>')
+
 # ---------------- item pages (with prev/next within the constellation) ----------------
 BY_CLS = {}
 for w in DATA:
@@ -432,6 +442,7 @@ for cls, items in BY_CLS.items():
     <div class="meta"><b>{html.escape(w["period"])}</b> · {bi(html.escape(w["where"]["en"]), html.escape(w["where"]["zh"]))}<br/>{bi(html.escape(w["status"]["en"]), html.escape(w["status"]["zh"]))}</div>
     <div class="rule"></div>
     <div class="desc">{paras}</div>
+    {demo_block(w)}
     {links}
     <div class="skyline">✦ {bi(c["sky_en"], c["sky_zh"])}</div>
     {pager}

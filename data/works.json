@@ -1,622 +1,623 @@
 {
- "works": [
-  {
-   "id": "worldmodel",
-   "cls": "research",
-   "title": {
-    "en": "A Density-Matrix Belief-State World Model",
-    "zh": "密度矩阵信念态世界模型"
-   },
-   "period": "2026 —",
-   "where": {
-    "en": "Independent theoretical / computational physics",
-    "zh": "独立理论 / 计算物理研究"
-   },
-   "status": {
-    "en": "Active research program",
-    "zh": "研究纲领 · 进行中"
-   },
-   "desc": {
-    "en": [
-     "A quantum-computing × world-model theory line: uncertainty over multiple futures is carried as an open-system density matrix (ρ), evolved by an operator/channel algebra, and revised through a proper-scored, auditable measurement-update ledger.",
-     "The honest current headline: a calibrated, auditable system with no demonstrated raw-accuracy advantage over strong classical baselines — no primacy claim is made. Manuscripts in preparation include an honest negative-result systems paper (real-data calibration/coverage certificate) and a Lindblad-form open-system extension."
-    ],
-    "zh": [
-     "量子计算×世界模型交叉的理论研究线:以开系统密度矩阵(ρ)承载多重未来的不确定性,由算子/信道代数演化,并通过经正当评分、可审计的测量更新账本进行修正。",
-     "诚实的当前结论:得到一个可校准、可审计的系统,但在原始精度上未证明胜过强经典基线——不作任何首创主张。撰写中的手稿包括一篇诚实的负结果系统论文(真实数据校准/覆盖率证书)与一个 Lindblad 形式的开系统扩展。"
-    ]
-   },
-   "links": [
+  "works": [
     {
-     "label": "Live demo · Console ↗",
-     "href": "https://omytea-console.pages.dev"
+      "id": "worldmodel",
+      "cls": "research",
+      "title": {
+        "en": "A Density-Matrix Belief-State World Model",
+        "zh": "密度矩阵信念态世界模型"
+      },
+      "period": "2026 —",
+      "where": {
+        "en": "Independent theoretical / computational physics",
+        "zh": "独立理论 / 计算物理研究"
+      },
+      "status": {
+        "en": "Active research program",
+        "zh": "研究纲领 · 进行中"
+      },
+      "desc": {
+        "en": [
+          "A quantum-computing × world-model theory line: uncertainty over multiple futures is carried as an open-system density matrix (ρ), evolved by an operator/channel algebra, and revised through a proper-scored, auditable measurement-update ledger.",
+          "The honest current headline: a calibrated, auditable system with no demonstrated raw-accuracy advantage over strong classical baselines — no primacy claim is made. Manuscripts in preparation include an honest negative-result systems paper (real-data calibration/coverage certificate) and a Lindblad-form open-system extension."
+        ],
+        "zh": [
+          "量子计算×世界模型交叉的理论研究线:以开系统密度矩阵(ρ)承载多重未来的不确定性,由算子/信道代数演化,并通过经正当评分、可审计的测量更新账本进行修正。",
+          "诚实的当前结论:得到一个可校准、可审计的系统,但在原始精度上未证明胜过强经典基线——不作任何首创主张。撰写中的手稿包括一篇诚实的负结果系统论文(真实数据校准/覆盖率证书)与一个 Lindblad 形式的开系统扩展。"
+        ]
+      },
+      "links": [
+        {
+          "label": "Live demo · Console ↗",
+          "href": "https://omytea-console.pages.dev"
+        },
+        {
+          "label": "omyteaai.com ↗",
+          "href": "https://omyteaai.com"
+        }
+      ]
     },
     {
-     "label": "omyteaai.com ↗",
-     "href": "https://omyteaai.com"
-    }
-   ]
-  },
-  {
-   "id": "paperA",
-   "cls": "research",
-   "title": {
-    "en": "What an Algorithmic-Idealism Modular Identification Requires: A Foundational Delimitation",
-    "zh": "算法理想主义的模块化识别需要什么:一个基础性界定"
-   },
-   "period": "2026",
-   "where": {
-    "en": "Foundations of physics · single author",
-    "zh": "物理基础 · 单作者"
-   },
-   "status": {
-    "en": "Manuscript in preparation",
-    "zh": "手稿备稿中"
-   },
-   "desc": {
-    "en": [
-     "Separates the assumptions an algorithmic-idealism reading must pay for a modular identification, and proves a foundational delimitation: which identifications come free, and which demand structural cost."
-    ],
-    "zh": [
-     "逐项分离\"算法理想主义\"作出模块化识别所需付出的假设,并给出基础性界定:哪些识别是免费的,哪些必须付出结构性代价。"
-    ]
-   },
-   "links": []
-  },
-  {
-   "id": "paperB",
-   "cls": "research",
-   "title": {
-    "en": "The Universal Prior Does Not Select a Factorization",
-    "zh": "通用先验不选出分解"
-   },
-   "period": "2026",
-   "where": {
-    "en": "Foundations of physics · single author",
-    "zh": "物理基础 · 单作者"
-   },
-   "status": {
-    "en": "Under journal consideration",
-    "zh": "投稿轮转中"
-   },
-   "desc": {
-    "en": [
-     "Proves, via a constant-complexity carry-increment recoding witness, that the universal (Solomonoff–Levin) algorithmic prior selects no preferred tensor factorization — and therefore cannot, by itself, supply locality."
-    ],
-    "zh": [
-     "借一个常数复杂度的进位递增重编码作为可审计见证,证明通用(Solomonoff–Levin)算法先验不选出任何优先的张量分解——因而其自身无法提供局域性。"
-    ]
-   },
-   "links": []
-  },
-  {
-   "id": "paperB2",
-   "cls": "research",
-   "title": {
-    "en": "A Universal Prior Selects No Preferred Factorization: the Same Cross-Context Gap in Born-Rule Derivations",
-    "zh": "通用先验不选优先分解:同一跨语境缺口在玻恩规则推导中的复现"
-   },
-   "period": "2026",
-   "where": {
-    "en": "Foundations of physics · single author",
-    "zh": "物理基础 · 单作者"
-   },
-   "status": {
-    "en": "Manuscript prepared (SciPost Physics Core)",
-    "zh": "投稿包已备(SciPost Physics Core)"
-   },
-   "desc": {
-    "en": [
-     "Builds on the locality no-go and maps the same cross-context gap, route by route, across the major derivations of the Born rule — a unified diagnosis of what each derivation quietly assumes."
-    ],
-    "zh": [
-     "在局域性 no-go 之上,将同一\"跨语境缺口\"逐条映射到玻恩规则的各主要推导路线——对每条推导暗中假设了什么,给出统一诊断。"
-    ]
-   },
-   "links": []
-  },
-  {
-   "id": "paperC1",
-   "cls": "research",
-   "title": {
-    "en": "Boltzmann Brains under an Observer-State Ontology",
-    "zh": "观察者态本体论下的玻尔兹曼大脑"
-   },
-   "period": "2026",
-   "where": {
-    "en": "Philosophy of physics",
-    "zh": "物理哲学"
-   },
-   "status": {
-    "en": "In preparation (Synthese track)",
-    "zh": "撰写中(Synthese 方向)"
-   },
-   "desc": {
-    "en": [
-     "Re-examines the Boltzmann-brain problem in an observer-state framework: measure, typicality, and what self-locating evidence can and cannot license."
-    ],
-    "zh": [
-     "在观察者态框架下重审玻尔兹曼大脑问题:测度、典型性,以及自定位证据能许可什么、不能许可什么。"
-    ]
-   },
-   "links": []
-  },
-  {
-   "id": "paperC2",
-   "cls": "research",
-   "title": {
-    "en": "Other Minds under an Observer-State Ontology",
-    "zh": "观察者态本体论下的他心问题"
-   },
-   "period": "2026",
-   "where": {
-    "en": "Philosophy of physics",
-    "zh": "物理哲学"
-   },
-   "status": {
-    "en": "In preparation (Synthese track)",
-    "zh": "撰写中(Synthese 方向)"
-   },
-   "desc": {
-    "en": [
-     "The other-minds question inside a single-observer ontology: under what conditions multi-observer consistency can be recovered."
-    ],
-    "zh": [
-     "单观察者本体论中的他心问题:在什么条件下可以恢复多观察者一致性。"
-    ]
-   },
-   "links": []
-  },
-  {
-   "id": "paperD",
-   "cls": "research",
-   "title": {
-    "en": "Half-Line Free Fermions: Local CAR and Modular Scaling with a Type-Forced Mass-Axis Obstruction",
-    "zh": "半直线自由费米子:局域 CAR 与模流标度,及类型强制的质量轴障碍"
-   },
-   "period": "2026",
-   "where": {
-    "en": "Mathematical physics · single author · 64 pp",
-    "zh": "数学物理 · 单作者 · 64 页"
-   },
-   "status": {
-    "en": "Submission package ready (AHP)",
-    "zh": "投稿包就绪(AHP)"
-   },
-   "desc": {
-    "en": [
-     "Along the scaling axis: wavelet-embedded quasi-free states converge in norm on every finite-mode CAR subalgebra, upgraded to local modular-automorphism convergence on the analytic core. Along the mass axis: a type I∞ / III₁ incompatibility forces the global folium comparison to fail — the obstruction is proved, not conjectured."
-    ],
-    "zh": [
-     "标度轴上:经小波嵌入的准自由态在每个有限模 CAR 子代数上范数收敛,并升级为解析核上的局域模自同构收敛;质量轴上:I∞ 与 III₁ 的类型不相容强制全局 folium 比较失败——障碍是被证明的,不是猜想。"
-    ]
-   },
-   "links": []
-  },
-  {
-   "id": "bornNaturalness",
-   "cls": "research",
-   "title": {
-    "en": "Born Rule & Naturalness",
-    "zh": "玻恩规则与自然性"
-   },
-   "period": "2026 —",
-   "where": {
-    "en": "Foundations of physics",
-    "zh": "物理基础"
-   },
-   "status": {
-    "en": "Active — capstone track",
-    "zh": "代表作课题 · 进行中"
-   },
-   "desc": {
-    "en": [
-     "Chases the bridge-obligation through Born-rule derivations: whether a positive minimal-successor construction discharges that obligation or merely relocates it — the make-or-break criterion of the whole line."
-    ],
-    "zh": [
-     "追索玻恩规则推导中的\"桥接义务\":一个正向的最小后继构造究竟是解除了义务,还是仅仅把它转移了——这条线的成败判据即在于此。"
-    ]
-   },
-   "links": []
-  },
-  {
-   "id": "ringdown",
-   "cls": "research",
-   "title": {
-    "en": "Covariance-Estimator Dependence of Ringdown Overtone Significance: A Coverage-Validated Real-Noise Calibration Standard",
-    "zh": "铃宕泛音显著性对协方差估计器的依赖:一个经覆盖率验证的真实噪声标定标准"
-   },
-   "period": "2026",
-   "where": {
-    "en": "Gravitational-wave methods · single author",
-    "zh": "引力波方法学 · 单作者"
-   },
-   "status": {
-    "en": "Manuscript prepared (RASTI, OUP/RAS)",
-    "zh": "投稿包已备(RASTI · OUP/RAS)"
-   },
-   "desc": {
-    "en": [
-     "Shows a black-hole ringdown overtone's reported significance can swing by an order of magnitude with the analyst's noise-covariance estimator, and introduces a coverage-validated, covariance-choice-independent real-noise calibration standard — demonstrated on GW250114 and GW150914."
-    ],
-    "zh": [
-     "证明黑洞铃宕泛音的报告显著性会因分析者所选的噪声协方差估计器而波动一个量级;提出一个经覆盖率验证、与协方差选择无关的真实噪声标定标准,并在 GW250114 与 GW150914 上演示。"
-    ]
-   },
-   "links": []
-  },
-  {
-   "id": "tachyon",
-   "cls": "research",
-   "title": {
-    "en": "Tachyonic Phase-Boundary Classification",
-    "zh": "快子相边界分类"
-   },
-   "period": "2026 —",
-   "where": {
-    "en": "Theoretical physics",
-    "zh": "理论物理"
-   },
-   "status": {
-    "en": "Active line, with a formalized finite-window certificate",
-    "zh": "理论课题 · 进行中,附形式化有限窗口证书线"
-   },
-   "desc": {
-    "en": [
-     "A classification study of tachyonic phase boundaries, carried with a formalized finite-window certificate line — turning \"when may one claim the transition\" into a checkable criterion."
-    ],
-    "zh": [
-     "快子场相边界的分类研究,并携带一条形式化的有限窗口证书线——把\"何时可以宣称相变\"变成可核查的判据。"
-    ]
-   },
-   "links": []
-  },
-  {
-   "id": "gwPopulation",
-   "cls": "research",
-   "title": {
-    "en": "Feature-Local Significance Certificates for Gravitational-Wave Populations (GWTC-4)",
-    "zh": "引力波族群特征的特征局域显著性证书(GWTC-4)"
-   },
-   "period": "2026",
-   "where": {
-    "en": "Gravitational-wave methods",
-    "zh": "引力波方法学"
-   },
-   "status": {
-    "en": "In preparation",
-    "zh": "撰写中"
-   },
-   "desc": {
-    "en": [
-     "Constructs feature-local certificates for the significance of gravitational-wave population features, applied to the GWTC-4 catalog."
-    ],
-    "zh": [
-     "为引力波族群特征的显著性构造特征局域证书,并应用于 GWTC-4 目录。"
-    ]
-   },
-   "links": []
-  },
-  {
-   "id": "cmsJets",
-   "cls": "research",
-   "title": {
-    "en": "CMS Jet Physics",
-    "zh": "CMS 喷流物理"
-   },
-   "period": "2024 — 2026",
-   "where": {
-    "en": "Roloff Group, Brown University · graduate research",
-    "zh": "布朗大学 Roloff 组 · 研究生研究"
-   },
-   "status": {
-    "en": "Graduate research",
-    "zh": "研究生研究"
-   },
-   "desc": {
-    "en": [
-     "High-energy experimental physics on CMS jet physics: jet simulation with PYTHIA; jet structure, parton-shower cascades, and beyond-the-Standard-Model signatures in jet topology."
-    ],
-    "zh": [
-     "CMS 喷流方向的高能实验物理:使用 PYTHIA 的喷流模拟;喷注结构、部分子级联,以及喷注拓扑中的超出标准模型特征。"
-    ]
-   },
-   "links": []
-  },
-  {
-   "id": "cnt3omega",
-   "cls": "research",
-   "title": {
-    "en": "Unified Theory for 3ω Thermal Characterization: Finite Heater Length and Environmental Coupling",
-    "zh": "3ω 热学表征的统一理论:有限加热丝长度与环境耦合"
-   },
-   "period": "2024 — 2026",
-   "where": {
-    "en": "Kuehne Group, Brown University · co-authored",
-    "zh": "布朗大学 Kuehne 组 · 合著"
-   },
-   "status": {
-    "en": "In preparation",
-    "zh": "撰写中"
-   },
-   "desc": {
-    "en": [
-     "Condensed-matter thermal transport: 3ω characterization of single-walled carbon nanotubes, contributing to a unified finite-heater 3ω impedance theory with environmental-coupling effects."
-    ],
-    "zh": [
-     "凝聚态热输运:单壁碳纳米管的 3ω 表征,参与建立含环境耦合效应的统一有限加热丝 3ω 阻抗理论。"
-    ]
-   },
-   "links": []
-  },
-  {
-   "id": "blazar",
-   "cls": "research",
-   "title": {
-    "en": "Formation Mechanism of Blazar Jets",
-    "zh": "耀变体喷流的形成机制"
-   },
-   "period": "2022 — 2023",
-   "where": {
-    "en": "UCL research project · CONF-CIAP 2023 · single author",
-    "zh": "伦敦大学学院项目 · CONF-CIAP 2023 · 单作者"
-   },
-   "status": {
-    "en": "Conference paper accepted",
-    "zh": "会议论文已录用"
-   },
-   "desc": {
-    "en": [
-     "Single-author conference paper on the formation mechanism of blazar (AGN) jets, fitting jet power spectra via Blandford–Payne / Blandford–Znajek theory."
-    ],
-    "zh": [
-     "单作者会议论文:基于 Blandford–Payne / Blandford–Znajek 理论拟合喷流功率谱,研究耀变体(活动星系核)喷流的形成机制。"
-    ]
-   },
-   "links": []
-  },
-  {
-   "id": "gammaSpec",
-   "cls": "research",
-   "title": {
-    "en": "In-Beam γ-ray Spectroscopy",
-    "zh": "在束 γ 射线能谱学"
-   },
-   "period": "2022",
-   "where": {
-    "en": "Shandong University · undergraduate research",
-    "zh": "山东大学 · 本科研究"
-   },
-   "status": {
-    "en": "Completed",
-    "zh": "已完成"
-   },
-   "desc": {
-    "en": [
-     "Nuclear physics: analyzing γ spectra from α-induced reactions, gating on energy matrices to identify residual nuclides."
-    ],
-    "zh": [
-     "核物理研究:分析 α 粒子轰击后的 γ 能谱,以能量矩阵开窗鉴别剩余核素。"
-    ]
-   },
-   "links": []
-  },
-  {
-   "id": "alpDM",
-   "cls": "research",
-   "title": {
-    "en": "Axion-Like Dark Matter",
-    "zh": "类轴子暗物质"
-   },
-   "period": "2022",
-   "where": {
-    "en": "Beijing Normal University · research project",
-    "zh": "北京师范大学 · 研究项目"
-   },
-   "status": {
-    "en": "Completed",
-    "zh": "已完成"
-   },
-   "desc": {
-    "en": [
-     "Theory / phenomenology of axion-like dark matter: analyzing photon survival probabilities to constrain the parameter space."
-    ],
-    "zh": [
-     "类轴子暗物质的理论与唯象研究:分析光子\"生存概率\"以约束参数空间。"
-    ]
-   },
-   "links": []
-  },
-  {
-   "id": "maxi",
-   "cls": "research",
-   "title": {
-    "en": "MAXI J1348-630 Black-Hole X-ray Binary",
-    "zh": "MAXI J1348-630 黑洞 X 射线双星"
-   },
-   "period": "2023 — 2024",
-   "where": {
-    "en": "Shandong University · undergraduate thesis",
-    "zh": "山东大学 · 本科毕业论文"
-   },
-   "status": {
-    "en": "Thesis completed",
-    "zh": "论文已完成"
-   },
-   "desc": {
-    "en": [
-     "Astrophysical data analysis of NICER / NuSTAR observations of the black-hole X-ray binary MAXI J1348-630 — the basis of the undergraduate thesis."
-    ],
-    "zh": [
-     "对黑洞 X 射线双星 MAXI J1348-630 的 NICER / NuSTAR 观测进行天体物理数据分析——本科毕业论文的基础。"
-    ]
-   },
-   "links": []
-  },
-  {
-   "id": "toiFlares",
-   "cls": "research",
-   "title": {
-    "en": "TOI Stellar-Flare Spectroscopy",
-    "zh": "TOI 恒星耀发光谱"
-   },
-   "period": "2022 — 2023",
-   "where": {
-    "en": "Shandong University · undergraduate research",
-    "zh": "山东大学 · 本科研究"
-   },
-   "status": {
-    "en": "Completed",
-    "zh": "已完成"
-   },
-   "desc": {
-    "en": [
-     "Spectroscopic study of stellar flares on TESS Objects of Interest, assessing exoplanet habitability and radiation environment."
-    ],
-    "zh": [
-     "对 TESS 关注目标(TOI)的恒星耀发进行光谱学研究,评估系外行星宜居性与辐射环境。"
-    ]
-   },
-   "links": []
-  },
-  {
-   "id": "monopolyRent",
-   "cls": "humanities",
-   "title": {
-    "en": "Technological Monopoly Rent: A Category for the Political Economy of the New Productive Forces",
-    "zh": "技术垄断租金:新质生产力政治经济学的一个范畴"
-   },
-   "period": "2026",
-   "where": {
-    "en": "SSRN · public preprint",
-    "zh": "SSRN · 公开预印本"
-   },
-   "status": {
-    "en": "Public — posted 19 Jun 2026",
-    "zh": "已公开 · 2026-06-19 发布"
-   },
-   "desc": {
-    "en": [
-     "A bounded conceptual paper naming \"inference rent\" / technological monopoly rent: the above-normal return that arises when high-fixed-cost, non-rival AI model capability is metered into priced scarcity."
-    ],
-    "zh": [
-     "一篇界定清晰的概念论文,提出\"推理租金\"/技术垄断租金:当高固定成本、非竞争性的 AI 模型能力被计量化为定价稀缺时产生的超额回报。"
-    ]
-   },
-   "links": [
-    {
-     "label": "SSRN abstract 6950759 ↗",
-     "href": "https://ssrn.com/abstract=6950759"
+      "id": "paperA",
+      "cls": "research",
+      "title": {
+        "en": "What an Algorithmic-Idealism Modular Identification Requires: A Foundational Delimitation",
+        "zh": "算法理想主义的模块化识别需要什么:一个基础性界定"
+      },
+      "period": "2026",
+      "where": {
+        "en": "Foundations of physics · single author",
+        "zh": "物理基础 · 单作者"
+      },
+      "status": {
+        "en": "Manuscript in preparation",
+        "zh": "手稿备稿中"
+      },
+      "desc": {
+        "en": [
+          "Separates the assumptions an algorithmic-idealism reading must pay for a modular identification, and proves a foundational delimitation: which identifications come free, and which demand structural cost."
+        ],
+        "zh": [
+          "逐项分离\"算法理想主义\"作出模块化识别所需付出的假设,并给出基础性界定:哪些识别是免费的,哪些必须付出结构性代价。"
+        ]
+      },
+      "links": []
     },
     {
-     "label": "SSRN author page ↗",
-     "href": "https://ssrn.com/author=12014588"
+      "id": "paperB",
+      "cls": "research",
+      "title": {
+        "en": "The Universal Prior Does Not Select a Factorization",
+        "zh": "通用先验不选出分解"
+      },
+      "period": "2026",
+      "where": {
+        "en": "Foundations of physics · single author",
+        "zh": "物理基础 · 单作者"
+      },
+      "status": {
+        "en": "Under journal consideration",
+        "zh": "投稿轮转中"
+      },
+      "desc": {
+        "en": [
+          "Proves, via a constant-complexity carry-increment recoding witness, that the universal (Solomonoff–Levin) algorithmic prior selects no preferred tensor factorization — and therefore cannot, by itself, supply locality."
+        ],
+        "zh": [
+          "借一个常数复杂度的进位递增重编码作为可审计见证,证明通用(Solomonoff–Levin)算法先验不选出任何优先的张量分解——因而其自身无法提供局域性。"
+        ]
+      },
+      "links": []
+    },
+    {
+      "id": "paperB2",
+      "cls": "research",
+      "title": {
+        "en": "A Universal Prior Selects No Preferred Factorization: the Same Cross-Context Gap in Born-Rule Derivations",
+        "zh": "通用先验不选优先分解:同一跨语境缺口在玻恩规则推导中的复现"
+      },
+      "period": "2026",
+      "where": {
+        "en": "Foundations of physics · single author",
+        "zh": "物理基础 · 单作者"
+      },
+      "status": {
+        "en": "Manuscript prepared (SciPost Physics Core)",
+        "zh": "投稿包已备(SciPost Physics Core)"
+      },
+      "desc": {
+        "en": [
+          "Builds on the locality no-go and maps the same cross-context gap, route by route, across the major derivations of the Born rule — a unified diagnosis of what each derivation quietly assumes."
+        ],
+        "zh": [
+          "在局域性 no-go 之上,将同一\"跨语境缺口\"逐条映射到玻恩规则的各主要推导路线——对每条推导暗中假设了什么,给出统一诊断。"
+        ]
+      },
+      "links": []
+    },
+    {
+      "id": "paperC1",
+      "cls": "research",
+      "title": {
+        "en": "Boltzmann Brains under an Observer-State Ontology",
+        "zh": "观察者态本体论下的玻尔兹曼大脑"
+      },
+      "period": "2026",
+      "where": {
+        "en": "Philosophy of physics",
+        "zh": "物理哲学"
+      },
+      "status": {
+        "en": "In preparation (Synthese track)",
+        "zh": "撰写中(Synthese 方向)"
+      },
+      "desc": {
+        "en": [
+          "Re-examines the Boltzmann-brain problem in an observer-state framework: measure, typicality, and what self-locating evidence can and cannot license."
+        ],
+        "zh": [
+          "在观察者态框架下重审玻尔兹曼大脑问题:测度、典型性,以及自定位证据能许可什么、不能许可什么。"
+        ]
+      },
+      "links": []
+    },
+    {
+      "id": "paperC2",
+      "cls": "research",
+      "title": {
+        "en": "Other Minds under an Observer-State Ontology",
+        "zh": "观察者态本体论下的他心问题"
+      },
+      "period": "2026",
+      "where": {
+        "en": "Philosophy of physics",
+        "zh": "物理哲学"
+      },
+      "status": {
+        "en": "In preparation (Synthese track)",
+        "zh": "撰写中(Synthese 方向)"
+      },
+      "desc": {
+        "en": [
+          "The other-minds question inside a single-observer ontology: under what conditions multi-observer consistency can be recovered."
+        ],
+        "zh": [
+          "单观察者本体论中的他心问题:在什么条件下可以恢复多观察者一致性。"
+        ]
+      },
+      "links": []
+    },
+    {
+      "id": "paperD",
+      "cls": "research",
+      "title": {
+        "en": "Half-Line Free Fermions: Local CAR and Modular Scaling with a Type-Forced Mass-Axis Obstruction",
+        "zh": "半直线自由费米子:局域 CAR 与模流标度,及类型强制的质量轴障碍"
+      },
+      "period": "2026",
+      "where": {
+        "en": "Mathematical physics · single author · 64 pp",
+        "zh": "数学物理 · 单作者 · 64 页"
+      },
+      "status": {
+        "en": "Submission package ready (AHP)",
+        "zh": "投稿包就绪(AHP)"
+      },
+      "desc": {
+        "en": [
+          "Along the scaling axis: wavelet-embedded quasi-free states converge in norm on every finite-mode CAR subalgebra, upgraded to local modular-automorphism convergence on the analytic core. Along the mass axis: a type I∞ / III₁ incompatibility forces the global folium comparison to fail — the obstruction is proved, not conjectured."
+        ],
+        "zh": [
+          "标度轴上:经小波嵌入的准自由态在每个有限模 CAR 子代数上范数收敛,并升级为解析核上的局域模自同构收敛;质量轴上:I∞ 与 III₁ 的类型不相容强制全局 folium 比较失败——障碍是被证明的,不是猜想。"
+        ]
+      },
+      "links": []
+    },
+    {
+      "id": "bornNaturalness",
+      "cls": "research",
+      "title": {
+        "en": "Born Rule & Naturalness",
+        "zh": "玻恩规则与自然性"
+      },
+      "period": "2026 —",
+      "where": {
+        "en": "Foundations of physics",
+        "zh": "物理基础"
+      },
+      "status": {
+        "en": "Active — capstone track",
+        "zh": "代表作课题 · 进行中"
+      },
+      "desc": {
+        "en": [
+          "Chases the bridge-obligation through Born-rule derivations: whether a positive minimal-successor construction discharges that obligation or merely relocates it — the make-or-break criterion of the whole line."
+        ],
+        "zh": [
+          "追索玻恩规则推导中的\"桥接义务\":一个正向的最小后继构造究竟是解除了义务,还是仅仅把它转移了——这条线的成败判据即在于此。"
+        ]
+      },
+      "links": []
+    },
+    {
+      "id": "ringdown",
+      "cls": "research",
+      "title": {
+        "en": "Covariance-Estimator Dependence of Ringdown Overtone Significance: A Coverage-Validated Real-Noise Calibration Standard",
+        "zh": "铃宕泛音显著性对协方差估计器的依赖:一个经覆盖率验证的真实噪声标定标准"
+      },
+      "period": "2026",
+      "where": {
+        "en": "Gravitational-wave methods · single author",
+        "zh": "引力波方法学 · 单作者"
+      },
+      "status": {
+        "en": "Manuscript prepared (RASTI, OUP/RAS)",
+        "zh": "投稿包已备(RASTI · OUP/RAS)"
+      },
+      "desc": {
+        "en": [
+          "Shows a black-hole ringdown overtone's reported significance can swing by an order of magnitude with the analyst's noise-covariance estimator, and introduces a coverage-validated, covariance-choice-independent real-noise calibration standard — demonstrated on GW250114 and GW150914."
+        ],
+        "zh": [
+          "证明黑洞铃宕泛音的报告显著性会因分析者所选的噪声协方差估计器而波动一个量级;提出一个经覆盖率验证、与协方差选择无关的真实噪声标定标准,并在 GW250114 与 GW150914 上演示。"
+        ]
+      },
+      "links": [],
+      "demo": "ringdown"
+    },
+    {
+      "id": "tachyon",
+      "cls": "research",
+      "title": {
+        "en": "Tachyonic Phase-Boundary Classification",
+        "zh": "快子相边界分类"
+      },
+      "period": "2026 —",
+      "where": {
+        "en": "Theoretical physics",
+        "zh": "理论物理"
+      },
+      "status": {
+        "en": "Active line, with a formalized finite-window certificate",
+        "zh": "理论课题 · 进行中,附形式化有限窗口证书线"
+      },
+      "desc": {
+        "en": [
+          "A classification study of tachyonic phase boundaries, carried with a formalized finite-window certificate line — turning \"when may one claim the transition\" into a checkable criterion."
+        ],
+        "zh": [
+          "快子场相边界的分类研究,并携带一条形式化的有限窗口证书线——把\"何时可以宣称相变\"变成可核查的判据。"
+        ]
+      },
+      "links": []
+    },
+    {
+      "id": "gwPopulation",
+      "cls": "research",
+      "title": {
+        "en": "Feature-Local Significance Certificates for Gravitational-Wave Populations (GWTC-4)",
+        "zh": "引力波族群特征的特征局域显著性证书(GWTC-4)"
+      },
+      "period": "2026",
+      "where": {
+        "en": "Gravitational-wave methods",
+        "zh": "引力波方法学"
+      },
+      "status": {
+        "en": "In preparation",
+        "zh": "撰写中"
+      },
+      "desc": {
+        "en": [
+          "Constructs feature-local certificates for the significance of gravitational-wave population features, applied to the GWTC-4 catalog."
+        ],
+        "zh": [
+          "为引力波族群特征的显著性构造特征局域证书,并应用于 GWTC-4 目录。"
+        ]
+      },
+      "links": []
+    },
+    {
+      "id": "cmsJets",
+      "cls": "research",
+      "title": {
+        "en": "CMS Jet Physics",
+        "zh": "CMS 喷流物理"
+      },
+      "period": "2024 — 2026",
+      "where": {
+        "en": "Roloff Group, Brown University · graduate research",
+        "zh": "布朗大学 Roloff 组 · 研究生研究"
+      },
+      "status": {
+        "en": "Graduate research",
+        "zh": "研究生研究"
+      },
+      "desc": {
+        "en": [
+          "High-energy experimental physics on CMS jet physics: jet simulation with PYTHIA; jet structure, parton-shower cascades, and beyond-the-Standard-Model signatures in jet topology."
+        ],
+        "zh": [
+          "CMS 喷流方向的高能实验物理:使用 PYTHIA 的喷流模拟;喷注结构、部分子级联,以及喷注拓扑中的超出标准模型特征。"
+        ]
+      },
+      "links": []
+    },
+    {
+      "id": "cnt3omega",
+      "cls": "research",
+      "title": {
+        "en": "Unified Theory for 3ω Thermal Characterization: Finite Heater Length and Environmental Coupling",
+        "zh": "3ω 热学表征的统一理论:有限加热丝长度与环境耦合"
+      },
+      "period": "2024 — 2026",
+      "where": {
+        "en": "Kuehne Group, Brown University · co-authored",
+        "zh": "布朗大学 Kuehne 组 · 合著"
+      },
+      "status": {
+        "en": "In preparation",
+        "zh": "撰写中"
+      },
+      "desc": {
+        "en": [
+          "Condensed-matter thermal transport: 3ω characterization of single-walled carbon nanotubes, contributing to a unified finite-heater 3ω impedance theory with environmental-coupling effects."
+        ],
+        "zh": [
+          "凝聚态热输运:单壁碳纳米管的 3ω 表征,参与建立含环境耦合效应的统一有限加热丝 3ω 阻抗理论。"
+        ]
+      },
+      "links": []
+    },
+    {
+      "id": "blazar",
+      "cls": "research",
+      "title": {
+        "en": "Formation Mechanism of Blazar Jets",
+        "zh": "耀变体喷流的形成机制"
+      },
+      "period": "2022 — 2023",
+      "where": {
+        "en": "UCL research project · CONF-CIAP 2023 · single author",
+        "zh": "伦敦大学学院项目 · CONF-CIAP 2023 · 单作者"
+      },
+      "status": {
+        "en": "Conference paper accepted",
+        "zh": "会议论文已录用"
+      },
+      "desc": {
+        "en": [
+          "Single-author conference paper on the formation mechanism of blazar (AGN) jets, fitting jet power spectra via Blandford–Payne / Blandford–Znajek theory."
+        ],
+        "zh": [
+          "单作者会议论文:基于 Blandford–Payne / Blandford–Znajek 理论拟合喷流功率谱,研究耀变体(活动星系核)喷流的形成机制。"
+        ]
+      },
+      "links": []
+    },
+    {
+      "id": "gammaSpec",
+      "cls": "research",
+      "title": {
+        "en": "In-Beam γ-ray Spectroscopy",
+        "zh": "在束 γ 射线能谱学"
+      },
+      "period": "2022",
+      "where": {
+        "en": "Shandong University · undergraduate research",
+        "zh": "山东大学 · 本科研究"
+      },
+      "status": {
+        "en": "Completed",
+        "zh": "已完成"
+      },
+      "desc": {
+        "en": [
+          "Nuclear physics: analyzing γ spectra from α-induced reactions, gating on energy matrices to identify residual nuclides."
+        ],
+        "zh": [
+          "核物理研究:分析 α 粒子轰击后的 γ 能谱,以能量矩阵开窗鉴别剩余核素。"
+        ]
+      },
+      "links": []
+    },
+    {
+      "id": "alpDM",
+      "cls": "research",
+      "title": {
+        "en": "Axion-Like Dark Matter",
+        "zh": "类轴子暗物质"
+      },
+      "period": "2022",
+      "where": {
+        "en": "Beijing Normal University · research project",
+        "zh": "北京师范大学 · 研究项目"
+      },
+      "status": {
+        "en": "Completed",
+        "zh": "已完成"
+      },
+      "desc": {
+        "en": [
+          "Theory / phenomenology of axion-like dark matter: analyzing photon survival probabilities to constrain the parameter space."
+        ],
+        "zh": [
+          "类轴子暗物质的理论与唯象研究:分析光子\"生存概率\"以约束参数空间。"
+        ]
+      },
+      "links": []
+    },
+    {
+      "id": "maxi",
+      "cls": "research",
+      "title": {
+        "en": "MAXI J1348-630 Black-Hole X-ray Binary",
+        "zh": "MAXI J1348-630 黑洞 X 射线双星"
+      },
+      "period": "2023 — 2024",
+      "where": {
+        "en": "Shandong University · undergraduate thesis",
+        "zh": "山东大学 · 本科毕业论文"
+      },
+      "status": {
+        "en": "Thesis completed",
+        "zh": "论文已完成"
+      },
+      "desc": {
+        "en": [
+          "Astrophysical data analysis of NICER / NuSTAR observations of the black-hole X-ray binary MAXI J1348-630 — the basis of the undergraduate thesis."
+        ],
+        "zh": [
+          "对黑洞 X 射线双星 MAXI J1348-630 的 NICER / NuSTAR 观测进行天体物理数据分析——本科毕业论文的基础。"
+        ]
+      },
+      "links": []
+    },
+    {
+      "id": "toiFlares",
+      "cls": "research",
+      "title": {
+        "en": "TOI Stellar-Flare Spectroscopy",
+        "zh": "TOI 恒星耀发光谱"
+      },
+      "period": "2022 — 2023",
+      "where": {
+        "en": "Shandong University · undergraduate research",
+        "zh": "山东大学 · 本科研究"
+      },
+      "status": {
+        "en": "Completed",
+        "zh": "已完成"
+      },
+      "desc": {
+        "en": [
+          "Spectroscopic study of stellar flares on TESS Objects of Interest, assessing exoplanet habitability and radiation environment."
+        ],
+        "zh": [
+          "对 TESS 关注目标(TOI)的恒星耀发进行光谱学研究,评估系外行星宜居性与辐射环境。"
+        ]
+      },
+      "links": []
+    },
+    {
+      "id": "monopolyRent",
+      "cls": "humanities",
+      "title": {
+        "en": "Technological Monopoly Rent: A Category for the Political Economy of the New Productive Forces",
+        "zh": "技术垄断租金:新质生产力政治经济学的一个范畴"
+      },
+      "period": "2026",
+      "where": {
+        "en": "SSRN · public preprint",
+        "zh": "SSRN · 公开预印本"
+      },
+      "status": {
+        "en": "Public — posted 19 Jun 2026",
+        "zh": "已公开 · 2026-06-19 发布"
+      },
+      "desc": {
+        "en": [
+          "A bounded conceptual paper naming \"inference rent\" / technological monopoly rent: the above-normal return that arises when high-fixed-cost, non-rival AI model capability is metered into priced scarcity."
+        ],
+        "zh": [
+          "一篇界定清晰的概念论文,提出\"推理租金\"/技术垄断租金:当高固定成本、非竞争性的 AI 模型能力被计量化为定价稀缺时产生的超额回报。"
+        ]
+      },
+      "links": [
+        {
+          "label": "SSRN abstract 6950759 ↗",
+          "href": "https://ssrn.com/abstract=6950759"
+        },
+        {
+          "label": "SSRN author page ↗",
+          "href": "https://ssrn.com/author=12014588"
+        }
+      ]
+    },
+    {
+      "id": "stackPower",
+      "cls": "humanities",
+      "title": {
+        "en": "Stack Power: Frontier AI and Market Non-Correction",
+        "zh": "栈权力:前沿 AI 与市场不矫正"
+      },
+      "period": "2026",
+      "where": {
+        "en": "Political economy · single author",
+        "zh": "政治经济学 · 单作者"
+      },
+      "status": {
+        "en": "Under journal re-submission",
+        "zh": "期刊再投轮"
+      },
+      "desc": {
+        "en": [
+          "On the forms of power that accumulate across the frontier-AI stack, and why market self-correction fails to arrive — with a diagnostic for when it structurally cannot."
+        ],
+        "zh": [
+          "论前沿 AI 产业栈中积聚的权力形态,以及市场自我矫正为何迟迟不至——并给出一个判别\"结构上不可能矫正\"的诊断。"
+        ]
+      },
+      "links": []
+    },
+    {
+      "id": "cpe",
+      "cls": "humanities",
+      "title": {
+        "en": "Camera, Player, Engine",
+        "zh": "相机 · 棋手 · 引擎"
+      },
+      "period": "2026",
+      "where": {
+        "en": "Epistemology / methodology",
+        "zh": "认识论 / 方法论"
+      },
+      "status": {
+        "en": "Method paper",
+        "zh": "方法论文"
+      },
+      "desc": {
+        "en": [
+          "An epistemological frame separating three stances of knowledge — descriptive (camera), strategic (player), operative (engine) — and how to tell which one a claim is actually making."
+        ],
+        "zh": [
+          "一个认识论框架:区分知识的三种立场——描述性(相机)、战略性(棋手)、操作性(引擎)——以及如何判别一个断言实际处于哪一种。"
+        ]
+      },
+      "links": []
+    },
+    {
+      "id": "invitation",
+      "cls": "books",
+      "title": {
+        "en": "An Invitation After Abundance: Reading the Present, Wagering the Future",
+        "zh": "An Invitation After Abundance:读现在,赌未来"
+      },
+      "period": "2026",
+      "where": {
+        "en": "Political economy · ~1,164 pages",
+        "zh": "政治经济学专著 · 约 1,164 页"
+      },
+      "status": {
+        "en": "Publish-ready",
+        "zh": "成书 · 待出版"
+      },
+      "desc": {
+        "en": [
+          "A political-economy volume: reading the present and wagering the future — technology, power, and institutions after abundance."
+        ],
+        "zh": [
+          "一部政治经济学专著:读现在,赌未来——富足之后的技术、权力与制度。"
+        ]
+      },
+      "links": []
+    },
+    {
+      "id": "sovereign",
+      "cls": "books",
+      "title": {
+        "en": "Sovereign Scintillation Over Grand Fluctuation: An Observer-State Theory of Physics",
+        "zh": "Sovereign Scintillation Over Grand Fluctuation:观察者态物理理论"
+      },
+      "period": "2024 — 2026",
+      "where": {
+        "en": "Foundations of physics · book draft",
+        "zh": "物理基础 · 书稿"
+      },
+      "status": {
+        "en": "In manuscript (unpublished)",
+        "zh": "成稿中 · 未出版"
+      },
+      "desc": {
+        "en": [
+          "A single-volume framework: observer self-states plus a universal-prior-weighted transition rule as primitives, asking what physics — locality, modular flow, the Born rule — does and does not follow."
+        ],
+        "zh": [
+          "单卷本框架专著:以观察者自态与通用先验加权的转移规则为原语,追问物理——局域性、模流、玻恩规则——什么能从中导出,什么不能。"
+        ]
+      },
+      "links": []
     }
-   ]
-  },
-  {
-   "id": "stackPower",
-   "cls": "humanities",
-   "title": {
-    "en": "Stack Power: Frontier AI and Market Non-Correction",
-    "zh": "栈权力:前沿 AI 与市场不矫正"
-   },
-   "period": "2026",
-   "where": {
-    "en": "Political economy · single author",
-    "zh": "政治经济学 · 单作者"
-   },
-   "status": {
-    "en": "Under journal re-submission",
-    "zh": "期刊再投轮"
-   },
-   "desc": {
-    "en": [
-     "On the forms of power that accumulate across the frontier-AI stack, and why market self-correction fails to arrive — with a diagnostic for when it structurally cannot."
-    ],
-    "zh": [
-     "论前沿 AI 产业栈中积聚的权力形态,以及市场自我矫正为何迟迟不至——并给出一个判别\"结构上不可能矫正\"的诊断。"
-    ]
-   },
-   "links": []
-  },
-  {
-   "id": "cpe",
-   "cls": "humanities",
-   "title": {
-    "en": "Camera, Player, Engine",
-    "zh": "相机 · 棋手 · 引擎"
-   },
-   "period": "2026",
-   "where": {
-    "en": "Epistemology / methodology",
-    "zh": "认识论 / 方法论"
-   },
-   "status": {
-    "en": "Method paper",
-    "zh": "方法论文"
-   },
-   "desc": {
-    "en": [
-     "An epistemological frame separating three stances of knowledge — descriptive (camera), strategic (player), operative (engine) — and how to tell which one a claim is actually making."
-    ],
-    "zh": [
-     "一个认识论框架:区分知识的三种立场——描述性(相机)、战略性(棋手)、操作性(引擎)——以及如何判别一个断言实际处于哪一种。"
-    ]
-   },
-   "links": []
-  },
-  {
-   "id": "invitation",
-   "cls": "books",
-   "title": {
-    "en": "An Invitation After Abundance: Reading the Present, Wagering the Future",
-    "zh": "An Invitation After Abundance:读现在,赌未来"
-   },
-   "period": "2026",
-   "where": {
-    "en": "Political economy · ~1,164 pages",
-    "zh": "政治经济学专著 · 约 1,164 页"
-   },
-   "status": {
-    "en": "Publish-ready",
-    "zh": "成书 · 待出版"
-   },
-   "desc": {
-    "en": [
-     "A political-economy volume: reading the present and wagering the future — technology, power, and institutions after abundance."
-    ],
-    "zh": [
-     "一部政治经济学专著:读现在,赌未来——富足之后的技术、权力与制度。"
-    ]
-   },
-   "links": []
-  },
-  {
-   "id": "sovereign",
-   "cls": "books",
-   "title": {
-    "en": "Sovereign Scintillation Over Grand Fluctuation: An Observer-State Theory of Physics",
-    "zh": "Sovereign Scintillation Over Grand Fluctuation:观察者态物理理论"
-   },
-   "period": "2024 — 2026",
-   "where": {
-    "en": "Foundations of physics · book draft",
-    "zh": "物理基础 · 书稿"
-   },
-   "status": {
-    "en": "In manuscript (unpublished)",
-    "zh": "成稿中 · 未出版"
-   },
-   "desc": {
-    "en": [
-     "A single-volume framework: observer self-states plus a universal-prior-weighted transition rule as primitives, asking what physics — locality, modular flow, the Born rule — does and does not follow."
-    ],
-    "zh": [
-     "单卷本框架专著:以观察者自态与通用先验加权的转移规则为原语,追问物理——局域性、模流、玻恩规则——什么能从中导出,什么不能。"
-    ]
-   },
-   "links": []
-  }
- ]
+  ]
 }
