@@ -129,6 +129,10 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
   transition:color .2s ease, border-color .2s ease, background .2s ease;}
 .links a:first-child{color:var(--ink); border-color:rgba(255,255,255,.22); box-shadow:inset 0 0 0 .5px rgba(232,195,122,.10);}
 .links a:hover{color:var(--accent); border-color:var(--accent); background:rgba(224,135,106,.06);}
+.links .cite{cursor:pointer; background:transparent; font-family:var(--mono); font-size:12px; letter-spacing:.05em;
+  color:var(--body); border:1px solid var(--hairline); border-radius:999px; padding:10px 16px;
+  transition:color .2s ease, border-color .2s ease, background .2s ease;}
+.links .cite:hover{color:var(--accent); border-color:var(--accent); background:rgba(224,135,106,.06);}
 
 /* ── skyline note ─────────────────────────────────────────── */
 .skyline{margin-top:var(--s6); font-family:var(--mono); font-size:10.5px; color:var(--muted);
@@ -223,7 +227,12 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
     <div class="meta"><b>2026</b> · <span class="i18n-en">SSRN · public preprint</span><span class="i18n-zh">SSRN · 公开预印本</span><br/><span class="i18n-en">Public — posted 19 Jun 2026</span><span class="i18n-zh">已公开 · 2026-06-19 发布</span></div>
     <div class="rule"></div>
     <div class="desc"><p><span class="i18n-en">A bounded conceptual paper naming &quot;inference rent&quot; / technological monopoly rent: the above-normal return that arises when high-fixed-cost, non-rival AI model capability is metered into priced scarcity.</span><span class="i18n-zh">一篇界定清晰的概念论文,提出&quot;推理租金&quot;/技术垄断租金:当高固定成本、非竞争性的 AI 模型能力被计量化为定价稀缺时产生的超额回报。</span></p></div>
-    <div class="links"><a href="https://ssrn.com/abstract=6950759" target="_blank" rel="noopener" data-magnet>SSRN abstract 6950759 ↗</a><a href="https://ssrn.com/author=12014588" target="_blank" rel="noopener" data-magnet>SSRN author page ↗</a></div>
+    <div class="links paper"><a href="https://ssrn.com/abstract=6950759" target="_blank" rel="noopener" data-magnet>SSRN abstract 6950759 ↗</a><a href="https://ssrn.com/author=12014588" target="_blank" rel="noopener" data-magnet>SSRN author page ↗</a><button class="cite" type="button" data-magnet onclick="var p=this.parentNode.querySelector('.bibtex');if(navigator.clipboard)navigator.clipboard.writeText(p.textContent);var e=this.querySelector('.i18n-en'),z=this.querySelector('.i18n-zh'),oe=e.textContent,oz=z.textContent;e.textContent='Copied \u2713';z.textContent='\u5df2\u590d\u5236 \u2713';clearTimeout(this._t);this._t=setTimeout(function(){e.textContent=oe;z.textContent=oz;},1500);"><span class="i18n-en">Cite · BibTeX ⧉</span><span class="i18n-zh">引用 · BibTeX ⧉</span></button><pre class="bibtex" hidden>@unpublished{chen2026technolo,
+  title = {Technological Monopoly Rent: A Category for the Political Economy of the New Productive Forces},
+  author = {Chen, Jiaxuan},
+  year = {2026},
+  note = {Public — posted 19 Jun 2026}
+}</pre></div>
     <div class="skyline">✦ <span class="i18n-en">Gemini — where Saturn stood</span><span class="i18n-zh">双子座 · 土星所在</span></div>
     <nav class="pager" aria-label="Within Humanities & Social Science"><a class="empty" aria-hidden="true"></a><a class="next" data-magnet href="stackPower.html"><span class="dir"><span class="i18n-en">Next ⟶</span><span class="i18n-zh">下一篇 ⟶</span></span><span class="nm"><span class="i18n-en">Stack Power: Frontier AI and Market Non-Correction</span><span class="i18n-zh">栈权力:前沿 AI 与市场不矫正</span></span></a></nav>
   </main>

@@ -129,6 +129,10 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
   transition:color .2s ease, border-color .2s ease, background .2s ease;}
 .links a:first-child{color:var(--ink); border-color:rgba(255,255,255,.22); box-shadow:inset 0 0 0 .5px rgba(232,195,122,.10);}
 .links a:hover{color:var(--accent); border-color:var(--accent); background:rgba(224,135,106,.06);}
+.links .cite{cursor:pointer; background:transparent; font-family:var(--mono); font-size:12px; letter-spacing:.05em;
+  color:var(--body); border:1px solid var(--hairline); border-radius:999px; padding:10px 16px;
+  transition:color .2s ease, border-color .2s ease, background .2s ease;}
+.links .cite:hover{color:var(--accent); border-color:var(--accent); background:rgba(224,135,106,.06);}
 
 /* ── skyline note ─────────────────────────────────────────── */
 .skyline{margin-top:var(--s6); font-family:var(--mono); font-size:10.5px; color:var(--muted);
@@ -223,7 +227,12 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
     <div class="meta"><b>2026 —</b> · <span class="i18n-en">Theoretical physics</span><span class="i18n-zh">理论物理</span><br/><span class="i18n-en">Active line, with a formalized finite-window certificate</span><span class="i18n-zh">理论课题 · 进行中,附形式化有限窗口证书线</span></div>
     <div class="rule"></div>
     <div class="desc"><p><span class="i18n-en">A classification study of tachyonic phase boundaries, carried with a formalized finite-window certificate line — turning &quot;when may one claim the transition&quot; into a checkable criterion.</span><span class="i18n-zh">快子场相边界的分类研究,并携带一条形式化的有限窗口证书线——把&quot;何时可以宣称相变&quot;变成可核查的判据。</span></p></div>
-    
+    <div class="links paper"><button class="cite" type="button" data-magnet onclick="var p=this.parentNode.querySelector('.bibtex');if(navigator.clipboard)navigator.clipboard.writeText(p.textContent);var e=this.querySelector('.i18n-en'),z=this.querySelector('.i18n-zh'),oe=e.textContent,oz=z.textContent;e.textContent='Copied \u2713';z.textContent='\u5df2\u590d\u5236 \u2713';clearTimeout(this._t);this._t=setTimeout(function(){e.textContent=oe;z.textContent=oz;},1500);"><span class="i18n-en">Cite · BibTeX ⧉</span><span class="i18n-zh">引用 · BibTeX ⧉</span></button><pre class="bibtex" hidden>@unpublished{chen2026tachyoni,
+  title = {Tachyonic Phase-Boundary Classification},
+  author = {Chen, Jiaxuan},
+  year = {2026},
+  note = {Active line, with a formalized finite-window certificate}
+}</pre></div>
     <div class="skyline">✦ <span class="i18n-en">Capricornus — the outward word</span><span class="i18n-zh">摩羯座 · 主外之言</span></div>
     <nav class="pager" aria-label="Within Sciences"><a class="prev" data-magnet href="ringdown.html"><span class="dir"><span class="i18n-en">⟵ Previous</span><span class="i18n-zh">⟵ 上一篇</span></span><span class="nm"><span class="i18n-en">Covariance-Estimator Dependence of Ringdown Overtone Significance: A Coverage-Validated Real-Noise Calibration Standard</span><span class="i18n-zh">铃宕泛音显著性对协方差估计器的依赖:一个经覆盖率验证的真实噪声标定标准</span></span></a><a class="next" data-magnet href="gwPopulation.html"><span class="dir"><span class="i18n-en">Next ⟶</span><span class="i18n-zh">下一篇 ⟶</span></span><span class="nm"><span class="i18n-en">Feature-Local Significance Certificates for Gravitational-Wave Populations (GWTC-4)</span><span class="i18n-zh">引力波族群特征的特征局域显著性证书(GWTC-4)</span></span></a></nav>
   </main>

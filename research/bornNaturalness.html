@@ -129,6 +129,10 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
   transition:color .2s ease, border-color .2s ease, background .2s ease;}
 .links a:first-child{color:var(--ink); border-color:rgba(255,255,255,.22); box-shadow:inset 0 0 0 .5px rgba(232,195,122,.10);}
 .links a:hover{color:var(--accent); border-color:var(--accent); background:rgba(224,135,106,.06);}
+.links .cite{cursor:pointer; background:transparent; font-family:var(--mono); font-size:12px; letter-spacing:.05em;
+  color:var(--body); border:1px solid var(--hairline); border-radius:999px; padding:10px 16px;
+  transition:color .2s ease, border-color .2s ease, background .2s ease;}
+.links .cite:hover{color:var(--accent); border-color:var(--accent); background:rgba(224,135,106,.06);}
 
 /* ── skyline note ─────────────────────────────────────────── */
 .skyline{margin-top:var(--s6); font-family:var(--mono); font-size:10.5px; color:var(--muted);
@@ -223,7 +227,12 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
     <div class="meta"><b>2026 —</b> · <span class="i18n-en">Foundations of physics</span><span class="i18n-zh">物理基础</span><br/><span class="i18n-en">Active — capstone track</span><span class="i18n-zh">代表作课题 · 进行中</span></div>
     <div class="rule"></div>
     <div class="desc"><p><span class="i18n-en">Chases the bridge-obligation through Born-rule derivations: whether a positive minimal-successor construction discharges that obligation or merely relocates it — the make-or-break criterion of the whole line.</span><span class="i18n-zh">追索玻恩规则推导中的&quot;桥接义务&quot;:一个正向的最小后继构造究竟是解除了义务,还是仅仅把它转移了——这条线的成败判据即在于此。</span></p></div>
-    
+    <div class="links paper"><button class="cite" type="button" data-magnet onclick="var p=this.parentNode.querySelector('.bibtex');if(navigator.clipboard)navigator.clipboard.writeText(p.textContent);var e=this.querySelector('.i18n-en'),z=this.querySelector('.i18n-zh'),oe=e.textContent,oz=z.textContent;e.textContent='Copied \u2713';z.textContent='\u5df2\u590d\u5236 \u2713';clearTimeout(this._t);this._t=setTimeout(function(){e.textContent=oe;z.textContent=oz;},1500);"><span class="i18n-en">Cite · BibTeX ⧉</span><span class="i18n-zh">引用 · BibTeX ⧉</span></button><pre class="bibtex" hidden>@unpublished{chen2026bornrule,
+  title = {Born Rule &amp; Naturalness},
+  author = {Chen, Jiaxuan},
+  year = {2026},
+  note = {Active — capstone track}
+}</pre></div>
     <div class="skyline">✦ <span class="i18n-en">Capricornus — the outward word</span><span class="i18n-zh">摩羯座 · 主外之言</span></div>
     <nav class="pager" aria-label="Within Sciences"><a class="prev" data-magnet href="paperD.html"><span class="dir"><span class="i18n-en">⟵ Previous</span><span class="i18n-zh">⟵ 上一篇</span></span><span class="nm"><span class="i18n-en">Half-Line Free Fermions: Local CAR and Modular Scaling with a Type-Forced Mass-Axis Obstruction</span><span class="i18n-zh">半直线自由费米子:局域 CAR 与模流标度,及类型强制的质量轴障碍</span></span></a><a class="next" data-magnet href="ringdown.html"><span class="dir"><span class="i18n-en">Next ⟶</span><span class="i18n-zh">下一篇 ⟶</span></span><span class="nm"><span class="i18n-en">Covariance-Estimator Dependence of Ringdown Overtone Significance: A Coverage-Validated Real-Noise Calibration Standard</span><span class="i18n-zh">铃宕泛音显著性对协方差估计器的依赖:一个经覆盖率验证的真实噪声标定标准</span></span></a></nav>
   </main>

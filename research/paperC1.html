@@ -129,6 +129,10 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
   transition:color .2s ease, border-color .2s ease, background .2s ease;}
 .links a:first-child{color:var(--ink); border-color:rgba(255,255,255,.22); box-shadow:inset 0 0 0 .5px rgba(232,195,122,.10);}
 .links a:hover{color:var(--accent); border-color:var(--accent); background:rgba(224,135,106,.06);}
+.links .cite{cursor:pointer; background:transparent; font-family:var(--mono); font-size:12px; letter-spacing:.05em;
+  color:var(--body); border:1px solid var(--hairline); border-radius:999px; padding:10px 16px;
+  transition:color .2s ease, border-color .2s ease, background .2s ease;}
+.links .cite:hover{color:var(--accent); border-color:var(--accent); background:rgba(224,135,106,.06);}
 
 /* ── skyline note ─────────────────────────────────────────── */
 .skyline{margin-top:var(--s6); font-family:var(--mono); font-size:10.5px; color:var(--muted);
@@ -223,7 +227,12 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
     <div class="meta"><b>2026</b> · <span class="i18n-en">Philosophy of physics</span><span class="i18n-zh">物理哲学</span><br/><span class="i18n-en">In preparation (Synthese track)</span><span class="i18n-zh">撰写中(Synthese 方向)</span></div>
     <div class="rule"></div>
     <div class="desc"><p><span class="i18n-en">Re-examines the Boltzmann-brain problem in an observer-state framework: measure, typicality, and what self-locating evidence can and cannot license.</span><span class="i18n-zh">在观察者态框架下重审玻尔兹曼大脑问题:测度、典型性,以及自定位证据能许可什么、不能许可什么。</span></p></div>
-    
+    <div class="links paper"><button class="cite" type="button" data-magnet onclick="var p=this.parentNode.querySelector('.bibtex');if(navigator.clipboard)navigator.clipboard.writeText(p.textContent);var e=this.querySelector('.i18n-en'),z=this.querySelector('.i18n-zh'),oe=e.textContent,oz=z.textContent;e.textContent='Copied \u2713';z.textContent='\u5df2\u590d\u5236 \u2713';clearTimeout(this._t);this._t=setTimeout(function(){e.textContent=oe;z.textContent=oz;},1500);"><span class="i18n-en">Cite · BibTeX ⧉</span><span class="i18n-zh">引用 · BibTeX ⧉</span></button><pre class="bibtex" hidden>@unpublished{chen2026boltzman,
+  title = {Boltzmann Brains under an Observer-State Ontology},
+  author = {Chen, Jiaxuan},
+  year = {2026},
+  note = {In preparation (Synthese track)}
+}</pre></div>
     <div class="skyline">✦ <span class="i18n-en">Capricornus — the outward word</span><span class="i18n-zh">摩羯座 · 主外之言</span></div>
     <nav class="pager" aria-label="Within Sciences"><a class="prev" data-magnet href="paperB2.html"><span class="dir"><span class="i18n-en">⟵ Previous</span><span class="i18n-zh">⟵ 上一篇</span></span><span class="nm"><span class="i18n-en">A Universal Prior Selects No Preferred Factorization: the Same Cross-Context Gap in Born-Rule Derivations</span><span class="i18n-zh">通用先验不选优先分解:同一跨语境缺口在玻恩规则推导中的复现</span></span></a><a class="next" data-magnet href="paperC2.html"><span class="dir"><span class="i18n-en">Next ⟶</span><span class="i18n-zh">下一篇 ⟶</span></span><span class="nm"><span class="i18n-en">Other Minds under an Observer-State Ontology</span><span class="i18n-zh">观察者态本体论下的他心问题</span></span></a></nav>
   </main>

@@ -129,6 +129,10 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
   transition:color .2s ease, border-color .2s ease, background .2s ease;}
 .links a:first-child{color:var(--ink); border-color:rgba(255,255,255,.22); box-shadow:inset 0 0 0 .5px rgba(232,195,122,.10);}
 .links a:hover{color:var(--accent); border-color:var(--accent); background:rgba(224,135,106,.06);}
+.links .cite{cursor:pointer; background:transparent; font-family:var(--mono); font-size:12px; letter-spacing:.05em;
+  color:var(--body); border:1px solid var(--hairline); border-radius:999px; padding:10px 16px;
+  transition:color .2s ease, border-color .2s ease, background .2s ease;}
+.links .cite:hover{color:var(--accent); border-color:var(--accent); background:rgba(224,135,106,.06);}
 
 /* ── skyline note ─────────────────────────────────────────── */
 .skyline{margin-top:var(--s6); font-family:var(--mono); font-size:10.5px; color:var(--muted);
@@ -223,7 +227,12 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
     <div class="meta"><b>2026</b> · <span class="i18n-en">Gravitational-wave methods · single author</span><span class="i18n-zh">引力波方法学 · 单作者</span><br/><span class="i18n-en">Manuscript prepared (RASTI, OUP/RAS)</span><span class="i18n-zh">投稿包已备(RASTI · OUP/RAS)</span></div>
     <div class="rule"></div>
     <div class="desc"><p><span class="i18n-en">Shows a black-hole ringdown overtone&#x27;s reported significance can swing by an order of magnitude with the analyst&#x27;s noise-covariance estimator, and introduces a coverage-validated, covariance-choice-independent real-noise calibration standard — demonstrated on GW250114 and GW150914.</span><span class="i18n-zh">证明黑洞铃宕泛音的报告显著性会因分析者所选的噪声协方差估计器而波动一个量级;提出一个经覆盖率验证、与协方差选择无关的真实噪声标定标准,并在 GW250114 与 GW150914 上演示。</span></p></div>
-    
+    <div class="links paper"><button class="cite" type="button" data-magnet onclick="var p=this.parentNode.querySelector('.bibtex');if(navigator.clipboard)navigator.clipboard.writeText(p.textContent);var e=this.querySelector('.i18n-en'),z=this.querySelector('.i18n-zh'),oe=e.textContent,oz=z.textContent;e.textContent='Copied \u2713';z.textContent='\u5df2\u590d\u5236 \u2713';clearTimeout(this._t);this._t=setTimeout(function(){e.textContent=oe;z.textContent=oz;},1500);"><span class="i18n-en">Cite · BibTeX ⧉</span><span class="i18n-zh">引用 · BibTeX ⧉</span></button><pre class="bibtex" hidden>@unpublished{chen2026covarian,
+  title = {Covariance-Estimator Dependence of Ringdown Overtone Significance: A Coverage-Validated Real-Noise Calibration Standard},
+  author = {Chen, Jiaxuan},
+  year = {2026},
+  note = {Manuscript prepared (RASTI, OUP/RAS)}
+}</pre></div>
     <div class="skyline">✦ <span class="i18n-en">Capricornus — the outward word</span><span class="i18n-zh">摩羯座 · 主外之言</span></div>
     <nav class="pager" aria-label="Within Sciences"><a class="prev" data-magnet href="bornNaturalness.html"><span class="dir"><span class="i18n-en">⟵ Previous</span><span class="i18n-zh">⟵ 上一篇</span></span><span class="nm"><span class="i18n-en">Born Rule &amp; Naturalness</span><span class="i18n-zh">玻恩规则与自然性</span></span></a><a class="next" data-magnet href="tachyon.html"><span class="dir"><span class="i18n-en">Next ⟶</span><span class="i18n-zh">下一篇 ⟶</span></span><span class="nm"><span class="i18n-en">Tachyonic Phase-Boundary Classification</span><span class="i18n-zh">快子相边界分类</span></span></a></nav>
   </main>

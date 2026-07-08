@@ -134,6 +134,10 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
   transition:color .2s ease, border-color .2s ease, background .2s ease;}
 .links a:first-child{color:var(--ink); border-color:rgba(255,255,255,.22); box-shadow:inset 0 0 0 .5px rgba(232,195,122,.10);}
 .links a:hover{color:var(--accent); border-color:var(--accent); background:rgba(224,135,106,.06);}
+.links .cite{cursor:pointer; background:transparent; font-family:var(--mono); font-size:12px; letter-spacing:.05em;
+  color:var(--body); border:1px solid var(--hairline); border-radius:999px; padding:10px 16px;
+  transition:color .2s ease, border-color .2s ease, background .2s ease;}
+.links .cite:hover{color:var(--accent); border-color:var(--accent); background:rgba(224,135,106,.06);}
 
 /* ── skyline note ─────────────────────────────────────────── */
 .skyline{margin-top:var(--s6); font-family:var(--mono); font-size:10.5px; color:var(--muted);
@@ -353,6 +357,51 @@ def chrome(backs, depth=0):
     </div>
   </div>"""
 
+# ---------------- publication / citation infrastructure ----------------
+import re as _re
+def _year_of(w):
+    m = _re.search(r"(19|20)\d\d", (w.get("year") or w.get("period") or ""))
+    return m.group(0) if m else ""
+def _venue_of(w):
+    v = w.get("venue")
+    if isinstance(v, dict): return v.get("en", "")
+    return v or w.get("journal", "") or ""
+def bibtex(w):
+    """Honest BibTeX from whatever fields exist — @article if a DOI is provided, @misc for an arXiv
+    preprint, else @unpublished with the real status note. Never invents an identifier."""
+    year = _year_of(w); title = w["title"]["en"]; status = w["status"]["en"]
+    arxiv, doi, journal = w.get("arxiv"), w.get("doi"), _venue_of(w)
+    b = lambda s: str(s).replace("{", "(").replace("}", ")")
+    key = "chen" + (year or "nd") + (_re.sub(r"[^a-z]", "", title.lower())[:8] or "work")
+    lines = [f"  title = {{{b(title)}}}", "  author = {Chen, Jiaxuan}"]
+    if year: lines.append(f"  year = {{{year}}}")
+    if doi:
+        head = "@article"
+        if journal: lines.append(f"  journal = {{{b(journal)}}}")
+        lines.append(f"  doi = {{{b(doi)}}}")
+    elif arxiv:
+        head = "@misc"; lines += [f"  eprint = {{{b(arxiv)}}}", "  archivePrefix = {arXiv}"]
+        if status: lines.append(f"  note = {{{b(status)}}}")
+    else:
+        head = "@unpublished"
+        if status: lines.append(f"  note = {{{b(status)}}}")
+    return head + "{" + key + ",\n" + ",\n".join(lines) + "\n}"
+def paper_block(w):
+    btns = []
+    if w.get("arxiv"): btns.append(f'<a href="https://arxiv.org/abs/{html.escape(w["arxiv"])}" target="_blank" rel="noopener" data-magnet>arXiv ↗</a>')
+    if w.get("pdf"):   btns.append(f'<a href="{html.escape(w["pdf"])}" target="_blank" rel="noopener" data-magnet>PDF ↗</a>')
+    if w.get("doi"):   btns.append(f'<a href="https://doi.org/{html.escape(w["doi"])}" target="_blank" rel="noopener" data-magnet>DOI ↗</a>')
+    for l in (w.get("links") or []):
+        btns.append(f'<a href="{l["href"]}" target="_blank" rel="noopener" data-magnet>{html.escape(l["label"])}</a>')
+    cite = ('<button class="cite" type="button" data-magnet '
+            "onclick=\"var p=this.parentNode.querySelector('.bibtex');if(navigator.clipboard)navigator.clipboard.writeText(p.textContent);"
+            "var e=this.querySelector('.i18n-en'),z=this.querySelector('.i18n-zh'),oe=e.textContent,oz=z.textContent;"
+            "e.textContent='Copied \\u2713';z.textContent='\\u5df2\\u590d\\u5236 \\u2713';clearTimeout(this._t);"
+            "this._t=setTimeout(function(){e.textContent=oe;z.textContent=oz;},1500);\">"
+            '<span class="i18n-en">Cite · BibTeX ⧉</span><span class="i18n-zh">引用 · BibTeX ⧉</span></button>')
+    return ('<div class="links paper">' + "".join(btns) + cite +
+            f'<pre class="bibtex" hidden>{html.escape(bibtex(w))}</pre></div>')
+
 # ---------------- item pages (with prev/next within the constellation) ----------------
 BY_CLS = {}
 for w in DATA:
@@ -364,11 +413,7 @@ for cls, items in BY_CLS.items():
         paras = "".join(
             f'<p>{bi(html.escape(e), html.escape(z))}</p>'
             for e, z in zip(w["desc"]["en"], w["desc"]["zh"]))
-        links = ""
-        if w["links"]:
-            links = '<div class="links">' + "".join(
-                f'<a href="{l["href"]}" target="_blank" rel="noopener" data-magnet>{html.escape(l["label"])}</a>'
-                for l in w["links"]) + "</div>"
+        links = paper_block(w)
         prev_w = items[i - 1] if i > 0 else None
         next_w = items[i + 1] if i < len(items) - 1 else None
         def pager_link(pw, cls_name, arrow_en, arrow_zh):

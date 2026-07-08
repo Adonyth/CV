@@ -129,6 +129,10 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
   transition:color .2s ease, border-color .2s ease, background .2s ease;}
 .links a:first-child{color:var(--ink); border-color:rgba(255,255,255,.22); box-shadow:inset 0 0 0 .5px rgba(232,195,122,.10);}
 .links a:hover{color:var(--accent); border-color:var(--accent); background:rgba(224,135,106,.06);}
+.links .cite{cursor:pointer; background:transparent; font-family:var(--mono); font-size:12px; letter-spacing:.05em;
+  color:var(--body); border:1px solid var(--hairline); border-radius:999px; padding:10px 16px;
+  transition:color .2s ease, border-color .2s ease, background .2s ease;}
+.links .cite:hover{color:var(--accent); border-color:var(--accent); background:rgba(224,135,106,.06);}
 
 /* ── skyline note ─────────────────────────────────────────── */
 .skyline{margin-top:var(--s6); font-family:var(--mono); font-size:10.5px; color:var(--muted);
@@ -223,7 +227,12 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
     <div class="meta"><b>2022 — 2023</b> · <span class="i18n-en">Shandong University · undergraduate research</span><span class="i18n-zh">山东大学 · 本科研究</span><br/><span class="i18n-en">Completed</span><span class="i18n-zh">已完成</span></div>
     <div class="rule"></div>
     <div class="desc"><p><span class="i18n-en">Spectroscopic study of stellar flares on TESS Objects of Interest, assessing exoplanet habitability and radiation environment.</span><span class="i18n-zh">对 TESS 关注目标(TOI)的恒星耀发进行光谱学研究,评估系外行星宜居性与辐射环境。</span></p></div>
-    
+    <div class="links paper"><button class="cite" type="button" data-magnet onclick="var p=this.parentNode.querySelector('.bibtex');if(navigator.clipboard)navigator.clipboard.writeText(p.textContent);var e=this.querySelector('.i18n-en'),z=this.querySelector('.i18n-zh'),oe=e.textContent,oz=z.textContent;e.textContent='Copied \u2713';z.textContent='\u5df2\u590d\u5236 \u2713';clearTimeout(this._t);this._t=setTimeout(function(){e.textContent=oe;z.textContent=oz;},1500);"><span class="i18n-en">Cite · BibTeX ⧉</span><span class="i18n-zh">引用 · BibTeX ⧉</span></button><pre class="bibtex" hidden>@unpublished{chen2022toistell,
+  title = {TOI Stellar-Flare Spectroscopy},
+  author = {Chen, Jiaxuan},
+  year = {2022},
+  note = {Completed}
+}</pre></div>
     <div class="skyline">✦ <span class="i18n-en">Capricornus — the outward word</span><span class="i18n-zh">摩羯座 · 主外之言</span></div>
     <nav class="pager" aria-label="Within Sciences"><a class="prev" data-magnet href="maxi.html"><span class="dir"><span class="i18n-en">⟵ Previous</span><span class="i18n-zh">⟵ 上一篇</span></span><span class="nm"><span class="i18n-en">MAXI J1348-630 Black-Hole X-ray Binary</span><span class="i18n-zh">MAXI J1348-630 黑洞 X 射线双星</span></span></a><a class="empty" aria-hidden="true"></a></nav>
   </main>

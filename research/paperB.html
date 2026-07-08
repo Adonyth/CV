@@ -129,6 +129,10 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
   transition:color .2s ease, border-color .2s ease, background .2s ease;}
 .links a:first-child{color:var(--ink); border-color:rgba(255,255,255,.22); box-shadow:inset 0 0 0 .5px rgba(232,195,122,.10);}
 .links a:hover{color:var(--accent); border-color:var(--accent); background:rgba(224,135,106,.06);}
+.links .cite{cursor:pointer; background:transparent; font-family:var(--mono); font-size:12px; letter-spacing:.05em;
+  color:var(--body); border:1px solid var(--hairline); border-radius:999px; padding:10px 16px;
+  transition:color .2s ease, border-color .2s ease, background .2s ease;}
+.links .cite:hover{color:var(--accent); border-color:var(--accent); background:rgba(224,135,106,.06);}
 
 /* ── skyline note ─────────────────────────────────────────── */
 .skyline{margin-top:var(--s6); font-family:var(--mono); font-size:10.5px; color:var(--muted);
@@ -223,7 +227,12 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
     <div class="meta"><b>2026</b> · <span class="i18n-en">Foundations of physics · single author</span><span class="i18n-zh">物理基础 · 单作者</span><br/><span class="i18n-en">Under journal consideration</span><span class="i18n-zh">投稿轮转中</span></div>
     <div class="rule"></div>
     <div class="desc"><p><span class="i18n-en">Proves, via a constant-complexity carry-increment recoding witness, that the universal (Solomonoff–Levin) algorithmic prior selects no preferred tensor factorization — and therefore cannot, by itself, supply locality.</span><span class="i18n-zh">借一个常数复杂度的进位递增重编码作为可审计见证,证明通用(Solomonoff–Levin)算法先验不选出任何优先的张量分解——因而其自身无法提供局域性。</span></p></div>
-    
+    <div class="links paper"><button class="cite" type="button" data-magnet onclick="var p=this.parentNode.querySelector('.bibtex');if(navigator.clipboard)navigator.clipboard.writeText(p.textContent);var e=this.querySelector('.i18n-en'),z=this.querySelector('.i18n-zh'),oe=e.textContent,oz=z.textContent;e.textContent='Copied \u2713';z.textContent='\u5df2\u590d\u5236 \u2713';clearTimeout(this._t);this._t=setTimeout(function(){e.textContent=oe;z.textContent=oz;},1500);"><span class="i18n-en">Cite · BibTeX ⧉</span><span class="i18n-zh">引用 · BibTeX ⧉</span></button><pre class="bibtex" hidden>@unpublished{chen2026theunive,
+  title = {The Universal Prior Does Not Select a Factorization},
+  author = {Chen, Jiaxuan},
+  year = {2026},
+  note = {Under journal consideration}
+}</pre></div>
     <div class="skyline">✦ <span class="i18n-en">Capricornus — the outward word</span><span class="i18n-zh">摩羯座 · 主外之言</span></div>
     <nav class="pager" aria-label="Within Sciences"><a class="prev" data-magnet href="paperA.html"><span class="dir"><span class="i18n-en">⟵ Previous</span><span class="i18n-zh">⟵ 上一篇</span></span><span class="nm"><span class="i18n-en">What an Algorithmic-Idealism Modular Identification Requires: A Foundational Delimitation</span><span class="i18n-zh">算法理想主义的模块化识别需要什么:一个基础性界定</span></span></a><a class="next" data-magnet href="paperB2.html"><span class="dir"><span class="i18n-en">Next ⟶</span><span class="i18n-zh">下一篇 ⟶</span></span><span class="nm"><span class="i18n-en">A Universal Prior Selects No Preferred Factorization: the Same Cross-Context Gap in Born-Rule Derivations</span><span class="i18n-zh">通用先验不选优先分解:同一跨语境缺口在玻恩规则推导中的复现</span></span></a></nav>
   </main>
