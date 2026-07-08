@@ -320,6 +320,7 @@ export function mountNyeArmature(THREE, scene, opts) {
     group,
     tick,
     earthSurfacePoint,
+    earthRadiusVis,               // scene-unit globe radius — the base-view terrain needs it for real-meters→scene displacement
     setBaseMarker,
     dispose,
     buildRings: buildGanzhiRings,        // idempotent; called by the scale director at orrery scale

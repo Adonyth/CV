@@ -436,6 +436,7 @@
        natal sky. Everything else — lift-off, tours, the whole orrery — starts from there. */
     var DEFAULT_BASE = { lat: 41.824, lon: -71.4128, city: "Providence" };   // the author's home, if the visitor can't be placed
     var baseGeo = null, groundEntered = false, tryGroundEntrance = null, groundDome = null, groundStars = null;
+    var groundTerrain = null, _terrainMat = null, _heightmap = null, _hmMeta = null, _hmLoading = null;   // base-view REAL ETOPO terrain
     var groundDimTarget = 0, _earthUni = null, _traceMat = null;   // eased toward the target every frame in the frame loop
     /* the ground-view ATMOSPHERE: a warm band of light hugging the horizon all around
        the base — additive, baked once per landing, zero per-frame cost */
@@ -525,6 +526,112 @@
         if (groundStars.material.map) groundStars.material.map.dispose();
         groundStars.material.dispose(); groundStars.geometry.dispose();
         groundStars = null;
+      }
+      removeGroundTerrain();
+    }
+
+    /* ---- base-view REAL TERRAIN: a modeled local relief patch built ONCE per landing from
+       real NOAA ETOPO1 elevation (data/earth-heightmap.i16, public domain) sampled around the
+       visitor's lat/lon. Lives ONLY in ground mode — built on descent, disposed on exit — so
+       the space / orrery / LSS views never construct it and stay byte-identical. Dark night
+       ground; distant ranges dissolve into the horizon glow (aerial perspective); ridges
+       occlude low stars (they set behind the mountains). The sky stays the star. ---- */
+    function loadHeightmap() {
+      if (_heightmap) return Promise.resolve(_heightmap);
+      if (_hmLoading) return _hmLoading;
+      _hmLoading = fetch("data/earth-heightmap.json").then(function (r) { return r.json(); }).then(function (meta) {
+        _hmMeta = meta;
+        return fetch("data/earth-heightmap.i16").then(function (r) { return r.arrayBuffer(); }).then(function (buf) {
+          _heightmap = new Int16Array(buf); window.__space.heightmapPts = _heightmap.length; return _heightmap;
+        });
+      }).catch(function (e) { window.__space.hmError = String(e); _hmLoading = null; return null; });
+      return _hmLoading;
+    }
+    function sampleElevM(lat, lon) {                     // bilinear metres from the ETOPO grid
+      var m = _hmMeta; if (!m || !_heightmap) return 0;
+      while (lon < -180) lon += 360; while (lon > 180) lon -= 360;
+      var fr = (lat - m.lat0) / (m.lat1 - m.lat0) * (m.nlat - 1);
+      var fc = (lon - m.lon0) / (m.lon1 - m.lon0) * (m.nlon - 1);
+      fr = Math.max(0, Math.min(m.nlat - 1.0001, fr));
+      var r0 = Math.floor(fr), c0 = ((Math.floor(fc) % m.nlon) + m.nlon) % m.nlon;
+      var dr = fr - Math.floor(fr), dc = fc - Math.floor(fc);
+      var r1 = Math.min(m.nlat - 1, r0 + 1), c1 = (c0 + 1) % m.nlon;
+      var a = _heightmap[r0 * m.nlon + c0] * (1 - dc) + _heightmap[r0 * m.nlon + c1] * dc;
+      var b = _heightmap[r1 * m.nlon + c0] * (1 - dc) + _heightmap[r1 * m.nlon + c1] * dc;
+      return a * (1 - dr) + b * dr;
+    }
+    function buildGroundTerrain(geo) {
+      removeGroundTerrain();
+      if (!nyeArmature || !nyeArmature.earthSurfacePoint || !_heightmap) return;
+      var Rv = nyeArmature.earthRadiusVis || 0.95;
+      var EARTH_M = 6371000, EXAG = 22;                 // vertical exaggeration — true relief is invisibly small vs the radius
+      var mToScene = (Rv / EARTH_M) * EXAG;
+      var em = nyeArmature.group.getObjectByName("NyeEarthMesh"); if (!em) return;
+      em.updateWorldMatrix(true, false);
+      var M = em.matrixWorld, ctr = new THREE.Vector3().setFromMatrixPosition(M), lv = new THREE.Vector3();
+      var N = MOBILE ? 96 : 144, SPAN = 11.0, DEG = Math.PI / 180;
+      var cl = Math.max(0.30, Math.cos(geo.lat * DEG));
+      var pos = new Float32Array(N * N * 3), up = new Float32Array(N * N * 3), uvs = new Float32Array(N * N * 2);
+      var k = 0, k2 = 0;
+      for (var iy = 0; iy < N; iy++) {
+        var v = iy / (N - 1), la = geo.lat + (v - 0.5) * 2 * SPAN;
+        for (var ix = 0; ix < N; ix++) {
+          var u = ix / (N - 1), lo = geo.lon + (u - 0.5) * 2 * SPAN / cl;
+          var e = sampleElevM(la, lo), eUse = e > 0 ? e : 0;      // sea → flat at the sphere surface
+          var r = Rv + 0.0008 + eUse * mToScene;                 // +epsilon lifts the patch off the globe (no z-fight at sea level)
+          var th = (90 - la) * DEG, ph = (lo + 180) * DEG, st = Math.sin(th);
+          lv.set(-r * st * Math.cos(ph), r * Math.cos(th), r * st * Math.sin(ph)).applyMatrix4(M);
+          pos[k] = lv.x; pos[k + 1] = lv.y; pos[k + 2] = lv.z;
+          var nx = lv.x - ctr.x, ny = lv.y - ctr.y, nz = lv.z - ctr.z, il = 1 / Math.hypot(nx, ny, nz);
+          up[k] = nx * il; up[k + 1] = ny * il; up[k + 2] = nz * il; k += 3;
+          uvs[k2] = u; uvs[k2 + 1] = v; k2 += 2;
+        }
+      }
+      var idx = [];
+      for (var y = 0; y < N - 1; y++) for (var x = 0; x < N - 1; x++) {
+        var a0 = y * N + x, b0 = a0 + 1, c0i = a0 + N, d0 = c0i + 1;
+        idx.push(a0, c0i, b0, b0, c0i, d0);
+      }
+      var g = new THREE.BufferGeometry();
+      g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      g.setAttribute("aUp", new THREE.BufferAttribute(up, 3));
+      g.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+      g.setIndex(idx); g.computeVertexNormals();
+      var mat = new THREE.ShaderMaterial({
+        uniforms: { uFade: { value: 0 } }, fog: false,
+        vertexShader:
+          "attribute vec3 aUp; varying vec3 vN; varying vec3 vUp; varying vec3 vWp; varying vec2 vUv;\n" +
+          "void main(){ vUv=uv; vUp=normalize(mat3(modelMatrix)*aUp);\n" +
+          "  vec4 wp=modelMatrix*vec4(position,1.0); vWp=wp.xyz; vN=normalize(mat3(modelMatrix)*normal);\n" +
+          "  gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
+        fragmentShader:
+          "varying vec3 vN; varying vec3 vUp; varying vec3 vWp; varying vec2 vUv; uniform float uFade;\n" +
+          "float th(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\n" +
+          "float tn(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.0-2.0*f);\n" +
+          "  return mix(mix(th(i),th(i+vec2(1,0)),u.x),mix(th(i+vec2(0,1)),th(i+vec2(1,1)),u.x),u.y);}\n" +
+          "float tf(vec2 p){float v=0.0,a=0.5;for(int i=0;i<3;i++){v+=a*tn(p);p*=2.1;a*=0.5;}return v;}\n" +
+          "void main(){\n" +
+          "  vec3 N=normalize(vN), up=normalize(vUp); N=(dot(N,up)<0.0)?-N:N;\n" +   // outward, winding-independent
+          "  float sky=max(dot(N,up),0.0), slope=clamp(1.0-dot(N,up),0.0,1.0);\n" +
+          "  vec3 col=vec3(0.018,0.015,0.012);\n" +                 // near-black warm ground
+          "  col+=vec3(0.05,0.06,0.09)*sky*0.45;\n" +               // cool starlit fill on flats
+          "  col+=vec3(0.95,0.58,0.36)*slope*0.13;\n" +             // warm airglow catches slopes/ridges
+          "  float g=tf(vUv*260.0)*0.7+tn(vUv*900.0)*0.3; col*=0.55+0.6*g;\n" +   // micro grain
+          "  float d=length(cameraPosition-vWp), haze=smoothstep(0.03,0.13,d);\n" +
+          "  col=mix(col,vec3(0.85,0.42,0.22)*0.5,haze*0.7);\n" +   // aerial perspective → distant ranges melt into the horizon glow
+          "  gl_FragColor=vec4(col*uFade,1.0);\n" +
+          "}"
+      });
+      if ("toneMapped" in mat) mat.toneMapped = false;
+      groundTerrain = new THREE.Mesh(g, mat);
+      groundTerrain.name = "GroundTerrain"; groundTerrain.frustumCulled = false; groundTerrain.renderOrder = 0;
+      _terrainMat = mat; scene.add(groundTerrain);
+    }
+    function removeGroundTerrain() {
+      if (groundTerrain) {
+        scene.remove(groundTerrain);
+        groundTerrain.geometry.dispose(); groundTerrain.material.dispose();
+        groundTerrain = null; _terrainMat = null;
       }
     }
     function fetchBase() {
@@ -1017,7 +1124,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=37").then(function (mod) {
+    import("./nye-armature.js?v=38").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -1340,6 +1447,9 @@
           onLiftoff: function () { ascendThen(null, 12); }
         });
         makeGroundDome(sp.position, sp.normal);   // the horizon glows all around the base
+        // real modeled terrain around this base (ETOPO1), lazy-loaded once then built; the
+        // sky is already usable while it streams in — it fades up with the ground-dim ease
+        loadHeightmap().then(function (hm) { if (hm && controls.isGround()) buildGroundTerrain(baseGeo); });
         groundHint(true);
       }
       /* the launch: straight up off the base — the gaze pivots from the sky down to the
@@ -2046,6 +2156,10 @@
           // the REAL footprint blazes at 0.95 in space, fades to ~0.17 when lying at the base — an
           // owner-local visitor genuinely rests on the owner's real roads (A). Exact 0.95 when gDim=0.
           if (_traceMat) _traceMat.opacity = 0.95 * (1.0 - 0.82 * _earthUni.uGroundDim.value);
+          if (_terrainMat) {
+            _terrainMat.uniforms.uFade.value = _earthUni.uGroundDim.value;   // terrain fades up/down with the base
+            if (groundTerrain) groundTerrain.visible = _earthUni.uGroundDim.value > 0.01;   // never a black patch on the globe off-base
+          }
         }
         // the entrance/glide owns the radius this frame → update() must NOT ease against it;
         // otherwise the wheel's log-target owns it. Recomputed every frame, so it clears cleanly.
