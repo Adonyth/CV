@@ -334,6 +334,7 @@ def page(title, body, depth=0, pager=False, desc="", path=None, jsonld=None):
 {body}
   <div class="stamp">{BUILD}</div>
   <script src="{pre}magnet.js?v=1"></script>
+  <script src="{pre}search.js?v=1" defer></script>
   <script src="{pre}craft.js?v=1" defer></script>
   <script>{LANG_JS}{keynav}</script>
 </body>

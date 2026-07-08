@@ -117,6 +117,9 @@
         <svg class="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
         <svg class="eyeoff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10.4 10.4 0 0 1 12 19C5.5 19 2 12 2 12a18 18 0 0 1 5.1-5.9m3.2-1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-2.3 3.3M1 1l22 22"/></svg>
       </button>
+      <button class="iconbtn" id="searchbtn" type="button" aria-label="Search (press /)" onclick="window.__openSearch&&window.__openSearch()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      </button>
     </div>
 
     <!-- the symbol legend was removed: it duplicated what a click on the Sun/Moon/Earth already reveals,
@@ -205,7 +208,7 @@
     <aside id="focus-card" class="focus-card no-print" aria-live="polite"></aside>
 
     <!-- visible build stamp — so "which version am I seeing" is never a mystery again -->
-    <div class="cosmos-build no-print" aria-hidden="true">build 176 · 07-08</div>
+    <div class="cosmos-build no-print" aria-hidden="true">build 177 · 07-08</div>
 
     <!-- fallback when 3D is gated off (mobile / low power / reduced motion):
          a full, tappable mobile home that reaches every page -->
@@ -265,6 +268,7 @@
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
     <script src="home.js?v=6" defer></script>
     <script src="magnet.js?v=1" defer></script>
+    <script src="search.js?v=1" defer></script>
     <script src="craft.js?v=1" defer></script>
     <script src="cosmic-layers.js?v=6"></script>
     <script type="module" src="space.js?v=189"></script>
