@@ -1233,7 +1233,14 @@ export function mountNyeArmature(THREE, scene, opts) {
     const normal = new T.Vector3().crossVectors(dir, new T.Vector3(0, 1, 0));
     if (normal.lengthSq() < 1e-10) normal.crossVectors(dir, new T.Vector3(1, 0, 0));
     normal.normalize();
-    dayGroup.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), normal);
+    // `normal` is WORLD-space, but dayGroup.quaternion is LOCAL (dayGroup is a child of earth.group,
+    // which is itself rotated by the aligned orrery). Setting the local quaternion straight from a world
+    // normal tilts the plane by the parent's rotation → the Earth→Moon direction no longer lies in the
+    // day plane, so the 庚午 glyphs land ~86° off the Moon. Convert the world normal into earth.group's
+    // local frame first, so the day plane's WORLD normal is exactly `normal` and the Moon lies in it.
+    const parentQ = new T.Quaternion(); earthGroupRef.getWorldQuaternion(parentQ);
+    const localNormal = normal.clone().applyQuaternion(parentQ.invert());
+    dayGroup.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), localNormal);
   }
 
   function computeFrozenEphemeris(date) {
