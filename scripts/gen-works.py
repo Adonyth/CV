@@ -293,11 +293,18 @@ KEYNAV_JS = """
     });
 """
 
-def page(title, body, depth=0, pager=False, desc=""):
+SITE = "https://cv-2ad.pages.dev"   # production domain — single source of truth for canonical/OG/JSON-LD
+
+def page(title, body, depth=0, pager=False, desc="", path=None, jsonld=None):
     pre = "../" * depth
     keynav = KEYNAV_JS if pager else ""
     d = html.escape((desc or "Jiaxuan Chen (陈嘉轩) — physicist and independent researcher.")[:180])
     full_title = f"{title} · Jiaxuan Chen"
+    canon = f"{SITE}/{path}" if path else SITE + "/"
+    import json as _json
+    ld = ""
+    if jsonld:
+        ld = '\n  <script type="application/ld+json">' + _json.dumps(jsonld, ensure_ascii=False) + '</script>'
     return f"""<!DOCTYPE html>
 <html lang="en" class="locale-en">
 <head>
@@ -309,11 +316,14 @@ def page(title, body, depth=0, pager=False, desc=""):
   <title>{html.escape(full_title)}</title>
   <meta name="description" content="{d}" />
   <meta name="author" content="Jiaxuan Chen (陈嘉轩)" />
+  <link rel="canonical" href="{html.escape(canon)}" />
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="Jiaxuan Chen · 陈嘉轩" />
   <meta property="og:title" content="{html.escape(full_title)}" />
   <meta property="og:description" content="{d}" />
-  <meta name="twitter:card" content="summary" />
+  <meta property="og:url" content="{html.escape(canon)}" />
+  <meta property="og:image" content="{SITE}/og-cover.png" />
+  <meta name="twitter:card" content="summary_large_image" />{ld}
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -382,6 +392,19 @@ for cls, items in BY_CLS.items():
   </main>
   {footer_nav(depth=1, current=cls)}"""
         out = ROOT / c["dir"] / f'{w["id"]}.html'
-        out.write_text(page(w["title"]["en"], body, depth=1, pager=True, desc=w["desc"]["en"][0]), encoding="utf-8")
+        relpath = f'{c["dir"]}/{w["id"]}.html'
+        ld_type = {"research": "ScholarlyArticle", "humanities": "ScholarlyArticle", "books": "Book"}.get(cls, "CreativeWork")
+        jsonld = {
+            "@context": "https://schema.org", "@type": ld_type,
+            "name": w["title"]["en"], "headline": w["title"]["en"],
+            "description": w["desc"]["en"][0][:300],
+            "inLanguage": ["en", "zh"], "url": f"{SITE}/{relpath}",
+            "datePublished": w["period"], "creativeWorkStatus": w["status"]["en"],
+            "author": {"@type": "Person", "name": "Jiaxuan Chen", "alternateName": "陈嘉轩",
+                       "url": SITE + "/", "identifier": "https://orcid.org/0009-0008-5211-4313"},
+            "isPartOf": {"@type": "WebSite", "name": "Jiaxuan Chen · 陈嘉轩", "url": SITE + "/"},
+        }
+        out.write_text(page(w["title"]["en"], body, depth=1, pager=True, desc=w["desc"]["en"][0],
+                            path=relpath, jsonld=jsonld), encoding="utf-8")
 
 print("generated:", len(DATA), "item pages (no aggregate index pages — the sky is the index)")
