@@ -756,7 +756,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // glowPx>0 adds a SECOND Points from the SAME geometry with a big, dim, additive sprite: overlapping
     // galaxies accumulate → a soft continuous density glow (the DTFE/Millennium "net" look) behind the
     // sharp points. Dense nodes+filaments bloom; empty voids stay black. Returns the geometry for reuse.
-    function buildLayer(xyz, rgb, sizePx, op, name, order, glowPx, glowOp) {
+    function buildLayer(xyz, rgb, sizePx, op, name, order, glowPx, glowOp, glowTiers) {
       if (!xyz || !rgb || xyz.length < 3) return null;
       var NG = (xyz.length / 3) | 0;
       var pos = new Float32Array(NG * 3), col = new Float32Array(NG * 3);
@@ -778,7 +778,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
       // glow: dense nodes/filaments bloom, empty voids stay black. This is fake-bloom via additive sprites
       // (no post-processing pass) — refined look at ~zero extra pipeline cost.
       if (glowPx) {
-        var pg2 = new T.Points(g, mat(glowPx*2.15, (glowOp||0.12)*0.5)); pg2.name = name+"Glow2"; pg2.frustumCulled = false; pg2.renderOrder = base - 2; belt.add(pg2);
+        if (glowTiers !== 1) { var pg2 = new T.Points(g, mat(glowPx*2.15, (glowOp||0.12)*0.5)); pg2.name = name+"Glow2"; pg2.frustumCulled = false; pg2.renderOrder = base - 2; belt.add(pg2); }
         var pg = new T.Points(g, mat(glowPx, glowOp || 0.12)); pg.name = name+"Glow"; pg.frustumCulled = false; pg.renderOrder = base - 1; belt.add(pg);
       }
       var p = new T.Points(g, mat(sizePx, op)); p.name = name; p.frustumCulled = false; if (order != null) p.renderOrder = order; belt.add(p);
@@ -786,10 +786,11 @@ export function buildNatalSky(THREE, scene, data, opts) {
     }
     if (o.galXYZ && o.galRGB && o.galXYZ.length >= 3) {
       // the galaxy field (real 2MRS) — crisp bright cores + soft bloom halos = a refined glowing web
-      buildLayer(o.galXYZ, o.galRGB, mobile?1.6:2.0, 1.0, "LargeScaleStructure", -3, mobile?5:6, 0.13);
-      // the WEB LINES overlay — real MST filament skeleton + Laniakea flow streamlines to the Great
-      // Attractor. Crisp core + halo so the NET and the FLOW read as the recognizable signatures.
-      buildLayer(o.webXYZ, o.webRGB, mobile?1.9:2.5, 1.0, "CosmicWebLines", -2, mobile?4:5, 0.17);
+      buildLayer(o.galXYZ, o.galRGB, mobile?1.6:2.0, 1.0, "LargeScaleStructure", -3, mobile?5:6, 0.13, 2);
+      // the WEB LINES overlay — real MST filament skeleton + per-basin flow streamlines. Single glow tier
+      // (they are already bright lines) so the whole overlay stays light. Every basin (Laniakea, Perseus-
+      // Pisces, Coma, Shapley, Hercules, Pavo-Indus) has its own converging flow — a mosaic of basins.
+      buildLayer(o.webXYZ, o.webRGB, mobile?1.9:2.5, 1.0, "CosmicWebLines", -2, mobile?4:5, 0.17, 1);
       return;
     }
 
