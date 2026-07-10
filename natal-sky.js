@@ -745,9 +745,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // glowing points, not hard dots; a 128px texture keeps the falloff clean when magnified.
     var cv = document.createElement("canvas"); cv.width = cv.height = 128;
     var gg = cv.getContext("2d"), gr = gg.createRadialGradient(64,64,0,64,64,64);
-    gr.addColorStop(0.00,"rgba(255,255,255,1)");
-    gr.addColorStop(0.08,"rgba(255,252,245,0.96)");
-    gr.addColorStop(0.18,"rgba(255,248,230,0.72)");
+    gr.addColorStop(0.00,"rgba(255,240,214,1)");     // WARM-white core (not pure white) so dense additive clusters saturate toward GOLD, not silver
+    gr.addColorStop(0.08,"rgba(255,236,208,0.96)");
+    gr.addColorStop(0.18,"rgba(255,232,198,0.72)");
     gr.addColorStop(0.38,"rgba(255,236,210,0.28)");
     gr.addColorStop(0.68,"rgba(255,220,190,0.08)");
     gr.addColorStop(1.00,"rgba(255,210,175,0)");
@@ -764,7 +764,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // glowPx>0 adds a SECOND Points from the SAME geometry with a big, dim, additive sprite: overlapping
     // galaxies accumulate → a soft continuous density glow (the DTFE/Millennium "net" look) behind the
     // sharp points. Dense nodes+filaments bloom; empty voids stay black. Returns the geometry for reuse.
-    function buildLayer(xyz, rgb, sizePx, op, name, order, glowPx, glowOp, glowTiers) {
+    function buildLayer(xyz, rgb, sizePx, op, name, order, glowPx, glowOp, glowTiers, warm) {
       if (!xyz || !rgb || xyz.length < 3) return null;
       var NG = (xyz.length / 3) | 0;
       var pos = new Float32Array(NG * 3), col = new Float32Array(NG * 3);
@@ -773,7 +773,19 @@ export function buildNatalSky(THREE, scene, data, opts) {
         pos[i*3]   = K*(sx*axx + sy*ayx + sz*azx);
         pos[i*3+1] = K*(sx*axy + sy*ayy + sz*azy);
         pos[i*3+2] = K*(sx*axz + sy*ayz + sz*azz);
-        col[i*3]=rgb[i*3]/255; col[i*3+1]=rgb[i*3+1]/255; col[i*3+2]=rgb[i*3+2]/255;
+        if (warm) {
+          // Two-temperature remap (user: warm gold nodes like the reference web). The baked luminance IS
+          // the real local density, so dim filament/void galaxies read cool SLATE and dense cluster nodes —
+          // where filaments intersect — burn warm white-GOLD. One substance, two temperatures; structure stays real.
+          var L = (rgb[i*3] + rgb[i*3+1] + rgb[i*3+2]) / 765;                 // 0..1 baked density proxy
+          var w = L <= 0.16 ? 0 : L >= 0.64 ? 1 : (L - 0.16) / 0.48; w = w * w * (3 - 2 * w);
+          var amp = 0.34 + 0.66 * L;                                          // density brightness, pulled below full clip so gold nodes don't blow to white
+          col[i*3]   = (0.40 + 0.86 * w) * amp;                              // slate 0.40 → gold 1.26
+          col[i*3+1] = (0.49 + 0.36 * w) * amp;                              // slate 0.49 → gold 0.85
+          col[i*3+2] = (0.66 - 0.30 * w) * amp;                              // slate 0.66 → gold 0.36 (low blue → stays warm even when bright)
+        } else {
+          col[i*3]=rgb[i*3]/255; col[i*3+1]=rgb[i*3+1]/255; col[i*3+2]=rgb[i*3+2]/255;
+        }
       }
       var g = new T.BufferGeometry();
       g.setAttribute("position", new T.BufferAttribute(pos,3));
@@ -798,7 +810,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     }
     if (o.galXYZ && o.galRGB && o.galXYZ.length >= 3) {
       // the galaxy field (real 2MRS) — crisp cores + multi-tier bloom = refined glowing web
-      buildLayer(o.galXYZ, o.galRGB, mobile ? 1.75 : 2.15, 1.0, "LargeScaleStructure", -3, mobile ? 5.5 : 6.8, 0.145, 2);
+      buildLayer(o.galXYZ, o.galRGB, mobile ? 1.75 : 2.15, 1.0, "LargeScaleStructure", -3, mobile ? 5.5 : 6.8, 0.145, 2, true);
       // WEB LINES — MST filaments + basin flow streamlines; two glow tiers so strands read as luminous threads
       buildLayer(o.webXYZ, o.webRGB, mobile ? 2.05 : 2.7, 1.0, "CosmicWebLines", -2, mobile ? 4.4 : 5.6, 0.19, 2);
       return;

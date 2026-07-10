@@ -439,6 +439,7 @@
     var groundTerrain = null, _terrainMat = null, _heightmap = null, _hmMeta = null, _hmLoading = null;   // base-view REAL ETOPO terrain
     var _earthDayTex = null, _earthDayLoading = null;   // NASA-style day map for ground albedo (lazy)
     var groundDimTarget = 0, _earthUni = null, _traceMat = null;   // eased toward the target every frame in the frame loop
+    var _localMap = null, _localMapMat = null, _localMapTex = null;   // base-view REAL local street map (geo-ui-maps / prettymaps)
     /* the ground-view ATMOSPHERE: a warm band of light hugging the horizon all around
        the base — additive, baked once per landing, zero per-frame cost */
     function makeGroundDome(pos, normal) {
@@ -678,6 +679,10 @@
           mat.uniforms.uMap.value = tex; mat.uniforms.uUseMap.value = 1;
         });
       }
+      // the REAL local street map goes on LAST (built with the terrain, cleared with it) so the terrain
+      // rebuild's removeGroundTerrain() can't wipe it — your actual streets underfoot at the base.
+      var _sp = nyeArmature.earthSurfacePoint(geo.lat, geo.lon, 0.0002);   // on the GROUND (well below the ~0.004 eye), so the map is the floor you stand on, not a ceiling
+      if (_sp) buildLocalMapGround(_sp);
     }
     function removeGroundTerrain() {
       if (groundTerrain) {
@@ -685,6 +690,48 @@
         groundTerrain.geometry.dispose(); groundTerrain.material.dispose();
         groundTerrain = null; _terrainMat = null;
       }
+      removeLocalMapGround();
+    }
+    // LOCAL STREET-MAP GROUND (geo-ui-maps): a real prettymaps rendering of the base city (Providence)
+    // laid in the tangent plane at the base point, so standing at the base your actual streets recede
+    // toward the horizon under the natal sky. The regional ETOPO patch carries the far relief; this
+    // carries the near human geography. Scale is exaggerated (a 3 km map → a neighborhood-to-horizon
+    // patch) because the base view is a symbolic first-person tableau, not a survey.
+    function buildLocalMapGround(sp) {
+      removeLocalMapGround();
+      if (!_localMapTex) {
+        _localMapTex = new THREE.TextureLoader().load("data/base-map-providence.jpg", function (t) {
+          if ("colorSpace" in t && THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace;
+        });
+      }
+      var up = sp.normal.clone().normalize();
+      var east = new THREE.Vector3(0, 1, 0).cross(up); if (east.lengthSq() < 1e-6) east.set(1, 0, 0); east.normalize();
+      var north = up.clone().cross(east).normalize();   // map north → geographic north at the base
+      // The base view can only look ~6° below the horizon, so the map must be BROAD (a circular disc that
+      // reaches toward the horizon) with the fade only at the very outer rim — the near ground you can see
+      // is then your real streets, not a generic wash. Lifted enough to clear nearby ETOPO relief.
+      var R = 0.14;
+      var geo = new THREE.PlaneGeometry(2 * R, 2 * R, 1, 1);
+      _localMapMat = new THREE.ShaderMaterial({
+        uniforms: { uMap: { value: _localMapTex }, uFade: { value: 0 } },
+        transparent: true, depthWrite: false, fog: false,
+        vertexShader: "varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
+        fragmentShader:
+          "varying vec2 vUv; uniform sampler2D uMap; uniform float uFade;\n" +
+          "void main(){ vec3 c=texture2D(uMap,vUv).rgb; float d=distance(vUv,vec2(0.5));\n" +
+          "  float rim=1.0-smoothstep(0.40,0.50,d);\n" +   // opaque circular disc (80% radius) → soft dissolve only at the outer rim
+          "  c*=1.55;\n" +                                  // lift the gold roads so they read at grazing angle vs the terrain glow
+          "  gl_FragColor=vec4(c, rim*uFade); }"
+      });
+      if ("toneMapped" in _localMapMat) _localMapMat.toneMapped = false;
+      _localMap = new THREE.Mesh(geo, _localMapMat);
+      _localMap.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(east, north, up));
+      _localMap.position.copy(sp.position).addScaledVector(up, 0.0009);   // just clear of nearby ETOPO relief, still ~0.003 below the eye
+      _localMap.name = "LocalMapGround"; _localMap.renderOrder = 0.5; _localMap.frustumCulled = false;
+      scene.add(_localMap);
+    }
+    function removeLocalMapGround() {
+      if (_localMap) { scene.remove(_localMap); _localMap.geometry.dispose(); _localMap.material.dispose(); _localMap = null; _localMapMat = null; }
     }
     function fetchBase() {
       function viaIpwho() {
@@ -1253,7 +1300,7 @@
       var webXYZ = arr[4] ? new Int16Array(arr[4]) : null;
       var webRGB = arr[5] ? new Uint8Array(arr[5]) : null;
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=134").then(function (mod) {
+      return import("./natal-sky.js?v=136").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -2226,6 +2273,10 @@
           if (_terrainMat) {
             _terrainMat.uniforms.uFade.value = _earthUni.uGroundDim.value;   // terrain fades up/down with the base
             if (groundTerrain) groundTerrain.visible = _earthUni.uGroundDim.value > 0.01;   // never a black patch on the globe off-base
+          }
+          if (_localMapMat) {
+            _localMapMat.uniforms.uFade.value = _earthUni.uGroundDim.value;   // the real street map fades in/out with the base
+            if (_localMap) _localMap.visible = _earthUni.uGroundDim.value > 0.01;
           }
         }
         // the entrance/glide owns the radius this frame → update() must NOT ease against it;

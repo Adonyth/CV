@@ -629,6 +629,7 @@ body.is-flat .cosmos-dock{display:none !important;}
   font-family:var(--mono); font-size:11.5px; letter-spacing:.1em; color:var(--muted);
   opacity:0; pointer-events:none; transition:opacity .8s ease; text-align:center; max-width:92vw;}
 .ground-hint b{color:#e8c37a; font-weight:500;}
+.ground-hint .ground-credit{opacity:.5; font-size:.86em; letter-spacing:.04em; margin-left:.2em;}
 .ground-hint.is-on{opacity:1;}
 body.on-ground .cosmos-legend, body.on-ground .cosmos-hint{opacity:0 !important; transition:opacity .6s ease;}
 @media(max-width:700px){ .ground-hint{bottom:76px; font-size:10.5px;} }
