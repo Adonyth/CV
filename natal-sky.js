@@ -780,9 +780,17 @@ export function buildNatalSky(THREE, scene, data, opts) {
           var L = (rgb[i*3] + rgb[i*3+1] + rgb[i*3+2]) / 765;                 // 0..1 baked density proxy
           var w = L <= 0.16 ? 0 : L >= 0.64 ? 1 : (L - 0.16) / 0.48; w = w * w * (3 - 2 * w);
           var amp = 0.34 + 0.66 * L;                                          // density brightness, pulled below full clip so gold nodes don't blow to white
-          col[i*3]   = (0.40 + 0.86 * w) * amp;                              // slate 0.40 → gold 1.26
-          col[i*3+1] = (0.49 + 0.36 * w) * amp;                              // slate 0.49 → gold 0.85
-          col[i*3+2] = (0.66 - 0.30 * w) * amp;                              // slate 0.66 → gold 0.36 (low blue → stays warm even when bright)
+          if (warm === 2) {
+            // FLOW mode (the Laniakea streamlines / filament river): warm-AMBER throughout, brightening to
+            // white-gold at the convergences — the gold flow of the reference, not a cool filament.
+            col[i*3]   = (0.72 + 0.52 * w) * amp * 1.18;                      // amber → gold, boosted so the river reads
+            col[i*3+1] = (0.48 + 0.34 * w) * amp * 1.18;
+            col[i*3+2] = (0.22 - 0.02 * w) * amp * 1.18;                      // stays low-blue = warm at every brightness
+          } else {
+            col[i*3]   = (0.40 + 0.86 * w) * amp;                            // slate 0.40 → gold 1.26
+            col[i*3+1] = (0.49 + 0.36 * w) * amp;                            // slate 0.49 → gold 0.85
+            col[i*3+2] = (0.66 - 0.30 * w) * amp;                            // slate 0.66 → gold 0.36 (low blue → stays warm even when bright)
+          }
         } else {
           col[i*3]=rgb[i*3]/255; col[i*3+1]=rgb[i*3+1]/255; col[i*3+2]=rgb[i*3+2]/255;
         }
@@ -812,7 +820,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
       // the galaxy field (real 2MRS) — crisp cores + multi-tier bloom = refined glowing web
       buildLayer(o.galXYZ, o.galRGB, mobile ? 1.75 : 2.15, 1.0, "LargeScaleStructure", -3, mobile ? 5.5 : 6.8, 0.145, 2, true);
       // WEB LINES — MST filaments + basin flow streamlines; two glow tiers so strands read as luminous threads
-      buildLayer(o.webXYZ, o.webRGB, mobile ? 2.05 : 2.7, 1.0, "CosmicWebLines", -2, mobile ? 4.4 : 5.6, 0.19, 2);
+      buildLayer(o.webXYZ, o.webRGB, mobile ? 2.15 : 2.9, 1.0, "CosmicWebLines", -2, mobile ? 4.8 : 6.2, 0.24, 2, 2);   // warm-amber gold river (warm=2) + a touch more glow so the Laniakea flow reads
       return;
     }
 
