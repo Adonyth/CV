@@ -435,7 +435,7 @@
        cached) and the site OPENS lying on the ground at that spot, looking up at the
        natal sky. Everything else — lift-off, tours, the whole orrery — starts from there. */
     var DEFAULT_BASE = { lat: 41.824, lon: -71.4128, city: "Providence" };   // the author's home, if the visitor can't be placed
-    var baseGeo = null, groundEntered = false, tryGroundEntrance = null, groundDome = null, groundStars = null;
+    var baseGeo = null, groundEntered = false, tryGroundEntrance = null, groundDome = null, groundStars = null, groundMilky = null;
     var groundTerrain = null, _terrainMat = null, _heightmap = null, _hmMeta = null, _hmLoading = null;   // base-view REAL ETOPO terrain
     var _earthDayTex = null, _earthDayLoading = null;   // NASA-style day map for ground albedo (lazy)
     var groundDimTarget = 0, _earthUni = null, _traceMat = null;   // eased toward the target every frame in the frame loop
@@ -480,29 +480,45 @@
       gg.addColorStop(1, "rgba(255,220,176,0)");
       gx.fillStyle = gg; gx.fillRect(0, 0, 32, 32);
       var starTex = new THREE.CanvasTexture(gc);
-      var n = MOBILE ? 560 : 1200, gp = new Float32Array(n * 3), gc2 = new Float32Array(n * 3);
+      var nField = MOBILE ? 780 : 1400, nBand = MOBILE ? 1900 : 3600, n = nField + nBand;   // the band needs MANY dim stars packed tight to overlap into a glowing river
+      var gp = new Float32Array(n * 3), gc2 = new Float32Array(n * 3);
       var seed = 0x91ab7;
       function grndRand() {
         seed = (seed * 1664525 + 1013904223) >>> 0;
         return seed / 4294967296;
       }
+      // real stars span a range of spectral COLOURS — hot blue-white O/B/A → white → gold F/G → orange K → red M.
+      function starRGB(t) {
+        if (t < 0.11) return [0.60, 0.73, 1.0];        // O/B hot blue-white
+        if (t < 0.29) return [0.80, 0.89, 1.0];        // A blue-white
+        if (t < 0.54) return [1.0, 1.0, 0.97];         // white
+        if (t < 0.75) return [1.0, 0.93, 0.72];        // F/G yellow-gold
+        if (t < 0.90) return [1.0, 0.80, 0.52];        // K orange
+        return [1.0, 0.60, 0.43];                      // M red-orange
+      }
+      // the MILKY WAY — a luminous band arching across the sky (a great circle tilted off the horizon). Dense,
+      // dim, hazy stars packed near the circle overlap (additive) into the soft glowing river you see from a dark site.
+      var bandPole = new THREE.Vector3().addScaledVector(east, 0.86).addScaledVector(north, 0.50).addScaledVector(normal, 0.08).normalize();   // near-horizontal pole → the band's great circle passes ~overhead (through the zenith), so the Milky Way arches across the sky you see when you look up from the base
+      var b1 = new THREE.Vector3().crossVectors(bandPole, normal); if (b1.lengthSq() < 1e-4) b1.copy(east); b1.normalize();
+      var b2 = new THREE.Vector3().crossVectors(bandPole, b1).normalize();
       for (var si = 0; si < n; si++) {
-        var az = grndRand() * Math.PI * 2;
-        var alt = 0.18 + Math.pow(grndRand(), 0.72) * 1.24;
-        var ca = Math.cos(alt), sa = Math.sin(alt);
-        var rSky = 34 + grndRand() * 4;
-        var v = new THREE.Vector3()
-          .addScaledVector(north, Math.cos(az) * ca)
-          .addScaledVector(east, Math.sin(az) * ca)
-          .addScaledVector(normal, sa)
-          .normalize();
-        var pk = si * 3;
+        var band = si >= nField, v = new THREE.Vector3(), okAbove = false;
+        for (var tr = 0; tr < 14 && !okAbove; tr++) {
+          if (band) {
+            var th = grndRand() * Math.PI * 2, off = (grndRand() + grndRand() + grndRand() - 1.5) * 0.11;   // gaussian half-width ~6° — tight so the stars overlap into a bright band
+            v.copy(b1).multiplyScalar(Math.cos(th)).addScaledVector(b2, Math.sin(th)).addScaledVector(bandPole, off).normalize();
+          } else {
+            var az = grndRand() * Math.PI * 2, alt = 0.18 + Math.pow(grndRand(), 0.72) * 1.24, ca = Math.cos(alt), sa = Math.sin(alt);
+            v.copy(north).multiplyScalar(Math.cos(az) * ca).addScaledVector(east, Math.sin(az) * ca).addScaledVector(normal, sa).normalize();
+          }
+          if (v.dot(normal) >= 0.14) okAbove = true;   // keep every star above the horizon (depthTest is off)
+        }
+        var rSky = 34 + grndRand() * 4, pk = si * 3;
         gp[pk] = pos.x + v.x * rSky; gp[pk + 1] = pos.y + v.y * rSky; gp[pk + 2] = pos.z + v.z * rSky;
-        var temp = grndRand(), lum = 0.32 + 0.68 * Math.pow(grndRand(), 3.2);
-        var cr = temp < 0.72 ? 1.0 : temp < 0.9 ? 0.80 : 1.0;
-        var cg = temp < 0.72 ? 0.96 : temp < 0.9 ? 0.88 : 0.74;
-        var cb = temp < 0.72 ? 0.88 : temp < 0.9 ? 1.0 : 0.55;
-        gc2[pk] = cr * lum; gc2[pk + 1] = cg * lum; gc2[pk + 2] = cb * lum;
+        if (!okAbove) { gc2[pk] = gc2[pk + 1] = gc2[pk + 2] = 0; continue; }   // couldn't clear the horizon → invisible
+        var lum = band ? (0.12 + 0.30 * Math.pow(grndRand(), 2.2)) : (0.32 + 0.68 * Math.pow(grndRand(), 3.2));
+        var c = starRGB(grndRand());
+        gc2[pk] = c[0] * lum; gc2[pk + 1] = c[1] * lum; gc2[pk + 2] = c[2] * lum;
       }
       var sg = new THREE.BufferGeometry();
       sg.setAttribute("position", new THREE.BufferAttribute(gp, 3));
@@ -515,6 +531,33 @@
       if ("toneMapped" in groundStars.material) groundStars.material.toneMapped = false;
       groundStars.name = "GroundSkyStars"; groundStars.frustumCulled = false; groundStars.renderOrder = 3;
       scene.add(groundStars);
+      // MILKY WAY HAZE: big, dim, soft sprites packed tight on the same band → they overlap (additive) into a
+      // smooth glowing river behind the sharp stars, so the Milky Way reads as a luminous band, not just dots.
+      var nh = MOBILE ? 340 : 700, hp = new Float32Array(nh * 3), hc = new Float32Array(nh * 3);
+      for (var hi = 0; hi < nh; hi++) {
+        var hv = new THREE.Vector3(), okh = false;
+        for (var ht = 0; ht < 16 && !okh; ht++) {
+          var hth = grndRand() * Math.PI * 2, hoff = (grndRand() + grndRand() + grndRand() - 1.5) * 0.075;   // tighter than the stars → a defined river
+          hv.copy(b1).multiplyScalar(Math.cos(hth)).addScaledVector(b2, Math.sin(hth)).addScaledVector(bandPole, hoff).normalize();
+          if (hv.dot(normal) >= 0.14) okh = true;
+        }
+        var hr = 33 + grndRand() * 3, hk = hi * 3;
+        hp[hk] = pos.x + hv.x * hr; hp[hk + 1] = pos.y + hv.y * hr; hp[hk + 2] = pos.z + hv.z * hr;
+        if (!okh) { hc[hk] = hc[hk + 1] = hc[hk + 2] = 0; continue; }
+        var hl = 0.022 + 0.028 * grndRand();                                   // VERY dim — many overlap into a soft glow
+        hc[hk] = hl * 1.0; hc[hk + 1] = hl * 0.95; hc[hk + 2] = hl * 0.84;     // warm-white galactic glow
+      }
+      var hg = new THREE.BufferGeometry();
+      hg.setAttribute("position", new THREE.BufferAttribute(hp, 3));
+      hg.setAttribute("color", new THREE.BufferAttribute(hc, 3));
+      groundMilky = new THREE.Points(hg, new THREE.PointsMaterial({
+        map: starTex, size: (MOBILE ? 24 : 34) * Math.min(devicePixelRatio || 1, 1.6),
+        sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.6,
+        depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, fog: false
+      }));
+      if ("toneMapped" in groundMilky.material) groundMilky.material.toneMapped = false;
+      groundMilky.name = "GroundMilkyHaze"; groundMilky.frustumCulled = false; groundMilky.renderOrder = 2;   // behind the sharp stars
+      scene.add(groundMilky);
     }
     function removeGroundDome() {
       if (groundDome) {
@@ -528,6 +571,11 @@
         if (groundStars.material.map) groundStars.material.map.dispose();
         groundStars.material.dispose(); groundStars.geometry.dispose();
         groundStars = null;
+      }
+      if (groundMilky) {
+        scene.remove(groundMilky);
+        groundMilky.material.dispose(); groundMilky.geometry.dispose();
+        groundMilky = null;
       }
       removeGroundTerrain();
     }
