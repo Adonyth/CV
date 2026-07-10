@@ -210,10 +210,10 @@
         getRadius: function () { return cam.position.distanceTo(target); },
         update: function () {
           if (groundMode) {   // the orbit model is suspended — only the flick inertia glides out
-            if (!dragging && (Math.abs(gVelYaw) > 4e-5 || Math.abs(gVelPitch) > 4e-5)) {
+            if (!dragging && (Math.abs(gVelYaw) > 2e-5 || Math.abs(gVelPitch) > 2e-5)) {
               gYaw += gVelYaw;
               gPitch = Math.max(-0.10, Math.min(1.52, gPitch + gVelPitch));
-              gVelYaw *= 0.90; gVelPitch *= 0.90;
+              gVelYaw *= 0.935; gVelPitch *= 0.935;   // longer silk glide on release
               applyGroundLook();
             }
             return;
@@ -437,6 +437,7 @@
     var DEFAULT_BASE = { lat: 41.824, lon: -71.4128, city: "Providence" };   // the author's home, if the visitor can't be placed
     var baseGeo = null, groundEntered = false, tryGroundEntrance = null, groundDome = null, groundStars = null;
     var groundTerrain = null, _terrainMat = null, _heightmap = null, _hmMeta = null, _hmLoading = null;   // base-view REAL ETOPO terrain
+    var _earthDayTex = null, _earthDayLoading = null;   // NASA-style day map for ground albedo (lazy)
     var groundDimTarget = 0, _earthUni = null, _traceMat = null;   // eased toward the target every frame in the frame loop
     /* the ground-view ATMOSPHERE: a warm band of light hugging the horizon all around
        the base — additive, baked once per landing, zero per-frame cost */
@@ -536,6 +537,21 @@
        the space / orrery / LSS views never construct it and stay byte-identical. Dark night
        ground; distant ranges dissolve into the horizon glow (aerial perspective); ridges
        occlude low stars (they set behind the mountains). The sky stays the star. ---- */
+    function loadEarthDayMap() {
+      if (_earthDayTex) return Promise.resolve(_earthDayTex);
+      if (_earthDayLoading) return _earthDayLoading;
+      _earthDayLoading = new Promise(function (resolve) {
+        var loader = new THREE.TextureLoader();
+        loader.load("data/earth-map.jpg", function (tex) {
+          tex.colorSpace = THREE.SRGBColorSpace || tex.colorSpace;
+          tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.ClampToEdgeWrapping;
+          tex.minFilter = THREE.LinearMipmapLinearFilter; tex.magFilter = THREE.LinearFilter;
+          tex.anisotropy = Math.min(8, (renderer.capabilities.getMaxAnisotropy && renderer.capabilities.getMaxAnisotropy()) || 1);
+          _earthDayTex = tex; resolve(tex);
+        }, undefined, function () { _earthDayLoading = null; resolve(null); });
+      });
+      return _earthDayLoading;
+    }
     function loadHeightmap() {
       if (_heightmap) return Promise.resolve(_heightmap);
       if (_hmLoading) return _hmLoading;
@@ -569,10 +585,11 @@
       var em = nyeArmature.group.getObjectByName("NyeEarthMesh"); if (!em) return;
       em.updateWorldMatrix(true, false);
       var M = em.matrixWorld, ctr = new THREE.Vector3().setFromMatrixPosition(M), lv = new THREE.Vector3();
-      var N = MOBILE ? 132 : 200, SPAN = 11.0, DEG = Math.PI / 180;   // denser grid → smoother ridgelines (same real data, finer sampling)
+      var N = MOBILE ? 148 : 240, SPAN = 11.0, DEG = Math.PI / 180;   // denser grid → smoother ridgelines (same real data, finer sampling)
       var cl = Math.max(0.30, Math.cos(geo.lat * DEG));
-      var pos = new Float32Array(N * N * 3), up = new Float32Array(N * N * 3), uvs = new Float32Array(N * N * 2);
-      var k = 0, k2 = 0;
+      var pos = new Float32Array(N * N * 3), up = new Float32Array(N * N * 3);
+      var uvs = new Float32Array(N * N * 2), loc = new Float32Array(N * N * 2), elev = new Float32Array(N * N);
+      var k = 0, k2 = 0, ke = 0;
       for (var iy = 0; iy < N; iy++) {
         var v = iy / (N - 1), la = geo.lat + (v - 0.5) * 2 * SPAN;
         for (var ix = 0; ix < N; ix++) {
@@ -584,7 +601,11 @@
           pos[k] = lv.x; pos[k + 1] = lv.y; pos[k + 2] = lv.z;
           var nx = lv.x - ctr.x, ny = lv.y - ctr.y, nz = lv.z - ctr.z, il = 1 / Math.hypot(nx, ny, nz);
           up[k] = nx * il; up[k + 1] = ny * il; up[k + 2] = nz * il; k += 3;
-          uvs[k2] = u; uvs[k2 + 1] = v; k2 += 2;
+          // equirectangular UV — match Three.js SphereGeometry + earth-map.jpg (north → v=1)
+          uvs[k2] = ((lo + 180) / 360) % 1; if (uvs[k2] < 0) uvs[k2] += 1;
+          uvs[k2 + 1] = (la + 90) / 180;
+          loc[k2] = u; loc[k2 + 1] = v; k2 += 2;
+          elev[ke++] = Math.max(0, Math.min(1, eUse / 4500));   // 0 sea → 1 ~Himalaya, for biome shading
         }
       }
       var idx = [];
@@ -596,38 +617,53 @@
       g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
       g.setAttribute("aUp", new THREE.BufferAttribute(up, 3));
       g.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+      g.setAttribute("aLoc", new THREE.BufferAttribute(loc, 2));
+      g.setAttribute("aElev", new THREE.BufferAttribute(elev, 1));
       g.setIndex(idx); g.computeVertexNormals();
+      var placeholder = new THREE.DataTexture(new Uint8Array([8, 6, 5, 255]), 1, 1);
+      placeholder.needsUpdate = true;
       var mat = new THREE.ShaderMaterial({
-        uniforms: { uFade: { value: 0 } }, fog: false,
+        uniforms: {
+          uFade: { value: 0 },
+          uMap: { value: _earthDayTex || placeholder },
+          uUseMap: { value: _earthDayTex ? 1 : 0 }
+        }, fog: false,
         vertexShader:
-          "attribute vec3 aUp; varying vec3 vN; varying vec3 vUp; varying vec3 vWp; varying vec2 vUv;\n" +
-          "void main(){ vUv=uv; vUp=normalize(mat3(modelMatrix)*aUp);\n" +
+          "attribute vec3 aUp; attribute vec2 aLoc; attribute float aElev;\n" +
+          "varying vec3 vN; varying vec3 vUp; varying vec3 vWp; varying vec2 vUv; varying vec2 vLoc; varying float vElev;\n" +
+          "void main(){ vUv=uv; vLoc=aLoc; vElev=aElev; vUp=normalize(mat3(modelMatrix)*aUp);\n" +
           "  vec4 wp=modelMatrix*vec4(position,1.0); vWp=wp.xyz; vN=normalize(mat3(modelMatrix)*normal);\n" +
           "  gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
         fragmentShader:
-          "varying vec3 vN; varying vec3 vUp; varying vec3 vWp; varying vec2 vUv; uniform float uFade;\n" +
+          "varying vec3 vN; varying vec3 vUp; varying vec3 vWp; varying vec2 vUv; varying vec2 vLoc; varying float vElev;\n" +
+          "uniform float uFade; uniform sampler2D uMap; uniform float uUseMap;\n" +
           "float th(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\n" +
           "float tn(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.0-2.0*f);\n" +
           "  return mix(mix(th(i),th(i+vec2(1.0,0.0)),u.x),mix(th(i+vec2(0.0,1.0)),th(i+vec2(1.0,1.0)),u.x),u.y);}\n" +
           "float fbm(vec2 p){float v=0.0,a=0.5;for(int i=0;i<6;i++){v+=a*tn(p);p=p*2.04+vec2(3.1,1.7);a*=0.5;}return v;}\n" +
           "void main(){\n" +
-          "  vec3 N=normalize(vN), up=normalize(vUp); N=(dot(N,up)<0.0)?-N:N;\n" +   // outward, winding-independent
-          // surface tangent frame (approx) for bump — light must catch fine relief, not a flat sheen
+          "  vec3 N=normalize(vN), up=normalize(vUp); N=(dot(N,up)<0.0)?-N:N;\n" +
           "  vec3 east=normalize(cross(vec3(0.0,1.0,0.0),up)); if(dot(east,east)<0.5) east=vec3(1.0,0.0,0.0);\n" +
           "  vec3 north=normalize(cross(up,east));\n" +
-          // multi-octave BUMP: tilt the normal by a height-field gradient → rock/soil texture in the light
-          // (no fake landforms — the SILHOUETTE stays real ETOPO; this only adds surface relief to shading)
-          "  vec2 P=vUv*520.0; float e=0.9;\n" +
+          // micro-relief bump only — silhouette stays real ETOPO
+          "  vec2 P=vLoc*640.0; float e=0.85;\n" +
           "  float h0=fbm(P), hx=fbm(P+vec2(e,0.0)), hy=fbm(P+vec2(0.0,e));\n" +
-          "  vec3 Nb=normalize(N - (east*(hx-h0)+north*(hy-h0))*3.6);\n" +
+          "  float bumpAmt=mix(1.4,4.2,smoothstep(0.02,0.35,vElev));\n" +   // sea almost flat; land catches light
+          "  vec3 Nb=normalize(N - (east*(hx-h0)+north*(hy-h0))*bumpAmt);\n" +
           "  float sky=max(dot(Nb,up),0.0), slope=clamp(1.0-dot(Nb,up),0.0,1.0);\n" +
-          "  float ao=0.55+0.9*smoothstep(0.25,0.72,h0);\n" +       // fake cavity/ridge occlusion: crevices dark, ridges catch light
-          "  vec3 col=vec3(0.022,0.018,0.014)*ao;\n" +              // near-black warm ground, depth from AO
-          "  col+=vec3(0.05,0.06,0.09)*sky*0.40;\n" +              // cool starlit fill on flats
-          "  col+=vec3(0.95,0.58,0.36)*slope*(0.10+0.10*fbm(P*0.12));\n" +  // warm airglow on slopes — varied
-          "  float g=fbm(P*4.0)*0.30+0.16; col*=0.7+0.5*g;\n" +    // fine grain
-          "  float d=length(cameraPosition-vWp), haze=smoothstep(0.03,0.13,d);\n" +
-          "  col=mix(col,vec3(0.85,0.42,0.22)*0.5,haze*0.72);\n" +  // aerial perspective → distant ranges melt into the horizon glow
+          "  float ao=0.52+0.95*smoothstep(0.22,0.75,h0);\n" +
+          // real Blue Marble albedo (same map as the globe) — night-ground read, not daytime postcard
+          "  vec3 alb=vec3(0.04,0.035,0.028);\n" +
+          "  if(uUseMap>0.5){ alb=texture2D(uMap,vUv).rgb; }\n" +
+          "  float ocean=smoothstep(0.04,0.0,vElev);\n" +
+          "  alb=mix(alb,vec3(0.02,0.04,0.09),ocean*0.55);\n" +
+          "  alb=mix(alb,vec3(0.55,0.58,0.62),smoothstep(0.55,0.92,vElev)*0.35);\n" + // high peaks cool/pale
+          "  vec3 col=alb*ao*(0.055+0.10*sky);\n" +                 // starlit night ground from real continents
+          "  col+=vec3(0.04,0.05,0.08)*sky*0.28*(1.0-ocean);\n" +
+          "  col+=vec3(0.95,0.58,0.36)*slope*(0.07+0.09*fbm(P*0.12))*(0.35+0.65*(1.0-ocean));\n" +
+          "  float g=fbm(P*4.0)*0.28+0.18; col*=0.72+0.48*g;\n" +
+          "  float d=length(cameraPosition-vWp), haze=smoothstep(0.028,0.14,d);\n" +
+          "  col=mix(col,vec3(0.85,0.42,0.22)*0.48,haze*0.70);\n" +
           "  gl_FragColor=vec4(col*uFade,1.0);\n" +
           "}"
       });
@@ -635,6 +671,13 @@
       groundTerrain = new THREE.Mesh(g, mat);
       groundTerrain.name = "GroundTerrain"; groundTerrain.frustumCulled = false; groundTerrain.renderOrder = 0;
       _terrainMat = mat; scene.add(groundTerrain);
+      // if the day map arrives after the mesh, hot-swap without rebuilding the ETOPO grid
+      if (!_earthDayTex) {
+        loadEarthDayMap().then(function (tex) {
+          if (!tex || !_terrainMat || _terrainMat !== mat) return;
+          mat.uniforms.uMap.value = tex; mat.uniforms.uUseMap.value = 1;
+        });
+      }
     }
     function removeGroundTerrain() {
       if (groundTerrain) {
@@ -682,7 +725,8 @@
       controls = createPremiumOrbitControls(camera, canvas, THREE);
       controls.target.copy(HOME);
       controls.setDistanceLimits(5.0, (window.CosmicLOD ? window.CosmicLOD.MAXCAM : 46000));   // 5.0 floor clears the Moon (2.99); ceiling widened to the cosmic-address MAXCAM (46000) so the log zoom reaches the observable-universe tier
-      controls.setInteractionTuning({ rotateSpeed: 0.00046, dampingFactor: 0.032, zoomStepLn: 0.34, zoomRef: 118, zoomHi: 1.85, zoomEase: 0.215, maxEventDelta: 0.012 });
+      // silkier desktop feel: slightly softer damping + gentler log-zoom ease (still returns to rest)
+      controls.setInteractionTuning({ rotateSpeed: 0.00044, dampingFactor: 0.026, zoomStepLn: 0.31, zoomRef: 122, zoomHi: 1.78, zoomEase: 0.168, maxEventDelta: 0.011 });
       canvas.style.opacity = "0.001";
       setTimeout(function () {   // fallback: never leave the visitor in the dark
         if (!groundEntered) {
@@ -1196,7 +1240,7 @@
     var DOSSIER = {};   // the data-hook registry (keyed by pick-id) → the focus card; blank entries render nothing
     var _galSfx = (MOBILE || /[?&]gallite=1/.test(location.search)) ? "_lite" : "";
     Promise.all([
-      fetch("data/natal-sky.json?v=16").then(function (r) { return r.json(); }),
+      fetch("data/natal-sky.json?v=17").then(function (r) { return r.json(); }),
       fetch("data/large-scale.json?v=1").then(function (r) { return r.json(); }).catch(function () { return null; }),
       fetch("data/galaxies_xyz" + _galSfx + ".i16?v=3").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; }),
       fetch("data/galaxies_rgb" + _galSfx + ".u8?v=3").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; }),
@@ -1209,7 +1253,7 @@
       var webXYZ = arr[4] ? new Int16Array(arr[4]) : null;
       var webRGB = arr[5] ? new Uint8Array(arr[5]) : null;
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=131").then(function (mod) {
+      return import("./natal-sky.js?v=134").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1222,6 +1266,8 @@
         if (natalSky.onConstellationClick) natalSky.onConstellationClick(function (cid) { window.__space.focusCon(cid); });
         if (natalSky.onNodeClick) natalSky.onNodeClick(function (info) { window.__space.focusStar(info); });
         window.__space.natalStats = natalSky.stats;
+        window.__space.getStarAtlas = function () { return natalSky && natalSky.getNodes ? natalSky.getNodes() : []; };
+        try { window.dispatchEvent(new CustomEvent("space:atlas-ready", { detail: { count: window.__space.getStarAtlas().length } })); } catch (e) {}
         tryAlignChart();
         applySceneLocale();
         if (tryGroundEntrance) tryGroundEntrance();   // the chart is ALIGNED now — safe to wake on the ground
@@ -1458,7 +1504,11 @@
         makeGroundDome(sp.position, sp.normal);   // the horizon glows all around the base
         // real modeled terrain around this base (ETOPO1), lazy-loaded once then built; the
         // sky is already usable while it streams in — it fades up with the ground-dim ease
-        loadHeightmap().then(function (hm) { if (hm && controls.isGround()) buildGroundTerrain(baseGeo); });
+        // ETOPO relief + Blue Marble albedo in parallel (arnis idea: real geography → walkable volume;
+        // here: real elev + real albedo → night-ground patch, not Minecraft voxels)
+        Promise.all([loadHeightmap(), loadEarthDayMap()]).then(function (pair) {
+          if (pair[0] && controls.isGround()) buildGroundTerrain(baseGeo);
+        });
         groundHint(true);
       }
       /* the launch: straight up off the base — the gaze pivots from the sky down to the
@@ -1704,6 +1754,7 @@
       function clearSel() {
         selStar = null; if (starCta) starCta.classList.remove("is-on");
         hideDossier();
+        try { window.dispatchEvent(new CustomEvent("space:star-clear")); } catch (e) {}
         if (controls) controls.setDistanceLimits(5.0, (window.CosmicLOD ? window.CosmicLOD.MAXCAM : 46000));   // leaving any body-focus: the earth-anchored floor returns; ceiling stays at the cosmic-address MAXCAM so you can pull back to the web/observable tiers
       }
       window.__space.clearSel = clearSel;
@@ -1720,6 +1771,7 @@
         if (selStar && selStar.id === info.id) { openStarDoor(); return; }
         selStar = info;
         showDossier(info.id, { en: info.titleEn, zh: info.titleZh });
+        try { window.dispatchEvent(new CustomEvent("space:star-focus", { detail: info })); } catch (e) {}
         if (starCta) {
           var te = info.titleEn.length > 34 ? info.titleEn.slice(0, 33) + "…" : info.titleEn;
           var tz = info.titleZh.length > 17 ? info.titleZh.slice(0, 16) + "…" : info.titleZh;
@@ -1735,6 +1787,12 @@
       }
       if (starCta) starCta.addEventListener("click", openStarDoor);
       window.__space.focusStar = focusStar;
+      window.__space.focusStarById = function (id) {
+        var info = natalSky && natalSky.getNodeById ? natalSky.getNodeById(id) : null;
+        if (!info) return false;
+        focusStar(info);
+        return true;
+      };
       function focusGiant(objName, id, titleEn, titleZh, href, con) {
         var o = natalSky && natalSky.group.getObjectByName(objName); if (!o) return;
         if (con && natalSky) { natalSky.highlight(con, true); setTimeout(function () { natalSky.highlight(con, false); }, 4200); }

@@ -54,14 +54,15 @@ export function buildNatalSky(THREE, scene, data, opts) {
   function normFull(c) {
     return {
       id: c.id, signIndex: c.signIndex, name: c.figureName, loadBearing: !!c.loadBearing, polarity: c.polarity,
-      stars: c.stars.map(function (s) { return { raH: s.raH, decDeg: s.decDeg, mag: s.mag }; }),
+      stars: c.stars.map(function (s) { return { raH: s.raH, decDeg: s.decDeg, mag: s.mag, ly: s.ly }; }),
       figureLines: c.figureLines || [], dataNodes: c.dataNodes || []
     };
   }
   function normBrief(c) {
     return {
       id: c.id, signIndex: c.signIndex, name: c.figureName, loadBearing: false, polarity: c.polarity,
-      stars: c.stars.map(function (t) { return { raH: t[1], decDeg: t[2], mag: t[3] }; }),
+      // brief rows: [name, raH, decDeg, mag] or [name, raH, decDeg, mag, ly]
+      stars: c.stars.map(function (t) { return { raH: t[1], decDeg: t[2], mag: t[3], ly: t[4] }; }),
       figureLines: c.figureLines || [], dataNodes: c.dataNodes || []
     };
   }
@@ -86,27 +87,33 @@ export function buildNatalSky(THREE, scene, data, opts) {
     c.figureLines.forEach(function (seg) { inFigure[seg[0]] = 1; inFigure[seg[1]] = 1; });
     var centroid = new T.Vector3(), dirSum = new T.Vector3(), near = 1e9, far = 0;
     c._starPos = [];
-    // APPARENT SKY LAYER: zodiac constellations are not physical 3-D star clusters.
-    // Without per-star distances, the scientifically honest representation is the
-    // real RA/Dec direction pattern as seen from Earth, drawn on the local sky.
-    var conBase = R * 1.04;
+    /* VOLUMETRIC ZODIAC (2026-07-09): restore true 3-D constellation bodies.
+       Keep the REAL RA/Dec sightline from Earth (so the figure still reads from home),
+       but place each star at a log-compressed TRUE light-year depth. Flying into a
+       sign then reveals depth — no more flat celestial-sphere ring. */
+    var ZY_LO = 34, ZY_HI = 1800, ZR_LO = R * 0.78, ZR_HI = R * 1.72;
+    function zodiacSceneRadius(ly) {
+      var L = Math.max(ZY_LO, Math.min(ZY_HI, (ly > 0 ? ly : 180)));
+      var t = Math.log(L / ZY_LO) / Math.log(ZY_HI / ZY_LO);
+      return ZR_LO + (ZR_HI - ZR_LO) * t;
+    }
     ecl.forEach(function (e, si) {
-      var dist = conBase;
+      var dist = zodiacSceneRadius(c.stars[si].ly);
       var pos = eclVec(e.lon, e.lat, dist);
       c._starPos[si] = pos;
       centroid.add(pos); dirSum.add(pos.clone().normalize());
       if (dist < near) near = dist; if (dist > far) far = dist;
       var node = nodeByStar[si] || null;
       var importance = node ? 1.0 : (inFigure[si] ? 0.7 : 0.35);
-      stars.push({ pos: pos, mag: c.stars[si].mag, importance: importance, conIdx: ci, node: node });
+      stars.push({ pos: pos, mag: c.stars[si].mag, importance: importance, conIdx: ci, node: node, ly: c.stars[si].ly });
     });
     conCentroid[ci] = centroid.multiplyScalar(1 / (ecl.length || 1));
     conDir[ci] = dirSum.clone().normalize(); conNear[ci] = near; conFar[ci] = far;
-    // a generous invisible pick sphere covering the whole figure → clicking anywhere over the
+    // a generous invisible pick sphere covering the whole 3-D figure → clicking anywhere over the
     // constellation grabs it (the tiny deep star-points are far too small to raycast reliably)
     var bR = 0;
     for (var bi = 0; bi < c._starPos.length; bi++) { var bd = c._starPos[bi].distanceTo(conCentroid[ci]); if (bd > bR) bR = bd; }
-    bR = Math.max(bR * 1.15, conFar[ci] * 0.14);
+    bR = Math.max(bR * 1.2, (conFar[ci] - conNear[ci]) * 0.55, conFar[ci] * 0.12);
     var pshell = new T.Mesh(new T.SphereGeometry(bR, 12, 10), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
     pshell.position.copy(conCentroid[ci]); pshell.name = "ConPick_" + c.id; pshell.userData.nyePick = "con_" + c.id;
     conPickGroup.add(pshell);
@@ -146,7 +153,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   var uniforms = {
     uMap: { value: o.tex }, uTime: { value: 0 }, uFusion: { value: 0.52 },
     uPixelRatio: { value: Math.min((typeof devicePixelRatio !== "undefined" ? devicePixelRatio : 1) || 1, mobile ? 1.5 : 2) },
-    uMaxPointSize: { value: mobile ? 7.0 : 10.0 }, uRefDepth: { value: R * 1.04 }, // constellations are an apparent-sky annotation, not a galactic-depth object
+    uMaxPointSize: { value: mobile ? 7.0 : 10.0 }, uRefDepth: { value: R * 1.15 }, // volumetric zodiac spans ~0.78R–1.72R; mid-band keeps sizes honest
     uAmplitude: { value: 6.0 },              // near-frozen: figures hold their shape
     uLayerKind: { value: 0.0 }, uClearInner: { value: -2.0 }, uClearOuter: { value: -1.0 }
   };
@@ -739,10 +746,11 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var cv = document.createElement("canvas"); cv.width = cv.height = 128;
     var gg = cv.getContext("2d"), gr = gg.createRadialGradient(64,64,0,64,64,64);
     gr.addColorStop(0.00,"rgba(255,255,255,1)");
-    gr.addColorStop(0.14,"rgba(255,251,240,0.88)");
-    gr.addColorStop(0.34,"rgba(255,242,220,0.40)");
-    gr.addColorStop(0.62,"rgba(255,230,202,0.12)");
-    gr.addColorStop(1.00,"rgba(255,222,192,0)");
+    gr.addColorStop(0.08,"rgba(255,252,245,0.96)");
+    gr.addColorStop(0.18,"rgba(255,248,230,0.72)");
+    gr.addColorStop(0.38,"rgba(255,236,210,0.28)");
+    gr.addColorStop(0.68,"rgba(255,220,190,0.08)");
+    gr.addColorStop(1.00,"rgba(255,210,175,0)");
     gg.fillStyle = gr; gg.fillRect(0,0,128,128);
     var tex = new T.CanvasTexture(cv); if ("colorSpace" in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
 
@@ -774,23 +782,25 @@ export function buildNatalSky(THREE, scene, data, opts) {
         vertexColors: true, transparent: true, opacity: o2, depthWrite: false, blending: T.AdditiveBlending, fog: false });
         if ("toneMapped" in m) m.toneMapped = false; return m; }
       var base = (order != null ? order : -3);
-      // TWO bloom-halo tiers (medium + wide-soft), drawn behind the sharp core, give a smooth cinematic
-      // glow: dense nodes/filaments bloom, empty voids stay black. This is fake-bloom via additive sprites
-      // (no post-processing pass) — refined look at ~zero extra pipeline cost.
+      // THREE bloom-halo tiers (tight + medium + wide-soft) behind the sharp core → cinematic density
+      // glow without a post-process pass. Dense nodes/filaments bloom; empty voids stay black.
       if (glowPx) {
-        if (glowTiers !== 1) { var pg2 = new T.Points(g, mat(glowPx*2.15, (glowOp||0.12)*0.5)); pg2.name = name+"Glow2"; pg2.frustumCulled = false; pg2.renderOrder = base - 2; belt.add(pg2); }
-        var pg = new T.Points(g, mat(glowPx, glowOp || 0.12)); pg.name = name+"Glow"; pg.frustumCulled = false; pg.renderOrder = base - 1; belt.add(pg);
+        if (glowTiers !== 1) {
+          var pg3 = new T.Points(g, mat(glowPx * 3.4, (glowOp || 0.12) * 0.28));
+          pg3.name = name + "Glow3"; pg3.frustumCulled = false; pg3.renderOrder = base - 3; belt.add(pg3);
+          var pg2 = new T.Points(g, mat(glowPx * 2.05, (glowOp || 0.12) * 0.55));
+          pg2.name = name + "Glow2"; pg2.frustumCulled = false; pg2.renderOrder = base - 2; belt.add(pg2);
+        }
+        var pg = new T.Points(g, mat(glowPx, glowOp || 0.12)); pg.name = name + "Glow"; pg.frustumCulled = false; pg.renderOrder = base - 1; belt.add(pg);
       }
       var p = new T.Points(g, mat(sizePx, op)); p.name = name; p.frustumCulled = false; if (order != null) p.renderOrder = order; belt.add(p);
       return p;
     }
     if (o.galXYZ && o.galRGB && o.galXYZ.length >= 3) {
-      // the galaxy field (real 2MRS) — crisp bright cores + soft bloom halos = a refined glowing web
-      buildLayer(o.galXYZ, o.galRGB, mobile?1.6:2.0, 1.0, "LargeScaleStructure", -3, mobile?5:6, 0.13, 2);
-      // the WEB LINES overlay — real MST filament skeleton + per-basin flow streamlines. Single glow tier
-      // (they are already bright lines) so the whole overlay stays light. Every basin (Laniakea, Perseus-
-      // Pisces, Coma, Shapley, Hercules, Pavo-Indus) has its own converging flow — a mosaic of basins.
-      buildLayer(o.webXYZ, o.webRGB, mobile?1.9:2.5, 1.0, "CosmicWebLines", -2, mobile?4:5, 0.17, 1);
+      // the galaxy field (real 2MRS) — crisp cores + multi-tier bloom = refined glowing web
+      buildLayer(o.galXYZ, o.galRGB, mobile ? 1.75 : 2.15, 1.0, "LargeScaleStructure", -3, mobile ? 5.5 : 6.8, 0.145, 2);
+      // WEB LINES — MST filaments + basin flow streamlines; two glow tiers so strands read as luminous threads
+      buildLayer(o.webXYZ, o.webRGB, mobile ? 2.05 : 2.7, 1.0, "CosmicWebLines", -2, mobile ? 4.4 : 5.6, 0.19, 2);
       return;
     }
 
@@ -2398,9 +2408,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var nd = nodeIndex[idx].node;
       if (nodeClickCb) {
         // FIRST CLICK NEVER NAVIGATES — the host focuses the star and offers the door
-        nodeClickCb({ id: nd.id, href: nd.href || "",
-          titleEn: nd.title && nd.title.en || "", titleZh: nd.title && nd.title.zh || "",
-          world: belt.localToWorld(nodeIndex[idx].pos.clone()) });
+        nodeClickCb(nodeInfoAt(idx));
       } else if (nd.href) { location.href = nd.href; }
     };
     addEventListener("pointermove", onMove, { passive: true });
@@ -2417,6 +2425,42 @@ export function buildNatalSky(THREE, scene, data, opts) {
   }
   var bloomT = 0;
   function bloom(p) { if (!bloomSprite) return; bloomSprite.position.copy(p); bloomSprite.visible = true; bloomT = 1.0; }
+  function nodeInfoAt(idx) {
+    var rec = nodeIndex[idx]; if (!rec || !rec.node) return null;
+    var st = stars[idx] || {};
+    var c = cons[st.conIdx] || {};
+    var n = rec.node;
+    var title = n.title || {};
+    var cname = c.name || c.figureName || {};
+    return {
+      id: n.id,
+      href: n.href || "",
+      titleEn: title.en || n.titleEn || n.id,
+      titleZh: title.zh || n.titleZh || title.en || n.id,
+      role: n.role || "",
+      importance: (n.importance != null) ? n.importance : (st.importance || 0),
+      constellationId: c.id || "",
+      constellationEn: cname.en || c.id || "",
+      constellationZh: cname.zh || cname.en || c.id || "",
+      world: belt.localToWorld(rec.pos.clone())
+    };
+  }
+  function getNodeById(id) {
+    for (var i = 0; i < nodeIndex.length; i++) {
+      if (nodeIndex[i] && nodeIndex[i].node && nodeIndex[i].node.id === id) return nodeInfoAt(i);
+    }
+    return null;
+  }
+  function getAllNodes() {
+    var out = [];
+    cons.forEach(function (c) {
+      (c.dataNodes || []).forEach(function (n) {
+        var info = getNodeById(n.id);
+        if (info) out.push(info);
+      });
+    });
+    return out;
+  }
 
   /* ---------------- labels projection + housekeeping per frame ---------------- */
   function isLit(ci) { return !!hlSet[cons[ci].id] || hoverCon === ci; }
@@ -2479,6 +2523,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
     ensureMidLayers: ensureMidLayers,
     ensureCosmicWeb: ensureCosmicWeb,
     ensureUniverse: ensureUniverse,
+    getNodeById: getNodeById,
+    getNodes: getAllNodes,
     getPickName: function (id) {   // fallback name for the dossier card when a registry entry is blank
       if (id.indexOf("dso_") === 0) { var s = dsoPickGroup.getObjectByName("DSOPick_" + id.slice(4)); return s && s.userData.dsoName || null; }
       if (id.indexOf("con_") === 0) { var c = cons.filter(function (k) { return k.id === id.slice(4); })[0]; return c ? (c.name || (c.figureName)) : null; }

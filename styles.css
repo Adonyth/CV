@@ -558,6 +558,52 @@ body.cosmos.on-ground #field{z-index:2; opacity:.24 !important;}
 .focus-card__chip{font-size:.62rem; letter-spacing:.06em; text-transform:uppercase; padding:2px 7px; border-radius:999px; border:1px solid rgba(224,135,106,.4); color:var(--accent);}
 body.is-flat .focus-card, body.on-ground .focus-card{display:none !important;}
 @media(max-width:700px){ .focus-card{left:14px; right:14px; max-width:none; bottom:104px;} }
+.star-atlas[hidden]{display:none !important;}
+.star-atlas{position:fixed; top:82px; right:22px; z-index:7; width:min(360px,calc(100vw - 44px));
+  max-height:min(620px,calc(100dvh - 128px)); display:flex; flex-direction:column; gap:12px;
+  font-family:var(--mono); color:var(--ink); background:rgba(11,10,9,.82);
+  border:1px solid rgba(232,195,122,.18); border-radius:12px; padding:14px;
+  -webkit-backdrop-filter:blur(14px) saturate(1.15); backdrop-filter:blur(14px) saturate(1.15);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 20px 54px -28px rgba(0,0,0,.9);}
+.star-atlas__head{display:flex; align-items:center; justify-content:space-between; gap:12px;}
+.star-atlas__head h2{margin:0; font-family:var(--serif); font-size:1.08rem; font-weight:500; line-height:1.1; color:#f6ede1;}
+.star-atlas__close{width:28px; height:28px; border-radius:999px; border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.03); color:var(--muted); cursor:pointer; font-size:18px; line-height:1;}
+.star-atlas__close:hover{color:#f6ede1; border-color:rgba(224,135,106,.58);}
+.star-atlas__tools{display:flex; flex-direction:column; gap:8px;}
+.star-atlas__tools input{width:100%; border:1px solid rgba(255,255,255,.13); border-radius:999px;
+  background:rgba(255,255,255,.04); color:#f6ede1; padding:9px 12px; font:12px var(--mono); outline:none;}
+.star-atlas__tools input:focus{border-color:rgba(224,135,106,.62);}
+.star-atlas__tabs{display:flex; gap:6px; flex-wrap:wrap;}
+.star-atlas__tabs button{border:1px solid rgba(255,255,255,.12); border-radius:999px; background:rgba(255,255,255,.025);
+  color:var(--muted); font:11px var(--mono); padding:6px 10px; cursor:pointer;}
+.star-atlas__tabs button[aria-pressed="true"]{color:#f0b08e; border-color:rgba(224,135,106,.50); background:rgba(224,135,106,.08);}
+.star-atlas__list{overflow:auto; padding-right:2px; scrollbar-width:thin; scrollbar-color:rgba(224,135,106,.35) transparent;}
+.star-atlas__section{display:flex; align-items:center; justify-content:space-between; gap:10px;
+  margin:12px 0 3px; color:#e8c37a; font-size:10.5px; text-transform:uppercase;}
+.star-atlas__section i{font-style:normal; color:rgba(214,204,188,.55);}
+.star-atlas__row{display:grid; grid-template-columns:minmax(0,1fr) 30px; gap:8px; align-items:center;
+  border-top:1px solid rgba(255,255,255,.07);}
+.star-atlas__go{min-width:0; text-align:left; background:transparent; border:0; padding:10px 0; cursor:pointer; color:#efe7db;}
+.star-atlas__title{display:block; font-family:var(--serif); font-size:14.5px; line-height:1.22; overflow-wrap:anywhere;}
+.star-atlas__meta{display:block; margin-top:3px; color:rgba(214,204,188,.58); font:10.5px/1.35 var(--mono); overflow-wrap:anywhere;}
+.star-atlas__open{display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px;
+  border-radius:999px; color:rgba(214,204,188,.68); text-decoration:none; border:1px solid transparent;}
+.star-atlas__row:hover .star-atlas__title, .star-atlas__row.is-active .star-atlas__title{color:#f0b08e;}
+.star-atlas__row.is-active{border-top-color:rgba(224,135,106,.30);}
+.star-atlas__row.is-active .star-atlas__open, .star-atlas__open:hover{color:#f0b08e; border-color:rgba(224,135,106,.38);}
+.star-atlas__empty{margin:12px 0 4px; color:var(--muted); font-size:12px;}
+.focus-card__atlas{margin-top:11px; padding-top:9px; border-top:1px solid rgba(255,255,255,.08);}
+.focus-card__atlas-k{font-size:10.5px; color:#e8c37a;}
+.focus-card__atlas-links{display:flex; flex-direction:column; gap:4px; margin-top:7px;}
+.focus-card__atlas button{pointer-events:auto; display:block; width:100%; border:0; background:transparent; color:#d7cab8;
+  text-align:left; padding:2px 0; cursor:pointer; font:11px/1.35 var(--mono); overflow-wrap:anywhere;}
+.focus-card__atlas button:hover{color:#f0b08e;}
+body.is-flat .star-atlas, body.index-open .star-atlas{display:none !important;}
+@media(max-width:700px){
+  #atlasbtn{padding-inline:11px;}
+  .star-atlas{left:14px; right:14px; top:92px; bottom:92px; width:auto; max-height:none;}
+}
 /* return-to-overview: bottom-center, appears only when you've left the whole-sky view */
 .cosmos-home{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(8px); z-index:6;
   font-family:var(--mono); font-size:12px; letter-spacing:.1em; color:var(--ink);
