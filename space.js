@@ -755,11 +755,11 @@
       }).catch(function () { return null; });
     }
     function resolveBase() {
-      try {
-        var c = JSON.parse(localStorage.getItem("cv-base") || "null");
-        if (c && isFinite(c.lat) && isFinite(c.lon)) { fetchBase(); /* refresh for next visit */ return Promise.resolve(c); }
-      } catch (e) {}
-      return fetchBase();
+      // The base view is the AUTHOR's home, coherently: his natal sky, his real footprint, and his real
+      // streets (the baked Providence map) all belong together. So the base is Providence for every visitor —
+      // not their IP-geolocated city (which would put a stranger's label over the author's Providence streets,
+      // and his birth-sky over a random horizon). Pinning it also drops the third-party IP lookup (privacy).
+      return Promise.resolve(DEFAULT_BASE);
     }
     var basePromise = COSMOS ? resolveBase() : Promise.resolve(null);
 
