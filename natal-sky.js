@@ -2493,7 +2493,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   }
 
   /* ---------------- lifecycle ---------------- */
-  var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null, _sfObj = null, _sfMat = null, _sfBase = 1, _bdT = 0, _keepGal = false, _galMats = null, _localHide = null, _nsObj = null, _nsMat = null, _nsBase = 1, _lhTries = 0, _tierSeen = {};
+  var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null, _sfObj = null, _sfMat = null, _sfBase = 1, _bdT = 0, _keepGal = false, _galMats = null, _localHide = null, _nsObj = null, _nsMat = null, _nsBase = 1, _lhTries = 0, _tierSeen = {}, _lssObjs = null;
   // drives tier presence only. Opacity is never used for inter-tier transitions;
   // the address transition must read as real geometric zoom/collapse.
   function driveTier(key, grp2, w2, ghostW) {
@@ -2594,6 +2594,28 @@ export function buildNatalSky(THREE, scene, data, opts) {
         // OBSERVABLE UNIVERSE: the far foam is present by scale gate; the CMB horizon shell persists into
         // the beyond-horizon tier as the edge of what this scene can honestly map.
         driveTier("obs", tierUniverse, Math.max(_wObs, _wQnt * 0.5));
+        // SURVEY FIELD LOAD GATE (device-load lever). The 2MRS field (2 cores + 6 glow halos, ~320k
+        // point-draws with fixed-px sprites) serves the galaxy scale OUTWARD — below the star-chart
+        // scale it's sub-visual background that still costs full fill every frame (it used to keep
+        // drawing at the ground/orrery after any deep trip). Gate it by scale, and shed the widest
+        // halos (the proven GPU-stall fill bombs) when the adaptive governor (window.__cvQuality)
+        // says this device is struggling: level 1 drops *Glow3, level 2 also *Glow2.
+        if (!_lssObjs && _lssBuilt) {
+          _lssObjs = [];
+          for (var _li = 0; _li < belt.children.length; _li++) {
+            var _lo = belt.children[_li];
+            if (_lo.name && (_lo.name.indexOf("LargeScaleStructure") === 0 || _lo.name.indexOf("CosmicWebLines") === 0)) {
+              _lssObjs.push({ o: _lo, tier: /Glow3$/.test(_lo.name) ? 3 : /Glow2$/.test(_lo.name) ? 2 : 0 });
+            }
+          }
+        }
+        if (_lssObjs) {
+          var _lssOn = _cl > 300, _qv = window.__cvQuality || 0;
+          for (var _lj = 0; _lj < _lssObjs.length; _lj++) {
+            var _le = _lssObjs[_lj];
+            _le.o.visible = _lssOn && !(_qv >= 1 && _le.tier === 3) && !(_qv >= 2 && _le.tier === 2);
+          }
+        }
         if (_cmbUnifs) {
           _cmbUnifs[0].uOp.value = _wObs > 0 ? 0.54 : 0;                          // inside: the faint wall of first light
           _cmbUnifs[1].uOp.value = _wQnt > 0 ? 0.44 : (_wObs > 0 ? 0.56 : 0);     // outside: the whole universe as a temperature shell

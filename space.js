@@ -1348,7 +1348,7 @@
       var webXYZ = arr[4] ? new Int16Array(arr[4]) : null;
       var webRGB = arr[5] ? new Uint8Array(arr[5]) : null;
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=137").then(function (mod) {
+      return import("./natal-sky.js?v=138").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -2186,12 +2186,26 @@
 
     var running = true;
     var frameNo = 0, prevSec = 0, _clk = 0, beltCentered = false;
+    /* ADAPTIVE QUALITY — the anti-stutter lever. The wide additive glow tiers of the survey field
+       (*Glow2/*Glow3: ~80k points × 12-23px sprites) are fill-rate bombs at the deep tiers: proven to
+       stall the GPU for seconds. Instead of dimming the art for everyone, MEASURE the real frame
+       cadence and shed load only when this device struggles: level 1 hides the widest halos, level 2
+       the mid halos, level 3 also drops render resolution a notch. Climbs back when the device breathes.
+       natal-sky's tick reads window.__cvQuality and owns the actual glow visibility (single owner). */
+    var QUALITY = { level: (innerWidth < 700 || (navigator.deviceMemory || 8) <= 4) ? 1 : 0, ema: 17, prevT: 0, lastChange: 0, dprApplied: false };
+    window.__cvQuality = QUALITY.level;
     function frame(t) {
       if (!running) return;
       var busy = true;
       var sec = (t || 0) * 0.001;
       var dt = Math.min(0.1, Math.max(0.001, sec - prevSec)); prevSec = sec;
       frameNo++;
+      // measure the true rAF cadence (BEFORE any skip-return, so stalls are always seen)
+      if (QUALITY.prevT > 0) {
+        var _qd = t - QUALITY.prevT;
+        if (_qd > 0 && _qd < 5000) QUALITY.ema += (_qd - QUALITY.ema) * 0.08;
+      }
+      QUALITY.prevT = t;
       if (COSMOS && controls) {
         var nowMs = performance.now();
         /* thermal guard: when the visitor rests, render at half rate — the slow
@@ -2201,6 +2215,20 @@
         var glid = glideActive() || (!userMoved && nowMs < entranceUntil);       // choreographed flight → keep it buttery at 60fps
         var freshInput = inputAge < 1150 || ptrDown || panOn;
         busy = freshInput || (inputAge < 3600) || glid || deepFusion.uniforms.uPointerAmt.value > 0.05;
+        // ADAPTIVE QUALITY step: degrade fast when the cadence collapses under load (EMA > ~70ms ≈
+        // <14fps while active), recover slowly once it's smooth again (hysteresis, floor at the
+        // device's starting level). Level 3 additionally drops the pixel ratio a notch.
+        if (busy && nowMs - QUALITY.lastChange > 900) {
+          var _qFloor = (innerWidth < 700 || (navigator.deviceMemory || 8) <= 4) ? 1 : 0;
+          if (QUALITY.ema > 70 && QUALITY.level < 3) { QUALITY.level++; QUALITY.lastChange = nowMs; QUALITY.ema = 33; }
+          else if (QUALITY.ema < 20 && QUALITY.level > _qFloor && nowMs - QUALITY.lastChange > 5000) { QUALITY.level--; QUALITY.lastChange = nowMs; QUALITY.ema = 33; }
+          if (window.__cvQuality !== QUALITY.level) {
+            window.__cvQuality = QUALITY.level;
+            var _basePr = Math.min(devicePixelRatio || 1, innerWidth < 700 ? 1.25 : 1.35);
+            var _wantDpr = QUALITY.level >= 3;
+            if (_wantDpr !== QUALITY.dprApplied) { renderer.setPixelRatio(_basePr * (_wantDpr ? 0.72 : 1)); QUALITY.dprApplied = _wantDpr; }
+          }
+        }
         // FRAME-RATE CAP (the big thermal lever): active hand motion and choreographed flights run at
         // full refresh; the inertial tail drops to half-rate, and true rest idles cold on a frozen scene.
         if (!glid) {
