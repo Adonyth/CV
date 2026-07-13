@@ -143,7 +143,13 @@
     var go = e.target.closest(".focus-card__atlas [data-star-id]");
     if (go) { e.preventDefault(); e.stopPropagation(); focusStar(go.getAttribute("data-star-id")); }
   });
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !panel.hidden) setOpen(false); });
+  document.addEventListener("keydown", function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var tag = (e.target && e.target.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA" || (e.target && e.target.isContentEditable)) return;
+    if (e.key === "Escape" && !panel.hidden) { setOpen(false); return; }
+    if (e.key === "a" || e.key === "A") { e.preventDefault(); setOpen(panel.hidden); }
+  });
   window.addEventListener("space:star-focus", function (e) { setActive(e.detail && e.detail.id); focusContext(e.detail); });
   window.addEventListener("space:star-clear", function () {
     setActive("");

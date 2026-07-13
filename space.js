@@ -629,27 +629,45 @@
       removeGroundTerrain();
       if (!nyeArmature || !nyeArmature.earthSurfacePoint || !_heightmap) return;
       var Rv = nyeArmature.earthRadiusVis || 0.95;
-      var EARTH_M = 6371000, EXAG = 22;                 // vertical exaggeration — true relief is invisibly small vs the radius
+      var EARTH_M = 6371000, EXAG = 26;                 // vertical exaggeration — true relief is invisibly small vs the radius
       var mToScene = (Rv / EARTH_M) * EXAG;
       var em = nyeArmature.group.getObjectByName("NyeEarthMesh"); if (!em) return;
       em.updateWorldMatrix(true, false);
       var M = em.matrixWorld, ctr = new THREE.Vector3().setFromMatrixPosition(M), lv = new THREE.Vector3();
-      var N = MOBILE ? 148 : 240, SPAN = 11.0, DEG = Math.PI / 180;   // denser grid → smoother ridgelines (same real data, finer sampling)
+      var N = MOBILE ? 160 : 280, SPAN = 11.0, DEG = Math.PI / 180;   // denser grid → smoother ridgelines (same real data, finer sampling)
       var cl = Math.max(0.30, Math.cos(geo.lat * DEG));
-      var pos = new Float32Array(N * N * 3), up = new Float32Array(N * N * 3);
+      var dLa = (2 * SPAN) / (N - 1), dLo = (2 * SPAN / cl) / (N - 1);
+      var pos = new Float32Array(N * N * 3), up = new Float32Array(N * N * 3), nrm = new Float32Array(N * N * 3);
       var uvs = new Float32Array(N * N * 2), loc = new Float32Array(N * N * 2), elev = new Float32Array(N * N);
       var k = 0, k2 = 0, ke = 0;
+      function elevUse(la2, lo2) { var ee = sampleElevM(la2, lo2); return ee > 0 ? ee : 0; }
       for (var iy = 0; iy < N; iy++) {
         var v = iy / (N - 1), la = geo.lat + (v - 0.5) * 2 * SPAN;
         for (var ix = 0; ix < N; ix++) {
           var u = ix / (N - 1), lo = geo.lon + (u - 0.5) * 2 * SPAN / cl;
-          var e = sampleElevM(la, lo), eUse = e > 0 ? e : 0;      // sea → flat at the sphere surface
+          var eUse = elevUse(la, lo);
           var r = Rv + 0.0008 + eUse * mToScene;                 // +epsilon lifts the patch off the globe (no z-fight at sea level)
           var th = (90 - la) * DEG, ph = (lo + 180) * DEG, st = Math.sin(th);
           lv.set(-r * st * Math.cos(ph), r * Math.cos(th), r * st * Math.sin(ph)).applyMatrix4(M);
           pos[k] = lv.x; pos[k + 1] = lv.y; pos[k + 2] = lv.z;
           var nx = lv.x - ctr.x, ny = lv.y - ctr.y, nz = lv.z - ctr.z, il = 1 / Math.hypot(nx, ny, nz);
-          up[k] = nx * il; up[k + 1] = ny * il; up[k + 2] = nz * il; k += 3;
+          var ux = nx * il, uy = ny * il, uz = nz * il;
+          up[k] = ux; up[k + 1] = uy; up[k + 2] = uz;
+          // REAL slope normal from ETOPO finite differences (geography owns the lighting)
+          var eE = elevUse(la, lo + dLo), eW = elevUse(la, lo - dLo);
+          var eNn = elevUse(la + dLa, lo), eSs = elevUse(la - dLa, lo);
+          var stepE = Math.max(1e-6, Rv * dLo * DEG * cl), stepN = Math.max(1e-6, Rv * dLa * DEG);
+          var sx = ((eE - eW) * 0.5 * mToScene) / stepE, sy = ((eNn - eSs) * 0.5 * mToScene) / stepN;
+          // east = normalize(cross(worldY, up)); north = normalize(cross(up, east))
+          var ex = uz, ey = 0, ez = -ux, el = Math.hypot(ex, ey, ez);
+          if (el < 1e-6) { ex = 1; ey = 0; ez = 0; } else { ex /= el; ey /= el; ez /= el; }
+          var nxE = uy * ez - uz * ey, nyE = uz * ex - ux * ez, nzE = ux * ey - uy * ex;
+          var nl = Math.hypot(nxE, nyE, nzE); if (nl > 1e-6) { nxE /= nl; nyE /= nl; nzE /= nl; }
+          var nnx = ux - ex * sx * 1.35 - nxE * sy * 1.35;
+          var nny = uy - ey * sx * 1.35 - nyE * sy * 1.35;
+          var nnz = uz - ez * sx * 1.35 - nzE * sy * 1.35;
+          var nil = 1 / Math.hypot(nnx, nny, nnz);
+          nrm[k] = nnx * nil; nrm[k + 1] = nny * nil; nrm[k + 2] = nnz * nil; k += 3;
           // equirectangular UV — match Three.js SphereGeometry + earth-map.jpg (north → v=1)
           uvs[k2] = ((lo + 180) / 360) % 1; if (uvs[k2] < 0) uvs[k2] += 1;
           uvs[k2 + 1] = (la + 90) / 180;
@@ -664,11 +682,12 @@
       }
       var g = new THREE.BufferGeometry();
       g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      g.setAttribute("normal", new THREE.BufferAttribute(nrm, 3));
       g.setAttribute("aUp", new THREE.BufferAttribute(up, 3));
       g.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
       g.setAttribute("aLoc", new THREE.BufferAttribute(loc, 2));
       g.setAttribute("aElev", new THREE.BufferAttribute(elev, 1));
-      g.setIndex(idx); g.computeVertexNormals();
+      g.setIndex(idx);
       var placeholder = new THREE.DataTexture(new Uint8Array([8, 6, 5, 255]), 1, 1);
       placeholder.needsUpdate = true;
       var mat = new THREE.ShaderMaterial({
@@ -689,30 +708,29 @@
           "float th(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\n" +
           "float tn(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.0-2.0*f);\n" +
           "  return mix(mix(th(i),th(i+vec2(1.0,0.0)),u.x),mix(th(i+vec2(0.0,1.0)),th(i+vec2(1.0,1.0)),u.x),u.y);}\n" +
-          "float fbm(vec2 p){float v=0.0,a=0.5;for(int i=0;i<6;i++){v+=a*tn(p);p=p*2.04+vec2(3.1,1.7);a*=0.5;}return v;}\n" +
+          "float fbm(vec2 p){float v=0.0,a=0.5;for(int i=0;i<5;i++){v+=a*tn(p);p=p*2.04+vec2(3.1,1.7);a*=0.5;}return v;}\n" +
           "void main(){\n" +
           "  vec3 N=normalize(vN), up=normalize(vUp); N=(dot(N,up)<0.0)?-N:N;\n" +
           "  vec3 east=normalize(cross(vec3(0.0,1.0,0.0),up)); if(dot(east,east)<0.5) east=vec3(1.0,0.0,0.0);\n" +
           "  vec3 north=normalize(cross(up,east));\n" +
-          // micro-relief bump only — silhouette stays real ETOPO
-          "  vec2 P=vLoc*640.0; float e=0.85;\n" +
+          // micro-grain on top of REAL ETOPO slopes (silhouettes + lighting from elevation)
+          "  vec2 P=vLoc*720.0; float e=0.75;\n" +
           "  float h0=fbm(P), hx=fbm(P+vec2(e,0.0)), hy=fbm(P+vec2(0.0,e));\n" +
-          "  float bumpAmt=mix(1.4,4.2,smoothstep(0.02,0.35,vElev));\n" +   // sea almost flat; land catches light
+          "  float bumpAmt=mix(0.55,2.2,smoothstep(0.02,0.35,vElev));\n" +
           "  vec3 Nb=normalize(N - (east*(hx-h0)+north*(hy-h0))*bumpAmt);\n" +
           "  float sky=max(dot(Nb,up),0.0), slope=clamp(1.0-dot(Nb,up),0.0,1.0);\n" +
-          "  float ao=0.52+0.95*smoothstep(0.22,0.75,h0);\n" +
-          // real Blue Marble albedo (same map as the globe) — night-ground read, not daytime postcard
+          "  float ao=0.48+0.95*smoothstep(0.18,0.78,h0)*mix(0.85,1.0,vElev);\n" +
           "  vec3 alb=vec3(0.04,0.035,0.028);\n" +
           "  if(uUseMap>0.5){ alb=texture2D(uMap,vUv).rgb; }\n" +
-          "  float ocean=smoothstep(0.04,0.0,vElev);\n" +
-          "  alb=mix(alb,vec3(0.02,0.04,0.09),ocean*0.55);\n" +
-          "  alb=mix(alb,vec3(0.55,0.58,0.62),smoothstep(0.55,0.92,vElev)*0.35);\n" + // high peaks cool/pale
-          "  vec3 col=alb*ao*(0.055+0.10*sky);\n" +                 // starlit night ground from real continents
-          "  col+=vec3(0.04,0.05,0.08)*sky*0.28*(1.0-ocean);\n" +
-          "  col+=vec3(0.95,0.58,0.36)*slope*(0.07+0.09*fbm(P*0.12))*(0.35+0.65*(1.0-ocean));\n" +
-          "  float g=fbm(P*4.0)*0.28+0.18; col*=0.72+0.48*g;\n" +
-          "  float d=length(cameraPosition-vWp), haze=smoothstep(0.028,0.14,d);\n" +
-          "  col=mix(col,vec3(0.85,0.42,0.22)*0.48,haze*0.70);\n" +
+          "  float ocean=smoothstep(0.035,0.0,vElev);\n" +
+          "  alb=mix(alb,vec3(0.015,0.03,0.07),ocean*0.62);\n" +
+          "  alb=mix(alb,vec3(0.58,0.60,0.64),smoothstep(0.52,0.92,vElev)*0.38);\n" +
+          "  vec3 col=alb*ao*(0.048+0.12*sky);\n" +
+          "  col+=vec3(0.035,0.045,0.075)*sky*0.32*(1.0-ocean);\n" +
+          "  col+=vec3(0.95,0.58,0.36)*slope*(0.09+0.10*fbm(P*0.12))*(0.25+0.75*(1.0-ocean));\n" +
+          "  float g=fbm(P*4.0)*0.26+0.20; col*=0.70+0.50*g;\n" +
+          "  float d=length(cameraPosition-vWp), haze=smoothstep(0.026,0.145,d);\n" +
+          "  col=mix(col,vec3(0.85,0.42,0.22)*0.48,haze*0.72);\n" +
           "  gl_FragColor=vec4(col*uFade,1.0);\n" +
           "}"
       });
@@ -758,7 +776,7 @@
       // The base view can only look ~6° below the horizon, so the map must be BROAD (a circular disc that
       // reaches toward the horizon) with the fade only at the very outer rim — the near ground you can see
       // is then your real streets, not a generic wash. Lifted enough to clear nearby ETOPO relief.
-      var R = 0.14;
+      var R = 0.155;
       var geo = new THREE.PlaneGeometry(2 * R, 2 * R, 1, 1);
       _localMapMat = new THREE.ShaderMaterial({
         uniforms: { uMap: { value: _localMapTex }, uFade: { value: 0 } },
@@ -766,15 +784,22 @@
         vertexShader: "varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
         fragmentShader:
           "varying vec2 vUv; uniform sampler2D uMap; uniform float uFade;\n" +
-          "void main(){ vec3 c=texture2D(uMap,vUv).rgb; float d=distance(vUv,vec2(0.5));\n" +
-          "  float rim=1.0-smoothstep(0.40,0.50,d);\n" +   // opaque circular disc (80% radius) → soft dissolve only at the outer rim
-          "  c*=1.55;\n" +                                  // lift the gold roads so they read at grazing angle vs the terrain glow
-          "  gl_FragColor=vec4(c, rim*uFade); }"
+          "void main(){\n" +
+          "  vec3 src=texture2D(uMap,vUv).rgb;\n" +
+          "  float lum=dot(src,vec3(0.30,0.54,0.16));\n" +
+          // night remapping: dark wash → warm gold streets under starlight (not a daytime postcard)
+          "  vec3 night=mix(vec3(0.018,0.016,0.014), vec3(0.92,0.62,0.34), smoothstep(0.06,0.42,lum));\n" +
+          "  night=mix(night, src*vec3(1.05,0.78,0.55)*0.55, 0.28);\n" +
+          "  float d=distance(vUv,vec2(0.5));\n" +
+          "  float rim=1.0-smoothstep(0.38,0.50,d);\n" +
+          "  float center=smoothstep(0.50,0.12,d);\n" +
+          "  night*=0.72+0.55*center;\n" +
+          "  gl_FragColor=vec4(night, rim*uFade*0.92); }"
       });
       if ("toneMapped" in _localMapMat) _localMapMat.toneMapped = false;
       _localMap = new THREE.Mesh(geo, _localMapMat);
       _localMap.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(east, north, up));
-      _localMap.position.copy(sp.position).addScaledVector(up, 0.0009);   // just clear of nearby ETOPO relief, still ~0.003 below the eye
+      _localMap.position.copy(sp.position).addScaledVector(up, 0.00105);   // clear nearby ETOPO relief, still below the eye
       _localMap.name = "LocalMapGround"; _localMap.renderOrder = 0.5; _localMap.frustumCulled = false;
       scene.add(_localMap);
     }
@@ -821,7 +846,7 @@
       controls.target.copy(HOME);
       controls.setDistanceLimits(5.0, (window.CosmicLOD ? window.CosmicLOD.MAXCAM : 46000));   // 5.0 floor clears the Moon (2.99); ceiling widened to the cosmic-address MAXCAM (46000) so the log zoom reaches the observable-universe tier
       // silkier desktop feel: slightly softer damping + gentler log-zoom ease (still returns to rest)
-      controls.setInteractionTuning({ rotateSpeed: 0.00044, dampingFactor: 0.026, zoomStepLn: 0.31, zoomRef: 122, zoomHi: 1.78, zoomEase: 0.168, maxEventDelta: 0.011 });
+      controls.setInteractionTuning({ rotateSpeed: 0.00042, dampingFactor: 0.022, zoomStepLn: 0.29, zoomRef: 126, zoomHi: 1.72, zoomEase: 0.148, maxEventDelta: 0.010 });
       canvas.style.opacity = "0.001";
       setTimeout(function () {   // fallback: never leave the visitor in the dark
         if (!groundEntered) {
@@ -1348,7 +1373,7 @@
       var webXYZ = arr[4] ? new Int16Array(arr[4]) : null;
       var webRGB = arr[5] ? new Uint8Array(arr[5]) : null;
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=138").then(function (mod) {
+      return import("./natal-sky.js?v=139").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1984,8 +2009,8 @@
         var target = targetForScale(peak);
         var dir = camera.position.clone().sub(controls.target || HOME); if (dir.lengthSq() < 1e-6) dir.set(0.42, 0.26, 0.88);
         dir.normalize();
-        var frames = Math.round(120 + Math.abs(Math.log(peak / Math.max(1, camera.position.length()))) * 90);
-        paramGlide({ camTo: cameraOnScaleSphere(target, dir, peak), targetTo: target, frames: Math.min(360, frames), ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 4, onDone: null });
+        var frames = Math.round(140 + Math.abs(Math.log(peak / Math.max(1, camera.position.length()))) * 100);
+        paramGlide({ camTo: cameraOnScaleSphere(target, dir, peak), targetTo: target, frames: Math.min(420, frames), ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 5.5, onDone: null });
       }
       easeAddressPivot = function () {
         if (!LOD || !LOD.weight || !natalSky || !userMoved || controls.isGround() || glideActive() || soloBody || ptrDown || panOn) return;
@@ -2019,11 +2044,36 @@
         LOD.LAYERS.forEach(function (ly) {
           if (ly.rail === false) return;                     // quiet tiers (the Local Sheet) are scene layers, not rail stops
           var cap = LOD.scaleCaption ? LOD.scaleCaption(ly) : "";
-          var it = document.createElement("div"); it.className = "cosmos-rail__i"; it.dataset.id = ly.id;
+          var it = document.createElement("button"); it.type = "button"; it.className = "cosmos-rail__i"; it.dataset.id = ly.id;
+          it.setAttribute("aria-label", (ly.label && (ly.label.en + " / " + ly.label.zh)) || ly.id);
           it.innerHTML = '<span class="cosmos-rail__l"><span class="i18n-en">' + ly.label.en + '</span><span class="i18n-zh">' + ly.label.zh + '</span>' +
-            (cap ? '<span class="cosmos-rail__s">' + cap + '</span>' : "") + '</span><span class="cosmos-rail__t"></span>';
+            (cap ? '<span class="cosmos-rail__s">' + cap + '</span>' : "") + '</span><span class="cosmos-rail__t" aria-hidden="true"></span>';
           it.addEventListener("click", function () { flyToScale(ly.camLenPeak); });
-          railEl.appendChild(it); railItems.push(it);
+          railEl.appendChild(it); railItems.push({ el: it, id: ly.id, peak: ly.camLenPeak });
+        });
+        // keyboard: [ / ] or ↑ / ↓ step the cosmic address; B = Base, H = Whole sky (skip when typing)
+        document.addEventListener("keydown", function (e) {
+          if (e.metaKey || e.ctrlKey || e.altKey) return;
+          var tag = (e.target && e.target.tagName) || "";
+          if (tag === "INPUT" || tag === "TEXTAREA" || (e.target && e.target.isContentEditable)) return;
+          var k = e.key;
+          if (k === "b" || k === "B") {
+            if (baseBtn && !controls.isGround()) { e.preventDefault(); baseBtn.click(); }
+            return;
+          }
+          if (k === "h" || k === "H") {
+            if (homeBtn) { e.preventDefault(); goHome(); }
+            return;
+          }
+          if (k !== "[" && k !== "]" && k !== "ArrowUp" && k !== "ArrowDown") return;
+          if (!railItems.length || controls.isGround()) return;
+          e.preventDefault();
+          var cur = -1;
+          for (var ri = 0; ri < railItems.length; ri++) if (railItems[ri].el.classList.contains("is-cur")) cur = ri;
+          if (cur < 0) cur = 0;
+          var next = (k === "]" || k === "ArrowDown") ? Math.min(railItems.length - 1, cur + 1) : Math.max(0, cur - 1);
+          if (next === cur && (k === "[" || k === "ArrowUp") && cur === 0) { if (baseBtn) baseBtn.click(); return; }
+          flyToScale(railItems[next].peak);
         });
       }
       // nearest RAIL stop in log-space (currentLayerId may name a quiet tier like the Local Sheet;
@@ -2095,7 +2145,7 @@
             var curId = railCurrentId(camera.position.length());
             if (curId !== _railCur) {
               _railCur = curId;
-              for (var ri = 0; ri < railItems.length; ri++) railItems[ri].classList.toggle("is-cur", railItems[ri].dataset.id === curId);
+              for (var ri = 0; ri < railItems.length; ri++) railItems[ri].el.classList.toggle("is-cur", railItems[ri].id === curId);
             }
           }
         }

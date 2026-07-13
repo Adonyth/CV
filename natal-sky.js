@@ -818,9 +818,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
     }
     if (o.galXYZ && o.galRGB && o.galXYZ.length >= 3) {
       // the galaxy field (real 2MRS) — crisp cores + multi-tier bloom = refined glowing web
-      buildLayer(o.galXYZ, o.galRGB, mobile ? 1.75 : 2.15, 1.0, "LargeScaleStructure", -3, mobile ? 5.5 : 6.8, 0.145, 2, true);
+      buildLayer(o.galXYZ, o.galRGB, mobile ? 1.85 : 2.35, 1.0, "LargeScaleStructure", -3, mobile ? 5.2 : 6.4, 0.155, 2, true);
       // WEB LINES — MST filaments + basin flow streamlines; two glow tiers so strands read as luminous threads
-      buildLayer(o.webXYZ, o.webRGB, mobile ? 2.15 : 2.9, 1.0, "CosmicWebLines", -2, mobile ? 4.8 : 6.2, 0.24, 2, 2);   // warm-amber gold river (warm=2) + a touch more glow so the Laniakea flow reads
+      buildLayer(o.webXYZ, o.webRGB, mobile ? 2.25 : 3.05, 1.0, "CosmicWebLines", -2, mobile ? 4.6 : 5.9, 0.26, 2, 2);   // warm-amber gold river (warm=2)
       return;
     }
 
