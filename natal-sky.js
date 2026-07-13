@@ -787,9 +787,18 @@ export function buildNatalSky(THREE, scene, data, opts) {
             col[i*3+1] = (0.48 + 0.34 * w) * amp * 1.18;
             col[i*3+2] = (0.22 - 0.02 * w) * amp * 1.18;                      // stays low-blue = warm at every brightness
           } else {
-            col[i*3]   = (0.40 + 0.86 * w) * amp;                            // slate 0.40 → gold 1.26
-            col[i*3+1] = (0.49 + 0.36 * w) * amp;                            // slate 0.49 → gold 0.85
-            col[i*3+2] = (0.66 - 0.30 * w) * amp;                            // slate 0.66 → gold 0.36 (low blue → stays warm even when bright)
+            var br = 0.40 + 0.86 * w, bg = 0.49 + 0.36 * w, bb = 0.66 - 0.30 * w;   // density slate → gold-node
+            // per-galaxy TYPE colour (real surveys are bimodal): blue star-forming spirals vs gold-red quiescent
+            // ellipticals. Applied only to INDIVIDUAL galaxies (low w); dense cluster nodes keep the gold so the
+            // deep web is unchanged. Gives the close galaxy field real colour variety instead of a grey wash.
+            var hh = Math.sin(i * 12.9898) * 43758.5453; hh -= Math.floor(hh);
+            var tr, tg, tb;
+            if (hh < 0.60) { var q = hh / 0.60; tr = 0.54 + 0.30 * q; tg = 0.70 + 0.18 * q; tb = 1.02; }   // blue → blue-white spirals
+            else { var q2 = (hh - 0.60) / 0.40; tr = 1.05; tg = 0.82 - 0.20 * q2; tb = 0.62 - 0.24 * q2; }  // gold → red ellipticals
+            var hb = (1 - w) * 0.62;                                          // type colour only where it's an individual galaxy
+            col[i*3]   = (br * (1 - hb) + tr * hb) * amp;
+            col[i*3+1] = (bg * (1 - hb) + tg * hb) * amp;
+            col[i*3+2] = (bb * (1 - hb) + tb * hb) * amp;
           }
         } else {
           col[i*3]=rgb[i*3]/255; col[i*3+1]=rgb[i*3+1]/255; col[i*3+2]=rgb[i*3+2]/255;
