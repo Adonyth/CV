@@ -226,7 +226,8 @@
         <button class="star-atlas__close" type="button" aria-label="Close star atlas · 关闭星图">×</button>
       </header>
       <div class="star-atlas__tools">
-        <input id="star-atlas-search" type="search" autocomplete="off" spellcheck="false" placeholder="Search stars · 搜索星辰" aria-label="Search stars · 搜索星辰" />
+        <!-- text search lives in the global finder (🔍 / press /); the atlas is browse-and-fly only, so the two
+             top-bar buttons no longer duplicate a search box. Filter tabs + click-to-fly remain the atlas's job. -->
         <div class="star-atlas__tabs" role="tablist" aria-label="Star groups">
           <button type="button" data-atlas-filter="all" aria-pressed="true"><span class="i18n-en">All</span><span class="i18n-zh">全部</span></button>
           <button type="button" data-atlas-filter="capricorn"><span class="i18n-en">Sciences</span><span class="i18n-zh">科学</span></button>
@@ -237,7 +238,7 @@
     </aside>
 
     <!-- visible build stamp — so "which version am I seeing" is never a mystery again -->
-    <div class="cosmos-build no-print" aria-hidden="true">build 203 · 07-13</div>
+    <div class="cosmos-build no-print" aria-hidden="true">build 204 · 07-13</div>
 
     <!-- fallback when 3D is gated off (mobile / low power / reduced motion):
          a full, tappable mobile home that reaches every page -->
@@ -298,7 +299,7 @@
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
     <script src="home.js?v=6" defer></script>
     <script src="magnet.js?v=1" defer></script>
-    <script src="search.js?v=1" defer></script>
+    <script src="search.js?v=2" defer></script>
     <script src="menu.js?v=6" defer></script>
     <script src="craft.js?v=1" defer></script>
     <script src="cosmic-layers.js?v=6"></script>

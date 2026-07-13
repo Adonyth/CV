@@ -17,8 +17,10 @@
     { t: "Curriculum Vitae", z: "完整履历", h: "/cv.html", g: "cv" }
   ];
   var DIR = { research: "research", humanities: "humanities", books: "books" };
-  var GLABEL = { research: "Research · 研究", humanities: "Humanities · 人文社科", books: "Books · 著作",
-                 making: "Making · 创造", page: "Pages", cv: "CV" };
+  // group labels follow the page locale (no bilingual leak in single-language mode)
+  var GLABEL_EN = { research: "Research", humanities: "Humanities", books: "Books", making: "Making", page: "Pages", cv: "CV" };
+  var GLABEL_ZH = { research: "研究", humanities: "人文社科", books: "著作", making: "创造", page: "页面", cv: "完整履历" };
+  function isZh() { return document.documentElement.className.indexOf("locale-zh") >= 0; }
 
   var items = null, loading = null;
   function load() {
@@ -65,10 +67,13 @@
 
   var ov = document.createElement("div"); ov.className = "sf-ov"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-label", "Search");
   ov.innerHTML = '<div class="sf-box"><div class="sf-hd"><span class="sf-mag">⌕</span>' +
-    '<input class="sf-in" type="text" autocomplete="off" spellcheck="false" ' +
-    'placeholder="Search research, writing, making… · 搜索研究 / 著作 / 创造"></div>' +
+    '<input class="sf-in" type="text" autocomplete="off" spellcheck="false"></div>' +   // placeholder set per-locale in open()
     '<div class="sf-list" id="sf-list"></div>' +
-    '<div class="sf-hint"><span>↑↓ move</span><span>↵ open</span><span>esc close</span></div></div>';
+    '<div class="sf-hint">' +
+      '<span><span class="i18n-en">↑↓ move</span><span class="i18n-zh">↑↓ 移动</span></span>' +
+      '<span><span class="i18n-en">↵ open</span><span class="i18n-zh">↵ 打开</span></span>' +
+      '<span><span class="i18n-en">esc close</span><span class="i18n-zh">esc 关闭</span></span>' +
+    '</div></div>';
   var mounted = false;
   function mount() { if (!mounted) { document.body.appendChild(ov); mounted = true; } }
 
@@ -81,15 +86,18 @@
       return ql.split(/\s+/).every(function (tok) { return it.blob.indexOf(tok) >= 0; });
     });
     results = matched; sel = 0;
-    if (!matched.length) { listEl.innerHTML = '<div class="sf-empty">No match · 无结果</div>'; return; }
+    if (!matched.length) { listEl.innerHTML = '<div class="sf-empty"><span class="i18n-en">No match</span><span class="i18n-zh">无结果</span></div>'; return; }
+    var GL = isZh() ? GLABEL_ZH : GLABEL_EN;
     var byG = {}, order = [];
     matched.forEach(function (it) { if (!byG[it.g]) { byG[it.g] = []; order.push(it.g); } byG[it.g].push(it); });
     var html = "", idx = 0;
     order.forEach(function (g) {
-      html += '<div class="sf-g">' + (GLABEL[g] || g) + "</div>";
+      html += '<div class="sf-g">' + (GL[g] || g) + "</div>";
       byG[g].forEach(function (it) {
-        html += '<a class="sf-row" data-i="' + idx + '" href="' + it.h + '"><span>' + esc(it.t) +
-          '</span><span class="z">' + esc(it.z) + "</span>" + (it.sub ? '<span class="sub">' + esc(it.sub) + "</span>" : "") + "</a>";
+        // one title in the current locale — no bilingual leak (EN mode shows only English)
+        html += '<a class="sf-row" data-i="' + idx + '" href="' + it.h + '">' +
+          '<span class="i18n-en">' + esc(it.t) + '</span><span class="i18n-zh">' + esc(it.z || it.t) + "</span>" +
+          (it.sub ? '<span class="sub">' + esc(it.sub) + "</span>" : "") + "</a>";
         it._i = idx; idx++;
       });
     });
@@ -101,7 +109,11 @@
     rows.forEach(function (r) { r.classList.toggle("sel", +r.dataset.i === sel); });
     var cur = listEl.querySelector(".sf-row.sel"); if (cur) cur.scrollIntoView({ block: "nearest" });
   }
-  function open() { mount(); ov.classList.add("on"); input.value = ""; load().then(function () { render(""); }); setTimeout(function () { input.focus(); }, 20); }
+  function open() {
+    mount(); ov.classList.add("on"); input.value = "";
+    input.placeholder = isZh() ? "搜索研究 / 著作 / 创造…" : "Search research, writing, making…";
+    load().then(function () { render(""); }); setTimeout(function () { input.focus(); }, 20);
+  }
   function close() { ov.classList.remove("on"); }
   function go() { var it = results[sel]; if (it) location.href = it.h; }
 
