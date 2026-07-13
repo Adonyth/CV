@@ -440,6 +440,7 @@
     var _earthDayTex = null, _earthDayLoading = null;   // NASA-style day map for ground albedo (lazy)
     var groundDimTarget = 0, _earthUni = null, _traceMat = null;   // eased toward the target every frame in the frame loop
     var _localMap = null, _localMapMat = null, _localMapTex = null;   // base-view REAL local street map (geo-ui-maps / prettymaps)
+    var _city = null, _cityMat = null, _cityData = null, _cityLoading = null;   // base-view REAL extruded OSM buildings (geo-ui-map 3D)
     /* the ground-view ATMOSPHERE: a warm band of light hugging the horizon all around
        the base — additive, baked once per landing, zero per-frame cost */
     function makeGroundDome(pos, normal) {
@@ -748,7 +749,7 @@
       // the REAL local street map goes on LAST (built with the terrain, cleared with it) so the terrain
       // rebuild's removeGroundTerrain() can't wipe it — your actual streets underfoot at the base.
       var _sp = nyeArmature.earthSurfacePoint(geo.lat, geo.lon, 0.0002);   // on the GROUND (well below the ~0.004 eye), so the map is the floor you stand on, not a ceiling
-      if (_sp) buildLocalMapGround(_sp);
+      if (_sp) { buildLocalMapGround(_sp); buildBaseCity(_sp); }
     }
     function removeGroundTerrain() {
       if (groundTerrain) {
@@ -757,6 +758,7 @@
         groundTerrain = null; _terrainMat = null;
       }
       removeLocalMapGround();
+      removeBaseCity();
     }
     // LOCAL STREET-MAP GROUND (geo-ui-maps): a real prettymaps rendering of the base city (Providence)
     // laid in the tangent plane at the base point, so standing at the base your actual streets recede
@@ -805,6 +807,87 @@
     }
     function removeLocalMapGround() {
       if (_localMap) { scene.remove(_localMap); _localMap.geometry.dispose(); _localMap.material.dispose(); _localMap = null; _localMapMat = null; }
+    }
+    // BASE CITY (geo-ui-map 3D): real OSM building footprints (data/base-buildings-providence.json, in local
+    // ENU metres) extruded as low prisms on the same tangent frame + scale as the street map — so standing at
+    // the base you're among your real city's 3D blocks, downtown towers on the skyline, windows lit at night.
+    function loadCityData() {
+      if (_cityData) return Promise.resolve(_cityData);
+      if (_cityLoading) return _cityLoading;
+      _cityLoading = fetch("data/base-buildings-providence.json").then(function (r) { return r.json(); })
+        .then(function (j) { _cityData = j; return j; }).catch(function () { return null; });
+      return _cityLoading;
+    }
+    var CITY_SCALE = 0.155 / 1500;   // metres → scene units, matched to the street-map disc (R=0.155 ≙ 1500 m)
+    function buildBaseCity(sp) {
+      removeBaseCity();
+      var up = sp.normal.clone().normalize();
+      var east = new THREE.Vector3(0, 1, 0).cross(up); if (east.lengthSq() < 1e-6) east.set(1, 0, 0); east.normalize();
+      var north = up.clone().cross(east).normalize();
+      var qpos = sp.position.clone().addScaledVector(up, 0.00108);   // bases sit just on the street map
+      var quat = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(east, north, up));
+      loadCityData().then(function (j) {
+        if (!j || !j.b || !controls.isGround()) return;
+        var S = CITY_SCALE, B = j.b, P = [], I = [];   // position (local), aInfo (topFrac, wallFlag, seed)
+        for (var bi = 0; bi < B.length; bi++) {
+          var r = B[bi].r, H = B[bi].h * S, m = r.length >> 1;
+          if (m < 3) continue;
+          var seed = (bi * 0.6180339887) % 1;
+          var cx = 0, cy = 0;
+          for (var k = 0; k < m; k++) { cx += r[k * 2]; cy += r[k * 2 + 1]; }
+          cx = cx / m * S; cy = cy / m * S;
+          for (var e0 = 0; e0 < m; e0++) {
+            var e1 = (e0 + 1) % m;
+            var ax = r[e0 * 2] * S, ay = r[e0 * 2 + 1] * S, bx = r[e1 * 2] * S, by = r[e1 * 2 + 1] * S;
+            // wall quad (two tris): bottom a,b → top b,a
+            P.push(ax, ay, 0, bx, by, 0, bx, by, H,  ax, ay, 0, bx, by, H, ax, ay, H);
+            I.push(0, 1, seed, 0, 1, seed, 1, 1, seed,  0, 1, seed, 1, 1, seed, 1, 1, seed);
+            // roof fan from centroid (flat top)
+            P.push(cx, cy, H, ax, ay, H, bx, by, H);
+            I.push(1, 0, seed, 1, 0, seed, 1, 0, seed);
+          }
+        }
+        if (!P.length) return;
+        var g = new THREE.BufferGeometry();
+        g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(P), 3));
+        g.setAttribute("aInfo", new THREE.BufferAttribute(new Float32Array(I), 3));
+        _cityMat = new THREE.ShaderMaterial({
+          uniforms: { uFade: { value: 0 }, uScale: { value: S }, uHorizon: { value: new THREE.Color(0.36, 0.20, 0.11) } },
+          side: THREE.DoubleSide, depthWrite: true, depthTest: true, fog: false,
+          vertexShader:
+            "attribute vec3 aInfo; varying vec3 vLocal; varying vec3 vInfo; varying float vDist;\n" +
+            "void main(){ vLocal=position; vInfo=aInfo; vec4 wp=modelMatrix*vec4(position,1.0);\n" +
+            "  vDist=distance(wp.xyz, cameraPosition);\n" +
+            "  gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
+          fragmentShader:
+            "precision highp float; varying vec3 vLocal; varying vec3 vInfo; varying float vDist;\n" +
+            "uniform float uFade; uniform float uScale; uniform vec3 uHorizon;\n" +
+            "float h3(vec3 p){ return fract(sin(dot(p,vec3(12.9898,78.233,37.719)))*43758.5453); }\n" +
+            "void main(){\n" +
+            "  float top=vInfo.x, wall=vInfo.y, seed=vInfo.z;\n" +
+            "  vec3 m=vLocal/uScale;\n" +                                   // local metres (e, n, heightM)
+            "  vec3 col=mix(vec3(0.020,0.017,0.014), vec3(0.11,0.093,0.070), top);\n" +   // dark warm silhouette, skyline lightening
+            "  if(wall>0.5){\n" +
+            "    float u=(m.x*0.9+m.y*1.1);\n" +
+            "    float ci=floor(u/3.4), ri=floor(m.z/3.6);\n" +
+            "    float lit=step(0.66, h3(vec3(ci, ri, seed*97.0)));\n" +
+            "    float px=abs(fract(u/3.4)-0.5), py=abs(fract(m.z/3.6)-0.42);\n" +
+            "    float pane=smoothstep(0.36,0.18,px)*smoothstep(0.36,0.14,py);\n" +
+            "    col+=lit*pane*vec3(1.0,0.66,0.32)*0.9;\n" +               // warm lit windows
+            "  }\n" +
+            "  float haze=smoothstep(0.02,0.15,vDist);\n" +
+            "  col=mix(col, uHorizon, haze*0.72);\n" +                     // distant blocks dissolve into the amber horizon
+            "  gl_FragColor=vec4(col*uFade, 1.0); }"
+        });
+        if ("toneMapped" in _cityMat) _cityMat.toneMapped = false;
+        _city = new THREE.Mesh(g, _cityMat);
+        _city.quaternion.copy(quat); _city.position.copy(qpos);
+        _city.name = "BaseCity"; _city.renderOrder = 0.6; _city.frustumCulled = false; _city.visible = false;
+        scene.add(_city);
+      });
+    }
+    function removeBaseCity() {
+      if (_city) { scene.remove(_city); _city.geometry.dispose(); _city.material.dispose(); _city = null; _cityMat = null; }
     }
     function fetchBase() {
       function viaIpwho() {
@@ -2403,6 +2486,10 @@
           if (_localMapMat) {
             _localMapMat.uniforms.uFade.value = _earthUni.uGroundDim.value;   // the real street map fades in/out with the base
             if (_localMap) _localMap.visible = _earthUni.uGroundDim.value > 0.01;
+          }
+          if (_cityMat) {
+            _cityMat.uniforms.uFade.value = _earthUni.uGroundDim.value;        // the extruded city dims/hides with the base
+            if (_city) _city.visible = _earthUni.uGroundDim.value > 0.02;
           }
         }
         // the entrance/glide owns the radius this frame → update() must NOT ease against it;
