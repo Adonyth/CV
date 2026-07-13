@@ -9,5 +9,8 @@ node_modules/
 .agents/
 CLAUDE.md
 AGENTS.md
+PROGRESS-BOARD.md
+PROJECT-REGISTRY.md
+scripts/progress_sync.py
 SPATIAL_SPEC.md
 design-research/
