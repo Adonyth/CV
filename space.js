@@ -2327,7 +2327,7 @@
        natal-sky's tick reads window.__cvQuality and owns the actual glow visibility (single owner). */
     var QUALITY = {
       glow: (innerWidth < 700 || (navigator.deviceMemory || 8) <= 4) ? 1 : 0,   // glow-shed level: 0 full · 1 drop *Glow3 · 2 drop *Glow2
-      ema: 18, prevT: 0, lastStep: 0,
+      ema: 18, prevT: 0, lastStep: 0, lastDprStep: 0,
       cap: Math.min(devicePixelRatio || 1, innerWidth < 700 ? 1.25 : 1.35),      // top resolution (already DPR-capped)
       floor: innerWidth < 700 ? 0.5 : 0.58, dpr: 0, applied: 0
     };
@@ -2361,12 +2361,27 @@
           QUALITY.prevT = t;
           if ((frameNo & 3) === 0) {
             var em = QUALITY.ema;
-            if (em > 22 && QUALITY.dpr > QUALITY.floor) QUALITY.dpr = Math.max(QUALITY.floor, QUALITY.dpr * 0.90);        // slow → lower resolution
-            else if (em < 15 && QUALITY.dpr < QUALITY.cap) QUALITY.dpr = Math.min(QUALITY.cap, QUALITY.dpr * 1.035);       // fast → creep back up
-            if (Math.abs(QUALITY.dpr - QUALITY.applied) > 0.03) { renderer.setPixelRatio(QUALITY.dpr); QUALITY.applied = QUALITY.dpr; }
-            var qf = (innerWidth < 700 || (navigator.deviceMemory || 8) <= 4) ? 1 : 0;
-            if (QUALITY.dpr <= QUALITY.floor + 0.02 && em > 30 && QUALITY.glow < 2 && nowMs - QUALITY.lastStep > 700) { QUALITY.glow++; window.__cvQuality = QUALITY.glow; QUALITY.lastStep = nowMs; QUALITY.ema = 19; }
-            else if (QUALITY.dpr >= QUALITY.cap - 0.02 && em < 13 && QUALITY.glow > qf && nowMs - QUALITY.lastStep > 4000) { QUALITY.glow--; window.__cvQuality = QUALITY.glow; QUALITY.lastStep = nowMs; QUALITY.ema = 19; }
+            // Move the *target* resolution toward the frame budget (widened 14-24 ms deadband so a scene
+            // hovering near budget doesn't oscillate). The target may drift every tick; APPLYING it is
+            // strictly rate-limited below — because setPixelRatio → setSize reallocates the WebGL drawing
+            // buffer (a 2-16 ms stall). Build 207 applied on every non-deadband tick and let that stall
+            // pollute the EMA → self-reinforcing hitch cascade during drag. Fixed here.
+            if (em > 24 && QUALITY.dpr > QUALITY.floor) QUALITY.dpr = Math.max(QUALITY.floor, QUALITY.dpr * 0.88);
+            else if (em < 14 && QUALITY.dpr < QUALITY.cap) QUALITY.dpr = Math.min(QUALITY.cap, QUALITY.dpr * 1.05);
+            // quantize to coarse rungs (0.12) so sub-rung dither can't fire, apply at most ~once/600 ms, and
+            // DISCARD the realloc-polluted next interval (prevT=0) + reset the EMA so the stall never feeds back.
+            var rung = Math.min(QUALITY.cap, Math.max(QUALITY.floor, Math.round(QUALITY.dpr / 0.12) * 0.12));
+            if (Math.abs(rung - QUALITY.applied) > 0.06 && nowMs - QUALITY.lastDprStep > 600) {
+              renderer.setPixelRatio(rung); QUALITY.applied = rung; QUALITY.lastDprStep = nowMs;
+              QUALITY.prevT = 0; QUALITY.ema = 18;   // the realloc stall is not a real cadence sample
+            }
+            // glow-halo backstop: only when resolution is pinned at the floor and the scene is STILL slow
+            // (toggling .visible via window.__cvQuality is cheap — no buffer realloc — so it's unthrottled here)
+            else {
+              var qf = (innerWidth < 700 || (navigator.deviceMemory || 8) <= 4) ? 1 : 0;
+              if (QUALITY.dpr <= QUALITY.floor + 0.02 && em > 32 && QUALITY.glow < 2 && nowMs - QUALITY.lastStep > 900) { QUALITY.glow++; window.__cvQuality = QUALITY.glow; QUALITY.lastStep = nowMs; QUALITY.ema = 18; }
+              else if (QUALITY.dpr >= QUALITY.cap - 0.02 && em < 12 && QUALITY.glow > qf && nowMs - QUALITY.lastStep > 4000) { QUALITY.glow--; window.__cvQuality = QUALITY.glow; QUALITY.lastStep = nowMs; QUALITY.ema = 18; }
+            }
           }
         } else { QUALITY.prevT = 0; }   // reset the interval clock on throttled frames so the next active burst measures cleanly
         // FRAME-RATE CAP (the big thermal lever): active hand motion and choreographed flights run at
