@@ -815,9 +815,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
       // glow without a post-process pass. Dense nodes/filaments bloom; empty voids stay black.
       if (glowPx) {
         if (glowTiers !== 1) {
-          var pg3 = new T.Points(g, mat(glowPx * 3.4, (glowOp || 0.12) * 0.28));
+          var pg3 = new T.Points(g, mat(glowPx * 2.8, (glowOp || 0.12) * 0.37));   // fill ∝ size²: 2.8²/3.4²=0.68 with opacity ×1.32 → same integrated brightness, tighter bloom radius
           pg3.name = name + "Glow3"; pg3.frustumCulled = false; pg3.renderOrder = base - 3; belt.add(pg3);
-          var pg2 = new T.Points(g, mat(glowPx * 2.05, (glowOp || 0.12) * 0.55));
+          var pg2 = new T.Points(g, mat(glowPx * 1.8, (glowOp || 0.12) * 0.64));   // 1.8²/2.05²=0.77 with opacity ×1.16 → brightness held
           pg2.name = name + "Glow2"; pg2.frustumCulled = false; pg2.renderOrder = base - 2; belt.add(pg2);
         }
         var pg = new T.Points(g, mat(glowPx, glowOp || 0.12)); pg.name = name + "Glow"; pg.frustumCulled = false; pg.renderOrder = base - 1; belt.add(pg);
@@ -2407,8 +2407,17 @@ export function buildNatalSky(THREE, scene, data, opts) {
       }
       return { node: nodeIdx, con: con };
     }
+    var _hovT = 0;
     onMove = function (e) {
       if (!group.visible) { hoverCon = -1; return; }
+      // L2 perf guards: don't raycast while orbiting (no hover tooltip is wanted mid-drag), skip at deep
+      // cosmic scales where the work-stars are non-interactive (camLen >= 1300, same gate as zoomMul), and
+      // throttle to ~40ms — the raycast is an O(N) intersectObject over the star cloud + a hits[] alloc.
+      if (e.buttons !== 0 || (o.camera && o.camera.position.length() >= 1300)) {
+        if (hovered >= 0) { hovered = -1; tip.style.opacity = "0"; } hoverCon = -1; return;
+      }
+      var _now = (typeof performance !== "undefined" ? performance.now() : Date.now());
+      if (_now - _hovT < 40) return; _hovT = _now;
       var pk = pick(e.clientX, e.clientY);
       hoverCon = pk.con;                                  // hovering a constellation reveals ONLY its name
       var idx = pk.node;
@@ -2620,9 +2629,17 @@ export function buildNatalSky(THREE, scene, data, opts) {
         }
         if (_lssObjs) {
           var _lssOn = _cl > 300, _qv = window.__cvQuality || 0;
+          // FILL-BOMB TIER-GATE: the wide bloom halos (Glow2/Glow3) are ~93% of the survey field's fill and
+          // only READ as the cosmic-web "net" once you're at supercluster/web scale. Below that they are
+          // sub-visual background that still costs full fill every frame — so gate Glow3 to the web band
+          // (_cl>9000, Laniakea outward) and Glow2 to the supercluster band (_cl>4200, Virgo outward), on top
+          // of the adaptive __cvQuality shedding. At the Milky-Way/LG/Sheet tiers this drops both → −93% fill.
+          var _webBand = _cl > 9000, _scBand = _cl > 4200;
           for (var _lj = 0; _lj < _lssObjs.length; _lj++) {
             var _le = _lssObjs[_lj];
-            _le.o.visible = _lssOn && !(_qv >= 1 && _le.tier === 3) && !(_qv >= 2 && _le.tier === 2);
+            _le.o.visible = _lssOn
+              && !(_le.tier === 3 && (!_webBand || _qv >= 1))
+              && !(_le.tier === 2 && (!_scBand || _qv >= 2));
           }
         }
         if (_cmbUnifs) {
@@ -2681,10 +2698,11 @@ export function buildNatalSky(THREE, scene, data, opts) {
           var _gOn = LOD ? (_cl < 15000) : (_cl < 8000);
           var _gScale = LOD ? LOD.collapse(_cl, "milky-way", 0.05) : 1;
           var _gTail = LOD ? (1 - LOD.smooth(12500, 15000, _cl)) : 1;
+          var _gqv = window.__cvQuality || 0;                                    // FIX E: the 22px MilkyWayGlow (_galMats[1], ~42M writes) is the biggest non-survey fill bomb
           for (var _gi = 0; _gi < _galMats.length; _gi++) {
             var _ge = _galMats[_gi];
-            _ge.o.visible = _gOn;
-            if (_gOn) {
+            _ge.o.visible = _gOn && !(_gi === 1 && _gqv >= 1);                    // shed the glow halo under load; the 118k sharp disc carries the read
+            if (_ge.o.visible) {
               _ge.m.opacity = _ge.base * _gSolo * _gTail;
               _ge.o.scale.setScalar(_gScale);
             }

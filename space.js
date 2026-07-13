@@ -946,6 +946,13 @@
       renderer.setSize(innerWidth, innerHeight, false);
       camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
       if (deepFusion) deepFusion.setPixelRatio(Math.min(devicePixelRatio || 1, MOBILE ? 1.5 : 2));
+      if (QUALITY) {   // L4: the dynamic-resolution budget was derived from innerWidth<700 once at construction;
+        var _m = innerWidth < 700;   // re-derive on resize so a phone rotated across the 700px line keeps its mobile-tuned cap/floor
+        QUALITY.cap = Math.min(devicePixelRatio || 1, _m ? 1.25 : 1.35);
+        QUALITY.floor = _m ? 0.5 : 0.58;
+        QUALITY.dpr = Math.min(QUALITY.cap, Math.max(QUALITY.floor, QUALITY.dpr));
+        QUALITY.applied = Math.min(QUALITY.cap, Math.max(QUALITY.floor, QUALITY.applied));
+      }
     }
 
     // recreate home.js's exact GLOW sprite as the point texture (same brushstroke)
@@ -1456,7 +1463,7 @@
       var webXYZ = arr[4] ? new Int16Array(arr[4]) : null;
       var webRGB = arr[5] ? new Uint8Array(arr[5]) : null;
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=139").then(function (mod) {
+      return import("./natal-sky.js?v=140").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
