@@ -427,10 +427,6 @@ body.cosmos .natal-tip{z-index:6;}
 .cosmos-id{position:fixed; top:22px; left:22px; z-index:4; max-width:min(400px,72vw); padding:16px 20px 14px; border-radius:16px; pointer-events:auto; background:rgba(11,10,9,.40); -webkit-backdrop-filter:blur(14px) saturate(1.3); backdrop-filter:blur(14px) saturate(1.3); box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 20px 50px -30px rgba(0,0,0,.75);}
 .cosmos-name{font-family:var(--serif); font-size:clamp(1.5rem,2.6vw,2.1rem); line-height:1.12; margin:.35rem 0 .5rem; color:var(--ink); font-weight:600; letter-spacing:-.014em; text-shadow:0 0 22px rgba(11,10,9,.9), 0 1px 0 rgba(0,0,0,.5);}
 .cosmos-name__zh{font-weight:500; margin-left:.35rem;}
-/* the visible identity line — WHAT he is, not just the name (this line previously lived only in
-   metadata/JSON-LD, invisible to a sighted visitor). Editorial serif, sits right under the name. */
-.cosmos-role{font-family:var(--serif); font-size:14px; line-height:1.46; color:var(--body); margin:0 0 .75rem;
-  max-width:34ch; text-wrap:pretty; text-shadow:0 0 18px rgba(11,10,9,.85);}
 /* the ONE confident door into the work — the content's primary affordance, ranked above the contact links.
    A two-line pill: bold label + a quiet count that doubles as a substance signal. */
 .cosmos-enter{display:inline-flex; flex-direction:column; align-items:flex-start; gap:1px; margin:.1rem 0 .85rem;
@@ -475,7 +471,6 @@ body.is-flat .cosmos-ui{top:18px; right:18px; z-index:9;}
 .flat-eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-deep);}
 .flat-name{font-family:var(--serif); font-size:clamp(30px,9vw,42px); font-weight:600; color:var(--ink); letter-spacing:-.01em; margin:8px 0 14px; line-height:1.05;}
 .flat-name span[lang="zh"]{font-family:var(--cjk-strong); font-weight:700; font-size:.62em; margin-left:.3em;}
-.flat-role{font-family:var(--serif); font-size:15px; line-height:1.5; color:var(--body); margin:-4px 0 16px; max-width:52ch; text-wrap:pretty;}
 .flat-contact{display:flex; flex-wrap:wrap; gap:16px;}
 .flat-contact a{font-family:var(--mono); font-size:13px; color:var(--body); text-decoration:none; border-bottom:1px solid var(--hairline); padding-bottom:2px;}
 .flat-contact a:active{color:var(--accent);}
@@ -766,11 +761,9 @@ body.cosmos .cosmos-home{
   letter-spacing:0;
 }
 /* the cosmos identity card is always dark (over the space scene) regardless of the day/night toggle,
-   so its overlay text must stay light in both themes — pin the new role line + demoted links explicitly. */
-body.cosmos .cosmos-role{color:rgba(228,218,203,.94);}
+   so its overlay text must stay light in both themes — pin the demoted contact links explicitly. */
 body.cosmos .cosmos-links a{color:rgba(200,190,175,.80);}
 body.cosmos .cosmos-links a:hover{color:#f4ecdf;}
-body.index-open .flat-role{color:#d8cbb4;}
 body.cosmos .cosmos-nav button:hover,
 body.cosmos .cosmos-nav a:hover,
 body.cosmos .cosmos-home:hover,
