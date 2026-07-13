@@ -2126,7 +2126,7 @@
       if (railEl && LOD) {
         LOD.LAYERS.forEach(function (ly) {
           if (ly.rail === false) return;                     // quiet tiers (the Local Sheet) are scene layers, not rail stops
-          var cap = LOD.scaleCaption ? LOD.scaleCaption(ly) : "";
+          var cap = "";                                      // no "10ˣ ly" science annotation — the rail is a clean navigation address (tier names only)
           var it = document.createElement("button"); it.type = "button"; it.className = "cosmos-rail__i"; it.dataset.id = ly.id;
           it.setAttribute("aria-label", (ly.label && (ly.label.en + " / " + ly.label.zh)) || ly.id);
           it.innerHTML = '<span class="cosmos-rail__l"><span class="i18n-en">' + ly.label.en + '</span><span class="i18n-zh">' + ly.label.zh + '</span>' +
@@ -2325,20 +2325,22 @@
        cadence and shed load only when this device struggles: level 1 hides the widest halos, level 2
        the mid halos, level 3 also drops render resolution a notch. Climbs back when the device breathes.
        natal-sky's tick reads window.__cvQuality and owns the actual glow visibility (single owner). */
-    var QUALITY = { level: (innerWidth < 700 || (navigator.deviceMemory || 8) <= 4) ? 1 : 0, ema: 17, prevT: 0, lastChange: 0, dprApplied: false };
-    window.__cvQuality = QUALITY.level;
+    var QUALITY = {
+      glow: (innerWidth < 700 || (navigator.deviceMemory || 8) <= 4) ? 1 : 0,   // glow-shed level: 0 full · 1 drop *Glow3 · 2 drop *Glow2
+      ema: 18, prevT: 0, lastStep: 0,
+      cap: Math.min(devicePixelRatio || 1, innerWidth < 700 ? 1.25 : 1.35),      // top resolution (already DPR-capped)
+      floor: innerWidth < 700 ? 0.5 : 0.58, dpr: 0, applied: 0
+    };
+    QUALITY.dpr = QUALITY.cap; QUALITY.applied = QUALITY.cap;
+    window.__cvQuality = QUALITY.glow;
     function frame(t) {
       if (!running) return;
       var busy = true;
       var sec = (t || 0) * 0.001;
       var dt = Math.min(0.1, Math.max(0.001, sec - prevSec)); prevSec = sec;
       frameNo++;
-      // measure the true rAF cadence (BEFORE any skip-return, so stalls are always seen)
-      if (QUALITY.prevT > 0) {
-        var _qd = t - QUALITY.prevT;
-        if (_qd > 0 && _qd < 5000) QUALITY.ema += (_qd - QUALITY.ema) * 0.08;
-      }
-      QUALITY.prevT = t;
+      // (frame cadence is measured inside the COSMOS block below, gated to full-rate active frames only,
+      //  so the deliberate at-rest / inertial-tail throttle never fools the governor into degrading)
       if (COSMOS && controls) {
         var nowMs = performance.now();
         /* thermal guard: when the visitor rests, render at half rate — the slow
@@ -2348,20 +2350,25 @@
         var glid = glideActive() || (!userMoved && nowMs < entranceUntil);       // choreographed flight → keep it buttery at 60fps
         var freshInput = inputAge < 1150 || ptrDown || panOn;
         busy = freshInput || (inputAge < 3600) || glid || deepFusion.uniforms.uPointerAmt.value > 0.05;
-        // ADAPTIVE QUALITY step: degrade fast when the cadence collapses under load (EMA > ~70ms ≈
-        // <14fps while active), recover slowly once it's smooth again (hysteresis, floor at the
-        // device's starting level). Level 3 additionally drops the pixel ratio a notch.
-        if (busy && nowMs - QUALITY.lastChange > 900) {
-          var _qFloor = (innerWidth < 700 || (navigator.deviceMemory || 8) <= 4) ? 1 : 0;
-          if (QUALITY.ema > 70 && QUALITY.level < 3) { QUALITY.level++; QUALITY.lastChange = nowMs; QUALITY.ema = 33; }
-          else if (QUALITY.ema < 20 && QUALITY.level > _qFloor && nowMs - QUALITY.lastChange > 5000) { QUALITY.level--; QUALITY.lastChange = nowMs; QUALITY.ema = 33; }
-          if (window.__cvQuality !== QUALITY.level) {
-            window.__cvQuality = QUALITY.level;
-            var _basePr = Math.min(devicePixelRatio || 1, innerWidth < 700 ? 1.25 : 1.35);
-            var _wantDpr = QUALITY.level >= 3;
-            if (_wantDpr !== QUALITY.dprApplied) { renderer.setPixelRatio(_basePr * (_wantDpr ? 0.72 : 1)); QUALITY.dprApplied = _wantDpr; }
+        // DYNAMIC-RESOLUTION governor (the games trick: hold the frame budget by scaling internal
+        // resolution). Measure the true render cadence ONLY on full-rate frames (active input or a
+        // choreographed glide) — the at-rest / inertial-tail throttle is deliberate and must NOT read
+        // as GPU strain. Then continuously scale the pixel ratio toward a ~20 ms (50 fps) budget
+        // (resolution IS the fill-rate lever); only when even the floor resolution can't cope do we
+        // shed the wide additive glow halos (natal-sky reads window.__cvQuality). Recover gently.
+        if (freshInput || glid) {
+          if (QUALITY.prevT > 0) { var _qd = t - QUALITY.prevT; if (_qd > 4 && _qd < 500) QUALITY.ema += (_qd - QUALITY.ema) * 0.12; }
+          QUALITY.prevT = t;
+          if ((frameNo & 3) === 0) {
+            var em = QUALITY.ema;
+            if (em > 22 && QUALITY.dpr > QUALITY.floor) QUALITY.dpr = Math.max(QUALITY.floor, QUALITY.dpr * 0.90);        // slow → lower resolution
+            else if (em < 15 && QUALITY.dpr < QUALITY.cap) QUALITY.dpr = Math.min(QUALITY.cap, QUALITY.dpr * 1.035);       // fast → creep back up
+            if (Math.abs(QUALITY.dpr - QUALITY.applied) > 0.03) { renderer.setPixelRatio(QUALITY.dpr); QUALITY.applied = QUALITY.dpr; }
+            var qf = (innerWidth < 700 || (navigator.deviceMemory || 8) <= 4) ? 1 : 0;
+            if (QUALITY.dpr <= QUALITY.floor + 0.02 && em > 30 && QUALITY.glow < 2 && nowMs - QUALITY.lastStep > 700) { QUALITY.glow++; window.__cvQuality = QUALITY.glow; QUALITY.lastStep = nowMs; QUALITY.ema = 19; }
+            else if (QUALITY.dpr >= QUALITY.cap - 0.02 && em < 13 && QUALITY.glow > qf && nowMs - QUALITY.lastStep > 4000) { QUALITY.glow--; window.__cvQuality = QUALITY.glow; QUALITY.lastStep = nowMs; QUALITY.ema = 19; }
           }
-        }
+        } else { QUALITY.prevT = 0; }   // reset the interval clock on throttled frames so the next active burst measures cleanly
         // FRAME-RATE CAP (the big thermal lever): active hand motion and choreographed flights run at
         // full refresh; the inertial tail drops to half-rate, and true rest idles cold on a frozen scene.
         if (!glid) {
