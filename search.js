@@ -115,7 +115,29 @@
     load().then(function () { render(""); }); setTimeout(function () { input.focus(); }, 20);
   }
   function close() { ov.classList.remove("on"); }
-  function go() { var it = results[sel]; if (it) location.href = it.h; }
+  // "Search is navigation" (the Galaxy-View idea): when the 3-D sky is live and the hit is a work-STAR
+  // (a research/humanities page that has a real star in the scene), FLY to it in-scene instead of leaving
+  // the page. Everything else — pages, books, products — navigates by URL as before. This is what makes
+  // Search and the Atlas complementary rather than redundant: same destinations, two legible doors.
+  function flyOrNav(href) {
+    if (!href) return;
+    var m = /\/(research|humanities)\/([^\/]+)\.html$/.exec(href);
+    if (m && window.__space && window.__space.ready && typeof window.__space.focusStarById === "function" &&
+        window.__space.focusStarById(m[2])) { close(); return; }
+    location.href = href;
+  }
+  function go() {
+    var cur = listEl.querySelector(".sf-row.sel") || listEl.querySelector(".sf-row");
+    if (cur) flyOrNav(cur.getAttribute("href"));
+  }
+  listEl.addEventListener("click", function (e) {
+    var a = e.target.closest("a.sf-row");
+    if (!a) return;
+    var href = a.getAttribute("href") || "";
+    if (/\/(research|humanities)\/[^\/]+\.html$/.test(href) && window.__space && window.__space.ready &&
+        typeof window.__space.focusStarById === "function") { e.preventDefault(); flyOrNav(href); }
+    // else: let the <a> navigate to the page normally
+  });
 
   input.addEventListener("input", function () { render(input.value); });
   ov.addEventListener("keydown", function (e) {

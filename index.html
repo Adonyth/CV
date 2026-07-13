@@ -29,7 +29,7 @@
       href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=45" />
+    <link rel="stylesheet" href="styles.css?v=46" />
     <link rel="stylesheet" href="craft.css?v=2" />
     <script>
       (function () {
@@ -99,23 +99,40 @@
     <!-- floating identity — the only card in the universe -->
     <header class="cosmos-id glass" id="top">
       <h1 class="cosmos-name">Jiaxuan&nbsp;Chen <span class="cosmos-name__zh" lang="zh">陈嘉轩</span></h1>
+      <p class="cosmos-role">
+        <span class="i18n-en">Physicist &amp; independent researcher — foundations of quantum theory, gravitational-wave astronomy, and the political economy of technology.</span>
+        <span class="i18n-zh">物理学者 · 独立研究者 —— 量子理论基础、引力波天文学，以及技术的政治经济学。</span>
+      </p>
+      <button type="button" class="cosmos-enter" aria-haspopup="dialog" aria-controls="cosmos-flat"
+              onclick="(window.__openIndex||window.__toggleIndex||function(){}) ()">
+        <span class="cosmos-enter__t"><span class="i18n-en">Explore the work</span><span class="i18n-zh">浏览全部作品</span></span>
+        <span class="cosmos-enter__c"><span class="i18n-en">21 papers · 2 books · 2 products</span><span class="i18n-zh">21 篇论文 · 2 部著作 · 2 个产品</span></span>
+      </button>
       <nav class="cosmos-links" aria-label="Contact and profiles">
+        <a href="cv.html" class="cosmos-links__cv"><span class="i18n-en">Curriculum Vitae ↗</span><span class="i18n-zh">完整履历 ↗</span></a>
         <a href="mailto:jiaxuan_chen1@alumni.brown.edu">Email</a>
         <a href="https://orcid.org/0009-0008-5211-4313" rel="noopener" target="_blank">ORCID</a>
         <a href="https://github.com/Adonyth" rel="noopener" target="_blank">GitHub</a>
         <a href="https://ssrn.com/author=12014588" rel="noopener" target="_blank">SSRN</a>
-        <a href="cv.html" class="cosmos-links__cv"><span class="i18n-en">Curriculum Vitae ↗</span><span class="i18n-zh">完整履历 ↗</span></a>
       </nav>
     </header>
 
     <!-- slim controls -->
     <div class="cosmos-ui glass no-print">
-      <button class="uipill" id="indexbtn" type="button" title="Open the full index of every page · 全站目录" aria-haspopup="dialog" aria-expanded="false" aria-controls="cosmos-flat" onclick="window.__toggleIndex&&window.__toggleIndex()">
-        <span class="i18n-en">☰ Index</span><span class="i18n-zh">☰ 目录</span>
+      <!-- FIND / GO zone — three distinct ways in: type to find any page · browse the works in the sky · list every page.
+           (Search finds & jumps by text; Atlas browses & flies to a work-star in the scene; All pages is the A–Z list.) -->
+      <button class="uipill uipill--find" id="searchbtn" type="button" title="Search — find any page, then jump · press /" aria-label="Search (press /)" onclick="window.__openSearch&&window.__openSearch()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <span class="i18n-en">Search</span><span class="i18n-zh">搜索</span><kbd class="uikbd" aria-hidden="true">/</kbd>
       </button>
-      <button class="uipill" id="atlasbtn" type="button" title="Open the star atlas · 打开星图" aria-haspopup="dialog" aria-expanded="false" aria-controls="star-atlas">
+      <button class="uipill" id="atlasbtn" type="button" title="Atlas — browse the works in the sky and fly to one · 星图" aria-haspopup="dialog" aria-expanded="false" aria-controls="star-atlas">
         <span class="i18n-en">✦ Atlas</span><span class="i18n-zh">✦ 星图</span>
       </button>
+      <button class="uipill" id="indexbtn" type="button" title="All pages — the full A–Z index of the site · 全站目录" aria-haspopup="dialog" aria-expanded="false" aria-controls="cosmos-flat" onclick="window.__toggleIndex&&window.__toggleIndex()">
+        <span class="i18n-en">☰ All pages</span><span class="i18n-zh">☰ 全部页面</span>
+      </button>
+      <span class="cosmos-ui__sep" aria-hidden="true"></span>
+      <!-- VIEW zone — language · day/night · star-field -->
       <div class="lang" role="group" aria-label="Language" id="lang-switch">
         <button type="button" data-locale="en" aria-pressed="true" id="btn-en">EN</button>
         <button type="button" data-locale="zh" aria-pressed="false" id="btn-zh">中文</button>
@@ -128,16 +145,13 @@
         <svg class="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
         <svg class="eyeoff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10.4 10.4 0 0 1 12 19C5.5 19 2 12 2 12a18 18 0 0 1 5.1-5.9m3.2-1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-2.3 3.3M1 1l22 22"/></svg>
       </button>
-      <button class="iconbtn" id="searchbtn" type="button" title="Search the site · press /  · 搜索" aria-label="Search (press /)" onclick="window.__openSearch&&window.__openSearch()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-      </button>
     </div>
 
     <!-- the symbol legend was removed: it duplicated what a click on the Sun/Moon/Earth already reveals,
          and its wide bottom-left line collided with the centred dock buttons. One clean hint remains. -->
     <div class="cosmos-hint no-print" id="cosmos-hint" aria-hidden="true">
-      <span class="i18n-en">drag to orbit · scroll to zoom · [ ] address · A atlas · click a star or world to focus</span>
-      <span class="i18n-zh">拖动旋转 · 滚轮缩放 · [ ] 尺度 · A 星图 · 点击星辰或天体聚焦</span>
+      <span class="i18n-en">drag to orbit · scroll to zoom · click to open</span>
+      <span class="i18n-zh">拖动旋转 · 滚轮缩放 · 点击进入</span>
     </div>
     <!-- the NAV bar carries CONTENT CATEGORIES only (研究/履历/创造/足迹 — CONTENT-TREE.md).
          The chart itself (sun, moon, constellations) is never a menu entry: it is the
@@ -171,8 +185,8 @@
       <button id="cosmos-base" class="cosmos-home" type="button" title="Return to your base — the ground view · 回到基地" data-magnet>
         <span class="i18n-en">⌂ Base</span><span class="i18n-zh">⌂ 基地</span>
       </button>
-      <button id="cosmos-home" class="cosmos-home" type="button" title="Reset to the whole sky · 回到星盘全景" data-magnet>
-        <span class="i18n-en">✦ Whole sky</span><span class="i18n-zh">✦ 星盘全景</span>
+      <button id="cosmos-home" class="cosmos-home" type="button" title="Reset to the whole-sky overview · 回到星盘全景" data-magnet>
+        <span class="i18n-en">◎ Overview</span><span class="i18n-zh">◎ 星盘全景</span>
       </button>
     </div>
     <!-- the COSMIC ADDRESS rail: a continuous scale breadcrumb Earth → Observable Universe → beyond the observable horizon.
@@ -229,8 +243,9 @@
       <div class="star-atlas__list" id="star-atlas-list" role="list"></div>
     </aside>
 
-    <!-- visible build stamp — so "which version am I seeing" is never a mystery again -->
-    <div class="cosmos-build no-print" aria-hidden="true">build 209 · 07-13</div>
+    <!-- build marker — NOT shown to visitors (a version stamp reads as "work in progress" on a personal site);
+         exposed for the author via window.__build + a console line so "which version am I seeing" is still answerable. -->
+    <script>window.__build = "210 · 07-13"; try { console.log("CV build " + window.__build); } catch (e) {}</script>
 
     <!-- fallback when 3D is gated off (mobile / low power / reduced motion):
          a full, tappable mobile home that reaches every page -->
@@ -238,6 +253,7 @@
       <button class="flat-close" type="button" onclick="window.__closeIndex&&window.__closeIndex()" aria-label="Close index · 关闭目录">✕ <span class="i18n-en">Close</span><span class="i18n-zh">关闭</span></button>
       <header class="flat-id">
         <h1 class="flat-name">Jiaxuan&nbsp;Chen <span lang="zh">陈嘉轩</span></h1>
+        <p class="flat-role"><span class="i18n-en">Physicist &amp; independent researcher — quantum foundations, gravitational-wave astronomy, and the political economy of technology.</span><span class="i18n-zh">物理学者 · 独立研究者 —— 量子理论基础、引力波天文学，以及技术的政治经济学。</span></p>
         <div class="flat-contact">
           <a href="mailto:jiaxuan_chen1@alumni.brown.edu">Email</a>
           <a href="https://orcid.org/0009-0008-5211-4313" rel="noopener" target="_blank">ORCID</a>
@@ -246,7 +262,7 @@
         </div>
       </header>
       <button id="flat-enter3d" class="flat-enter" type="button">
-        <span class="i18n-en">✦ Enter the sky — your base awaits</span><span class="i18n-zh">✦ 进入星空 — 你的基地在等你</span>
+        <span class="i18n-en">Enter the sky ↗ — your base awaits</span><span class="i18n-zh">进入星空 ↗ — 你的基地在等你</span>
       </button>
       <nav class="flat-menu" aria-label="Contents">
         <span class="flat-group"><span class="i18n-en">Sciences · 18</span><span class="i18n-zh">科学研究 · 18 题</span></span>
@@ -291,8 +307,8 @@
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
     <script src="home.js?v=6" defer></script>
     <script src="magnet.js?v=1" defer></script>
-    <script src="search.js?v=2" defer></script>
-    <script src="menu.js?v=6" defer></script>
+    <script src="search.js?v=3" defer></script>
+    <script src="menu.js?v=7" defer></script>
     <script src="craft.js?v=1" defer></script>
     <script src="cosmic-layers.js?v=6"></script>
     <script type="module" src="space.js?v=213"></script>

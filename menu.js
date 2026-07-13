@@ -209,11 +209,11 @@
     fork.setAttribute("aria-label", "Choose how to begin");
     fork.innerHTML =
       '<div class="fork-card">' +
-        '<p class="fork-lead"><span class="i18n-en">Jiaxuan Chen (陈嘉轩) — a living star chart of the research, books, and products.</span>' +
-          '<span class="i18n-zh">陈嘉轩 — 一张承载研究、著作与产品的活星图。</span></p>' +
+        '<p class="fork-lead"><span class="i18n-en">Jiaxuan Chen 陈嘉轩 — physicist &amp; independent researcher. A living star chart of his research, books, and products.</span>' +
+          '<span class="i18n-zh">陈嘉轩 — 物理学者与独立研究者。一张承载其研究、著作与产品的活星图。</span></p>' +
         '<div class="fork-btns">' +
           '<button type="button" class="fork-go" id="fork-sky">' +
-            '<span class="i18n-en">✦ Enter the sky</span><span class="i18n-zh">✦ 进入星空</span></button>' +
+            '<span class="i18n-en">Enter the sky ↗</span><span class="i18n-zh">进入星空 ↗</span></button>' +
           '<button type="button" class="fork-alt" id="fork-index">' +
             '<span class="i18n-en">Skip to index →</span><span class="i18n-zh">直接看目录 →</span></button>' +
         '</div>' +
