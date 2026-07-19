@@ -29,7 +29,7 @@
       href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=47" />
+    <link rel="stylesheet" href="styles.css?v=48" />
     <link rel="stylesheet" href="craft.css?v=2" />
     <script>
       (function () {
@@ -123,9 +123,6 @@
       <button class="uipill" id="atlasbtn" type="button" title="Atlas — browse the works in the sky and fly to one · 星图" aria-haspopup="dialog" aria-expanded="false" aria-controls="star-atlas">
         <span class="i18n-en">✦ Atlas</span><span class="i18n-zh">✦ 星图</span>
       </button>
-      <button class="uipill" id="indexbtn" type="button" title="All pages — the full A–Z index of the site · 全站目录" aria-haspopup="dialog" aria-expanded="false" aria-controls="cosmos-flat" onclick="window.__toggleIndex&&window.__toggleIndex()">
-        <span class="i18n-en">☰ All pages</span><span class="i18n-zh">☰ 全部页面</span>
-      </button>
       <span class="cosmos-ui__sep" aria-hidden="true"></span>
       <!-- VIEW zone — language · day/night · star-field -->
       <div class="lang" role="group" aria-label="Language" id="lang-switch">
@@ -157,7 +154,7 @@
         <div class="cosmos-nav__kids">
           <a href="#" data-tour="star:capricorn" data-magnet><span class="i18n-en">Sciences · fly to Capricorn</span><span class="i18n-zh">科学研究 · 飞向摩羯</span></a>
           <a href="#" data-tour="star:gemini" data-magnet><span class="i18n-en">Humanities · fly to Gemini</span><span class="i18n-zh">人文社科 · 飞向双子</span></a>
-          <a href="#" data-open-index="research" data-magnet><span class="i18n-en">▤ See all 21 · full list</span><span class="i18n-zh">▤ 全部 21 项 · 列表</span></a>
+          <a href="#" data-open-index="research" data-magnet><span class="i18n-en">See all 21 · full list</span><span class="i18n-zh">全部 21 项 · 列表</span></a>
         </div>
       </div>
       <a href="journey.html" data-tour="sun" data-href="journey.html" data-magnet><span class="i18n-en">Journey</span><span class="i18n-zh">履历</span></a>
@@ -171,8 +168,7 @@
           <a href="music.html" data-tour="moon" data-href="music.html" data-magnet><span class="i18n-en">Music</span><span class="i18n-zh">音乐</span></a>
         </div>
       </div>
-      <a href="footprint.html" data-tour="footprint" data-magnet><span class="i18n-en">⊕ Footprint</span><span class="i18n-zh">⊕ 足迹</span></a>
-      <a href="cv.html" class="cosmos-nav__cv" data-magnet><span class="i18n-en">CV ↗</span><span class="i18n-zh">完整履历 ↗</span></a>
+      <a href="footprint.html" data-tour="footprint" data-magnet><span class="i18n-en">Footprint</span><span class="i18n-zh">足迹</span></a>
     </nav>
 
     <!-- the bottom dock: return to the whole sky, or descend home to your base -->
@@ -240,7 +236,7 @@
 
     <!-- build marker — NOT shown to visitors (a version stamp reads as "work in progress" on a personal site);
          exposed for the author via window.__build + a console line so "which version am I seeing" is still answerable. -->
-    <script>window.__build = "212 · 07-13"; try { console.log("CV build " + window.__build); } catch (e) {}</script>
+    <script>window.__build = "213 · 07-13"; try { console.log("CV build " + window.__build); } catch (e) {}</script>
 
     <!-- fallback when 3D is gated off (mobile / low power / reduced motion):
          a full, tappable mobile home that reaches every page -->

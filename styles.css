@@ -505,8 +505,8 @@ body.is-flat .cosmos-ui{top:18px; right:18px; z-index:9;}
 .cosmos-rail__i:focus-visible{outline:1px solid rgba(232,195,122,.55); outline-offset:3px; border-radius:4px;}
 .cosmos-rail__i:hover{opacity:.95;}
 .cosmos-rail__l{font-family:var(--mono); font-size:10.5px; letter-spacing:.07em; color:var(--muted);
-  white-space:nowrap; opacity:0; transform:translateX(6px); transition:none;}
-.cosmos-rail__t{width:15px; height:1px; background:var(--muted); flex:none; transition:none;}
+  white-space:nowrap; opacity:0; transform:translateX(6px); transition:opacity .18s ease, transform .18s ease, color .18s ease;}
+.cosmos-rail__t{width:15px; height:1px; background:var(--muted); flex:none; transition:width .18s ease, background .18s ease;}
 .cosmos-rail__i:hover .cosmos-rail__l{opacity:1; transform:none;}
 .cosmos-rail__i:hover .cosmos-rail__t{width:25px; background:var(--accent);}
 .cosmos-rail__i.is-cur{opacity:1;}
@@ -688,7 +688,10 @@ body.to-map .cosmos-legend, body.to-map .cosmos-hint{opacity:0 !important; trans
 .cosmos-nav__group.open .cosmos-nav__head i{opacity:1; transform:rotate(90deg);}
 /* below this width the centred nav bar would collide with the (now labelled) top-right control cluster,
    so drop it to a right-stacked position under the controls. Raised from 1360 → 1560 for the wider cluster. */
-@media(max-width:1560px){ .cosmos-nav{left:auto; right:16px; transform:none; top:84px;} }
+/* the centered nav is now the DEFAULT laptop experience — with the duplicate "All pages" + "CV" pills
+   dropped, the cluster is narrow enough that nav and cluster no longer collide until ~1220px, where the
+   nav drops to a right-stacked position (edge-aligned to the cluster at 22px). */
+@media(max-width:1220px){ .cosmos-nav{left:auto; right:22px; transform:none; top:84px;} }
 @media(max-width:900px){
   .cosmos-nav{display:none;}
   /* in the mobile 3D world the atlas stays reachable: compact bar above the dock, leaves open upward */
@@ -813,7 +816,7 @@ body.cosmos .uipill--find{color:#f2e6da;}
   border-radius:4px; opacity:.55; margin-left:1px;}
 /* divider between the FIND/GO zone and the VIEW-toggle zone of the control cluster */
 .cosmos-ui__sep{width:1px; align-self:stretch; margin:3px 2px; background:rgba(255,255,255,.14); flex:none;}
-body.is-flat #indexbtn{display:none !important;}          /* flat tier: the list already IS the page */
+body.is-flat #atlasbtn{display:none !important;}          /* flat tier: the atlas PANEL is force-hidden, so the button would be a dead control (taps show nothing) — hide it; the flat list + Search already cover finding */
 @media(max-width:700px){ #indexbtn{display:none;} }        /* mobile reaches the list via ✕ simple view */
 
 /* screen-reader helper + a keyboard skip-link into the index */
