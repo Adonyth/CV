@@ -427,17 +427,7 @@ body.cosmos .natal-tip{z-index:6;}
 .cosmos-id{position:fixed; top:22px; left:22px; z-index:4; max-width:min(400px,72vw); padding:16px 20px 14px; border-radius:16px; pointer-events:auto; background:rgba(11,10,9,.40); -webkit-backdrop-filter:blur(14px) saturate(1.3); backdrop-filter:blur(14px) saturate(1.3); box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 20px 50px -30px rgba(0,0,0,.75);}
 .cosmos-name{font-family:var(--serif); font-size:clamp(1.5rem,2.6vw,2.1rem); line-height:1.12; margin:.35rem 0 .5rem; color:var(--ink); font-weight:600; letter-spacing:-.014em; text-shadow:0 0 22px rgba(11,10,9,.9), 0 1px 0 rgba(0,0,0,.5);}
 .cosmos-name__zh{font-weight:500; margin-left:.35rem;}
-/* the ONE confident door into the work — the content's primary affordance, ranked above the contact links.
-   A two-line pill: bold label + a quiet count that doubles as a substance signal. */
-.cosmos-enter{display:inline-flex; flex-direction:column; align-items:flex-start; gap:1px; margin:.1rem 0 .85rem;
-  padding:8px 16px; border-radius:13px; background:var(--accent); color:#160d05; border:0; cursor:pointer; text-align:left;
-  font-family:var(--sans); box-shadow:0 12px 28px -14px rgba(0,0,0,.75); transition:transform .18s ease, filter .18s ease;}
-.cosmos-enter:hover{filter:brightness(1.06); transform:translateY(-1px);}
-.cosmos-enter:focus-visible{outline:2px solid #160d05; outline-offset:2px;}
-.cosmos-enter__t{font-size:14px; font-weight:600; letter-spacing:-.005em; display:flex; align-items:center; gap:.4em;}
-.cosmos-enter__t::after{content:"→"; font-weight:400; opacity:.85;}
-.cosmos-enter__c{font-family:var(--mono); font-size:10px; letter-spacing:.01em; opacity:.72;}
-/* contact + profiles — now SECONDARY: quieter, under a hairline, ranked below the work-door above */
+/* contact + profiles — quiet row under the name (CV leads) */
 .cosmos-links{display:flex; flex-wrap:wrap; gap:4px 13px; font-size:12.5px; padding-top:9px; border-top:1px solid rgba(255,255,255,.10);}
 .cosmos-links a{color:var(--muted); text-decoration:none; border-bottom:none; padding-bottom:2px; transition:color .18s ease;}
 .cosmos-links a:hover{color:var(--ink);}
@@ -688,10 +678,10 @@ body.to-map .cosmos-legend, body.to-map .cosmos-hint{opacity:0 !important; trans
 .cosmos-nav__group.open .cosmos-nav__head i{opacity:1; transform:rotate(90deg);}
 /* below this width the centred nav bar would collide with the (now labelled) top-right control cluster,
    so drop it to a right-stacked position under the controls. Raised from 1360 → 1560 for the wider cluster. */
-/* the centered nav is now the DEFAULT laptop experience — with the duplicate "All pages" + "CV" pills
-   dropped, the cluster is narrow enough that nav and cluster no longer collide until ~1220px, where the
-   nav drops to a right-stacked position (edge-aligned to the cluster at 22px). */
-@media(max-width:1220px){ .cosmos-nav{left:auto; right:22px; transform:none; top:84px;} }
+/* below this width the centred nav bar would collide with the top-right control cluster (which carries
+   the "All pages" index entry since the hero door was removed) — drop it to a right-stacked position,
+   edge-aligned to the cluster at 22px. */
+@media(max-width:1560px){ .cosmos-nav{left:auto; right:22px; transform:none; top:84px;} }
 @media(max-width:900px){
   .cosmos-nav{display:none;}
   /* in the mobile 3D world the atlas stays reachable: compact bar above the dock, leaves open upward */
@@ -816,7 +806,7 @@ body.cosmos .uipill--find{color:#f2e6da;}
   border-radius:4px; opacity:.55; margin-left:1px;}
 /* divider between the FIND/GO zone and the VIEW-toggle zone of the control cluster */
 .cosmos-ui__sep{width:1px; align-self:stretch; margin:3px 2px; background:rgba(255,255,255,.14); flex:none;}
-body.is-flat #atlasbtn{display:none !important;}          /* flat tier: the atlas PANEL is force-hidden, so the button would be a dead control (taps show nothing) — hide it; the flat list + Search already cover finding */
+body.is-flat #indexbtn, body.is-flat #atlasbtn{display:none !important;}   /* flat tier: the list already IS the page, and the atlas PANEL is force-hidden (its button would be a dead control) */
 @media(max-width:700px){ #indexbtn{display:none;} }        /* mobile reaches the list via ✕ simple view */
 
 /* screen-reader helper + a keyboard skip-link into the index */
@@ -856,22 +846,4 @@ body.index-open .flat-close{
   transition:color .2s, border-color .2s;}
 body.index-open .flat-close:hover{ color:#f4ecdf; border-color:#c9975f; }
 
-/* ---- the one-time first-load FORK (built by menu.js) ---- */
-.cosmos-fork{position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center;
-  padding:24px; background:rgba(6,5,4,.42); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
-  animation:index-in .4s var(--ease-out) both;}
-.fork-card{width:min(440px,94vw); text-align:center;
-  background:linear-gradient(180deg, rgba(22,20,18,.92), rgba(10,9,8,.9));
-  border:1px solid rgba(224,150,90,.22); border-radius:18px; padding:30px 28px 24px;
-  box-shadow:0 40px 90px -30px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.08);}
-.fork-lead{font-family:var(--serif); font-size:19px; line-height:1.45; color:#f4ecdf; margin:0 0 22px;}
-.fork-btns{display:flex; flex-direction:column; gap:11px;}
-.fork-go{font-family:var(--mono); font-size:13.5px; letter-spacing:.06em; color:#1a1109; cursor:pointer;
-  background:linear-gradient(135deg, #e8c37a, #e0876a); border:none; border-radius:12px; padding:14px 18px;}
-.fork-go:hover{filter:brightness(1.06);}
-.fork-alt{font-family:var(--mono); font-size:13px; letter-spacing:.04em; color:#d7c8b0; cursor:pointer;
-  background:transparent; border:1px solid rgba(255,255,255,.16); border-radius:12px; padding:12px 18px;
-  transition:color .2s, border-color .2s;}
-.fork-alt:hover{color:#f4ecdf; border-color:#c9975f;}
-.fork-note{font-family:var(--mono); font-size:11px; letter-spacing:.04em; color:#8f8067; line-height:1.7; margin:18px 0 0;}
-@media(max-width:700px){ .fork-lead{font-size:17px;} }
+/* (the one-time first-load FORK was removed 2026-07-19 — the site opens directly in the cosmos) */

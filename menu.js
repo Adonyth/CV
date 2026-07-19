@@ -23,7 +23,6 @@
   if (!body || !body.classList.contains("cosmos")) return;   // homepage only
 
   var MOTION_KEY = "cv-motion";      // full | calm | flat  (shared with space.js)
-  var SEEN_KEY   = "cv-seen-fork";   // "1" once the first-load fork has been answered
 
   /* ---- tier mirror: the same decision space.js makes, so we can tell whether the
           3-D world will actually render (and therefore whether this chrome applies) ---- */
@@ -195,44 +194,7 @@
     addEventListener("pointerdown", function () { try { localStorage.setItem(HINT_KEY, "1"); } catch (e) {} }, { once: true });
   })();
 
-  /* ---------------- (2) first-load fork ---------------- */
-  function seen() { try { return localStorage.getItem(SEEN_KEY) === "1"; } catch (e) { return false; } }
-  function markSeen() { try { localStorage.setItem(SEEN_KEY, "1"); } catch (e) {} }
-
-  // show the fork only on a genuine first landing — not when the visitor deep-linked
-  // straight to the index (they have already declared their intent)
-  if (!stored() && !seen() && loadHash.indexOf("#index") !== 0) {
-    var fork = document.createElement("div");
-    fork.className = "cosmos-fork no-print";
-    fork.setAttribute("role", "dialog");
-    fork.setAttribute("aria-modal", "true");
-    fork.setAttribute("aria-label", "Choose how to begin");
-    fork.innerHTML =
-      '<div class="fork-card">' +
-        '<p class="fork-lead"><span class="i18n-en">Jiaxuan Chen 陈嘉轩 — a living star chart of the research, books, and products.</span>' +
-          '<span class="i18n-zh">陈嘉轩 — 一张承载研究、著作与产品的活星图。</span></p>' +
-        '<div class="fork-btns">' +
-          '<button type="button" class="fork-go" id="fork-sky">' +
-            '<span class="i18n-en">Enter the sky ↗</span><span class="i18n-zh">进入星空 ↗</span></button>' +
-          '<button type="button" class="fork-alt" id="fork-index">' +
-            '<span class="i18n-en">Skip to index →</span><span class="i18n-zh">直接看目录 →</span></button>' +
-        '</div>' +
-        '<p class="fork-note"><span class="i18n-en">drag to orbit · scroll to zoom · you can open the index any time</span>' +
-          '<span class="i18n-zh">拖动旋转 · 滚轮缩放 · 目录随时可开</span></p>' +
-      '</div>';
-    body.appendChild(fork);
-
-    function forkEsc(e) { if (e.key === "Escape") dismissFork(); }
-    function dismissFork() {
-      markSeen();
-      window.removeEventListener("keydown", forkEsc);
-      if (fork.parentNode) fork.parentNode.removeChild(fork);
-    }
-    var skyBtn = fork.querySelector("#fork-sky"), idxBtn = fork.querySelector("#fork-index");
-    skyBtn.addEventListener("click", dismissFork);
-    idxBtn.addEventListener("click", function () { dismissFork(); openIndex(); });
-    fork.addEventListener("click", function (e) { if (e.target === fork) dismissFork(); });   // backdrop dismiss
-    window.addEventListener("keydown", forkEsc);                                              // Esc from anywhere
-    setTimeout(function () { skyBtn.focus(); }, 60);
-  }
+  /* (the first-load fork dialog was removed by owner decision 2026-07-19: the site opens DIRECTLY
+     in the cosmos — no initialization/entry page. The index remains reachable via ☰ All pages,
+     the nav, and Search.) */
 })();

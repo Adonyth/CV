@@ -29,7 +29,7 @@
       href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=48" />
+    <link rel="stylesheet" href="styles.css?v=49" />
     <link rel="stylesheet" href="craft.css?v=2" />
     <script>
       (function () {
@@ -98,11 +98,6 @@
     <!-- floating identity — the only card in the universe -->
     <header class="cosmos-id glass" id="top">
       <h1 class="cosmos-name">Jiaxuan&nbsp;Chen <span class="cosmos-name__zh" lang="zh">陈嘉轩</span></h1>
-      <button type="button" class="cosmos-enter" aria-haspopup="dialog" aria-controls="cosmos-flat"
-              onclick="(window.__openIndex||window.__toggleIndex||function(){}) ()">
-        <span class="cosmos-enter__t"><span class="i18n-en">Explore the work</span><span class="i18n-zh">浏览全部作品</span></span>
-        <span class="cosmos-enter__c"><span class="i18n-en">21 papers · 2 books · 2 products</span><span class="i18n-zh">21 篇论文 · 2 部著作 · 2 个产品</span></span>
-      </button>
       <nav class="cosmos-links" aria-label="Contact and profiles">
         <a href="cv.html" class="cosmos-links__cv"><span class="i18n-en">Curriculum Vitae ↗</span><span class="i18n-zh">完整履历 ↗</span></a>
         <a href="mailto:jiaxuan_chen1@alumni.brown.edu">Email</a>
@@ -122,6 +117,9 @@
       </button>
       <button class="uipill" id="atlasbtn" type="button" title="Atlas — browse the works in the sky and fly to one · 星图" aria-haspopup="dialog" aria-expanded="false" aria-controls="star-atlas">
         <span class="i18n-en">✦ Atlas</span><span class="i18n-zh">✦ 星图</span>
+      </button>
+      <button class="uipill" id="indexbtn" type="button" title="All pages — the full A–Z index of the site · 全站目录" aria-haspopup="dialog" aria-expanded="false" aria-controls="cosmos-flat" onclick="window.__toggleIndex&&window.__toggleIndex()">
+        <span class="i18n-en">☰ All pages</span><span class="i18n-zh">☰ 全部页面</span>
       </button>
       <span class="cosmos-ui__sep" aria-hidden="true"></span>
       <!-- VIEW zone — language · day/night · star-field -->
@@ -236,7 +234,7 @@
 
     <!-- build marker — NOT shown to visitors (a version stamp reads as "work in progress" on a personal site);
          exposed for the author via window.__build + a console line so "which version am I seeing" is still answerable. -->
-    <script>window.__build = "213 · 07-13"; try { console.log("CV build " + window.__build); } catch (e) {}</script>
+    <script>window.__build = "214 · 07-13"; try { console.log("CV build " + window.__build); } catch (e) {}</script>
 
     <!-- fallback when 3D is gated off (mobile / low power / reduced motion):
          a full, tappable mobile home that reaches every page -->
@@ -298,7 +296,7 @@
     <script src="home.js?v=6" defer></script>
     <script src="magnet.js?v=1" defer></script>
     <script src="search.js?v=3" defer></script>
-    <script src="menu.js?v=8" defer></script>
+    <script src="menu.js?v=9" defer></script>
     <script src="craft.js?v=1" defer></script>
     <script src="cosmic-layers.js?v=6"></script>
     <script type="module" src="space.js?v=213"></script>
