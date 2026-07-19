@@ -16,6 +16,7 @@
   --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
   --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
   --cjk-strong:"PingFang SC","Hiragino Sans GB","Heiti SC","STHeiti","Microsoft YaHei",sans-serif;
+  /* motion tokens: canonical owner = craft.css (loads after this file on every page carrying both) — keep the two blocks identical */
   --ease:cubic-bezier(0.28,0.11,0.32,1);
   --gold:#e8c37a;                 /* PROMOTE: structure key — was used bare in .flat-group but never declared */
   --ease-out:cubic-bezier(0.22,0.61,0.30,1);
@@ -97,7 +98,7 @@ h2{font-size:clamp(25px,3.4vw,38px); line-height:1.14; letter-spacing:-.018em;}
 
 /* language pill switch */
 .lang{display:inline-flex; padding:3px; border-radius:999px; border:1px solid var(--hairline); background:transparent;}
-.lang button{border:none; background:transparent; color:var(--muted); font-family:var(--mono); font-size:12px; font-weight:500;
+.lang button{border:none; background:transparent; color:var(--muted); font-family:var(--mono); font-size:12px; font-weight:500; min-height:28px;
   letter-spacing:.04em; padding:5px 10px; border-radius:999px; cursor:pointer; transition:background .2s,color .2s; line-height:1;}
 .lang button[aria-pressed="true"]{background:var(--accent); color:#fff;}
 .lang button:hover:not([aria-pressed="true"]){color:var(--ink);}
@@ -271,7 +272,7 @@ footer{position:relative; padding:44px 0 56px;}
 .skip-link{position:absolute; left:-9999px;}
 .skip-link:focus{position:fixed; left:16px; top:16px; z-index:100; padding:10px 16px; border-radius:10px; background:var(--ink); color:var(--page);}
 
-:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:4px;}
+:focus-visible{outline:1.5px solid var(--accent); outline-offset:3px;}
 
 /* ============================================================ HOMEPAGE (index.html) */
 .anchor-stub{display:block; height:1px; width:1px;}
@@ -418,7 +419,10 @@ body.clock-view .natal-labels{opacity:0;}
    the 3D scene IS the page. #deep becomes the interactive stage;
    the beloved 2D field floats above it as atmosphere.
    ============================================================ */
-body.cosmos{overflow:hidden; height:100vh; height:100dvh;}
+body.cosmos{overflow:hidden; height:100vh; height:100dvh;
+  /* the cosmos chrome sits on PINNED-DARK glass regardless of the day/night toggle — pin the text
+     variables too, or a stored light theme renders ~1.7:1 near-black labels on dark surfaces. */
+  --ink:#f4f0e8; --body:#bdb6a8; --muted:#8a8276;}
 body.cosmos #deep{position:fixed; inset:0; z-index:0; pointer-events:auto; cursor:grab; touch-action:none;}
 body.cosmos #deep:active{cursor:grabbing;}
 body.cosmos #field{position:fixed; inset:0; z-index:1; pointer-events:none;}
@@ -468,7 +472,7 @@ body.is-flat .cosmos-ui{top:18px; right:18px; z-index:9;}
 .flat-menu{display:flex; flex-direction:column; border-top:1px solid var(--hairline);}
 .flat-group{font-family:var(--mono); font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); margin:26px 0 4px;}
 .flat-menu a{display:block; font-family:var(--serif); font-size:20px; color:var(--ink); text-decoration:none;
-  padding:15px 2px; border-bottom:1px solid rgba(255,255,255,.07);}
+  padding:15px 2px; border-bottom:1px solid var(--hairline);}
 .flat-menu a:active{color:var(--accent);}
 .flat-menu a.flat-cv{color:var(--accent-deep); margin-top:8px; border-bottom:none;}
 .flat-note{font-family:var(--mono); font-size:11px; letter-spacing:.05em; color:var(--muted); line-height:1.7; opacity:.8;}
@@ -478,9 +482,11 @@ body.is-flat .cosmos-ui{top:18px; right:18px; z-index:9;}
   /* 1:1 sizing with REAL hit-targets (the old transform:scale(.88) shrank every control below the
      44px touch minimum). #indexbtn is hidden at this width, so the row fits a 375px phone at full size. */
   .cosmos-ui{top:18px; right:14px; gap:6px; padding:6px 8px;}
-  .uipill{padding:10px 13px;}
-  .iconbtn{width:38px; height:38px;}
-  .lang button{padding:9px 11px;}
+  .uipill{padding:11px 13px;}
+  .iconbtn{width:40px; height:40px;}
+  .lang button{padding:10px 12px;}
+  .cosmos-home{padding:12px 18px;}
+  .exit3d{padding:11px 14px;}
   .cosmos-legend{display:none;}
   .cosmos-hint{left:14px; right:14px; transform:none; max-width:none; white-space:normal; text-align:center; bottom:76px;}
   .cosmos-dock{bottom:16px;}
@@ -496,7 +502,7 @@ body.is-flat .cosmos-ui{top:18px; right:18px; z-index:9;}
 .cosmos-rail__i{display:flex; align-items:center; gap:9px; justify-content:flex-end;
   background:transparent; border:0; margin:0; font:inherit; color:inherit; appearance:none; -webkit-appearance:none;
   pointer-events:auto; cursor:pointer; padding:3.5px 0; opacity:.42; transition:opacity .3s ease;}
-.cosmos-rail__i:focus-visible{outline:1px solid rgba(232,195,122,.55); outline-offset:3px; border-radius:4px;}
+.cosmos-rail__i:focus-visible{outline:1.5px solid rgba(232,195,122,.55); outline-offset:3px;}
 .cosmos-rail__i:hover{opacity:.95;}
 .cosmos-rail__l{font-family:var(--mono); font-size:10.5px; letter-spacing:.07em; color:var(--muted);
   white-space:nowrap; opacity:0; transform:translateX(6px); transition:opacity .18s ease, transform .18s ease, color .18s ease;}
@@ -579,9 +585,14 @@ body.is-flat .focus-card, body.on-ground .focus-card{display:none !important;}
   color:var(--muted); font:11px var(--mono); padding:6px 10px; cursor:pointer;}
 .star-atlas__tabs button[aria-pressed="true"]{color:#f0b08e; border-color:rgba(224,135,106,.50); background:rgba(224,135,106,.08);}
 .star-atlas__list{overflow:auto; padding-right:2px; scrollbar-width:thin; scrollbar-color:rgba(224,135,106,.35) transparent;}
+.star-atlas:not([hidden]){animation:atlas-in var(--dur-2) var(--ease-out) both;}
+@keyframes atlas-in{from{opacity:0; transform:translateY(-6px)}}
+@media(prefers-reduced-motion:reduce){ .star-atlas:not([hidden]){animation:none;} }
+.earth-cta, .star-atlas__close, .star-atlas__tabs button, .star-atlas__go, .star-atlas__open, .focus-card__atlas button{
+  transition:color var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out), background var(--dur-1) var(--ease-out);}
 .star-atlas__section{display:flex; align-items:center; justify-content:space-between; gap:10px;
   margin:12px 0 3px; color:#e8c37a; font-size:10.5px; text-transform:uppercase;}
-.star-atlas__section i{font-style:normal; color:rgba(214,204,188,.55);}
+.star-atlas__section i{font-style:normal; color:rgba(214,204,188,.65);}
 .star-atlas__row{display:grid; grid-template-columns:minmax(0,1fr) 30px; gap:8px; align-items:center;
   border-top:1px solid rgba(255,255,255,.07);}
 .star-atlas__go{min-width:0; text-align:left; background:transparent; border:0; padding:10px 0; cursor:pointer; color:#efe7db;}
@@ -778,8 +789,7 @@ body.cosmos .cosmos-rail__l{color:rgba(222,213,198,.78);}
 body.cosmos .cosmos-rail__t{background:rgba(222,213,198,.5);}
 body.cosmos .cosmos-rail__i.is-cur .cosmos-rail__l{color:#e8c37a; text-shadow:0 0 14px rgba(232,195,122,.24);}
 body.cosmos .cosmos-hint,
-body.cosmos .ground-hint,
-body.cosmos .ground-hint{color:rgba(205,194,178,.58); text-shadow:0 10px 30px rgba(0,0,0,.85);}
+body.cosmos .ground-hint{color:rgba(205,194,178,.75); text-shadow:0 10px 30px rgba(0,0,0,.85);}
 @media(max-width:700px){
   body.cosmos .cosmos-name{font-size:1.65rem;}
   body.cosmos::after{opacity:.018;}
@@ -803,7 +813,8 @@ body.cosmos .uipill:hover{color:#f0b08e; border-color:rgba(224,135,106,.58);}
 .uipill--find{color:var(--ink);}                                   /* Search is the primary find affordance of the cluster */
 body.cosmos .uipill--find{color:#f2e6da;}
 .uikbd{font-family:var(--mono); font-size:9px; line-height:1; padding:2px 4px; border:1px solid var(--hairline);
-  border-radius:4px; opacity:.55; margin-left:1px;}
+  border-radius:4px; opacity:.55; margin-left:1px; transition:opacity var(--dur-1) var(--ease-out);}
+.uipill--find:hover .uikbd{opacity:.9;}
 /* divider between the FIND/GO zone and the VIEW-toggle zone of the control cluster */
 .cosmos-ui__sep{width:1px; align-self:stretch; margin:3px 2px; background:rgba(255,255,255,.14); flex:none;}
 body.is-flat #indexbtn, body.is-flat #atlasbtn{display:none !important;}   /* flat tier: the list already IS the page, and the atlas PANEL is force-hidden (its button would be a dead control) */
@@ -822,6 +833,7 @@ body.index-open #cosmos-flat{
   animation:index-in .28s var(--ease-out) both;
 }
 @keyframes index-in{ from{opacity:0} to{opacity:1} }
+@media(prefers-reduced-motion:reduce){ body.index-open #cosmos-flat{animation:none;} }
 body.index-open #cosmos-flat > *{ width:100%; max-width:720px; margin-inline:auto; }
 /* the sky behind is always dark, so force the light-text palette regardless of day/night theme */
 body.index-open .flat-name,

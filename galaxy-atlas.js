@@ -5,7 +5,6 @@
   var panel = document.getElementById("star-atlas");
   var btn = document.getElementById("atlasbtn");
   var list = document.getElementById("star-atlas-list");
-  var search = document.getElementById("star-atlas-search");
   if (!panel || !btn || !list) return;
 
   var closeBtn = panel.querySelector(".star-atlas__close");
@@ -50,7 +49,8 @@
     panel.hidden = !on;
     btn.setAttribute("aria-expanded", on ? "true" : "false");
     document.body.classList.toggle("atlas-open", !!on);
-    if (on && search) setTimeout(function () { search.focus({ preventScroll: true }); }, 40);
+    if (on) setTimeout(function () { (closeBtn || panel).focus({ preventScroll: true }); }, 40);   // move focus INTO the dialog
+    else if (document.activeElement && panel.contains(document.activeElement)) btn.focus();        // and return it on close
   }
   function setActive(id) {
     activeId = id || "";
@@ -69,7 +69,7 @@
       '</div>';
   }
   function render() {
-    var term = search ? search.value.trim().toLowerCase() : "";
+    var term = "";
     var rows = nodes.filter(function (n) {
       if (filter !== "all" && n.constellationId !== filter) return false;
       if (!term) return true;
@@ -126,7 +126,6 @@
 
   btn.addEventListener("click", function (e) { e.stopPropagation(); setOpen(panel.hidden); });
   if (closeBtn) closeBtn.addEventListener("click", function () { setOpen(false); });
-  if (search) search.addEventListener("input", render);
   panel.addEventListener("click", function (e) {
     e.stopPropagation();
     var tab = e.target.closest("[data-atlas-filter]");
@@ -157,7 +156,16 @@
     var old = card && card.querySelector(".focus-card__atlas");
     if (old) old.remove();
   });
-  new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  var _lastZh = isZh();
+  new MutationObserver(function () {
+    if (isZh() === _lastZh) return;            // only a real locale change warrants a re-render
+    _lastZh = isZh();
+    var keep = (document.activeElement && list.contains(document.activeElement) &&
+                document.activeElement.closest("[data-star-id]")) ?
+               document.activeElement.closest("[data-star-id]").getAttribute("data-star-id") : null;
+    render();
+    if (keep) { var again = list.querySelector('[data-star-id="' + keep + '"]'); if (again) again.focus(); }
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 
   fetch("data/natal-sky.json?v=17").then(function (r) { return r.json(); }).then(function (data) {
     nodes = normalize(data);

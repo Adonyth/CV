@@ -46,7 +46,7 @@
 ::selection{ background:rgba(224,135,106,.20); color:var(--ink); text-shadow:none; }
 ::-moz-selection{ background:rgba(224,135,106,.20); color:var(--ink); text-shadow:none; }
 :where(a,button,[data-magnet]):focus-visible{
-  outline:1.5px solid var(--accent); outline-offset:3px; border-radius:999px;
+  outline:1.5px solid var(--accent); outline-offset:3px;
   transition:outline-offset var(--dur-1) var(--ease-out);
 }
 
@@ -74,7 +74,7 @@
    Z-lift + glow on hover only, so JS position and CSS lift compose cleanly.
    ============================================================ */
 .links a, .map-back, .lang, .pill, .hero__contact a, .contact-row a,
-.cosmos-nav button, .cosmos-nav a{
+.cosmos-nav button, .cosmos-nav a, .uipill, .cosmos-ui .iconbtn{
   transition:color var(--dur-1) var(--ease-out),
              border-color var(--dur-1) var(--ease-out),
              background var(--dur-1) var(--ease-out),
@@ -82,13 +82,15 @@
              box-shadow var(--dur-2) var(--ease-out);
 }
 .links a:hover, .map-back:hover, .pill:hover, .hero__contact a:hover,
-.contact-row a:hover, .cosmos-nav button:hover, .cosmos-nav a:hover{
+.contact-row a:hover, .cosmos-nav button:hover, .cosmos-nav a:hover, .uipill:hover, .cosmos-ui .iconbtn:hover{
   transform:translateY(-1px);
   box-shadow:0 6px 20px -13px rgba(0,0,0,.8),
              0 0 0 1px rgba(224,135,106,.07),
              0 0 18px -7px rgba(224,135,106,.16);
 }
-.links a:active, .map-back:active, .pill:active{ transform:translateY(0); transition-duration:.06s; }
+.links a:active, .map-back:active, .pill:active,
+.uipill:active, .cosmos-nav button:active, .cosmos-nav a:active, .lang button:active,
+.cosmos-ui .iconbtn:active, .star-atlas__tabs button:active{ transform:translateY(0); transition-duration:.06s; }
 
 /* ============================================================
    ARROW / PAGER NUDGE toward travel direction (gentle spring — tactile, not bouncy)
@@ -188,7 +190,7 @@ body.cosmos.is-flat .cosmos-dock{ opacity:0 !important; transition:none; } /* le
   ::view-transition-old(root),::view-transition-new(root){ animation:none !important; }
   .cx-rise{ opacity:1 !important; transform:none !important; transition:none !important; }
   .links a,.map-back,.pill,.hero__contact a,.contact-row a,
-  .cosmos-nav button,.cosmos-nav a,.pager a .nm,.map-back span,.portal__go{
+  .cosmos-nav button,.cosmos-nav a,.pager a .nm,.map-back span,.portal__go,.uipill,.cosmos-ui .iconbtn{
     transition:color var(--dur-1) linear, border-color var(--dur-1) linear !important;
     transform:none !important; box-shadow:none !important;
   }

@@ -8,6 +8,15 @@
   var SEL = "[data-magnet], .cosmos-ui .iconbtn, .lang button, .cosmos-links a, .earth-cta, .clock-exit, .map-back";
   var STRENGTH = 0.34, MAX = 8;
 
+  // honor the OS motion preference — magnet.js was the one motion layer that ignored it
+  var rm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)");
+  if (rm && rm.matches) return;
+  if (rm && rm.addEventListener) rm.addEventListener("change", function (e) {
+    if (e.matches) document.querySelectorAll(SEL).forEach(function (el) {
+      el.style.transition = "none"; el.style.transform = "";
+    });
+  });
+
   function attach(el) {
     if (el.__magnet) return; el.__magnet = true;
     var raf = 0, tx = 0, ty = 0;
@@ -26,7 +35,7 @@
       el.style.transform = "translate(" + tx.toFixed(1) + "px," + ty.toFixed(1) + "px)";
     }
     function onLeave() {
-      el.style.transition = "transform .38s cubic-bezier(.22,1.4,.36,1)";  // springy return
+      el.style.transition = "transform .38s cubic-bezier(0.34,1.12,0.42,1)";  // springy return (= --ease-spring: the site's ONE overshoot voice)
       el.style.transform = "translate(0,0)";
     }
     el.addEventListener("pointermove", onMove);

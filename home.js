@@ -28,6 +28,8 @@
   function applyTheme(dark) {
     if (dark) root.setAttribute("data-theme", "dark"); else root.removeAttribute("data-theme");
     store(THEME_KEY, dark ? "dark" : "light");
+    var tb = document.getElementById("themebtn");
+    if (tb) tb.setAttribute("aria-pressed", dark ? "true" : "false");   // its neighbors (field/lang) already sync
     if (reduce) { try { size(); } catch (e) {} }
   }
   function applyFieldOff(off) {
@@ -53,7 +55,10 @@
     var ls = document.getElementById("lang-switch");
     if (ls) ls.addEventListener("click", function (e) { var b = e.target.closest("[data-locale]"); if (b) applyLocale(b.getAttribute("data-locale")); });
     var tb = document.getElementById("themebtn");
-    if (tb) tb.addEventListener("click", function () { applyTheme(root.getAttribute("data-theme") !== "dark"); });
+    if (tb) {
+      tb.setAttribute("aria-pressed", root.getAttribute("data-theme") === "dark" ? "true" : "false");   // initial state (applyTheme keeps it in sync after)
+      tb.addEventListener("click", function () { applyTheme(root.getAttribute("data-theme") !== "dark"); });
+    }
     var fb = document.getElementById("fieldbtn");
     if (fb) fb.addEventListener("click", function () { applyFieldOff(!document.body.classList.contains("field-off")); });
   });

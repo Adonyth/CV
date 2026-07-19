@@ -142,7 +142,7 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
 
 /* ── skyline note ─────────────────────────────────────────── */
 .skyline{margin-top:var(--s6); font-family:var(--mono); font-size:10.5px; color:var(--muted);
-  letter-spacing:.18em; opacity:.7; text-shadow:0 0 18px rgba(0,0,0,.6);}
+  letter-spacing:.18em; text-shadow:0 0 18px rgba(0,0,0,.6);}
 
 /* ── pager: quiet dir, serif title carries it ─────────────── */
 .pager{margin-top:var(--s7); padding-top:var(--s4); border-top:1px solid var(--hairline);
@@ -294,7 +294,8 @@ def footer_nav(depth=0, current=None):
 KEYNAV_JS = """
     /* ← / → arrow keys walk the constellation (prev / next within the category) */
     document.addEventListener("keydown", function (e) {
-      if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;                       /* browser history shortcuts stay the browser's */
+      if (e.target && (/INPUT|TEXTAREA/.test(e.target.tagName) || e.target.isContentEditable)) return;
       if (e.key === "ArrowLeft") { var p = document.querySelector(".pager a.prev"); if (p) location.href = p.href; }
       else if (e.key === "ArrowRight") { var n = document.querySelector(".pager a.next"); if (n) location.href = n.href; }
     });
@@ -335,12 +336,12 @@ def page(title, body, depth=0, pager=False, desc="", path=None, jsonld=None):
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>{CSS}</style>
-  <link rel="stylesheet" href="{pre}craft.css?v=2" />
+  <link rel="stylesheet" href="{pre}craft.css?v=3" />
 </head>
 <body>
 {body}
-  <script src="{pre}magnet.js?v=1"></script>
-  <script src="{pre}search.js?v=3" defer></script>
+  <script src="{pre}magnet.js?v=2"></script>
+  <script src="{pre}search.js?v=4" defer></script>
   <script src="{pre}craft.js?v=1" defer></script>
   <script>{LANG_JS}{keynav}</script>
 </body>
@@ -399,11 +400,15 @@ def paper_block(w):
     # contact the author about THIS work — completes read → cite → contact on every page
     subj = urllib.parse.quote("Re: " + w["title"]["en"])
     btns.append(f'<a href="mailto:{EMAIL}?subject={subj}" data-magnet>{bi("Email the author ↗", "邮件联系作者 ↗")}</a>')
-    cite = ('<button class="cite" type="button" data-magnet '
-            "onclick=\"var p=this.parentNode.querySelector('.bibtex');if(navigator.clipboard)navigator.clipboard.writeText(p.textContent);"
-            "var e=this.querySelector('.i18n-en'),z=this.querySelector('.i18n-zh'),oe=e.textContent,oz=z.textContent;"
-            "e.textContent='Copied \\u2713';z.textContent='\\u5df2\\u590d\\u5236 \\u2713';clearTimeout(this._t);"
-            "this._t=setTimeout(function(){e.textContent=oe;z.textContent=oz;},1500);\">"
+    cite = ('<button class="cite" type="button" data-magnet aria-live="polite" '
+            "onclick=\"var b=this,p=b.parentNode.querySelector('.bibtex');"
+            "var e=b.querySelector('.i18n-en'),z=b.querySelector('.i18n-zh');"
+            "if(!b._oe){b._oe=e.textContent;b._oz=z.textContent;}"
+            "function done(ok){e.textContent=ok?'Copied \\u2713':'Copy failed';z.textContent=ok?'\\u5df2\\u590d\\u5236 \\u2713':'\\u590d\\u5236\\u5931\\u8d25';if(!ok)p.hidden=false;"
+            "clearTimeout(b._t);b._t=setTimeout(function(){e.textContent=b._oe;z.textContent=b._oz;},1600);}"
+            "function fb(){try{var t=document.createElement('textarea');t.value=p.textContent;document.body.appendChild(t);t.select();"
+            "var k=document.execCommand('copy');document.body.removeChild(t);done(!!k);}catch(x){done(false);}}"
+            "if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(p.textContent).then(function(){done(true);},fb);else fb();\">"
             '<span class="i18n-en">Cite · BibTeX ⧉</span><span class="i18n-zh">引用 · BibTeX ⧉</span></button>')
     return ('<div class="links paper">' + "".join(btns) + cite +
             f'<pre class="bibtex" hidden>{html.escape(bibtex(w))}</pre></div>')
@@ -447,7 +452,7 @@ for cls, items in BY_CLS.items():
   <main>
     <div class="eyebrow">{bi(c["eyebrow_en"], c["eyebrow_zh"])}</div>
     <h1>{bi(html.escape(w["title"]["en"]), html.escape(w["title"]["zh"]))}</h1>
-    <div class="meta"><b>{html.escape(w["period"])}</b> · {bi(html.escape(w["where"]["en"]), html.escape(w["where"]["zh"]))}<br/>{bi(html.escape(w["status"]["en"]), html.escape(w["status"]["zh"]))}</div>
+    <div class="meta"><b>{html.escape(w["period"])}</b>{"" if w["period"].rstrip().endswith("—") else " ·"} {bi(html.escape(w["where"]["en"]), html.escape(w["where"]["zh"]))}<br/>{bi(html.escape(w["status"]["en"]), html.escape(w["status"]["zh"]))}</div>
     <div class="rule"></div>
     <div class="desc">{paras}</div>
     {demo_block(w)}

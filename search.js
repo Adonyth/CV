@@ -45,27 +45,32 @@
   st.textContent = "" +
     ".sf-ov{position:fixed;inset:0;z-index:9000;display:none;align-items:flex-start;justify-content:center;" +
       "background:rgba(6,5,4,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}" +
-    ".sf-ov.on{display:flex}" +
+    ".sf-ov.on{display:flex;animation:sf-fade .2s ease-out both}" +
+    ".sf-ov.on .sf-box{animation:sf-rise .34s cubic-bezier(0.22,0.61,0.30,1) both}" +
+    "@keyframes sf-fade{from{opacity:0}}" +
+    "@keyframes sf-rise{from{opacity:0;transform:translateY(-8px) scale(.985)}}" +
+    "@media(prefers-reduced-motion:reduce){.sf-ov.on,.sf-ov.on .sf-box{animation:none}}" +
     ".sf-box{margin-top:11vh;width:min(680px,92vw);background:rgba(20,17,14,.94);border:1px solid rgba(224,150,90,.22);" +
       "border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden;font-family:'Newsreader',Georgia,serif}" +
     ".sf-in{width:100%;box-sizing:border-box;padding:20px 22px;font-size:22px;background:transparent;border:0;" +
       "color:#f4ecdf;outline:none;font-family:inherit}" +
     ".sf-in::placeholder{color:#8f8067}" +
-    ".sf-hd{display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(224,150,90,.14);padding-left:8px}" +
+    ".sf-hd{display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(224,150,90,.14);padding-left:8px;transition:border-color .18s ease}"+
+    ".sf-hd:focus-within{border-bottom-color:rgba(224,150,90,.34)}" +
     ".sf-hd .sf-mag{color:#c9975f;font-size:20px;padding-left:14px}" +
     ".sf-list{max-height:52vh;overflow:auto;padding:6px}" +
     ".sf-g{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;" +
       "color:#9a8a6f;padding:12px 14px 5px}" +
-    ".sf-row{display:block;padding:10px 14px;border-radius:9px;text-decoration:none;color:#e9e0d2;cursor:pointer}" +
+    ".sf-row{display:block;padding:10px 14px;border-radius:9px;text-decoration:none;color:#e9e0d2;cursor:pointer;transition:background .12s ease-out}" +
     ".sf-row .z{color:#b9ab93;font-size:14px;margin-left:8px}" +
     ".sf-row .sub{display:block;font-size:12px;color:#8f8067;font-family:'JetBrains Mono',monospace;margin-top:2px}" +
     ".sf-row.sel,.sf-row:hover{background:rgba(224,150,90,.13)}" +
     ".sf-empty{padding:26px 16px;color:#8f8067;text-align:center}" +
-    ".sf-hint{padding:9px 16px;border-top:1px solid rgba(224,150,90,.12);color:#7d7059;" +
+    ".sf-hint{padding:9px 16px;border-top:1px solid rgba(224,150,90,.12);color:#8f8067;" +
       "font-family:'JetBrains Mono',monospace;font-size:11px;display:flex;gap:16px;justify-content:center}";
   document.head.appendChild(st);
 
-  var ov = document.createElement("div"); ov.className = "sf-ov"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-label", "Search");
+  var ov = document.createElement("div"); ov.className = "sf-ov"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true"); ov.setAttribute("aria-label", "Search");
   ov.innerHTML = '<div class="sf-box"><div class="sf-hd"><span class="sf-mag">⌕</span>' +
     '<input class="sf-in" type="text" autocomplete="off" spellcheck="false"></div>' +   // placeholder set per-locale in open()
     '<div class="sf-list" id="sf-list"></div>' +
@@ -109,12 +114,20 @@
     rows.forEach(function (r) { r.classList.toggle("sel", +r.dataset.i === sel); });
     var cur = listEl.querySelector(".sf-row.sel"); if (cur) cur.scrollIntoView({ block: "nearest" });
   }
+  var lastFocus = null;
+  function syncBtn(on) { var b = document.getElementById("searchbtn"); if (b) b.setAttribute("aria-expanded", on ? "true" : "false"); }
   function open() {
-    mount(); ov.classList.add("on"); input.value = "";
+    lastFocus = document.activeElement;
+    mount(); ov.classList.add("on"); syncBtn(true); input.value = "";
     input.placeholder = isZh() ? "搜索研究 / 著作 / 创造…" : "Search research, writing, making…";
     load().then(function () { render(""); }); setTimeout(function () { input.focus(); }, 20);
   }
-  function close() { ov.classList.remove("on"); }
+  function close() {
+    ov.classList.remove("on"); syncBtn(false);
+    // return focus where it came from (the modal contract its sibling Index overlay already keeps)
+    var back = (lastFocus && document.contains(lastFocus)) ? lastFocus : document.getElementById("searchbtn");
+    if (back && back.focus) back.focus();
+  }
   // "Search is navigation" (the Galaxy-View idea): when the 3-D sky is live and the hit is a work-STAR
   // (a research/humanities page that has a real star in the scene), FLY to it in-scene instead of leaving
   // the page. Everything else — pages, books, products — navigates by URL as before. This is what makes
@@ -141,6 +154,13 @@
 
   input.addEventListener("input", function () { render(input.value); });
   ov.addEventListener("keydown", function (e) {
+    if (e.key === "Tab") {
+      var f = [input].concat(Array.prototype.slice.call(listEl.querySelectorAll("a.sf-row")));
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      return;
+    }
     if (e.key === "Escape") { close(); }
     else if (e.key === "ArrowDown") { e.preventDefault(); sel = Math.min(results.length - 1, sel + 1); highlight(); }
     else if (e.key === "ArrowUp") { e.preventDefault(); sel = Math.max(0, sel - 1); highlight(); }
@@ -150,8 +170,11 @@
 
   // global "/" opens (unless typing in a field); expose window.__openSearch for an icon button
   window.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && ov.classList.contains("on")) { close(); return; }   // Esc works even if focus left the overlay
     var tag = (e.target && e.target.tagName) || "";
+    if (e.target && e.target.isContentEditable) return;
     if (e.key === "/" && !/INPUT|TEXTAREA|SELECT/.test(tag) && !ov.classList.contains("on")) { e.preventDefault(); open(); }
   });
+  (function () { var b = document.getElementById("searchbtn"); if (b) { b.setAttribute("aria-haspopup", "dialog"); b.setAttribute("aria-expanded", "false"); } })();
   window.__openSearch = open;
 })();

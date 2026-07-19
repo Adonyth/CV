@@ -24,7 +24,7 @@
     .wrap{max-width:760px;margin:0 auto;padding:64px 24px 96px}
     .chrome{display:flex;justify-content:space-between;align-items:center;margin-bottom:40px}
     .back{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.05em;color:#b9ab93;text-decoration:none;
-      border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:9px 16px;transition:.2s}
+      border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:9px 16px;transition:color .2s ease,border-color .2s ease,background .2s ease}
     .back:hover{color:#e6b989;border-color:#e0876a}
     .lang button{background:none;border:0;color:#8f8067;font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;padding:4px 6px}
     .lang button[aria-pressed="true"]{color:#f4ecdf}
@@ -45,6 +45,7 @@
     html.locale-zh .i18n-zh{display:inline}
     .empty{color:#8f8067;padding:30px 0}
   </style>
+  <link rel="stylesheet" href="craft.css?v=3" />
 </head>
 <body>
   <div class="wrap">
@@ -81,6 +82,8 @@
       }).catch(function(){document.getElementById("feed").innerHTML='<li class="empty">—</li>';});
     })();
   </script>
-  <script src="/search.js?v=3" defer></script>
+  <script src="/magnet.js?v=2"></script>
+  <script src="/craft.js?v=1" defer></script>
+  <script src="/search.js?v=4" defer></script>
 </body>
 </html>
