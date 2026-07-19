@@ -21,15 +21,15 @@
   <style>
     *{margin:0;box-sizing:border-box}
     body{background:#0b0a09;color:#e9e0d2;font-family:'Newsreader',Georgia,serif;line-height:1.6;-webkit-font-smoothing:antialiased}
-    .wrap{max-width:720px;margin:0 auto;padding:64px 24px 96px}
+    .wrap{max-width:760px;margin:0 auto;padding:64px 24px 96px}
     .chrome{display:flex;justify-content:space-between;align-items:center;margin-bottom:40px}
     .back{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.05em;color:#b9ab93;text-decoration:none;
       border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:9px 16px;transition:.2s}
     .back:hover{color:#e6b989;border-color:#e0876a}
     .lang button{background:none;border:0;color:#8f8067;font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;padding:4px 6px}
     .lang button[aria-pressed="true"]{color:#f4ecdf}
-    .eyebrow{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:#e0876a;margin-bottom:10px}
-    h1{font-size:44px;font-weight:500;letter-spacing:-.01em;margin-bottom:8px}
+    .eyebrow{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;color:#e0876a;margin-bottom:10px}
+    h1{font-family:'Newsreader',Georgia,serif;font-size:clamp(31px,2.2rem + 1.1vw,46px);font-weight:500;letter-spacing:-.01em;margin-bottom:8px}
     .sub{color:#b9ab93;margin-bottom:40px}
     .rss{color:#8f8067;font-family:'JetBrains Mono',monospace;font-size:12px;text-decoration:none}
     .rss:hover{color:#e0876a}
@@ -81,6 +81,6 @@
       }).catch(function(){document.getElementById("feed").innerHTML='<li class="empty">—</li>';});
     })();
   </script>
-  <script src="/search.js?v=1" defer></script>
+  <script src="/search.js?v=3" defer></script>
 </body>
 </html>

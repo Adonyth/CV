@@ -22,6 +22,7 @@
   --ease-io:cubic-bezier(0.62,0.02,0.22,1);
   --ease-spring:cubic-bezier(0.34,1.12,0.42,1);
   --dur-1:.20s; --dur-2:.34s; --dur-3:.62s; --dur-4:.9s;
+  --edge:22px;                    /* ONE inset for every floating chrome corner over the cosmos */
   --glass-rim:linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.22) 34%, rgba(255,255,255,0.06) 56%, rgba(194,93,60,0.32) 100%);
   color-scheme:light;
 }
@@ -424,7 +425,7 @@ body.cosmos #field{position:fixed; inset:0; z-index:1; pointer-events:none;}
 body.cosmos .natal-labels{z-index:2;}
 body.cosmos .natal-tip{z-index:6;}
 
-.cosmos-id{position:fixed; top:22px; left:22px; z-index:4; max-width:min(400px,72vw); padding:16px 20px 14px; border-radius:16px; pointer-events:auto; background:rgba(11,10,9,.40); -webkit-backdrop-filter:blur(14px) saturate(1.3); backdrop-filter:blur(14px) saturate(1.3); box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 20px 50px -30px rgba(0,0,0,.75);}
+.cosmos-id{position:fixed; top:var(--edge); left:var(--edge); z-index:4; max-width:min(400px,72vw); padding:16px 20px 14px; border-radius:16px; pointer-events:auto; background:rgba(11,10,9,.40); -webkit-backdrop-filter:blur(14px) saturate(1.3); backdrop-filter:blur(14px) saturate(1.3); box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 20px 50px -30px rgba(0,0,0,.75);}
 .cosmos-name{font-family:var(--serif); font-size:clamp(1.5rem,2.6vw,2.1rem); line-height:1.12; margin:.35rem 0 .5rem; color:var(--ink); font-weight:600; letter-spacing:-.014em; text-shadow:0 0 22px rgba(11,10,9,.9), 0 1px 0 rgba(0,0,0,.5);}
 .cosmos-name__zh{font-weight:500; margin-left:.35rem;}
 /* contact + profiles — quiet row under the name (CV leads) */
@@ -433,7 +434,7 @@ body.cosmos .natal-tip{z-index:6;}
 .cosmos-links a:hover{color:var(--ink);}
 .cosmos-links__cv{color:var(--accent-deep)!important; font-weight:500;}
 
-.cosmos-ui{position:fixed; top:22px; right:22px; z-index:4; display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:999px;}
+.cosmos-ui{position:fixed; top:var(--edge); right:var(--edge); z-index:4; display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:999px;}
 
 .cosmos-legend{position:fixed; left:22px; bottom:20px; z-index:4; display:flex; flex-wrap:wrap; gap:4px 18px; font-family:var(--mono); font-size:11px; letter-spacing:.06em; color:var(--muted); pointer-events:none; max-width:70vw;}
 .cosmos-legend__item{white-space:nowrap;}
@@ -454,7 +455,7 @@ body.cosmos .natal-tip{z-index:6;}
   background:radial-gradient(130% 62% at 50% -12%, rgba(224,135,106,.09), transparent 58%), var(--page);}
 /* when the flat menu is up, the floating orrery chrome would only clutter — retire it
    (the field toggle is meaningless with no particle field to toggle) */
-body.is-flat .cosmos-id, body.is-flat .cosmos-legend, body.is-flat .cosmos-hint, body.is-flat .cosmos-build,
+body.is-flat .cosmos-id, body.is-flat .cosmos-legend, body.is-flat .cosmos-hint,
 body.is-flat #earth-cta, body.is-flat #sun-cta, body.is-flat #star-cta, body.is-flat #fieldbtn{display:none !important;}
 body.is-flat .cosmos-ui{top:18px; right:18px; z-index:9;}
 .flat-id{margin-top:8px;}
@@ -474,18 +475,21 @@ body.is-flat .cosmos-ui{top:18px; right:18px; z-index:9;}
 @media(max-width:700px){
   .cosmos-id{top:14px; left:14px; right:14px; max-width:none; padding:70px 16px 13px;}
   .cosmos-name{font-size:clamp(1.45rem,7.6vw,2rem); margin-top:0;}
-  .cosmos-ui{top:20px; right:20px; transform:scale(.88); transform-origin:top right;}
+  /* 1:1 sizing with REAL hit-targets (the old transform:scale(.88) shrank every control below the
+     44px touch minimum). #indexbtn is hidden at this width, so the row fits a 375px phone at full size. */
+  .cosmos-ui{top:18px; right:14px; gap:6px; padding:6px 8px;}
+  .uipill{padding:10px 13px;}
+  .iconbtn{width:38px; height:38px;}
+  .lang button{padding:9px 11px;}
   .cosmos-legend{display:none;}
   .cosmos-hint{left:14px; right:14px; transform:none; max-width:none; white-space:normal; text-align:center; bottom:76px;}
   .cosmos-dock{bottom:16px;}
 }
-.cosmos-build{position:fixed; right:22px; bottom:44px; z-index:4; font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--muted); opacity:.55; pointer-events:none;}
-@media(max-width:700px){ .cosmos-build{right:14px; bottom:40px;} }
 /* THE COSMIC ADDRESS RAIL — a continuous scale breadcrumb on the right edge, read
    inner→outer (Solar System at top → Observable Universe at bottom). Populated &
    highlighted by space.js from window.CosmicLOD. Minimal: a tick + a label per tier;
    the current tier is gold with its label always shown, others reveal on hover. */
-.cosmos-rail{position:fixed; right:20px; top:50%; transform:translateY(-50%); z-index:6;
+.cosmos-rail{position:fixed; right:var(--edge); top:50%; transform:translateY(-50%); z-index:6;
   display:flex; flex-direction:column; gap:1px; align-items:flex-end; pointer-events:none;
   opacity:0; transition:opacity .7s ease;}
 .cosmos-rail.is-on{opacity:1;}
@@ -496,23 +500,17 @@ body.is-flat .cosmos-ui{top:18px; right:18px; z-index:9;}
 .cosmos-rail__i:hover{opacity:.95;}
 .cosmos-rail__l{font-family:var(--mono); font-size:10.5px; letter-spacing:.07em; color:var(--muted);
   white-space:nowrap; opacity:0; transform:translateX(6px); transition:opacity .18s ease, transform .18s ease, color .18s ease;}
-.cosmos-rail__t{width:15px; height:1px; background:var(--muted); flex:none; transition:width .18s ease, background .18s ease;}
+.cosmos-rail__t{width:30px; height:1px; background:var(--muted); flex:none; transform:scaleX(.5); transform-origin:right center;
+  transition:transform .18s ease, background .18s ease;}   /* fixed box + scaleX: no layout animation, and the label never shifts on hover */
 .cosmos-rail__i:hover .cosmos-rail__l{opacity:1; transform:none;}
-.cosmos-rail__i:hover .cosmos-rail__t{width:25px; background:var(--accent);}
+.cosmos-rail__i:hover .cosmos-rail__t{transform:scaleX(.83); background:var(--accent);}
 .cosmos-rail__i.is-cur{opacity:1;}
 .cosmos-rail__i.is-cur .cosmos-rail__l{opacity:1; transform:none; color:#e8c37a;}
-.cosmos-rail__i.is-cur .cosmos-rail__t{width:30px; background:#e8c37a;}
+.cosmos-rail__i.is-cur .cosmos-rail__t{transform:scaleX(1); background:#e8c37a;}
 body.is-flat .cosmos-rail, body.on-ground .cosmos-rail{opacity:0 !important; pointer-events:none !important;}
 .cosmos-rail__s{display:block; font-family:var(--mono); font-size:8.5px; letter-spacing:.06em; color:var(--muted); opacity:.55; text-align:right; margin-top:1px;}
-@media(max-width:700px){ .cosmos-rail{right:11px;} .cosmos-rail__l{font-size:9px;} .cosmos-rail__t{width:11px;} .cosmos-rail__i:hover .cosmos-rail__t{width:18px;} .cosmos-rail__s{display:none;} }
+@media(max-width:700px){ .cosmos-rail{right:11px;} .cosmos-rail__l{font-size:9px;} .cosmos-rail__t{width:18px; transform:scaleX(.61);} .cosmos-rail__i:hover .cosmos-rail__t{transform:scaleX(1);} .cosmos-rail__s{display:none;} }
 
-/* the FLUCTUATION's whisper — one centred line at the loop's end; a doorway to the book */
-.quantum-note{position:fixed; left:50%; bottom:15vh; transform:translateX(-50%); z-index:5;
-  font-family:var(--serif); font-size:14.5px; letter-spacing:.04em; font-style:italic;
-  color:#cbb89a; text-decoration:none; text-align:center; text-shadow:0 1px 10px rgba(0,0,0,.9);
-  transition:color .4s ease; max-width:82vw;}
-.quantum-note:hover{color:#e8c37a;}
-@media(max-width:700px){ .quantum-note{font-size:12px; bottom:18vh;} }
 /* THE fix: author display:flex was defeating the hidden attribute — the "flat fallback"
    was an invisible full-viewport wall over every machine, eating all pointer input */
 .cosmos-flat[hidden]{display:none !important;}
@@ -647,7 +645,6 @@ body.is-mobile-3d .exit3d{display:block; position:fixed; left:14px; bottom:16px;
   background:rgba(11,10,9,.62); border:1px solid rgba(255,255,255,.12); border-radius:999px; padding:8px 13px;
   -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); cursor:pointer;}
 body.is-flat .exit3d{display:none !important;}
-body.is-mobile-3d .cosmos-build{display:none;}   /* no room for the stamp on a phone in the 3D world */
 body.to-map #deep, body.to-map #field, body.to-map .cosmos-id, body.to-map .cosmos-ui,
 body.to-map .cosmos-legend, body.to-map .cosmos-hint{opacity:0 !important; transition:opacity .38s ease;}
 /* build 30 — the tour bar sits at the TOP CENTER; each group drops its leaves
@@ -681,7 +678,7 @@ body.to-map .cosmos-legend, body.to-map .cosmos-hint{opacity:0 !important; trans
 /* below this width the centred nav bar would collide with the top-right control cluster (which carries
    the "All pages" index entry since the hero door was removed) — drop it to a right-stacked position,
    edge-aligned to the cluster at 22px. */
-@media(max-width:1560px){ .cosmos-nav{left:auto; right:22px; transform:none; top:84px;} }
+@media(max-width:1560px){ .cosmos-nav{left:auto; right:var(--edge); transform:none; top:84px;} }
 @media(max-width:900px){
   .cosmos-nav{display:none;}
   /* in the mobile 3D world the atlas stays reachable: compact bar above the dock, leaves open upward */
@@ -747,7 +744,6 @@ body.cosmos .cosmos-links,
 body.cosmos .cosmos-hint,
 body.cosmos .ground-hint,
 body.cosmos .cosmos-rail__l,
-body.cosmos .cosmos-build,
 body.cosmos .earth-cta,
 body.cosmos .focus-card,
 body.cosmos .cosmos-home{
@@ -765,7 +761,11 @@ body.cosmos .earth-cta:hover{
   box-shadow:inset 0 1px 0 rgba(255,255,255,.14), 0 18px 52px -25px rgba(0,0,0,.9), 0 0 26px -15px rgba(224,135,106,.52);
 }
 body.cosmos .lang button[aria-pressed="true"]{background:linear-gradient(135deg,#ee9a7b,#d87455); color:#fff;}
-body.cosmos .iconbtn{background:rgba(255,255,255,.025);}
+/* inside the glass capsule the chips sit FLAT — the capsule is the one surface; hover paints the
+   border back in. (The segmented EN|中文 track deliberately keeps its own capsule.) */
+body.cosmos .cosmos-ui .uipill, body.cosmos .cosmos-ui .iconbtn{background:transparent; border-color:transparent;}
+body.cosmos .cosmos-ui .uipill:hover{border-color:rgba(224,135,106,.58);}
+body.cosmos .cosmos-ui .iconbtn:hover{border-color:rgba(255,255,255,.30);}
 body.cosmos .focus-card{
   max-width:360px; border-color:rgba(232,195,122,.18); padding:15px 17px;
 }
@@ -779,7 +779,7 @@ body.cosmos .cosmos-rail__t{background:rgba(222,213,198,.5);}
 body.cosmos .cosmos-rail__i.is-cur .cosmos-rail__l{color:#e8c37a; text-shadow:0 0 14px rgba(232,195,122,.24);}
 body.cosmos .cosmos-hint,
 body.cosmos .ground-hint,
-body.cosmos .cosmos-build{color:rgba(205,194,178,.58); text-shadow:0 10px 30px rgba(0,0,0,.85);}
+body.cosmos .ground-hint{color:rgba(205,194,178,.58); text-shadow:0 10px 30px rgba(0,0,0,.85);}
 @media(max-width:700px){
   body.cosmos .cosmos-name{font-size:1.65rem;}
   body.cosmos::after{opacity:.018;}
@@ -793,10 +793,10 @@ body.cosmos .cosmos-build{color:rgba(205,194,178,.58); text-shadow:0 10px 30px r
    ============================================================ */
 
 /* the "☰ Index / 目录" pill lives among the top-right controls */
-.uipill{display:inline-flex; align-items:center; gap:6px; font-family:var(--mono); font-size:11.5px; letter-spacing:.06em; color:var(--body);
+.uipill{display:inline-flex; align-items:center; gap:6px; font-family:var(--sans); font-size:12.5px; font-weight:500; letter-spacing:.005em; color:var(--body);
   background:rgba(255,255,255,.03); border:1px solid var(--hairline); border-radius:999px;
   padding:7px 13px; cursor:pointer; white-space:nowrap; line-height:1;
-  transition:color .2s, border-color .2s, background .2s;}
+  transition:color .2s, border-color .2s, background .2s;}   /* sans to match the content nav — ONE voice across the top; mono stays for the kbd chip / rail / hints (the instrument layer) */
 .uipill svg{width:14px; height:14px; flex:none;}
 .uipill:hover{color:var(--ink); border-color:var(--ink);}
 body.cosmos .uipill:hover{color:#f0b08e; border-color:rgba(224,135,106,.58);}

@@ -12,8 +12,9 @@ const MARBLE = "https://cdn.jsdelivr.net/npm/three-globe@2.31.0/example/img/eart
 const START = { lat: 39.5, lng: -98 };           // the trace lives mostly here
 
 /* ---------------- the map (initialized immediately, hidden under the intro) ---------------- */
-const map = L.map("map", { zoomControl: true, worldCopyJump: true, preferCanvas: true })
+const map = L.map("map", { zoomControl: false, worldCopyJump: true, preferCanvas: true })
   .setView([START.lat, START.lng], 4);
+L.control.zoom({ position: "bottomright" }).addTo(map);
 L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
   subdomains: "abcd", maxZoom: 19
