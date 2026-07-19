@@ -226,7 +226,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var flGlow = new T.Points(lgeo, glowMat);
     flGlow.frustumCulled = false; flGlow.name = "natalFigureGlow_" + c.id;
     belt.add(flGlow);
-    lineEntries[ci] = { mat: mat, glowMat: glowMat, base: base, geo: lgeo };
+    lineEntries[ci] = { mat: mat, glowMat: glowMat, base: base, geo: lgeo, o1: fl, o2: flGlow };
     lineByCon[c.id] = ci;
   });
 
@@ -815,9 +815,22 @@ export function buildNatalSky(THREE, scene, data, opts) {
       // glow without a post-process pass. Dense nodes/filaments bloom; empty voids stay black.
       if (glowPx) {
         if (glowTiers !== 1) {
-          var pg3 = new T.Points(g, mat(glowPx * 2.8, (glowOp || 0.12) * 0.37));   // fill ∝ size²: 2.8²/3.4²=0.68 with opacity ×1.32 → same integrated brightness, tighter bloom radius
+          // the WIDE halos draw from a STRIDE-2 subset at ×1.7 opacity: a wide gaussian bloom is a smooth
+          // density field, so half the contributors at compensated opacity is near-indistinguishable
+          // (neighbouring halos overlap and fill the gaps) — and it halves the two worst fill-bombs
+          // at the tiers where they are the subject. The sharp core + tight Glow keep full density.
+          var NH = (NG / 2) | 0, ph = new Float32Array(NH * 3), ch = new Float32Array(NH * 3);
+          for (var hi = 0; hi < NH; hi++) {
+            var si = hi * 6;   // every 2nd point
+            ph[hi*3] = pos[si];   ph[hi*3+1] = pos[si+1]; ph[hi*3+2] = pos[si+2];
+            ch[hi*3] = col[si];   ch[hi*3+1] = col[si+1]; ch[hi*3+2] = col[si+2];
+          }
+          var gH = new T.BufferGeometry();
+          gH.setAttribute("position", new T.BufferAttribute(ph, 3));
+          gH.setAttribute("color", new T.BufferAttribute(ch, 3));
+          var pg3 = new T.Points(gH, mat(glowPx * 2.8, Math.min(1, (glowOp || 0.12) * 0.63)));
           pg3.name = name + "Glow3"; pg3.frustumCulled = false; pg3.renderOrder = base - 3; belt.add(pg3);
-          var pg2 = new T.Points(g, mat(glowPx * 1.8, (glowOp || 0.12) * 0.64));   // 1.8²/2.05²=0.77 with opacity ×1.16 → brightness held
+          var pg2 = new T.Points(gH, mat(glowPx * 1.8, Math.min(1, (glowOp || 0.12) * 1.09)));
           pg2.name = name + "Glow2"; pg2.frustumCulled = false; pg2.renderOrder = base - 2; belt.add(pg2);
         }
         var pg = new T.Points(g, mat(glowPx, glowOp || 0.12)); pg.name = name + "Glow"; pg.frustumCulled = false; pg.renderOrder = base - 1; belt.add(pg);
@@ -2511,12 +2524,16 @@ export function buildNatalSky(THREE, scene, data, opts) {
   }
 
   /* ---------------- lifecycle ---------------- */
-  var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null, _sfObj = null, _sfMat = null, _sfBase = 1, _bdT = 0, _keepGal = false, _galMats = null, _localHide = null, _nsObj = null, _nsMat = null, _nsBase = 1, _lhTries = 0, _tierSeen = {}, _lssObjs = null;
+  var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null, _sfObj = null, _sfMat = null, _sfBase = 1, _bdT = 0, _keepGal = false, _galMats = null, _localHide = null, _nsObj = null, _nsMat = null, _nsBase = 1, _lhTries = 0, _tierSeen = {}, _lssObjs = null, _tierScaleOn = true;
   // drives tier presence only. Opacity is never used for inter-tier transitions;
   // the address transition must read as real geometric zoom/collapse.
+  // The "once seen, stays" latch is SCALE-BANDED (_tierScaleOn = camLen > 1500, set in tick): after a
+  // deep round-trip, ~20 latched tier clouds used to keep rendering at the Earth/orrery scales where
+  // they are all off-tier — pure fill waste billed every frame. Every deep tier lives above camLen
+  // ~2600, so the 1500 gate can never clip an active fade/collapse window.
   function driveTier(key, grp2, w2, ghostW) {
     var list = _tierMats[key] || [];
-    var on = w2 > 0 || (ghostW || 0) > 0 || !!_tierSeen[key];
+    var on = w2 > 0 || (ghostW || 0) > 0 || (!!_tierSeen[key] && _tierScaleOn);
     if (w2 > 0 || (ghostW || 0) > 0) _tierSeen[key] = true;
     if (grp2) grp2.visible = on;
     if (!on) return;
@@ -2537,8 +2554,11 @@ export function buildNatalSky(THREE, scene, data, opts) {
     if (t0 === null) t0 = sec;
     var age = sec - t0;
     var pulse = age < 9 ? 1 + 0.8 * Math.max(0, 1 - age / 9) : 1;
+    var _figOn = zoomMul > 0;   // FIX F: opacity-0 figures were still 24 additive draws at every deep tier — hide them outright
     for (var ci = 0; ci < lineEntries.length; ci++) {
       var e = lineEntries[ci]; if (!e) continue;
+      if (e.o1) { e.o1.visible = _figOn; if (e.o2) e.o2.visible = _figOn; }
+      if (!_figOn) continue;
       var hl = isLit(ci) ? 1.9 : 1;
       e.mat.opacity = Math.min(1.0, e.base * (isDark ? 1 : 1.18) * pulse * hl) * backdropMul * zoomMul;
       if (e.glowMat) e.glowMat.opacity = Math.min(0.68, e.base * 0.42 * pulse * hl) * backdropMul * zoomMul;
@@ -2568,15 +2588,18 @@ export function buildNatalSky(THREE, scene, data, opts) {
       if (id.indexOf("con_") === 0) { var c = cons.filter(function (k) { return k.id === id.slice(4); })[0]; return c ? (c.name || (c.figureName)) : null; }
       return null;
     },
-    scaleTarget: function (id, peak) {
-      // RIGID ROTATION: the camera orbits the ORIGIN at every large-scale-structure tier. The real 2MRS
-      // galaxy distribution is centred on US — the mass centroid of galaxies within every tier radius is
-      // within ~6 Mpc of the origin (we sit INSIDE the supercluster; galaxies surround us). Orbiting the
-      // origin means camLen (= camera→origin distance) EQUALS the orbit radius, so it stays constant while
-      // rotating → no zoom during rotation, and the field stays centred + same-size. (Off-centre dense
-      // features like the Great Attractor keep honest 3-D perspective — that is correct, not a bug.)
-      return new T.Vector3(0, 0, 0);
-    },
+    scaleTarget: (function () {
+      var _Z = new T.Vector3(0, 0, 0);   // shared return — CALLERS MUST COPY/CLONE, NEVER MUTATE (this is called per frame by the pivot ease; allocating here fed GC hitches)
+      return function (id, peak) {
+        // RIGID ROTATION: the camera orbits the ORIGIN at every large-scale-structure tier. The real 2MRS
+        // galaxy distribution is centred on US — the mass centroid of galaxies within every tier radius is
+        // within ~6 Mpc of the origin (we sit INSIDE the supercluster; galaxies surround us). Orbiting the
+        // origin means camLen (= camera→origin distance) EQUALS the orbit radius, so it stays constant while
+        // rotating → no zoom during rotation, and the field stays centred + same-size. (Off-centre dense
+        // features like the Great Attractor keep honest 3-D perspective — that is correct, not a bug.)
+        return _Z;
+      };
+    })(),
     tick: function (sec) {
       uniforms.uTime.value = sec;
       if (o.camera) zoomMul = o.camera.position.length() >= 1300 ? 0 : 1;
@@ -2591,6 +2614,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
         // ===== THE COSMIC-ADDRESS DRIVER owns scale presence and geometric collapse.
         //       It must not drive opacity crossfades between address tiers. =====
         var LOD = window.CosmicLOD, _lg = Math.log(Math.max(1, _cl));
+        _tierScaleOn = _cl > 1500;   // release the tier-cloud latch at Earth/orrery scales (see driveTier)
         var _chartOn = _cl < 1300;
         conPickGroup.visible = _chartOn;
         var _wMW    = LOD ? LOD.weight(_cl, "milky-way")           : Math.max(0, Math.min(1, (4800 - _cl) / 1400));

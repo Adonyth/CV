@@ -136,8 +136,12 @@
         }
         cam.lookAt(target);
       }
+      // L3: shared scratch instances — these run every frame during drag/glide; per-frame
+      // .clone()/new allocations here were feeding minor-GC pauses (hitching mid-gesture).
+      var _sOff = null, _sAxis = null, _sQ = null;
       function safeOrbitOffset() {
-        var off = cam.position.clone().sub(target);
+        if (!_sOff) _sOff = new T3.Vector3();
+        var off = _sOff.copy(cam.position).sub(target);
         if (!isFinite(off.length()) || off.length() < 1e-8) {
           tmpPull.set(0, 0.22, 1).normalize().multiplyScalar(Math.max(minDistance, 2.2));
           cam.position.copy(target).add(tmpPull); cam.up.set(0, 1, 0); safeLookAtTarget();
@@ -151,12 +155,14 @@
         var a = activePointers[ids[0]], b = activePointers[ids[1]];
         return Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
       }
+      var _avAxis = null, _avQ = null, _avOff = null;
       function applyAngVel(av) {
         var len = av.length(); if (len < 1e-10 || !isFinite(len)) return;
-        var axis = av.clone().normalize();
+        if (!_avAxis) { _avAxis = new T3.Vector3(); _avQ = new T3.Quaternion(); _avOff = new T3.Vector3(); }
+        var axis = _avAxis.copy(av).normalize();
         if (!isFinite(axis.x + axis.y + axis.z) || axis.lengthSq() < 1e-20) return;
-        var q = new T3.Quaternion().setFromAxisAngle(axis, len);
-        var off = cam.position.clone().sub(target).applyQuaternion(q);
+        var q = _avQ.setFromAxisAngle(axis, len);
+        var off = _avOff.copy(cam.position).sub(target).applyQuaternion(q);
         cam.position.copy(target).add(off);
         cam.up.applyQuaternion(q);
         safeLookAtTarget();
@@ -1463,7 +1469,7 @@
       var webXYZ = arr[4] ? new Int16Array(arr[4]) : null;
       var webRGB = arr[5] ? new Uint8Array(arr[5]) : null;
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=140").then(function (mod) {
+      return import("./natal-sky.js?v=141").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -2079,6 +2085,16 @@
         }
         return fallbackScaleTarget(id, peak);
       }
+      // allocation-free variant for PER-FRAME callers (easeAddressPivot) — writes into `out`
+      function targetForScaleInto(peak, out) {
+        var id = LOD && LOD.currentLayerId ? LOD.currentLayerId(peak) : null;
+        if (natalSky && natalSky.scaleTarget) {
+          var st = natalSky.scaleTarget(id, peak);
+          if (st) return out.set(st.x || 0, st.y || 0, st.z || 0);
+        }
+        return out.copy(fallbackScaleTarget(id, peak));
+      }
+      var _pivT = new THREE.Vector3();
       function cameraOnScaleSphere(target, dir, scale) {
         var r = Math.max(0.001, scale || 1);
         var p = target && target.clone ? target.clone() : HOME.clone();
@@ -2106,21 +2122,21 @@
         if (!LOD || !LOD.weight || !natalSky || !userMoved || controls.isGround() || glideActive() || soloBody || ptrDown || panOn) return;
         var cl = camera.position.length();
         var wLG = LOD.weight(cl, "local-group"), wSheet = LOD.weight(cl, "local-sheet"), wVir = LOD.weight(cl, "virgo-supercluster"), wLani = LOD.weight(cl, "laniakea"), wWeb = LOD.weight(cl, "cosmic-web");
-        var target = null, rate = 0;
+        var target = null, rate = 0;   // scratch-based: this runs per frame — no allocations (L3)
         if (wLG > 0.04 && cl >= 4300 && cl <= 12200) {
-          target = targetForScale(cl);
+          target = targetForScaleInto(cl, _pivT);
           rate = 0.016 * wLG;
         } else if (wSheet > 0.035 && cl >= 11200 && cl <= 15400) {
-          target = HOME.clone();
+          target = _pivT.copy(HOME);
           rate = 0.018 * wSheet;
         } else if (wVir > 0.035 && cl >= 19800 && cl <= 23200) {
-          target = targetForScale(cl);
+          target = targetForScaleInto(cl, _pivT);
           rate = 0.007 * wVir;
         } else if (wLani > 0.04 && cl >= 28600 && cl <= 35400) {
-          target = targetForScale(cl);
+          target = targetForScaleInto(cl, _pivT);
           rate = 0.0045 * wLani;
         } else if (wWeb > 0.04 && cl >= 39000 && cl <= 52000) {
-          target = targetForScale(cl);
+          target = targetForScaleInto(cl, _pivT);
           rate = 0.0038 * wWeb;
         }
         if (!target || rate <= 0) return;
