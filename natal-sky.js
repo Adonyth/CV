@@ -1173,7 +1173,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     gg.setAttribute("color", new T.BufferAttribute(new Float32Array(GC), 3));
     var gm = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 15 : 22, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.135, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in gm) gm.toneMapped = false;
-    var glow = new T.Points(gg, gm); glow.name = "MilkyWayGlow"; glow.renderOrder = -5; glow.frustumCulled = false;
+    var glow = new T.Points(gg, gm); glow.name = "MilkyWayGlow"; glow.renderOrder = -5; glow.frustumCulled = false; _galBuilt = true;
     belt.add(glow);
     // the STAR layer on top — constant screen-size so the galaxy reads at every zoom
     var g = new T.BufferGeometry();
@@ -2524,6 +2524,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   }
 
   /* ---------------- lifecycle ---------------- */
+  var _galBuilt = false;
   var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null, _sfObj = null, _sfMat = null, _sfBase = 1, _bdT = 0, _keepGal = false, _galMats = null, _localHide = null, _nsObj = null, _nsMat = null, _nsBase = 1, _lhTries = 0, _tierSeen = {}, _lssObjs = null, _tierScaleOn = true;
   // drives tier presence only. Opacity is never used for inter-tier transitions;
   // the address transition must read as real geometric zoom/collapse.
@@ -2706,7 +2707,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
         }
         // GALAXY owns the milky-way tier: through its transition window it CONTRACTS
         // into the Local Group's spiral node. It does not opacity-fade.
-        if (!_galMats) {
+        if (!_galMats && _galBuilt) {   // guarded: these two full-group walks used to run EVERY tick for the whole session at ground scale (the galaxy isn't built until ensureFarLayers)
           var _g1 = group.getObjectByName("MilkyWayGalaxy"), _g2 = group.getObjectByName("MilkyWayGlow");
           if (_g1 && _g2) _galMats = [{ o: _g1, m: _g1.material, base: _g1.material.opacity }, { o: _g2, m: _g2.material, base: _g2.material.opacity }];
         }

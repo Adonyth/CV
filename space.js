@@ -101,7 +101,7 @@
       var minDistance = 8, maxDistance = 340;
       var angVel = new T3.Vector3();
       var tmpPull = new T3.Vector3(0, 0.22, 1);
-      var rotateSpeed = 0.00032, maxEventDelta = 0.008, dampingFactor = 0.032, zoomStep = 0.031, pinchGamma = 0.79;
+      var rotateSpeed = 0.00068, maxEventDelta = 0.045, dampingFactor = 0.032, zoomStep = 0.031, pinchGamma = 0.79;
       // ---- silky log-space zoom (geometric glide) ----
       // the wheel accumulates a TARGET radius in ln-space (so N notches in then N out return to
       // the exact start radius); update() eases the live radius toward it every frame — scale-
@@ -119,9 +119,10 @@
       var groundMode = false, gEast = null, gNorth = null, gNormal = null;
       var gYaw = 0, gPitch = 1.15, gLiftoff = null, gLiftFired = false;
       var gVelYaw = 0, gVelPitch = 0;   // flick inertia: release a drag and the gaze glides to rest
+      var _glDir = new T3.Vector3();
       function applyGroundLook() {
         var ch = Math.cos(gPitch), sh = Math.sin(gPitch), cy2 = Math.cos(gYaw), sy2 = Math.sin(gYaw);
-        var d = new T3.Vector3()
+        var d = _glDir.set(0, 0, 0)
           .addScaledVector(gNorth, ch * cy2).addScaledVector(gEast, ch * sy2).addScaledVector(gNormal, sh).normalize();
         cam.up.copy(gNormal);
         target.copy(cam.position).addScaledVector(d, 400);   // the "target" is a far sky point along the gaze
@@ -200,6 +201,12 @@
         },
         exitGroundMode: function () { groundMode = false; },   // deliberately touches nothing — the caller's glide steers the handoff
         isGround: function () { return groundMode; },
+        isSettling: function () {   // R8: true while inertia / zoom-ease is still visibly moving the camera
+          if (groundMode) return Math.abs(gVelYaw) > 2e-5 || Math.abs(gVelPitch) > 2e-5;
+          if (angVel.lengthSq() > 4e-9) return true;
+          var r = cam.position.distanceTo(target);
+          return zoomTarget > 0 && Math.abs(Math.log(r / Math.max(1e-8, zoomTarget))) > 3e-4;
+        },
         groundDrift: function (dYaw) { if (groundMode) { gYaw += dYaw; applyGroundLook(); } },
         rotateWorld: function (axis, ang) {                 // idle turn / glides ride the same math
           var q = new T3.Quaternion().setFromAxisAngle(axis, ang);
@@ -225,7 +232,9 @@
             return;
           }
           applyAngVel(angVel);
-          angVel.multiplyScalar(1 - dampingFactor);
+          // R1: while DRAGGING, damp hard (0.30/frame → the world follows the hand, τ≈3 frames ≈55ms);
+          // on release the gentler dampingFactor gives a ~1.2s silk coast instead of a 2-3s float-out.
+          angVel.multiplyScalar(1 - (dragging ? 0.30 : dampingFactor));
           if (angVel.lengthSq() < 1e-14) angVel.set(0, 0, 0);
           var off = safeOrbitOffset(); var r = off.length();
           if (!isFinite(r) || r < 1e-8) return;
@@ -252,13 +261,14 @@
           }
         }
       };
-      function addRotation(dx, dy) {
+      var _arRight = new T3.Vector3(), _arUp = new T3.Vector3();
+      function _arClp(v) { return Math.max(-maxEventDelta, Math.min(maxEventDelta, v)); }
+      function addRotation(dx, dy) {   // runs per pointermove (up to 240Hz mid-drag) — allocation-free
         cam.updateMatrixWorld();
-        var right = new T3.Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
-        var up = new T3.Vector3().setFromMatrixColumn(cam.matrixWorld, 1);
-        function clp(v) { return Math.max(-maxEventDelta, Math.min(maxEventDelta, v)); }
-        angVel.addScaledVector(up, clp(-dx * rotateSpeed));
-        angVel.addScaledVector(right, clp(-dy * rotateSpeed));
+        _arRight.setFromMatrixColumn(cam.matrixWorld, 0);
+        _arUp.setFromMatrixColumn(cam.matrixWorld, 1);
+        angVel.addScaledVector(_arUp, _arClp(-dx * rotateSpeed));
+        angVel.addScaledVector(_arRight, _arClp(-dy * rotateSpeed));
       }
       function onDown(e) {
         if (e.pointerType === "mouse" && e.button !== 0) return;   // right/middle stay free for PAN
@@ -284,6 +294,7 @@
             var r0 = off.length(); if (!isFinite(r0) || r0 < 1e-8) return;
             var r = Math.max(minDistance, Math.min(maxDistance, r0 * ratio));
             off.normalize(); cam.position.copy(target).add(off.multiplyScalar(r));
+            zoomTarget = r;   // R2: keep the log-zoom accumulator glued, or update()'s ease pulls the radius straight back (pinch was a no-op)
           }
           pinchLastDist = d; e.stopPropagation(); return;
         }
@@ -366,6 +377,7 @@
        a lander's double-soft touchdown) while the direction arcs and the gaze pivots. */
     function easeInOutCubic(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
     function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+    function easeSoftOut(t) { t = t * t * (3 - 2 * t); return 1 - Math.pow(1 - t, 3); }   // derivative 0 at t=0: no frame-one jolt, still front-loaded
     var _pgDir = new THREE.Vector3();
     function paramGlide(o) {
       var camFrom = camera.position.clone(), camTo = o.camTo;
@@ -935,7 +947,7 @@
       controls.target.copy(HOME);
       controls.setDistanceLimits(5.0, (window.CosmicLOD ? window.CosmicLOD.MAXCAM : 46000));   // 5.0 floor clears the Moon (2.99); ceiling widened to the cosmic-address MAXCAM (46000) so the log zoom reaches the observable-universe tier
       // silkier desktop feel: slightly softer damping + gentler log-zoom ease (still returns to rest)
-      controls.setInteractionTuning({ rotateSpeed: 0.00042, dampingFactor: 0.022, zoomStepLn: 0.29, zoomRef: 126, zoomHi: 1.72, zoomEase: 0.148, maxEventDelta: 0.010 });
+      controls.setInteractionTuning({ rotateSpeed: 0.00085, dampingFactor: 0.045, zoomStepLn: 0.29, zoomRef: 126, zoomHi: 1.72, zoomEase: 0.148, maxEventDelta: 0.045 });
       canvas.style.opacity = "0.001";
       setTimeout(function () {   // fallback: never leave the visitor in the dark
         if (!groundEntered) {
@@ -1393,7 +1405,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=38").then(function (mod) {
+    import("./nye-armature.js?v=39").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -1469,7 +1481,7 @@
       var webXYZ = arr[4] ? new Int16Array(arr[4]) : null;
       var webRGB = arr[5] ? new Uint8Array(arr[5]) : null;
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=141").then(function (mod) {
+      return import("./natal-sky.js?v=142").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1527,12 +1539,24 @@
         if (isFinite(ud.dsoMaxCam) && cl > ud.dsoMaxCam) return false;
         return true;
       }
+      var _ctaLastT = 0, _ctaEarthRef = null, _ctaSunRef = null;
       function updateCta(e) {
         if (!earthCta || !nyeArmature) return;
+        // R3: never raycast mid-gesture (the battery cost 0.7-2.5ms per hit during drags), never at
+        // deep cosmic scales (nothing here is interactive past camLen 1300), and throttle by TIME
+        // (~50ms) instead of every-3rd-event — event rate varies 60-240Hz across devices.
+        if (ptrDown || panOn) {
+          if (ctaOn) { ctaOn = false; earthCta.classList.remove("is-on"); }
+          if (sunCtaOn && sunCta) { sunCtaOn = false; sunCta.classList.remove("is-on"); }
+          return;
+        }
+        if (!controls.isGround() && camera.position.length() >= 1300) return;
+        var _ctaNow = performance.now();
+        if (_ctaNow - _ctaLastT < 50) return; _ctaLastT = _ctaNow;
         if (controls.isGround()) {   // on the ground the SKY is the interface: everything up there is a door
           if (ctaOn) { ctaOn = false; earthCta.classList.remove("is-on"); }
           if (sunCtaOn && sunCta) { sunCtaOn = false; sunCta.classList.remove("is-on"); }
-          if (!ptrDown && (ctaTick = (ctaTick + 1) % 3) === 0) {
+          if (!ptrDown) {
             _ctaNdc.x = (e.clientX / innerWidth) * 2 - 1; _ctaNdc.y = -(e.clientY / innerHeight) * 2 + 1;
             _ctaRay.setFromCamera(_ctaNdc, camera);
             var gHits = _ctaRay.intersectObject(nyeArmature.group, true);
@@ -1548,7 +1572,6 @@
           }
           return;
         }
-        if ((ctaTick = (ctaTick + 1) % 3) !== 0) return;
         _ctaNdc.x = (e.clientX / innerWidth) * 2 - 1; _ctaNdc.y = -(e.clientY / innerHeight) * 2 + 1;
         _ctaRay.setFromCamera(_ctaNdc, camera);
         var hits = _ctaRay.intersectObject(nyeArmature.group, true);
@@ -1562,12 +1585,14 @@
           if (pk === "sun") { onSun = true; break; }
         }
         if (onEarth) {
-          var ew = nyeArmature.group.getObjectByName("NyeEarthMesh").getWorldPosition(_ctaV).project(camera);
+          if (!_ctaEarthRef) _ctaEarthRef = nyeArmature.group.getObjectByName("NyeEarthMesh");
+          var ew = _ctaEarthRef.getWorldPosition(_ctaV).project(camera);
           earthCta.style.left = ((ew.x * 0.5 + 0.5) * innerWidth) + "px";
           earthCta.style.top = ((-ew.y * 0.5 + 0.5) * innerHeight - 46) + "px";
         }
         if (onSun && sunCta) {
-          var sw = nyeArmature.group.getObjectByName("NyeSunCore").getWorldPosition(_ctaV).project(camera);
+          if (!_ctaSunRef) _ctaSunRef = nyeArmature.group.getObjectByName("NyeSunCore");
+          var sw = _ctaSunRef.getWorldPosition(_ctaV).project(camera);
           sunCta.style.left = ((sw.x * 0.5 + 0.5) * innerWidth) + "px";
           sunCta.style.top = ((-sw.y * 0.5 + 0.5) * innerHeight - 58) + "px";
         }
@@ -1759,7 +1784,7 @@
         paramGlide({
           camTo: sp.position.clone(),
           targetTo: sp.position.clone().addScaledVector(sp.normal, 60),   // gaze lifts to the sky only at touchdown
-          frames: 260, ease: easeOutCubic, targetEase: easeInCubic, up: sp.normal,
+          frames: 260, ease: easeSoftOut, targetEase: easeInCubic, up: sp.normal,
           onDone: function () { enterGroundView({ pitch: 1.32 }); }
         });
       }
@@ -1863,6 +1888,7 @@
 
       var _stir = new THREE.Vector3();
       canvas.addEventListener("pointermove", function (e) {
+        lastTouch = performance.now();   // R11: hover wakes full-rate rendering (do NOT set userMoved — hover isn't navigation)
         updateCta(e);
         // the visitor's hand stirs the breath-dust: cursor ray → a point in the volume
         _stir.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1, 0.5).unproject(camera)
@@ -1884,10 +1910,15 @@
         controls.target.copy(nt); camera.position.add(_pm);
       }, true);
       addEventListener("pointerup", function () { panOn = false; });
-      canvas.addEventListener("wheel", function () { lastTouch = performance.now(); userMoved = true; }, { passive: true });
+      canvas.addEventListener("wheel", function () {
+        lastTouch = performance.now(); userMoved = true;
+        // R5: scrolling during a flight hands control back instantly (the controls wheel handler
+        // re-seeds zoomTarget from the live radius when externalDrive was set) — parity with pointerdown.
+        if (glideActive() && !controls.isGround()) { glide.frames = 0; glide.param = null; glide.onDone = null; }
+      }, { passive: true });
 
       // clean-click routing: a drag is never a click
-      var pickRay = new THREE.Raycaster(), pickNdc = new THREE.Vector2();
+      var pickRay = new THREE.Raycaster(), pickNdc = new THREE.Vector2(), _lastPickAt = 0;
       var FOCUS_MIN = { NyeSun: 9.5, NyeMoon: 2.2, NatalJupiter: 4.5, NatalSaturn: 4.5, NatalMercury: 0.9, NatalVenus: 1.6, NatalMars: 1.1, NatalUranus: 1.9, NatalNeptune: 1.8, NatalPluto: 0.5, NatalPlutoMoon: 0.35 };   // closest approach per body (must clear each surface + the near-plane)
       function glideToBody(objName, viewDist, nFrames) {
         var obj = nyeArmature.group.getObjectByName(objName);
@@ -2219,8 +2250,8 @@
       window.__space.uiTick = function () {
         // zoomed back out BY HAND → the chart reassembles (never mid-flight). A deep-sky wonder is
         // admired from far out (view-dist ~400), so its focus only releases when you truly pull away.
-        if (soloBody && soloBody !== "dso" && soloBody !== "galcore" && !glideActive() && controls.getRadius() > 130) soloBody = null;
-        if ((soloBody === "dso" || soloBody === "galcore") && !glideActive() && controls.getRadius() > 900) soloBody = null;
+        if (soloBody && soloBody !== "dso" && soloBody !== "galcore" && !glideActive() && controls.getRadius() > 130) { soloBody = null; clearSel(); }
+        if ((soloBody === "dso" || soloBody === "galcore") && !glideActive() && controls.getRadius() > 900) { soloBody = null; clearSel(); }
         // constellations are apparent Earth-sky annotations, not physical 3-D galaxy structures.
         if (natalSky && natalSky.setZodiacFade) natalSky.setZodiacFade(camera.position.length() >= 1300 ? 1 : 0);
         // the orrery (esp. the SUN) must NEVER hide — it's the anchor you click to fly back to the solar
@@ -2273,7 +2304,7 @@
       addEventListener("click", function (e) {
         if (e.target !== canvas) return;              // DOM buttons/links are none of our business
         if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 6) {
-          e.stopImmediatePropagation(); e.preventDefault(); return;
+          _lastPickAt = performance.now(); e.stopImmediatePropagation(); e.preventDefault(); return;
         }
         if (!nyeArmature) return;
         pickNdc.x = (e.clientX / innerWidth) * 2 - 1; pickNdc.y = -(e.clientY / innerHeight) * 2 + 1;
@@ -2298,7 +2329,7 @@
             // on the ground the camera sits INSIDE the beacon's pick bubble (and the
             // raycaster ignores visible=false) — look PAST it to the real target
             if (controls.isGround()) continue;
-            glideToBase(); e.stopImmediatePropagation(); return;
+            _lastPickAt = performance.now(); glideToBase(); e.stopImmediatePropagation(); return;
           }
           if (pick === "earth" && controls.isGround()) continue;   // you're standing on it (hour-ring ticks etc. walk to 'earth' at d≈0) — look PAST it to the sky
           if (pick === "sun") {
@@ -2333,11 +2364,14 @@
             glide.axis = null; glide.step = 0; glide.frames = 30; glide.distTarget = 7;
             glide.targetTo = new THREE.Vector3(0, 0, 0);      // orbit the Earth itself
           }
-          e.stopImmediatePropagation();
+          _lastPickAt = performance.now(); e.stopImmediatePropagation();
           return;
         }
       }, true);
-      canvas.addEventListener("dblclick", goHome);   // double-click also returns to the whole sky (now a smooth glide)
+      canvas.addEventListener("dblclick", function () {
+        if (performance.now() - _lastPickAt < 450) return;   // R14: two quick clicks on a body are an approach, not "go home"
+        goHome();
+      });
     }
 
     var running = true;
@@ -2370,7 +2404,7 @@
            drift is indistinguishable at 30fps, the GPU cools. Any touch, glide,
            entrance or stirred dust restores 60fps instantly. */
         var inputAge = nowMs - lastTouch;
-        var glid = glideActive() || (!userMoved && nowMs < entranceUntil);       // choreographed flight → keep it buttery at 60fps
+        var glid = glideActive() || controls.isSettling() || (!userMoved && nowMs < entranceUntil);   // flights AND the inertia/zoom settle stay at full rate (no 60→30 judder mid-coast)
         var freshInput = inputAge < 1150 || ptrDown || panOn;
         busy = freshInput || (inputAge < 3600) || glid || deepFusion.uniforms.uPointerAmt.value > 0.05;
         // DYNAMIC-RESOLUTION governor (the games trick: hold the frame budget by scaling internal
@@ -2584,7 +2618,7 @@
         camera.position.y += (targetCamY - camera.position.y) * 0.06;
         camera.lookAt(0, camera.position.y * 0.4, -300);
       }
-      if (busy) _clk = sec;                     // the animation clock only advances while active → at rest the scene is frozen (no twinkle/dust/disc churn, no wasted GPU)
+      if (busy) _clk += dt;                     // ACCUMULATE (not snap to sec): waking from rest must not fast-forward every uTime effect + the fusion rotation by the whole idle span — that was a visible lurch exactly when attention returns
       // LAZY-BY-SCALE: build the heavy far structures ONLY on genuine user navigation (userMoved gates out
       // the auto-entrance + the fallback deep-space dive, which both transiently fling the camera far). The
       // ground & whole-sky view therefore never pays for the galaxy / black hole / cosmic web.

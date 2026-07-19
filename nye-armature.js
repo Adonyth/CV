@@ -257,18 +257,18 @@ export function mountNyeArmature(THREE, scene, opts) {
 
   // Hide close Earth/Moon detail at galaxy scale. The Sun is the physical anchor of
   // the full address chain, so it must survive until it becomes sub-pixel by scale.
+  var _idLast = null, _idLastSun = null, _idSunRefs = null, _idEarthRefs = null;
   function setInnerDetail(on, sunOn) {
     var keepSun = sunOn !== false;
-    ["NyeSunCore", "NyeSunRim", "NyeSunCorona1", "NyeSunCorona2", "NyeSunCorona3", "NyeSunCorona4", "NyeSunSpark", "NyeSunStreak"].forEach(function (nm) {
-      var obj = group.getObjectByName(nm); if (obj) obj.visible = keepSun;
-    });
-    ["NyeEarthMesh"].forEach(function (nm) {
-      var obj = group.getObjectByName(nm); if (obj) obj.visible = on;
-    });
+    if (on === _idLast && keepSun === _idLastSun) return;   // called every frame — only act on transitions
+    _idLast = on; _idLastSun = keepSun;
+    if (!_idSunRefs) {   // resolve the 13 names ONCE (re-resolve nulls in case a layer builds later)
+      _idSunRefs = ["NyeSunCore", "NyeSunRim", "NyeSunCorona1", "NyeSunCorona2", "NyeSunCorona3", "NyeSunCorona4", "NyeSunSpark", "NyeSunStreak"].map(function (nm) { return group.getObjectByName(nm); });
+      _idEarthRefs = [group.getObjectByName("NyeEarthMesh"), group.getObjectByName("NyeEarthAtmosphere"), group.getObjectByName("NyeEarthOuterHaze"), earth.mesh.getObjectByName("FootprintTrace")];
+    }
+    for (var iS = 0; iS < _idSunRefs.length; iS++) if (_idSunRefs[iS]) _idSunRefs[iS].visible = keepSun;
+    for (var iE = 0; iE < _idEarthRefs.length; iE++) if (_idEarthRefs[iE]) _idEarthRefs[iE].visible = on;
     if (moon && moon.mesh) moon.mesh.visible = on;
-    var a1 = group.getObjectByName("NyeEarthAtmosphere"); if (a1) a1.visible = on;
-    var a2 = group.getObjectByName("NyeEarthOuterHaze"); if (a2) a2.visible = on;
-    var tr = earth.mesh.getObjectByName("FootprintTrace"); if (tr) tr.visible = on;
   }
 
   /* ---- the BASE (根据地): a point on the real Earth ---- */
