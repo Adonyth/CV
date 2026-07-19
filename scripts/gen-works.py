@@ -179,8 +179,7 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
 
 /* ── mobile ───────────────────────────────────────────────── */
 @media(max-width:640px){
-  .stamp{display:none;}
-  main{padding:var(--s7) 20px var(--s6);}
+  main{padding:88px 20px var(--s6);}   /* clear the fixed back/lang chrome even when it wraps to two rows */
   h1{letter-spacing:-0.006em;}
   .locale-zh h1{line-height:1.3;}
   .desc p{max-width:100%; text-align:left; hyphens:none; hanging-punctuation:none;}
@@ -275,6 +274,9 @@ def footer_nav(depth=0, current=None):
     # ONE OBJECT = ONE PAGE: no aggregate index pages exist — the sky is the only index.
     return (
         '<footer class="foot"><div class="foot__rule"></div><nav class="foot__nav" aria-label="More">'
+        + f'<span class="lbl">{bi("Research", "研究")}</span>'
+        + a("index.html#index-research", "Sciences · 18", "科学研究 · 18")
+        + a("index.html#index-humanities", "Humanities · 3", "人文社科 · 3")
         + f'<span class="lbl">{bi("Books", "著作")}</span>'
         + a("books/invitation.html", "An Invitation After Abundance", "An Invitation After Abundance", "invitation")
         + a("books/sovereign.html", "Sovereign Scintillation", "Sovereign Scintillation", "sovereign")
@@ -303,7 +305,7 @@ SITE = "https://cv-2ad.pages.dev"   # production domain — single source of tru
 def page(title, body, depth=0, pager=False, desc="", path=None, jsonld=None):
     pre = "../" * depth
     keynav = KEYNAV_JS if pager else ""
-    d = html.escape((desc or "Jiaxuan Chen (陈嘉轩) — physicist and independent researcher.")[:180])
+    d = html.escape((desc or "Jiaxuan Chen (陈嘉轩) — research, books, and products.")[:180])
     full_title = f"{title} · Jiaxuan Chen"
     canon = f"{SITE}/{path}" if path else SITE + "/"
     import json as _json
@@ -337,9 +339,8 @@ def page(title, body, depth=0, pager=False, desc="", path=None, jsonld=None):
 </head>
 <body>
 {body}
-  <div class="stamp">{BUILD}</div>
   <script src="{pre}magnet.js?v=1"></script>
-  <script src="{pre}search.js?v=1" defer></script>
+  <script src="{pre}search.js?v=3" defer></script>
   <script src="{pre}craft.js?v=1" defer></script>
   <script>{LANG_JS}{keynav}</script>
 </body>
@@ -348,8 +349,9 @@ def page(title, body, depth=0, pager=False, desc="", path=None, jsonld=None):
 
 def chrome(backs, depth=0):
     pre = "../" * depth
+    # back-buttons show ONLY the active locale (paired i18n spans) — no bilingual leak
     links = "".join(
-        f'<a class="map-back" data-magnet href="{pre}{href}">⟵ <span>{label}</span></a>' for href, label in backs)
+        f'<a class="map-back" data-magnet href="{pre}{href}">⟵ {bi(en, zh)}</a>' for href, en, zh in backs)
     return f"""  <div class="chrome">
     <div class="backs">{links}</div>
     <div class="lang" role="group" aria-label="Language">
@@ -440,8 +442,8 @@ for cls, items in BY_CLS.items():
                  f'{pager_link(prev_w, "prev", "⟵ Previous", "⟵ 上一篇")}'
                  f'{pager_link(next_w, "next", "Next ⟶", "下一篇 ⟶")}</nav>')
         # breadcrumb: ⟵ Orrery (the whole sky) · ⟵ this category (opens the home index at its group)
-        body = chrome([("index.html", "星盘 · Orrery"),
-                       (f"index.html#index-{cls}", f'{c["zh"]} · {c["en"]}')], depth=1) + f"""
+        body = chrome([("index.html", "Orrery", "星盘"),
+                       (f"index.html#index-{cls}", c["en"], c["zh"])], depth=1) + f"""
   <main>
     <div class="eyebrow">{bi(c["eyebrow_en"], c["eyebrow_zh"])}</div>
     <h1>{bi(html.escape(w["title"]["en"]), html.escape(w["title"]["zh"]))}</h1>
