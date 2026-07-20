@@ -15,6 +15,11 @@
    camLen = camera.position.length() (distance to world origin = the Sun/us).
    camLenPeak ≈ 1.35× that tier's sceneRadius: the tier is perfectly framed when
    the camera stands ~1.35 radii out.
+   [2026-07-19] The mid-ladder peaks are RESTORED to that rule. A build-168-era edit had
+   compressed MW→LG→Sheet→Virgo into camLen 3500→4500 (a 1.29× ratio — the whole middle
+   ladder passed in ~one wheel notch, so those tiers read as "no zoom happening"), while
+   the tier geometry radii, the easeAddressPivot bands, and verify-tiers.mjs all still
+   assumed the spaced ladder. Spaced peaks give each address rung real log-travel.
 
    realScaleLy = the structure's true radius in light-years (the log-address).
    sceneRadius = the outer extent of that tier's BUILT geometry (scene units).
@@ -50,34 +55,34 @@
     { id: "local-group", rail: true,
       label: { en: "Local Group", zh: "本星系群" },
       you:   { en: "the Milky Way — one of two great spirals", zh: "银河系——两大旋涡之一" },
-      realScaleLy: 5e6, sceneRadius: 6800, camLenPeak: 3700,
-      fadeInStart: 3300, fadeInEnd: 3700, fadeOutStart: 3900, fadeOutEnd: 4400, weAreOnEdge: false },
+      realScaleLy: 5e6, sceneRadius: 6800, camLenPeak: 9200,
+      fadeInStart: 3300, fadeInEnd: 4200, fadeOutStart: 12500, fadeOutEnd: 15000, weAreOnEdge: false },
 
     // the Local Sheet is a full address rung: subtle in the scene, but named on
     // the rail so the Virgo handoff never reads as a blank scale.
     { id: "local-sheet", rail: true,
       label: { en: "Local Sheet", zh: "本星系片" },
       you:   { en: "in the sheet plane, beside the Local Void", zh: "薄片平面内，本地空洞之侧" },
-      realScaleLy: 1.7e7, sceneRadius: 10400, camLenPeak: 4100,
-      fadeInStart: 3900, fadeInEnd: 4100, fadeOutStart: 4300, fadeOutEnd: 4800, weAreOnEdge: true },
+      realScaleLy: 1.7e7, sceneRadius: 10400, camLenPeak: 14000,
+      fadeInStart: 8000, fadeInEnd: 10000, fadeOutStart: 19000, fadeOutEnd: 23000, weAreOnEdge: true },
 
     { id: "virgo-supercluster", rail: true,
       label: { en: "Virgo / Local Supercluster", zh: "室女 · 本超星系团" },
       you:   { en: "on the outskirts — 54 Mly from Virgo", zh: "外缘——距室女团 5400 万光年" },
-      realScaleLy: 5.5e7, sceneRadius: 15800, camLenPeak: 4500,
-      fadeInStart: 4200, fadeInEnd: 4700, fadeOutStart: 9000, fadeOutEnd: 14000, weAreOnEdge: true },
+      realScaleLy: 5.5e7, sceneRadius: 15800, camLenPeak: 21300,
+      fadeInStart: 12000, fadeInEnd: 15000, fadeOutStart: 30000, fadeOutEnd: 38000, weAreOnEdge: true },
 
     { id: "laniakea", rail: true,
       label: { en: "Laniakea", zh: "拉尼亚凯亚" },
       you:   { en: "far shore of the basin, near the Perseus–Pisces divide", zh: "流域远岸，近英仙-双鱼分水岭" },
-      realScaleLy: 2.6e8, sceneRadius: 24000, camLenPeak: 22000,
-      fadeInStart: 6000, fadeInEnd: 10000, fadeOutStart: 37000, fadeOutEnd: 48000, weAreOnEdge: true },
+      realScaleLy: 2.6e8, sceneRadius: 24000, camLenPeak: 32400,
+      fadeInStart: 18000, fadeInEnd: 24000, fadeOutStart: 42000, fadeOutEnd: 54000, weAreOnEdge: true },
 
     { id: "cosmic-web", rail: true,
       label: { en: "Cosmic Web", zh: "宇宙网" },
       you:   { en: "one basin among thousands", zh: "千万流域之一" },
-      realScaleLy: 1e9, sceneRadius: 36500, camLenPeak: 72000,
-      fadeInStart: 37000, fadeInEnd: 48000, fadeOutStart: 56000, fadeOutEnd: 72000, weAreOnEdge: true },
+      realScaleLy: 1e9, sceneRadius: 36500, camLenPeak: 49300,
+      fadeInStart: 34000, fadeInEnd: 44000, fadeOutStart: 60000, fadeOutEnd: 78000, weAreOnEdge: true },
 
     { id: "observable-universe", rail: true,
       label: { en: "Observable Universe", zh: "可观测宇宙" },

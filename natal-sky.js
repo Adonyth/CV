@@ -2657,9 +2657,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
           // FILL-BOMB TIER-GATE: the wide bloom halos (Glow2/Glow3) are ~93% of the survey field's fill and
           // only READ as the cosmic-web "net" once you're at supercluster/web scale. Below that they are
           // sub-visual background that still costs full fill every frame — so gate Glow3 to the web band
-          // (_cl>9000, Laniakea outward) and Glow2 to the supercluster band (_cl>4200, Virgo outward), on top
-          // of the adaptive __cvQuality shedding. At the Milky-Way/LG/Sheet tiers this drops both → −93% fill.
-          var _webBand = _cl > 9000, _scBand = _cl > 4200;
+          // (Laniakea approach, _cl>18000) and Glow2 to the supercluster band (Virgo approach, _cl>12000),
+          // on top of the adaptive __cvQuality shedding. (Bands re-derived 2026-07-19 for the RESTORED
+          // spaced ladder — the old 4200/9000 values came from the compressed camLenPeak table.)
+          var _webBand = _cl > 18000, _scBand = _cl > 12000;
           for (var _lj = 0; _lj < _lssObjs.length; _lj++) {
             var _le = _lssObjs[_lj];
             _le.o.visible = _lssOn
@@ -2719,10 +2720,18 @@ export function buildNatalSky(THREE, scene, data, opts) {
           // every other origin-centred structure into the blown-white "galaxy eats Laniakea" blob.
           // RECEDE, don't pop: keep the disc drawn while it SHRINKS toward a speck at the origin (via
           // collapse), so it leaves the frame by getting far/small — real perspective — not by an
-          // opacity hard-cut. Only feather opacity once it is a sub-pixel speck past the Local Sheet.
-          var _gOn = LOD ? (_cl < 15000) : (_cl < 8000);
+          // opacity hard-cut. FEATHER as it shrinks: by the end of the collapse window (6800) the disc
+          // is sub-pixel — 118k points at full opacity in a few px rendered as a BLOWN-WHITE BLOB at the
+          // restored Local Group framing (9200). The tail now runs 6500→10000 so the speck dims into a
+          // modest member-knot through the LG band and is gone before the Sheet. (Old 12500→15000 was
+          // tuned for the compressed ladder.)
+          var _gOn = LOD ? (_cl < 14500) : (_cl < 8000);
           var _gScale = LOD ? LOD.collapse(_cl, "milky-way", 0.05) : 1;
-          var _gTail = LOD ? (1 - LOD.smooth(12500, 15000, _cl)) : 1;
+          // TWO-STAGE tail: (1) as the collapse completes (6500→9200) dim the sub-pixel disc to a ~13%
+          // MEMBER-KNOT — bright enough to anchor the Local Group frame, never the blown-white blob of
+          // 118k full-opacity points; (2) fade the knot out entirely (11500→14500) before the Sheet owns
+          // the frame. Continuous at the MW handoff (tail ≈ 0.97 at 6800).
+          var _gTail = LOD ? ((1 - 0.72 * LOD.smooth(6500, 9200, _cl)) * (1 - LOD.smooth(11500, 14500, _cl))) : 1;
           var _gqv = window.__cvQuality || 0;                                    // FIX E: the 22px MilkyWayGlow (_galMats[1], ~42M writes) is the biggest non-survey fill bomb
           for (var _gi = 0; _gi < _galMats.length; _gi++) {
             var _ge = _galMats[_gi];
