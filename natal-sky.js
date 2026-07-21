@@ -1171,7 +1171,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var gg = new T.BufferGeometry();
     gg.setAttribute("position", new T.BufferAttribute(new Float32Array(GP), 3));
     gg.setAttribute("color", new T.BufferAttribute(new Float32Array(GC), 3));
-    var gm = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 15 : 22, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.135, depthWrite: false, blending: T.AdditiveBlending, fog: false });
+    var gm = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 15 : 22, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.105, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in gm) gm.toneMapped = false;
     var glow = new T.Points(gg, gm); glow.name = "MilkyWayGlow"; glow.renderOrder = -5; glow.frustumCulled = false; _galBuilt = true;
     belt.add(glow);
@@ -1183,6 +1183,66 @@ export function buildNatalSky(THREE, scene, data, opts) {
     if ("toneMapped" in m) m.toneMapped = false;
     var pts = new T.Points(g, m); pts.name = "MilkyWayGalaxy"; pts.renderOrder = -4; pts.frustumCulled = false;
     belt.add(pts);
+    /* VOLUMETRIC-LOOK IMPOSTOR (build 222) — one oriented quad in the true galactic plane with a
+       STAMP-BAKED spiral texture (same 4-arm / 12°-pitch / warm-gold→cool-rim math as the points):
+       thousands of soft radial-gradient stamps accumulated with 'lighter' — a smooth photographic
+       under-glow beneath the point detail, at the cost of ONE quad. Geometry is pre-transformed into
+       belt space (mesh stays at the origin) so the collapse scaling contracts it toward the Sun-origin
+       exactly like the point layers. */
+    (function () {
+      var S = Rgal * 1.06, TEX = 1024, cnv = document.createElement("canvas");
+      cnv.width = cnv.height = TEX;
+      var ctx = cnv.getContext("2d");
+      ctx.fillStyle = "#000"; ctx.fillRect(0, 0, TEX, TEX);
+      ctx.globalCompositeOperation = "lighter";
+      function px(x) { return (0.5 + x / (2 * S)) * TEX; }
+      function stamp(x, y, rad, rgb, a) {
+        var cxp = px(x), cyp = px(y), rp = Math.max(1.5, rad / (2 * S) * TEX);
+        var gr = ctx.createRadialGradient(cxp, cyp, 0, cxp, cyp, rp);
+        gr.addColorStop(0, "rgba(" + (rgb[0]*255|0) + "," + (rgb[1]*255|0) + "," + (rgb[2]*255|0) + "," + a + ")");
+        gr.addColorStop(1, "rgba(" + (rgb[0]*255|0) + "," + (rgb[1]*255|0) + "," + (rgb[2]*255|0) + ",0)");
+        ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(cxp, cyp, rp, 0, 6.2832); ctx.fill();
+      }
+      var iRng = gRng(4242);
+      // bulge: compact warm-gold nucleus + wide tan halo
+      stamp(0, 0, Rgal * 0.55, [0.82, 0.66, 0.47], 0.10);
+      stamp(0, 0, Rgal * 0.22, [1.0, 0.85, 0.60], 0.30);
+      stamp(0, 0, Rgal * 0.10, [1.0, 0.88, 0.66], 0.42);
+      // arms: stamps along the same log-spirals (galactocentric frame → shift by C later via geometry transform)
+      for (var st = 0; st < 3400; st++) {
+        var arm = st % arms;
+        var th = Math.pow(iRng(), 1.55) * span;
+        var rC2 = aSpiral * Math.exp(bsp * th);
+        var an2 = th + phase0 + arm * (2 * Math.PI / arms);
+        var jit = (iRng() + iRng() - 1) * (9 + 0.11 * rC2);
+        var xx = rC2 * Math.cos(an2) + jit, yy = rC2 * Math.sin(an2) + (iRng() + iRng() - 1) * (9 + 0.11 * rC2);
+        var f2 = Math.min(1, Math.sqrt(xx * xx + yy * yy) / Rgal);
+        var c2 = ramp(f2);
+        if (iRng() < 0.20 * Math.min(1, f2 * 2.0)) c2 = COOL;
+        stamp(xx, yy, (40 + 105 * iRng()) * (0.6 + 0.6 * f2), c2, 0.028 * (1 - 0.55 * f2 * f2));
+      }
+      // sparse H-alpha knots + smooth inter-arm haze
+      for (var kt = 0; kt < 110; kt++) {
+        var tk = Math.pow(iRng(), 1.4) * span, rk = aSpiral * Math.exp(bsp * tk);
+        var ak = tk + phase0 + (kt % arms) * (2 * Math.PI / arms);
+        stamp(rk * Math.cos(ak) + (iRng()*2-1)*30, rk * Math.sin(ak) + (iRng()*2-1)*30, 26 + 34 * iRng(), PINK, 0.05);
+      }
+      for (var hz = 0; hz < 700; hz++) {
+        var hr2 = Math.sqrt(iRng()) * Rgal, ha2 = iRng() * 6.2832;
+        stamp(hr2 * Math.cos(ha2), hr2 * Math.sin(ha2), 70 + 120 * iRng(), ramp(hr2 / Rgal), 0.012 * (1 - 0.5 * hr2 / Rgal));
+      }
+      var impTex = new T.CanvasTexture(cnv);
+      impTex.colorSpace = T.SRGBColorSpace; impTex.anisotropy = 4;
+      var impGeo = new T.PlaneGeometry(2 * S, 2 * S);
+      var impM4 = new T.Matrix4().makeBasis(uu.clone(), vv.clone(), w.clone()).setPosition(C.x, C.y, C.z);
+      impGeo.applyMatrix4(impM4);                                            // bake orientation+centre INTO the geometry (origin-collapse-safe)
+      var impMat = new T.MeshBasicMaterial({ map: impTex, transparent: true, opacity: 0.5,
+        blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, fog: false });
+      if ("toneMapped" in impMat) impMat.toneMapped = false;
+      var imp = new T.Mesh(impGeo, impMat);
+      imp.name = "MilkyWayImpostor"; imp.renderOrder = -6; imp.frustumCulled = false;
+      belt.add(imp);
+    })();
   }
 
   /* ---------------- the GALACTIC CENTRE — Sgr A* as a small nucleus marker.
@@ -2709,8 +2769,11 @@ export function buildNatalSky(THREE, scene, data, opts) {
         // GALAXY owns the milky-way tier: through its transition window it CONTRACTS
         // into the Local Group's spiral node. It does not opacity-fade.
         if (!_galMats && _galBuilt) {   // guarded: these two full-group walks used to run EVERY tick for the whole session at ground scale (the galaxy isn't built until ensureFarLayers)
-          var _g1 = group.getObjectByName("MilkyWayGalaxy"), _g2 = group.getObjectByName("MilkyWayGlow");
-          if (_g1 && _g2) _galMats = [{ o: _g1, m: _g1.material, base: _g1.material.opacity }, { o: _g2, m: _g2.material, base: _g2.material.opacity }];
+          var _g1 = group.getObjectByName("MilkyWayGalaxy"), _g2 = group.getObjectByName("MilkyWayGlow"), _g3 = group.getObjectByName("MilkyWayImpostor");
+          if (_g1 && _g2) {
+            _galMats = [{ o: _g1, m: _g1.material, base: _g1.material.opacity }, { o: _g2, m: _g2.material, base: _g2.material.opacity }];
+            if (_g3) _galMats.push({ o: _g3, m: _g3.material, base: _g3.material.opacity });   // rides the same collapse scale + two-stage tail
+          }
         }
         if (_galMats) {
           var _gSolo = _keepGal ? 1 : (1 - 0.94 * _bdT);
