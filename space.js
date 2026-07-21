@@ -75,7 +75,7 @@
   }
 
   /* ---------------- M1 stage + M2 fusion ---------------- */
-  var THREE_URL = "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+  var THREE_URL = "/vendor/three/three.module.js";   // vendored (mainland-reliable; same URL the importmap maps "three" to, so addons share this module instance)
   import(THREE_URL).then(function (THREE) {
     var canvas = document.getElementById("deep");
     if (!canvas) return;
@@ -92,6 +92,61 @@
     // NEVER set scene.background — one black on the page (CSS --page)
 
     var camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 200000);  // far plane: MAXCAM 118000 (beyond-horizon tier) + the CMB horizon shell on the far side (56000) → 174000; headroom to 200000 so nothing ever clips. All far-tier materials are additive + depthWrite:false, so the huge near/far ratio costs no z-fighting
+
+    /* ================= SPACEENGINE-GRADE PIPELINE (build 220) =================
+       ACES filmic tonemapping + selective HDR bloom via EffectComposer. The additive layers
+       stack well past 1.0 — exactly what the bloom threshold catches (dense cores, the Sun,
+       the galactic core, city lights), while faint dust stays quiet. Wired to the dynamic-
+       resolution governor: bloom is shed at __cvQuality>=2 and the composer follows every
+       pixel-ratio change. If the addon import fails (offline/no importmap), we fall back to
+       the plain renderer path unchanged.
+       DELIBERATE LAW REVISION: with the composer active we DO set scene.background — synced
+       to the live page colour (and re-synced on theme change), pixel-identical to the CSS
+       --page behind the canvas. An opaque base is required for bloom to spread past sprite
+       footprints on a transparent canvas; #field (z-index 0) still paints above #deep (-2). */
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;   // near-neutral: ACES supplies the highlight rolloff; the low end must stay close to the tuned direct-path art
+    var composer = null, bloomPass = null, _acUniforms = null;
+    function syncSceneBg() {
+      // the page colour feeds the ALPHA-COMPOSITE pass (not scene.background) — re-synced on theme change
+      if (!_acUniforms) return;
+      try { _acUniforms.uBg.value.set(getComputedStyle(document.body).backgroundColor); }
+      catch (e) { _acUniforms.uBg.value.set(0x0b0a09); }
+    }
+    Promise.all([
+      import("three/addons/postprocessing/EffectComposer.js"),
+      import("three/addons/postprocessing/RenderPass.js"),
+      import("three/addons/postprocessing/UnrealBloomPass.js"),
+      import("three/addons/postprocessing/OutputPass.js"),
+      import("three/addons/postprocessing/ShaderPass.js")
+    ]).then(function (mods) {
+      /* THE KEY DISCOVERY (A/B against the direct path): the site's tuned look was silently shaped by
+         straight-alpha CSS compositing — faint additive sprites accumulate rgb but near-zero ALPHA, so
+         the page compositor (rgb×a) hid most of the field; only dense stacks became visible. A composer
+         bypasses that and exposes the raw (much brighter) scene. So we REPRODUCE the same composite
+         explicitly: base render keeps its alpha, then rgb×a + pageColour×(1−a), and only THEN bloom —
+         so bloom sees exactly what the eye saw on the direct path and lifts only its real hot cores.
+         LDR (UnsignedByte) base keeps the clamped-accumulation art; samples:4 restores MSAA (WebGL2). */
+      var baseRT = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.UnsignedByteType, samples: 4 });
+      var c = new mods[0].EffectComposer(renderer, baseRT);
+      c.setPixelRatio(renderer.getPixelRatio());
+      c.setSize(innerWidth, innerHeight);
+      c.addPass(new mods[1].RenderPass(scene, camera));
+      var alphaComposite = new mods[4].ShaderPass({
+        uniforms: { tDiffuse: { value: null }, uBg: { value: new THREE.Color(0x0b0a09) } },
+        vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+        fragmentShader: "uniform sampler2D tDiffuse; uniform vec3 uBg; varying vec2 vUv;\n" +
+          "void main(){ vec4 c = texture2D(tDiffuse, vUv); gl_FragColor = vec4(c.rgb * c.a + uBg * (1.0 - c.a), 1.0); }"
+      });
+      _acUniforms = alphaComposite.uniforms;
+      c.addPass(alphaComposite);
+      bloomPass = new mods[2].UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.32, 0.86);
+      c.addPass(bloomPass);
+      c.addPass(new mods[3].OutputPass());
+      composer = c;
+      syncSceneBg();
+      new MutationObserver(syncSceneBg).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    }).catch(function () { /* graceful: plain render path (no bloom) */ });
     /* cosmos: the camera orbits the world with the REAL Nye Clock's premium
        trackball — world-space angular velocity about ANY axis, up-vector riding
        along (ported from nye-clock-bazi.html createPremiumOrbitControls).
@@ -962,6 +1017,7 @@
     function resize() {
       if (!camera) return;                          // (Codex M1 critique) guard the temporal dependency
       renderer.setSize(innerWidth, innerHeight, false);
+      if (composer) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(innerWidth, innerHeight); }
       camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
       if (deepFusion) deepFusion.setPixelRatio(Math.min(devicePixelRatio || 1, MOBILE ? 1.5 : 2));
       if (QUALITY) {   // L4: the dynamic-resolution budget was derived from innerWidth<700 once at construction;
@@ -2430,6 +2486,7 @@
             var rung = Math.min(QUALITY.cap, Math.max(QUALITY.floor, Math.round(QUALITY.dpr / 0.12) * 0.12));
             if (Math.abs(rung - QUALITY.applied) > 0.06 && nowMs - QUALITY.lastDprStep > 600) {
               renderer.setPixelRatio(rung); QUALITY.applied = rung; QUALITY.lastDprStep = nowMs;
+              if (composer) { composer.setPixelRatio(rung); composer.setSize(innerWidth, innerHeight); }
               QUALITY.prevT = 0; QUALITY.ema = 18;   // the realloc stall is not a real cadence sample
             }
             // glow-halo backstop: only when resolution is pinned at the floor and the scene is STILL slow
@@ -2654,7 +2711,10 @@
       if (deepFusion && deepFusion.group) deepFusion.group.rotation.y = _clk * 0.006;
       if (nyeArmature) nyeArmature.tick(_clk);
       if (natalSky) natalSky.tick(_clk);
-      renderer.render(scene, camera);
+      if (composer) {
+        if (bloomPass) bloomPass.enabled = (window.__cvQuality || 0) < 2;   // shed the bloom pass under real load
+        composer.render();
+      } else renderer.render(scene, camera);
       requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
@@ -2681,7 +2741,7 @@
     window.__space.pump = function (n2) { var base = performance.now(); for (var q = 0; q < (n2 || 1); q++) frame(base + q * 16.7); };
     window.__space.snap = function () {
       if (COSMOS && controls) controls.update();
-      renderer.render(scene, camera); return canvas.toDataURL("image/jpeg", 0.8);
+      if (composer) composer.render(); else renderer.render(scene, camera); return canvas.toDataURL("image/jpeg", 0.8);
     };
     window.__space.setOpacity = function (o) { canvas.style.opacity = String(o); };
     window.__space.setFusion = deepFusion.setFusion;

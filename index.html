@@ -234,7 +234,7 @@
 
     <!-- build marker — NOT shown to visitors (a version stamp reads as "work in progress" on a personal site);
          exposed for the author via window.__build + a console line so "which version am I seeing" is still answerable. -->
-    <script>window.__build = "219 · 07-19"; try { console.log("CV build " + window.__build); } catch (e) {}</script>
+    <script>window.__build = "220 · 07-20"; try { console.log("CV build " + window.__build); } catch (e) {}</script>
 
     <!-- fallback when 3D is gated off (mobile / low power / reduced motion):
          a full, tappable mobile home that reaches every page -->
@@ -291,6 +291,9 @@
       <p class="flat-note"><span class="i18n-en">The living orrery — the interactive sky — opens on a desktop browser.</span><span class="i18n-zh">可交互的动态星盘请在桌面浏览器中开启。</span></p>
     </div>
 
+    <script type="importmap">
+      { "imports": { "three": "/vendor/three/three.module.js", "three/addons/": "/vendor/three/addons/" } }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
     <script src="home.js?v=7" defer></script>
@@ -299,7 +302,7 @@
     <script src="menu.js?v=9" defer></script>
     <script src="craft.js?v=1" defer></script>
     <script src="cosmic-layers.js?v=7"></script>
-    <script type="module" src="space.js?v=216"></script>
+    <script type="module" src="space.js?v=217"></script>
     <script src="galaxy-atlas.js?v=4" defer></script>
   </body>
 </html>
