@@ -656,8 +656,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var face = new T.Mesh(pgeo, sm); face.renderOrder = -1; grp.add(face);
     })();
     var gg = new T.BufferGeometry();
-    gg.setAttribute("position", new T.BufferAttribute(GP.slice(0, gC * 3), 3));
-    gg.setAttribute("color", new T.BufferAttribute(GC.slice(0, gC * 3), 3));
+    gg.setAttribute("position", new T.BufferAttribute(new Float32Array(GP), 3));
+    gg.setAttribute("color", new T.BufferAttribute(new Float32Array(GC), 3));
     var gm = new T.PointsMaterial({ map: DSO_SOFT, size: (d.psize || 2.7) * (internalDso ? 2.4 : 3.8), sizeAttenuation: true, vertexColors: true, transparent: true, opacity: internalDso ? 0.08 : 0.2, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in gm) gm.toneMapped = false; grp.add(new T.Points(gg, gm));
     var cg2 = new T.BufferGeometry();
@@ -881,7 +881,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   function tierPoints(key, P, C, sizePx, opt) {
     opt = opt || {};
     var g = new T.BufferGeometry();
-    g.setAttribute("position", new T.BufferAttribute(P.slice(0, pC * 3), 3));
+    g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
     g.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
     var m = new T.PointsMaterial({
       map: DSO_SOFT, size: sizePx * _tierPrx, sizeAttenuation: opt.attenuate === true,
@@ -898,7 +898,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   function tierGlow(key, P, C, sizePx, opt) {
     opt = opt || {};
     var g = new T.BufferGeometry();
-    g.setAttribute("position", new T.BufferAttribute(P.slice(0, pC * 3), 3));
+    g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
     g.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
     var m = new T.PointsMaterial({
       map: DSO_SOFT, size: sizePx * _tierPrx, sizeAttenuation: false,
@@ -1346,8 +1346,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
       P.push(bpt.x, bpt.y, bpt.z); Cc.push(bc[0] * a2, bc[1] * a2, bc[2] * a2);
     }
     var g = new T.BufferGeometry();
-    g.setAttribute("position", new T.BufferAttribute(P.slice(0, pC * 3), 3));
-    g.setAttribute("color", new T.BufferAttribute(Cc.slice(0, pC * 3), 3));
+    g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
+    g.setAttribute("color", new T.BufferAttribute(new Float32Array(Cc), 3));
     var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 2.6 : 3.2, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     andromeda = new T.Points(g, m); andromeda.name = "Andromeda"; andromeda.renderOrder = -4; andromeda.frustumCulled = false;
@@ -2663,7 +2663,11 @@ export function buildNatalSky(THREE, scene, data, opts) {
     group: group,
     starPoints: starPoints,
     ensureFarLayers: ensureFarLayers,
-    drainBuild: function () { var f = _buildQ.shift(); if (!f) return false; f(); return true; },
+    drainBuild: function () {
+      var f = _buildQ.shift(); if (!f) return false;
+      try { f(); } catch (e) { try { console.error("[natal-sky] builder failed (skipped):", e); } catch (_e) {} }
+      return true;
+    },
     ensureMidLayers: ensureMidLayers,
     ensureCosmicWeb: ensureCosmicWeb,
     ensureUniverse: ensureUniverse,

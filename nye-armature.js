@@ -325,6 +325,21 @@ export function mountNyeArmature(THREE, scene, opts) {
     dispose,
     buildRings: buildGanzhiRings,        // idempotent; called by the scale director at orrery scale
     hasRings: function () { return ringsBuilt; },
+    atmoFar: (function () {                 // CPU-side camera-distance extinction for the atmosphere shells (varyings go garbage inside the shell)
+      var _c = new T.Vector3();
+      return function (camPos) {
+        if (!earth || !earth.atmoUniforms) return;
+        earth.group.getWorldPosition(_c);
+        var e = earth.group.matrixWorld.elements;
+        var scl = Math.hypot(e[0], e[1], e[2]) || 1;
+        var rw = (earth.atmoRadiusGeo || 1) * scl;
+        var d = camPos.distanceTo(_c);
+        var t = Math.min(1, Math.max(0, (d - rw * 1.25) / (rw * 0.85)));
+        earth.atmoUniforms.uFar.value = t * t * (3 - 2 * t);
+        var t2 = Math.min(1, Math.max(0, (d - rw * 1.35) / (rw * 1.05)));
+        if (earth.hazeUniforms) earth.hazeUniforms.uFar.value = t2 * t2 * (3 - 2 * t2);
+      };
+    })(),
     setInnerDetail: setInnerDetail
   };
 
@@ -836,7 +851,8 @@ export function mountNyeArmature(THREE, scene, opts) {
        terminator. LDR-safe peaks (~0.55) so only the brightest limb feeds the bloom pass. */
     const atmoUniforms = {
       uSunDirWorld: { value: new T.Vector3(0, 0, 1) },
-      uIntensity: { value: 1.0 }
+      uIntensity: { value: 1.0 },
+      uFar: { value: 1.0 }   // camera-distance extinction, computed on the CPU (varyings are near-plane-interpolation garbage when the camera is INSIDE the shell)
     };
     const atmo = new T.Mesh(
       new T.SphereGeometry(radius * 1.16, 72, 72),
@@ -857,7 +873,7 @@ export function mountNyeArmature(THREE, scene, opts) {
         ].join("\n"),
         fragmentShader: [
           "varying vec3 vWn; varying vec3 vWp;",
-          "uniform vec3 uSunDirWorld; uniform float uIntensity;",
+          "uniform vec3 uSunDirWorld; uniform float uIntensity; uniform float uFar;",
           "void main(){",
           "  vec3 N = normalize(vWn);",
           "  vec3 V = normalize(cameraPosition - vWp);",
@@ -869,8 +885,12 @@ export function mountNyeArmature(THREE, scene, opts) {
           "  vec3 blue = vec3(0.30, 0.55, 1.0);",
           "  float band = (1.0 - smoothstep(0.0, 0.42, abs(ndl))) * smoothstep(-0.5, -0.05, ndl - 0.0);", // terminator belt
           "  vec3 warm = vec3(1.0, 0.42, 0.16) * band * 0.30;",
-          "  vec3 col = (blue * day * 0.55 + warm) * rim * uIntensity;",
-          "  gl_FragColor = vec4(col, 1.0);",
+          "  vec3 col = (blue * day * 0.55 + warm) * rim * uIntensity * uFar;",
+          // ALPHA = LUMINANCE (premultiplied form): with the site's alpha-composite pipeline, writing
+          // alpha 1.0 across a full-screen shell defeats the alpha gate for EVERYTHING behind it —
+          // that leak was the base-view blue film. Alpha may only be written where light actually is.
+          "  float aA = max(col.r, max(col.g, col.b));",
+          "  gl_FragColor = aA > 0.0001 ? vec4(col / aA, aA) : vec4(0.0);",
           "}"
         ].join("\n")
       })
@@ -880,13 +900,24 @@ export function mountNyeArmature(THREE, scene, opts) {
 
     const atmo2 = new T.Mesh(
       new T.SphereGeometry(radius * 1.28, 64, 64),
-      new T.MeshBasicMaterial({
-        color: 0x3366cc,
-        transparent: true,
-        opacity: 0.045,
-        blending: T.AdditiveBlending,
-        depthWrite: false,
-        side: T.BackSide
+      new T.ShaderMaterial({
+        uniforms: { uFar: { value: 1.0 } },
+        transparent: true, blending: T.AdditiveBlending, depthWrite: false, side: T.BackSide,
+        vertexShader: [
+          "varying vec3 vWn; varying vec3 vWp;",
+          "void main(){ vec4 wp = modelMatrix * vec4(position, 1.0); vWp = wp.xyz;",
+          "  vWn = normalize(mat3(modelMatrix) * normal);",
+          "  gl_Position = projectionMatrix * viewMatrix * wp; }"
+        ].join("\n"),
+        fragmentShader: [
+          "varying vec3 vWn; varying vec3 vWp;",
+          "uniform float uFar;",
+          "void main(){ vec3 N = normalize(vWn); vec3 V = normalize(cameraPosition - vWp);",
+          "  float rim = pow(1.0 - abs(dot(N, V)), 2.2);",
+          "  vec3 col = vec3(0.20, 0.40, 0.80) * 0.14 * rim * uFar;",
+          "  float aA = max(col.r, max(col.g, col.b));",
+          "  gl_FragColor = aA > 0.0001 ? vec4(col / aA, aA) : vec4(0.0); }"
+        ].join("\n")
       })
     );
     atmo2.name = "NyeEarthOuterHaze";
@@ -895,7 +926,7 @@ export function mountNyeArmature(THREE, scene, opts) {
     /* the GPS footprint shell lives in dressEarth (space.js) — ONE owner: it bakes the
        602,733 points at 6144px as a child of the earth mesh (inherits the sidereal
        rotation natively). The PNG shell that used to stack here doubled GPU memory. */
-    return { group: earthGroup, mesh: earthMesh, uniforms, atmoUniforms, vertexShader: earthVert };
+    return { group: earthGroup, mesh: earthMesh, uniforms, atmoUniforms, hazeUniforms: atmo2.material.uniforms, atmoRadiusGeo: radius, vertexShader: earthVert };
   }
 
   function buildMoon(radius) {

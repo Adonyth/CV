@@ -1462,7 +1462,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=40").then(function (mod) {
+    import("./nye-armature.js?v=44").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -1575,7 +1575,7 @@
       var webXYZ = arr[4] ? new Int16Array(arr[4]) : null;
       var webRGB = arr[5] ? new Uint8Array(arr[5]) : null;
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=146").then(function (mod) {
+      return import("./natal-sky.js?v=147").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -2732,9 +2732,10 @@
         // idle frames instead of the first gesture. Then drain ONE builder per rendered frame and
         // pre-compile its shaders off the interactive path.
         if (natalSky && !userMoved && nowMs > entranceUntil && natalSky.ensureMidLayers) { natalSky.ensureFarLayers(); natalSky.ensureMidLayers(); }
-        if (natalSky && natalSky.drainBuild && natalSky.drainBuild()) {
-          if (renderer.compileAsync) renderer.compileAsync(scene, camera).catch(function () {});
-        }
+        if (natalSky && natalSky.drainBuild) natalSky.drainBuild();
+        // (build 226) compileAsync REMOVED: without KHR_parallel_shader_compile it degrades to
+        // SYNCHRONOUSLY compiling every program in the scene, once per drained builder — a
+        // multi-second GPU stall felt as a total freeze. Materials compile on first render as pre-224.
         // FOG DENSITY by scale: the scene keeps its near-field fog (0.0018, the "no back wall" look); at web
         // scale ease it MUCH thinner so the 36500-radius lattice's far side dissolves into black rather than
         // clipping (0.75/36500 ≈ 0.00002 → half-lost at the rim). Only fog:true materials (the web) respond —
@@ -2760,6 +2761,7 @@
       // Moon→Leo stay put. Absolute-time driven so it stays smooth under the idle frame governor.
       if (deepFusion && deepFusion.group) deepFusion.group.rotation.y = _clk * 0.006;
       if (nyeArmature) nyeArmature.tick(_clk);
+      if (nyeArmature && nyeArmature.atmoFar) nyeArmature.atmoFar(camera.position);
       if (_flare) {
         var fs = _flare;
         if (!fs.sun) { fs.sun = nyeArmature && nyeArmature.group.getObjectByName("NyeSunCore"); fs.earth = nyeArmature && nyeArmature.group.getObjectByName("NyeEarthMesh"); fs.moon = nyeArmature && nyeArmature.group.getObjectByName("NyeMoon"); }
