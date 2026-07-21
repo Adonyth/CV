@@ -656,8 +656,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var face = new T.Mesh(pgeo, sm); face.renderOrder = -1; grp.add(face);
     })();
     var gg = new T.BufferGeometry();
-    gg.setAttribute("position", new T.BufferAttribute(new Float32Array(GP), 3));
-    gg.setAttribute("color", new T.BufferAttribute(new Float32Array(GC), 3));
+    gg.setAttribute("position", new T.BufferAttribute(GP.slice(0, gC * 3), 3));
+    gg.setAttribute("color", new T.BufferAttribute(GC.slice(0, gC * 3), 3));
     var gm = new T.PointsMaterial({ map: DSO_SOFT, size: (d.psize || 2.7) * (internalDso ? 2.4 : 3.8), sizeAttenuation: true, vertexColors: true, transparent: true, opacity: internalDso ? 0.08 : 0.2, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in gm) gm.toneMapped = false; grp.add(new T.Points(gg, gm));
     var cg2 = new T.BufferGeometry();
@@ -881,7 +881,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   function tierPoints(key, P, C, sizePx, opt) {
     opt = opt || {};
     var g = new T.BufferGeometry();
-    g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
+    g.setAttribute("position", new T.BufferAttribute(P.slice(0, pC * 3), 3));
     g.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
     var m = new T.PointsMaterial({
       map: DSO_SOFT, size: sizePx * _tierPrx, sizeAttenuation: opt.attenuate === true,
@@ -898,7 +898,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   function tierGlow(key, P, C, sizePx, opt) {
     opt = opt || {};
     var g = new T.BufferGeometry();
-    g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
+    g.setAttribute("position", new T.BufferAttribute(P.slice(0, pC * 3), 3));
     g.setAttribute("color", new T.BufferAttribute(new Float32Array(C), 3));
     var m = new T.PointsMaterial({
       map: DSO_SOFT, size: sizePx * _tierPrx, sizeAttenuation: false,
@@ -1050,17 +1050,22 @@ export function buildNatalSky(THREE, scene, data, opts) {
     function ramp(f) { var i; for (i = 1; i < RAMP.length; i++) if (f <= RAMP[i][0]) break; if (i >= RAMP.length) i = RAMP.length - 1; var a = RAMP[i - 1], b = RAMP[i], k = (f - a[0]) / ((b[0] - a[0]) || 1); return [a[1][0] + (b[1][0] - a[1][0]) * k, a[1][1] + (b[1][1] - a[1][1]) * k, a[1][2] + (b[1][2] - a[1][2]) * k]; }
     var COOL = [0.663, 0.769, 0.925], PINK = [0.91, 0.361, 0.541];               // young blue-white O/B arm stars; H-alpha magenta-red HII knots
     function G() { return rng() + rng() + rng() + rng() - 2; }                  // ~N(0, sd≈0.58)
-    var P = [], Cc = [], GP = [], GC = [];                                       // star layer + a soft GLOW layer (large faint sprites → smooth luminosity)
+    // R4(d): PREALLOCATED buffers + shared scratch — the push-array version generated ~700k
+    // doubles of GC garbage and 118k Vector3 clones per build (a GC storm on the build frame).
+    var _capN = (N + 30000) * 3;                                                 // headroom for knots + companions beyond N
+    var P = new Float32Array(_capN), Cc = new Float32Array(_capN), GP = new Float32Array(_capN), GC = new Float32Array(_capN), pC = 0, gC = 0;
+    var _dTmp = new T.Vector3();
     function push(pt, r, g2, b2, amp, glowC) {
       var dd = pt.lengthSq();
       if (dd < Rin * Rin) return;                                               // the immediate solar system stays clear
       if (dd < Rout * Rout && rng() > (Math.sqrt(dd) - Rin) / (Rout - Rin)) return;  // fade the galaxy IN gradually — no hard spherical shell
+      if (pC * 3 + 3 > P.length) return;                                        // capacity guard — never grows mid-build
       var cr = r * amp, cg = g2 * amp, cb = b2 * amp, mx = Math.max(cr, cg, cb);
       if (mx > 1) { cr /= mx; cg /= mx; cb /= mx; }                              // hue-preserving cap: bright regions keep their hue, never a flat white
-      P.push(pt.x, pt.y, pt.z); Cc.push(cr, cg, cb);
-      if (glowC && rng() < glowC) { GP.push(pt.x, pt.y, pt.z); GC.push(cr, cg, cb); }  // a fraction also emit a big soft halo → smooth underglow
+      var pi = pC * 3; P[pi] = pt.x; P[pi + 1] = pt.y; P[pi + 2] = pt.z; Cc[pi] = cr; Cc[pi + 1] = cg; Cc[pi + 2] = cb; pC++;
+      if (glowC && rng() < glowC && gC * 3 + 3 <= GP.length) { var gi2 = gC * 3; GP[gi2] = pt.x; GP[gi2 + 1] = pt.y; GP[gi2 + 2] = pt.z; GC[gi2] = cr; GC[gi2 + 1] = cg; GC[gi2 + 2] = cb; gC++; }  // a fraction also emit a big soft halo → smooth underglow
     }
-    function disk(rr, ang, h) { return C.clone().addScaledVector(uu, rr * Math.cos(ang)).addScaledVector(vv, rr * Math.sin(ang)).addScaledVector(w, h); }
+    function disk(rr, ang, h) { return _dTmp.copy(C).addScaledVector(uu, rr * Math.cos(ang)).addScaledVector(vv, rr * Math.sin(ang)).addScaledVector(w, h); }   // SHARED scratch — consume immediately
     var armN = Math.round(N * 0.68), bulgeN = Math.round(N * 0.12), haloN = Math.round(N * 0.12), knotN = N - armN - bulgeN - haloN;   // fewer, dimmer bulge points → the core no longer piles up into an additive white blob
     // --- spiral arms: a thick glowing river with a dust rift, warm→cool colour, blue young stars ---
     for (var i = 0; i < armN; i++) {
@@ -1090,7 +1095,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     for (var j = 0; j < bulgeN; j++) {
       var br = Math.pow(rng(), 1.9) * Rgal * 0.15;
       var uax = rng() * 2 - 1, ph = rng() * Math.PI * 2, ss = Math.sqrt(1 - uax * uax);
-      var bpt = C.clone().addScaledVector(uu, br * ss * Math.cos(ph)).addScaledVector(vv, br * ss * Math.sin(ph)).addScaledVector(w, br * uax * 0.7);
+      var bpt = _dTmp.copy(C).addScaledVector(uu, br * ss * Math.cos(ph)).addScaledVector(vv, br * ss * Math.sin(ph)).addScaledVector(w, br * uax * 0.7);
       var bc = ramp(0.04 + 0.24 * (br / (Rgal * 0.15)));
       push(bpt, bc[0], bc[1], bc[2], 0.16 + 0.22 * Math.pow(rng(), 2.4), 0.09);  // a warm-gold core held well below white — capped brightness, sparse glow
     }
@@ -1169,16 +1174,16 @@ export function buildNatalSky(THREE, scene, data, opts) {
     })();
     // the GLOW underlayer — big soft low-opacity sprites blur into a smooth luminous galaxy beneath the stars
     var gg = new T.BufferGeometry();
-    gg.setAttribute("position", new T.BufferAttribute(new Float32Array(GP), 3));
-    gg.setAttribute("color", new T.BufferAttribute(new Float32Array(GC), 3));
+    gg.setAttribute("position", new T.BufferAttribute(GP.slice(0, gC * 3), 3));
+    gg.setAttribute("color", new T.BufferAttribute(GC.slice(0, gC * 3), 3));
     var gm = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 15 : 22, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.105, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in gm) gm.toneMapped = false;
     var glow = new T.Points(gg, gm); glow.name = "MilkyWayGlow"; glow.renderOrder = -5; glow.frustumCulled = false; _galBuilt = true;
     belt.add(glow);
     // the STAR layer on top — constant screen-size so the galaxy reads at every zoom
     var g = new T.BufferGeometry();
-    g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
-    g.setAttribute("color", new T.BufferAttribute(new Float32Array(Cc), 3));
+    g.setAttribute("position", new T.BufferAttribute(P.slice(0, pC * 3), 3));
+    g.setAttribute("color", new T.BufferAttribute(Cc.slice(0, pC * 3), 3));
     var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 2.5 : 3.0, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.54, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     var pts = new T.Points(g, m); pts.name = "MilkyWayGalaxy"; pts.renderOrder = -4; pts.frustumCulled = false;
@@ -1328,8 +1333,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
       P.push(bpt.x, bpt.y, bpt.z); Cc.push(bc[0] * a2, bc[1] * a2, bc[2] * a2);
     }
     var g = new T.BufferGeometry();
-    g.setAttribute("position", new T.BufferAttribute(new Float32Array(P), 3));
-    g.setAttribute("color", new T.BufferAttribute(new Float32Array(Cc), 3));
+    g.setAttribute("position", new T.BufferAttribute(P.slice(0, pC * 3), 3));
+    g.setAttribute("color", new T.BufferAttribute(Cc.slice(0, pC * 3), 3));
     var m = new T.PointsMaterial({ map: DSO_SOFT, size: mobile ? 2.6 : 3.2, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
     andromeda = new T.Points(g, m); andromeda.name = "Andromeda"; andromeda.renderOrder = -4; andromeda.frustumCulled = false;
@@ -2401,14 +2406,20 @@ export function buildNatalSky(THREE, scene, data, opts) {
 
   // idempotent LAZY-BY-SCALE entry points, called by space.js only on genuine user navigation (never during
   // the auto-entrance) so the ground/whole-sky view is instant & cool and heavy geometry is built on demand.
-  function ensureFarLayers() { if (_farBuilt) return; _farBuilt = true; buildMilkyWayGalaxy(); buildGalacticCore(); buildAndromeda(); }   // galaxy MUST precede core (core reads galacticCentre)
+  /* R4 (build 224): the four scene tiers used to build SYNCHRONOUSLY on the frame a zoom
+     threshold was crossed — a guaranteed 30-150ms hitch exactly mid-gesture, every session.
+     ensure* now ENQUEUES its builders; the host drains ONE per rendered frame (drainBuild),
+     so each build lands on its own frame — and, with the host's idle prewarm, usually on an
+     IDLE frame where a stall is invisible. FIFO preserves order (galaxy before core). */
+  var _buildQ = [];
+  function ensureFarLayers() { if (_farBuilt) return; _farBuilt = true; _buildQ.push(buildMilkyWayGalaxy, buildGalacticCore, buildAndromeda); }   // galaxy MUST precede core (core reads galacticCentre)
   // [2026-07-07] the old per-tier builders (LG/Sheet/Virgo + Laniakea/Neighbor/Web blobs) are REPLACED
   // by ONE fixed real-coordinate structure (buildLargeScaleStructure). Camera dollies through it =
   // rigid + continuous + real. ensureMid/Web both build the SAME model once (guarded).
   var _NOLSS = (typeof location !== "undefined" && /[?&]nolss=1/.test(location.search));
-  function ensureMidLayers() { if (_midBuilt) return; _midBuilt = true; if (!_NOLSS) buildLargeScaleStructure(o.lss); }
-  function ensureCosmicWeb() { if (_webBuilt) return; _webBuilt = true; if (!_NOLSS) buildLargeScaleStructure(o.lss); }
-  function ensureUniverse() { if (_uniBuilt) return; _uniBuilt = true; buildObservableUniverse(); buildBeyondHorizonBoundary(); }          // CMB horizon shell (the outer boundary beyond the mapped structure)
+  function ensureMidLayers() { if (_midBuilt) return; _midBuilt = true; if (!_NOLSS) _buildQ.push(function () { buildLargeScaleStructure(o.lss); }); }
+  function ensureCosmicWeb() { if (_webBuilt) return; _webBuilt = true; if (!_NOLSS) _buildQ.push(function () { buildLargeScaleStructure(o.lss); }); }
+  function ensureUniverse() { if (_uniBuilt) return; _uniBuilt = true; _buildQ.push(buildObservableUniverse, buildBeyondHorizonBoundary); }          // CMB horizon shell (the outer boundary beyond the mapped structure)
 
   /* ---------------- constellation names: IN-SCENE Songti sprites (same craft as the 干支 glyphs) ---------------- */
   function nameTexture(zh, en, key, loc) {
@@ -2639,6 +2650,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     group: group,
     starPoints: starPoints,
     ensureFarLayers: ensureFarLayers,
+    drainBuild: function () { var f = _buildQ.shift(); if (!f) return false; f(); return true; },
     ensureMidLayers: ensureMidLayers,
     ensureCosmicWeb: ensureCosmicWeb,
     ensureUniverse: ensureUniverse,

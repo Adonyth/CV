@@ -1575,7 +1575,7 @@
       var webXYZ = arr[4] ? new Int16Array(arr[4]) : null;
       var webRGB = arr[5] ? new Uint8Array(arr[5]) : null;
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=144").then(function (mod) {
+      return import("./natal-sky.js?v=145").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -2727,6 +2727,14 @@
         if (natalSky && natalSky.ensureMidLayers && _farCl > 3200) natalSky.ensureMidLayers();   // Local Group / Local Sheet / Virgo supercluster: built just before the LG crossfade begins (fadeIn 5000)
         if (natalSky && _farCl > 12000) natalSky.ensureCosmicWeb();     // the Laniakea flow basin + neighbour basins + the whole web (fadeIn 24200 — built well ahead)
         if (natalSky && natalSky.ensureUniverse && _farCl > 30000) natalSky.ensureUniverse();   // far foam + CMB horizon + unobserved-boundary cue (active from 56000)
+        // R4: IDLE PREWARM — after the entrance, quietly enqueue the two layers every session hits
+        // (galaxy at the first zoom-out, the survey field right after) so their build cost lands on
+        // idle frames instead of the first gesture. Then drain ONE builder per rendered frame and
+        // pre-compile its shaders off the interactive path.
+        if (natalSky && !userMoved && nowMs > entranceUntil && natalSky.ensureMidLayers) { natalSky.ensureFarLayers(); natalSky.ensureMidLayers(); }
+        if (natalSky && natalSky.drainBuild && natalSky.drainBuild()) {
+          if (renderer.compileAsync) renderer.compileAsync(scene, camera).catch(function () {});
+        }
         // FOG DENSITY by scale: the scene keeps its near-field fog (0.0018, the "no back wall" look); at web
         // scale ease it MUCH thinner so the 36500-radius lattice's far side dissolves into black rather than
         // clipping (0.75/36500 ≈ 0.00002 → half-lost at the rim). Only fog:true materials (the web) respond —
