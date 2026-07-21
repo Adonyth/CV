@@ -830,15 +830,49 @@ export function mountNyeArmature(THREE, scene, opts) {
     pickShell.userData.nyePart = "earth";
     earthGroup.add(pickShell);
 
+    /* ATMOSPHERIC SCATTERING (build 221) — replaces the flat constant-opacity shell with an
+       analytic single-scatter look: the blue limb intensifies at grazing angles (fresnel),
+       glows on the day side, dies on the night side, and a warm sunset ring hugs the
+       terminator. LDR-safe peaks (~0.55) so only the brightest limb feeds the bloom pass. */
+    const atmoUniforms = {
+      uSunDirWorld: { value: new T.Vector3(0, 0, 1) },
+      uIntensity: { value: 1.0 }
+    };
     const atmo = new T.Mesh(
-      new T.SphereGeometry(radius * 1.14, 72, 72),
-      new T.MeshBasicMaterial({
-        color: 0x55aaff,
+      new T.SphereGeometry(radius * 1.16, 72, 72),
+      new T.ShaderMaterial({
+        uniforms: atmoUniforms,
         transparent: true,
-        opacity: 0.20,
         blending: T.AdditiveBlending,
         depthWrite: false,
-        side: T.BackSide
+        side: T.BackSide,
+        vertexShader: [
+          "varying vec3 vWn; varying vec3 vWp;",
+          "void main(){",
+          "  vec4 wp = modelMatrix * vec4(position, 1.0);",
+          "  vWp = wp.xyz;",
+          "  vWn = normalize(mat3(modelMatrix) * normal);",
+          "  gl_Position = projectionMatrix * viewMatrix * wp;",
+          "}"
+        ].join("\n"),
+        fragmentShader: [
+          "varying vec3 vWn; varying vec3 vWp;",
+          "uniform vec3 uSunDirWorld; uniform float uIntensity;",
+          "void main(){",
+          "  vec3 N = normalize(vWn);",
+          "  vec3 V = normalize(cameraPosition - vWp);",
+          "  vec3 L = normalize(uSunDirWorld);",
+          "  float mu = dot(N, V);",
+          "  float rim = pow(1.0 - abs(mu), 3.0);",                          // limb concentration
+          "  float ndl = dot(N, L);",
+          "  float day = 0.12 + 0.88 * smoothstep(-0.32, 0.28, ndl);",       // day-side glow, night-side fade
+          "  vec3 blue = vec3(0.30, 0.55, 1.0);",
+          "  float band = (1.0 - smoothstep(0.0, 0.42, abs(ndl))) * smoothstep(-0.5, -0.05, ndl - 0.0);", // terminator belt
+          "  vec3 warm = vec3(1.0, 0.42, 0.16) * band * 0.30;",
+          "  vec3 col = (blue * day * 0.55 + warm) * rim * uIntensity;",
+          "  gl_FragColor = vec4(col, 1.0);",
+          "}"
+        ].join("\n")
       })
     );
     atmo.name = "NyeEarthAtmosphere";
@@ -849,7 +883,7 @@ export function mountNyeArmature(THREE, scene, opts) {
       new T.MeshBasicMaterial({
         color: 0x3366cc,
         transparent: true,
-        opacity: 0.06,
+        opacity: 0.045,
         blending: T.AdditiveBlending,
         depthWrite: false,
         side: T.BackSide
@@ -861,7 +895,7 @@ export function mountNyeArmature(THREE, scene, opts) {
     /* the GPS footprint shell lives in dressEarth (space.js) — ONE owner: it bakes the
        602,733 points at 6144px as a child of the earth mesh (inherits the sidereal
        rotation natively). The PNG shell that used to stack here doubled GPU memory. */
-    return { group: earthGroup, mesh: earthMesh, uniforms, vertexShader: earthVert };
+    return { group: earthGroup, mesh: earthMesh, uniforms, atmoUniforms, vertexShader: earthVert };
   }
 
   function buildMoon(radius) {
@@ -1226,6 +1260,7 @@ export function mountNyeArmature(THREE, scene, opts) {
     if (earthLight.lengthSq() < 1e-12) earthLight.set(0, 0, 1);
     else earthLight.normalize();
     earth.uniforms.uSunDirWorld.value.copy(earthLight);
+    if (earth.atmoUniforms) earth.atmoUniforms.uSunDirWorld.value.copy(earthLight);
 
     if (moonUniformsRef) {
       const moonLight = sunPos.clone().sub(moon.mesh.position);

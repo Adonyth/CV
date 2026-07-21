@@ -1461,7 +1461,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=39").then(function (mod) {
+    import("./nye-armature.js?v=40").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -1473,6 +1473,43 @@
            (主外) and the Moon toward Leo (主内), exactly as the natal chart reads. */
         var solar = nyeArmature.group.getObjectByName("NyeSolarSystem");
         earthGrpRef = nyeArmature.group.getObjectByName("NyeEarth");
+        /* SUN LENS FLARE (build 221, custom) — the three.js Lensflare addon does framebuffer
+           copies that break against our multisampled composer target (it rendered a black box).
+           This lightweight replacement draws the classic ghost chain as screen-anchored sprites:
+           project the Sun to NDC each frame, place ghosts along the sun→centre axis, fade on
+           viewport exit and behind-camera, and occlude via a 120ms-throttled ray against the
+           Earth/Moon. Procedural canvas textures; ~zero per-frame cost. */
+        (function () {
+          function flareTex(px, stops, ring) {
+            var cnv = document.createElement("canvas"); cnv.width = cnv.height = px;
+            var ctx = cnv.getContext("2d");
+            var g = ctx.createRadialGradient(px/2, px/2, ring ? px*0.30 : 0, px/2, px/2, px/2);
+            stops.forEach(function (st) { g.addColorStop(st[0], st[1]); });
+            ctx.fillStyle = g; ctx.fillRect(0, 0, px, px);
+            var t = new THREE.CanvasTexture(cnv); t.colorSpace = THREE.SRGBColorSpace; return t;
+          }
+          var texGlow = flareTex(256, [[0, "rgba(255,244,224,0.9)"], [0.22, "rgba(255,208,146,0.5)"], [0.5, "rgba(236,146,86,0.15)"], [1, "rgba(236,146,86,0)"]]);
+          var texGhost = flareTex(128, [[0, "rgba(255,255,255,0)"], [0.55, "rgba(160,200,255,0.10)"], [0.78, "rgba(170,208,255,0.26)"], [1, "rgba(170,208,255,0)"]], true);
+          var texDot = flareTex(64, [[0, "rgba(255,230,200,0.45)"], [0.6, "rgba(255,214,170,0.13)"], [1, "rgba(255,214,170,0)"]]);
+          // [texture, px size, distance along sun→centre (0=sun, 1=centre, >1 past), tint, base opacity]
+          var DEFS = [
+            [texGlow, 210, 0.0, null, 0.85],
+            [texGhost, 64, 0.33, 0x8cb8ff, 0.5],
+            [texDot, 40, 0.55, 0xffc78c, 0.5],
+            [texGhost, 100, 0.82, 0x739ef2, 0.4],
+            [texDot, 28, 1.05, 0xffb380, 0.45]
+          ];
+          _flare = { grp: new THREE.Group(), sprites: [], occ: 1, occT: 0, sun: null, earth: null, moon: null, ray: new THREE.Raycaster(), v: new THREE.Vector3(), dir: new THREE.Vector3() };
+          DEFS.forEach(function (d) {
+            var m = new THREE.SpriteMaterial({ map: d[0], transparent: true, opacity: d[4], depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+            if (d[3] != null) m.color = new THREE.Color(d[3]);
+            if ("toneMapped" in m) m.toneMapped = false;
+            var sp = new THREE.Sprite(m); sp.renderOrder = 990; sp.visible = false; sp.userData._def = d;
+            _flare.grp.add(sp); _flare.sprites.push(sp);
+          });
+          _flare.grp.name = "SunFlareChain";
+          scene.add(_flare.grp);
+        })();
         if (solar && earthGrpRef) {
           solar.position.copy(earthGrpRef.position).negate();
           nyeArmature.group.updateMatrixWorld(true);
@@ -1975,6 +2012,7 @@
 
       // clean-click routing: a drag is never a click
       var pickRay = new THREE.Raycaster(), pickNdc = new THREE.Vector2(), _lastPickAt = 0;
+      var _flare = null;   // custom sun lens-flare chain (built at armature mount)
       var FOCUS_MIN = { NyeSun: 9.5, NyeMoon: 2.2, NatalJupiter: 4.5, NatalSaturn: 4.5, NatalMercury: 0.9, NatalVenus: 1.6, NatalMars: 1.1, NatalUranus: 1.9, NatalNeptune: 1.8, NatalPluto: 0.5, NatalPlutoMoon: 0.35 };   // closest approach per body (must clear each surface + the near-plane)
       function glideToBody(objName, viewDist, nFrames) {
         var obj = nyeArmature.group.getObjectByName(objName);
@@ -2710,6 +2748,49 @@
       // Moon→Leo stay put. Absolute-time driven so it stays smooth under the idle frame governor.
       if (deepFusion && deepFusion.group) deepFusion.group.rotation.y = _clk * 0.006;
       if (nyeArmature) nyeArmature.tick(_clk);
+      if (_flare) {
+        var fs = _flare;
+        if (!fs.sun) { fs.sun = nyeArmature && nyeArmature.group.getObjectByName("NyeSunCore"); fs.earth = nyeArmature && nyeArmature.group.getObjectByName("NyeEarthMesh"); fs.moon = nyeArmature && nyeArmature.group.getObjectByName("NyeMoon"); }
+        var sunVisible = fs.sun && fs.sun.visible && fs.sun.parent;
+        if (sunVisible) {
+          fs.sun.getWorldPosition(fs.v);
+          fs.dir.copy(fs.v).sub(camera.position);
+          var behind = fs.dir.dot(camera.getWorldDirection(_pivT)) <= 0;   // _pivT reused as scratch here (frame-local)
+          var ndc = fs.v.project(camera);                                   // fs.v now holds NDC
+          var inView = !behind && ndc.x > -1.25 && ndc.x < 1.25 && ndc.y > -1.25 && ndc.y < 1.25;
+          if (inView) {
+            var nowF = performance.now();
+            if (nowF - fs.occT > 120) {                                     // throttled occlusion: is the Sun hidden by Earth/Moon?
+              fs.occT = nowF;
+              fs.sun.getWorldPosition(fs.dir);
+              fs.ray.set(camera.position, fs.dir.sub(camera.position).normalize());
+              var occHit = false, sunDist = camera.position.distanceTo(fs.sun.getWorldPosition(_pivT));
+              var tests = [fs.earth, fs.moon];
+              for (var ti = 0; ti < tests.length; ti++) {
+                if (!tests[ti] || !tests[ti].visible) continue;
+                var hs = fs.ray.intersectObject(tests[ti], false);
+                if (hs.length && hs[0].distance < sunDist - 0.01) { occHit = true; break; }
+              }
+              fs._occTarget = occHit ? 0 : 1;
+            }
+            fs.occ += ((fs._occTarget == null ? 1 : fs._occTarget) - fs.occ) * 0.18;
+            var edge = Math.max(Math.abs(ndc.x), Math.abs(ndc.y));
+            var fade = fs.occ * (1 - Math.max(0, (edge - 0.92)) / 0.33);
+            var fovH = Math.tan(camera.fov * Math.PI / 360);
+            for (var fi = 0; fi < fs.sprites.length; fi++) {
+              var sp2 = fs.sprites[fi], d2 = sp2.userData._def;
+              if (fade <= 0.02) { sp2.visible = false; continue; }
+              var gx = ndc.x * (1 - d2[2]), gy = ndc.y * (1 - d2[2]);
+              _pivT.set(gx, gy, 0.5).unproject(camera).sub(camera.position).normalize();
+              sp2.position.copy(camera.position).addScaledVector(_pivT, 50);
+              var w = 2 * 50 * fovH * (d2[1] / innerHeight);
+              sp2.scale.set(w, w, 1);
+              sp2.material.opacity = d2[4] * fade;
+              sp2.visible = true;
+            }
+          } else for (var fh = 0; fh < fs.sprites.length; fh++) fs.sprites[fh].visible = false;
+        } else for (var fo = 0; fo < fs.sprites.length; fo++) fs.sprites[fo].visible = false;
+      }
       if (natalSky) natalSky.tick(_clk);
       if (composer) {
         if (bloomPass) bloomPass.enabled = (window.__cvQuality || 0) < 2;   // shed the bloom pass under real load
