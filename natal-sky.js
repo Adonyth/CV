@@ -1236,12 +1236,25 @@ export function buildNatalSky(THREE, scene, data, opts) {
         var hr2 = Math.sqrt(iRng()) * Rgal, ha2 = iRng() * 6.2832;
         stamp(hr2 * Math.cos(ha2), hr2 * Math.sin(ha2), 70 + 120 * iRng(), ramp(hr2 / Rgal), 0.012 * (1 - 0.5 * hr2 / Rgal));
       }
+      // RADIAL EXTINCTION MASK — the sticker/membrane fix: luminance must reach EXACT zero well
+      // before the canvas border, or ClampToEdge smears the last texel row across the quad rim as
+      // a visible square frame. destination-in zeroes alpha (and thus the additive contribution)
+      // from 62% radius outward, fully gone by 94% — the glow now dissolves into space.
+      ctx.globalCompositeOperation = "destination-in";
+      var mask = ctx.createRadialGradient(TEX/2, TEX/2, 0, TEX/2, TEX/2, TEX/2);
+      mask.addColorStop(0, "rgba(0,0,0,1)");
+      mask.addColorStop(0.62, "rgba(0,0,0,1)");
+      mask.addColorStop(0.82, "rgba(0,0,0,0.38)");
+      mask.addColorStop(0.94, "rgba(0,0,0,0)");
+      mask.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = mask; ctx.fillRect(0, 0, TEX, TEX);
+      ctx.globalCompositeOperation = "source-over";
       var impTex = new T.CanvasTexture(cnv);
       impTex.colorSpace = T.SRGBColorSpace; impTex.anisotropy = 4;
       var impGeo = new T.PlaneGeometry(2 * S, 2 * S);
       var impM4 = new T.Matrix4().makeBasis(uu.clone(), vv.clone(), w.clone()).setPosition(C.x, C.y, C.z);
       impGeo.applyMatrix4(impM4);                                            // bake orientation+centre INTO the geometry (origin-collapse-safe)
-      var impMat = new T.MeshBasicMaterial({ map: impTex, transparent: true, opacity: 0.5,
+      var impMat = new T.MeshBasicMaterial({ map: impTex, transparent: true, opacity: 0.42,
         blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, fog: false });
       if ("toneMapped" in impMat) impMat.toneMapped = false;
       var imp = new T.Mesh(impGeo, impMat);
@@ -2595,7 +2608,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   }
 
   /* ---------------- lifecycle ---------------- */
-  var _galBuilt = false;
+  var _galBuilt = false; var _impV = new T.Vector3();
   var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null, _sfObj = null, _sfMat = null, _sfBase = 1, _bdT = 0, _keepGal = false, _galMats = null, _localHide = null, _nsObj = null, _nsMat = null, _nsBase = 1, _lhTries = 0, _tierSeen = {}, _lssObjs = null, _tierScaleOn = true;
   // drives tier presence only. Opacity is never used for inter-tier transitions;
   // the address transition must read as real geometric zoom/collapse.
@@ -2808,11 +2821,20 @@ export function buildNatalSky(THREE, scene, data, opts) {
           // the frame. Continuous at the MW handoff (tail ≈ 0.97 at 6800).
           var _gTail = LOD ? ((1 - 0.72 * LOD.smooth(6500, 9200, _cl)) * (1 - LOD.smooth(11500, 14500, _cl))) : 1;
           var _gqv = window.__cvQuality || 0;                                    // FIX E: the 22px MilkyWayGlow (_galMats[1], ~42M writes) is the biggest non-survey fill bomb
+          // IMPOSTOR VIEW-ANGLE FADE (the sticker fix, part 2): a flat plane reads as a membrane when
+          // seen edge-on. Fade the impostor by |cos| of the view angle to the galactic normal — face-on
+          // it carries the photographic glow, edge-on it hands the view to the point cloud's real thickness.
+          var _impFade = 1;
+          if (_galMats.length > 2 && galacticNormal && galacticCentre) {
+            _impV.copy(o.camera.position).sub(galacticCentre).normalize();
+            var _mu2 = Math.abs(_impV.dot(galacticNormal));
+            _impFade = 0.08 + 0.92 * Math.pow(_mu2, 1.25);
+          }
           for (var _gi = 0; _gi < _galMats.length; _gi++) {
             var _ge = _galMats[_gi];
             _ge.o.visible = _gOn && !(_gi === 1 && _gqv >= 1);                    // shed the glow halo under load; the 118k sharp disc carries the read
             if (_ge.o.visible) {
-              _ge.m.opacity = _ge.base * _gSolo * _gTail;
+              _ge.m.opacity = _ge.base * _gSolo * _gTail * (_gi === 2 ? _impFade : 1);
               _ge.o.scale.setScalar(_gScale);
             }
           }
