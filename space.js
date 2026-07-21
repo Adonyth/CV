@@ -212,8 +212,8 @@
         return Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
       }
       var _avAxis = null, _avQ = null, _avOff = null;
-      function applyAngVel(av) {
-        var len = av.length(); if (len < 1e-10 || !isFinite(len)) return;
+      function applyAngVel(av, scale) {
+        var len = av.length() * (scale > 0 ? scale : 1); if (len < 1e-10 || !isFinite(len)) return;
         if (!_avAxis) { _avAxis = new T3.Vector3(); _avQ = new T3.Quaternion(); _avOff = new T3.Vector3(); }
         var axis = _avAxis.copy(av).normalize();
         if (!isFinite(axis.x + axis.y + axis.z) || axis.lengthSq() < 1e-20) return;
@@ -276,20 +276,21 @@
           safeLookAtTarget();
         },
         getRadius: function () { return cam.position.distanceTo(target); },
-        update: function () {
+        update: function (dtF) {
+          var dn = (dtF > 0 && isFinite(dtF)) ? dtF : 1;   // frames-equivalent step (offline pump() passes nothing → 1)
           if (groundMode) {   // the orbit model is suspended — only the flick inertia glides out
             if (!dragging && (Math.abs(gVelYaw) > 2e-5 || Math.abs(gVelPitch) > 2e-5)) {
-              gYaw += gVelYaw;
-              gPitch = Math.max(-0.10, Math.min(1.52, gPitch + gVelPitch));
-              gVelYaw *= 0.935; gVelPitch *= 0.935;   // longer silk glide on release
+              gYaw += gVelYaw * dn;
+              gPitch = Math.max(-0.10, Math.min(1.52, gPitch + gVelPitch * dn));
+              var gd = Math.pow(0.935, dn); gVelYaw *= gd; gVelPitch *= gd;   // longer silk glide on release (dt-correct)
               applyGroundLook();
             }
             return;
           }
-          applyAngVel(angVel);
+          applyAngVel(angVel, dn);
           // R1: while DRAGGING, damp hard (0.30/frame → the world follows the hand, τ≈3 frames ≈55ms);
           // on release the gentler dampingFactor gives a ~1.2s silk coast instead of a 2-3s float-out.
-          angVel.multiplyScalar(1 - (dragging ? 0.30 : dampingFactor));
+          angVel.multiplyScalar(Math.pow(1 - (dragging ? 0.30 : dampingFactor), dn));
           if (angVel.lengthSq() < 1e-14) angVel.set(0, 0, 0);
           var off = safeOrbitOffset(); var r = off.length();
           if (!isFinite(r) || r < 1e-8) return;
@@ -306,7 +307,7 @@
             // critically-damped ease in LOG space → scale-invariant, geometry-exact, no overshoot
             var lnR = Math.log(r), lnT = Math.log(zoomTarget), d = lnT - lnR, lnNext;
             if (Math.abs(d) < 1e-4) { lnNext = lnT; zoomTarget = Math.exp(lnT); }  // snap: kill float creep
-            else { lnNext = lnR + zoomEase * d; }
+            else { lnNext = lnR + (1 - Math.pow(1 - zoomEase, dn)) * d; }
             var rNext = Math.exp(lnNext);
             if (rNext < minDistance) rNext = minDistance;
             else if (rNext > maxDistance) rNext = maxDistance;         // re-clamp the eased radius every frame
@@ -481,7 +482,7 @@
       glide.frames = 0; glide.camTo = null; glide.targetTo = null; glide.axis = null; glide.distTarget = 0;
       glide.param = {
         flight: true, t: 0,
-        n: o.frames || Math.round(Math.max(150, Math.min(430, 90 + dist * 2.1))),
+        n: o.frames || Math.round(Math.max(120, Math.min(300, 80 + dist * 1.4))),
         ease: easeInOutCubic,
         P0: P0, P1: P1, P2: P2, P3: P3,
         body: body, t0: controls.target.clone(),
@@ -1860,7 +1861,7 @@
         var camTo = up.clone().multiplyScalar(highR || 12).addScaledVector(east, 5.0);
         paramGlide({
           camTo: camTo, targetTo: HOME.clone(),
-          frames: fn ? 210 : 290,        // ~3.5s when a flight follows, ~5s for the pure climb — nobody reaches space in two seconds
+          frames: fn ? 170 : 210,        // ~2.8s / ~3.5s — still reads as a climb, no longer an eternity
           ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 7, onDone: fn || null
         });
         return true;
@@ -1949,10 +1950,8 @@
           var hAz = (hOff.x * hOff.x + hOff.z * hOff.z > 1e-6) ? Math.atan2(hOff.x, hOff.z) : 0.8;
           var hEl = 0.517;
           var hDir = new THREE.Vector3(Math.sin(hAz) * Math.cos(hEl), Math.sin(hEl), Math.cos(hAz) * Math.cos(hEl));
-          glide.targetTo = HOME.clone();
-          glide.camTo = HOME.clone().add(hDir.multiplyScalar(name === "pillars" ? 92 : 390));
-          glide.axis = null; glide.step = 0; glide.distTarget = 0;
-          glide.frames = name === "pillars" ? 90 : 110;
+          paramGlide({ camTo: HOME.clone().add(hDir.multiplyScalar(name === "pillars" ? 92 : 390)), targetTo: HOME.clone(),
+            frames: name === "pillars" ? 130 : 150, ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 4, onDone: null });
         } else if (name && name.indexOf("star:") === 0) {
           focusConstellation(name.slice(5), 110);
         }
@@ -2176,15 +2175,17 @@
           controls.exitGroundMode(); groundHint(false);
           clearSel(); soloBody = null;
           var gdir = camera.position.clone().normalize();
-          paramGlide({ camTo: gdir.multiplyScalar(128), targetTo: HOME.clone(), frames: 300, ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 5, onDone: null });
+          paramGlide({ camTo: gdir.multiplyScalar(128), targetTo: HOME.clone(), frames: 220, ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 5, onDone: null });
           return;
         }
         clearSel(); soloBody = null;             // the whole chart returns — rings and all
         var az = (function () { var o = camera.position.clone().sub(controls.target); return (o.x * o.x + o.z * o.z > 1e-6) ? Math.atan2(o.x, o.z) : 0.8; })();
         var el = 0.26, dir = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
-        glide.targetTo = HOME.clone();
-        glide.camTo = HOME.clone().add(dir.multiplyScalar(128));
-        glide.axis = null; glide.step = 0; glide.distTarget = 0; glide.frames = 90; glide.onDone = null;   // home never navigates away
+        // R9: the legacy exponential glide teleported 10-12% of the distance on frame one from deep
+        // scales — route home through the authored paramGlide (smooth start, distance-scaled duration).
+        paramGlide({ camTo: HOME.clone().add(dir.multiplyScalar(128)), targetTo: HOME.clone(),
+          frames: Math.min(300, 90 + Math.round(55 * Math.abs(Math.log(Math.max(1, camera.position.length()) / 128)))),
+          ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 5, onDone: null });   // home never navigates away
       }
       window.__space.goHome = goHome;
       if (homeBtn) homeBtn.addEventListener("click", goHome);
@@ -2240,8 +2241,8 @@
         var target = targetForScale(peak);
         var dir = camera.position.clone().sub(controls.target || HOME); if (dir.lengthSq() < 1e-6) dir.set(0.42, 0.26, 0.88);
         dir.normalize();
-        var frames = Math.round(140 + Math.abs(Math.log(peak / Math.max(1, camera.position.length()))) * 100);
-        paramGlide({ camTo: cameraOnScaleSphere(target, dir, peak), targetTo: target, frames: Math.min(420, frames), ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 5.5, onDone: null });
+        var frames = Math.round(90 + Math.abs(Math.log(peak / Math.max(1, camera.position.length()))) * 62);
+        paramGlide({ camTo: cameraOnScaleSphere(target, dir, peak), targetTo: target, frames: Math.min(300, frames), ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 5.5, onDone: null });
       }
       easeAddressPivot = function () {
         if (!LOD || !LOD.weight || !natalSky || !userMoved || controls.isGround() || glideActive() || soloBody || ptrDown || panOn) return;
@@ -2489,6 +2490,7 @@
       var busy = true;
       var sec = (t || 0) * 0.001;
       var dt = Math.min(0.1, Math.max(0.001, sec - prevSec)); prevSec = sec;
+      var dtF = Math.min(3, dt * 60);   // R10: frames-equivalent step — all authored 60fps constants scale by this (120Hz no longer runs 2×; capped so a stall never teleports an ease)
       frameNo++;
       // (frame cadence is measured inside the COSMOS block below, gated to full-rate active frames only,
       //  so the deliberate at-rest / inertial-tail throttle never fools the governor into degrading)
@@ -2547,13 +2549,13 @@
         // the starfield and pulls out to the whole orrery ("✦ Whole sky" invites it).
         if (!userMoved && nowMs < entranceUntil) {
           var r0 = controls.getRadius();
-          controls.setRadius(r0 + (7.6 - r0) * 0.045);   // land close on the Earth, not the wide overview
+          controls.setRadius(r0 + (7.6 - r0) * (1 - Math.pow(0.955, dtF)));   // land close on the Earth, not the wide overview (dt-correct)
         }
         // choreographed flight (launch / landing) — a standard glide starting takes precedence
         if (glide.param && glide.frames > 0) glide.param = null;
         if (glide.param && glide.param.flight) {
           var F = glide.param;
-          F.t = Math.min(1, F.t + 1 / F.n);
+          F.t = Math.min(1, F.t + dtF / F.n);
           var fe = F.ease(F.t);
           bez(F, fe, _fPos);
           _fVel.copy(_fPos).sub(camera.position);           // this frame's velocity
@@ -2589,7 +2591,7 @@
           }
         } else if (glide.param) {
           var P = glide.param;
-          P.t = Math.min(1, P.t + 1 / P.n);
+          P.t = Math.min(1, P.t + dtF / P.n);
           var pe = P.ease(P.t);
           var pr = Math.exp(P.lnR0 + (P.lnR1 - P.lnR0) * pe);
           _pgDir.copy(P.d0).lerp(P.d1, pe).normalize();
@@ -2607,20 +2609,22 @@
             if (glide.onDone) { var fP = glide.onDone; glide.onDone = null; fP(); }
           }
         }
-        // guided glide after clicking a body (any touch cancels)
+        // guided glide after clicking a body (any touch cancels) — eases are dt-correct (R10)
         if (glide.frames > 0) {
+          var _lgK = 1 - Math.pow(0.9, dtF), _lgKu = 1 - Math.pow(0.92, dtF), _lgKt = 1 - Math.pow(0.88, dtF);
           if (glide.camTo) {
-            controls.target.lerp(glide.targetTo, 0.1);
-            camera.position.lerp(glide.camTo, 0.1);
-            camera.up.lerp(UP_Y, 0.08).normalize();
+            controls.target.lerp(glide.targetTo, _lgK);
+            camera.position.lerp(glide.camTo, _lgK);
+            camera.up.lerp(UP_Y, _lgKu).normalize();
             camera.lookAt(controls.target);
           } else {
-            if (glide.targetTo) { var dT = glide.targetTo.clone().sub(controls.target).multiplyScalar(0.12); controls.target.add(dT); camera.position.add(dT); }
-            if (glide.axis) controls.rotateWorld(glide.axis, glide.step);
-            if (glide.distTarget) { var rg = controls.getRadius(); controls.setRadius(rg + (glide.distTarget - rg) * 0.12); }
+            if (glide.targetTo) { var dT = glide.targetTo.clone().sub(controls.target).multiplyScalar(_lgKt); controls.target.add(dT); camera.position.add(dT); }
+            if (glide.axis) controls.rotateWorld(glide.axis, glide.step * dtF);
+            if (glide.distTarget) { var rg = controls.getRadius(); controls.setRadius(rg + (glide.distTarget - rg) * _lgKt); }
           }
-          glide.frames--;
-          if (glide.frames === 0) {
+          glide.frames -= dtF;
+          if (glide.frames <= 0) {
+            glide.frames = 0;
             glide.targetTo = null; glide.camTo = null;
             if (glide.onDone) { var fD = glide.onDone; glide.onDone = null; fD(); }
           }
@@ -2669,7 +2673,7 @@
         // the entrance/glide owns the radius this frame → update() must NOT ease against it;
         // otherwise the wheel's log-target owns it. Recomputed every frame, so it clears cleanly.
         controls.setExternalDrive(glideActive() || (!userMoved && nowMs < entranceUntil));
-        controls.update();
+        controls.update(dtF);
         easeAddressPivot();
         if (!beltCentered && natalSky && nyeArmature) {   // one-shot: the WHOLE planetary system (planets + belt) orbits the SUN, not the Earth
           var _bodies = natalSky.group.getObjectByName("NatalBodies");
@@ -2821,7 +2825,7 @@
     window.__space.camera = camera;
     window.__space.pump = function (n2) { var base = performance.now(); for (var q = 0; q < (n2 || 1); q++) frame(base + q * 16.7); };
     window.__space.snap = function () {
-      if (COSMOS && controls) controls.update();
+      if (COSMOS && controls) controls.update(dtF);
       if (composer) composer.render(); else renderer.render(scene, camera); return canvas.toDataURL("image/jpeg", 0.8);
     };
     window.__space.setOpacity = function (o) { canvas.style.opacity = String(o); };
