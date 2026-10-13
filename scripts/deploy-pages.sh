@@ -35,4 +35,9 @@ if [ "${1:-}" = "--dry-run" ]; then
   exit 0
 fi
 
-npx --yes wrangler pages deploy "$STAGE" --project-name="$PROJECT" --branch=main --commit-dirty=true
+# run FROM the staging folder: wrangler looks for functions/ in the current directory,
+# not in the uploaded one — deploying from the repo root would ship the redirect here too.
+SHA="$(git rev-parse HEAD)"
+cd "$STAGE"
+npx --yes wrangler pages deploy . --project-name="$PROJECT" --branch=main \
+  --commit-hash="$SHA" --commit-dirty=true
