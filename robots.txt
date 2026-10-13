@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://cv-2ad.pages.dev/sitemap.xml
+Sitemap: https://jiaxuanchen.pages.dev/sitemap.xml

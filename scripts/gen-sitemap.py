@@ -4,7 +4,7 @@
 # Also refreshes robots.txt to point at the sitemap. Domain is the single SITE constant below.
 import os, glob, datetime, html
 
-SITE = "https://cv-2ad.pages.dev"          # production domain — change here if a custom domain is added
+SITE = "https://jiaxuanchen.pages.dev"          # production domain — change here if a custom domain is added
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # (path, priority, changefreq). Root pages first, then the one-object-one-page content.

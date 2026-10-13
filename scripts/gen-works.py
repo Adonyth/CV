@@ -301,7 +301,7 @@ KEYNAV_JS = """
     });
 """
 
-SITE = "https://cv-2ad.pages.dev"   # production domain — single source of truth for canonical/OG/JSON-LD
+SITE = "https://jiaxuanchen.pages.dev"   # production domain — single source of truth for canonical/OG/JSON-LD
 
 def page(title, body, depth=0, pager=False, desc="", path=None, jsonld=None):
     pre = "../" * depth

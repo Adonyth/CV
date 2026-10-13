@@ -79,6 +79,8 @@
         ]
       }
     </script>
+    <!-- 2026-10-08: optional animation loading must never hide the actual CV. -->
+    <style>.reveal{opacity:1!important;transform:none!important}</style>
   </head>
 
   <body>
@@ -287,13 +289,19 @@
         <div class="rail reveal">
           <div class="secnum"><b>05</b> <span class="i18n-en">Software &amp; Benchmarks</span><span class="i18n-zh">软件与基准</span></div>
           <ul class="projs">
+            <li class="proj glass" id="swindo">
+              <h3>Swindo</h3>
+              <div class="entry-meta"><span class="tag tag--prep"><span class="i18n-en">In development</span><span class="i18n-zh">开发中</span></span> <span class="i18n-en">Product engineering · golf-motion software · 2026</span><span class="i18n-zh">产品工程 · 高尔夫动作软件 · 2026</span></div>
+              <p><span class="i18n-en">Developing capture and calibration workflows for golf-motion data, together with product interfaces and website engineering.</span><span class="i18n-zh">参与高尔夫动作数据的采集与校准流程开发，以及产品界面和官网工程。</span></p>
+              <ul class="artifacts"><li><a href="products/swindo.html"><span class="i18n-en">Project note ↗</span><span class="i18n-zh">项目介绍 ↗</span></a></li></ul>
+            </li>
             <li class="proj glass">
               <h3>omytea-quantum-substrate</h3>
               <div class="entry-meta"><span class="tag tag--public"><span class="i18n-en">Public · PyPI</span><span class="i18n-zh">公开 · PyPI</span></span> <span class="i18n-en">Open-source Python library (Apache-2.0) · v0.1.x · 2026</span><span class="i18n-zh">开源 Python 库 (Apache-2.0) · v0.1.x · 2026</span></div>
               <p><span class="i18n-en">A dependency-light (numpy + stdlib) standalone Python library providing the density-matrix / open-system quantum substrate used by the Omytea program, released via GitHub OIDC Trusted Publishing.</span><span class="i18n-zh">一个依赖极轻（numpy + 标准库）的独立 Python 库，提供 Omytea 纲领所用的密度矩阵 / 开系统量子基底，经 GitHub OIDC Trusted Publishing 发布。</span></p>
               <ul class="artifacts">
                 <li><a href="https://pypi.org/project/omytea-quantum-substrate/" rel="noopener" target="_blank">PyPI</a></li>
-                <li><a href="https://github.com/Adonyth/omytea-quantum-substrate" rel="noopener" target="_blank">GitHub</a></li>
+                <li><a href="https://github.com/Omytea-Almighty/omytea-quantum-substrate" rel="noopener" target="_blank">GitHub</a></li>
               </ul>
             </li>
             <li class="proj glass">
@@ -301,7 +309,7 @@
               <div class="entry-meta"><span class="tag tag--public"><span class="i18n-en">Public · live demo</span><span class="i18n-zh">公开 · 在线演示</span></span> <span class="i18n-en">Open-source decision-support app · GitHub + Streamlit · 2026</span><span class="i18n-zh">开源决策支持应用 · GitHub + Streamlit · 2026</span></div>
               <p><span class="i18n-en">A probability-calibrated, local-first decision-support tool: enter a decision or upload a short video and get multiple future scenarios with calibrated probabilities, operator-coherence decay, and measurement-update as new evidence arrives; built on omytea-quantum-substrate.</span><span class="i18n-zh">一个概率校准、本地优先的决策支持工具：输入一个决策或上传短视频，得到带校准概率的多重未来情景、算子相干性随时间衰减，并随新证据进行测量更新；构建于 omytea-quantum-substrate 之上。</span></p>
               <ul class="artifacts">
-                <li><a href="https://github.com/Adonyth/omytea-personal-console" rel="noopener" target="_blank">GitHub</a></li>
+                <li><a href="https://github.com/Omytea-Almighty/omytea-personal-console" rel="noopener" target="_blank">GitHub</a></li>
                 <li><a href="https://omytea-personal-console.streamlit.app" rel="noopener" target="_blank"><span class="i18n-en">Live demo</span><span class="i18n-zh">在线演示</span></a></li>
               </ul>
             </li>
@@ -495,11 +503,11 @@
     </div>
 
     <!-- GSAP motion layer -->
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js" async></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js" async></script>
     <script src="cv.js?v=6" defer></script>
     <script src="magnet.js?v=2"></script>
     <script src="craft.js?v=1" defer></script>
-    <script src="search.js?v=4" defer></script>
+    <script src="search.js?v=5" defer></script>
 </body>
 </html>

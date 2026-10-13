@@ -14,3 +14,15 @@ PROJECT-REGISTRY.md
 scripts/progress_sync.py
 SPATIAL_SPEC.md
 design-research/
+.browser-workflow/
+
+# music working tree — this repo is PUBLIC and deploys from its root.
+# music/ holds third-party CC0 sample packs, multi-GB render intermediates and
+# unfinished audition audio; none of it is meant to be served. When a mix is
+# approved, publish that single file deliberately rather than un-ignoring this.
+music/
+audio/samples/
+audio/auditions/
+audio/*.wav
+__pycache__/
+*.pyc

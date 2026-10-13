@@ -859,3 +859,19 @@ body.index-open .flat-close{
 body.index-open .flat-close:hover{ color:#f4ecdf; border-color:#c9975f; }
 
 /* (the one-time first-load FORK was removed 2026-07-19 — the site opens directly in the cosmos) */
+
+/* 2026-10-08 visibility incident: real content remains reachable if menu.js cannot load. */
+body.cosmos #cosmos-flat:target{display:flex !important; z-index:40;}
+.flat-static-close{display:none;}
+#cosmos-flat:target[hidden] .flat-static-close{display:inline-block; color:var(--accent);}
+.scene-recovery{padding:16px; border:1px solid var(--hairline); border-radius:12px; line-height:1.5;}
+.scene-recovery[hidden], #flat-enter3d[hidden]{display:none !important;}
+.scene-recovery p{margin:0 0 12px;}
+.scene-recovery button{font:inherit; color:inherit; background:var(--plate); border:1px solid var(--hairline); border-radius:8px; padding:10px 16px; cursor:pointer;}
+.scene-recovery button:focus-visible{outline:2px solid var(--accent); outline-offset:3px;}
+#indexbtn{text-decoration:none;}
+
+/* A narrow viewport can still run the sky; keep its real directory reachable. */
+@media(max-width:700px){body.cosmos:not(.is-flat) #indexbtn{display:inline-flex;}body.cosmos:not(.is-flat) .cosmos-ui{flex-wrap:wrap;max-width:calc(100vw - 28px);}body.cosmos:not(.is-flat) .cosmos-id{padding-top:120px;}}
+
+body.index-open .cosmos-id,body.index-open .cosmos-ui,body.index-open .cosmos-nav{visibility:hidden;}

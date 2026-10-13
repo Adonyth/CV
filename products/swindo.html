@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" class="locale-en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#0b0a09" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <title>Swindo — Jiaxuan Chen</title>
+  <meta name="description" content="Swindo — golf-motion capture and calibration software in development." />
+  <meta name="author" content="Jiaxuan Chen (陈嘉轩)" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Jiaxuan Chen · 陈嘉轩" />
+  <meta property="og:title" content="Swindo — Jiaxuan Chen" />
+  <meta property="og:description" content="Swindo — golf-motion capture and calibration software in development." />
+  <meta name="twitter:card" content="summary" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root{ --page:#0b0a09; --ink:#f4f0e8; --body:#bdb6a8; --muted:#8a8276;
+           --accent:#e0876a; --gold:#e8c37a; --hairline:rgba(255,255,255,.10);
+           --read:#cbc4b6;
+           --s0:4px; --s1:8px; --s2:12px; --s3:16px; --s4:24px; --s5:32px; --s6:48px; --s7:64px; --s8:96px; --s9:128px;
+           --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+           --serif:"Newsreader",Georgia,"Songti SC",serif; }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:var(--page); color:var(--body); font-family:var(--serif);
+         -webkit-font-smoothing:antialiased; overflow-x:hidden; min-height:100vh; animation:pageIn .5s ease both;}
+    @keyframes pageIn{from{opacity:0; transform:translateY(7px);} to{opacity:1; transform:none;}}
+    @media(prefers-reduced-motion:reduce){ body{animation:none;} }
+    .locale-en .i18n-zh{display:none!important;} .locale-zh .i18n-en{display:none!important;}
+    a{color:inherit;text-decoration:none;}
+    ::selection{background:rgba(224,135,106,.22); color:var(--ink);}
+    :focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:4px;}
+    .map-back{position:fixed; top:18px; left:18px; z-index:10; display:inline-flex; align-items:center; gap:8px;
+      font-family:var(--mono); font-size:13px; letter-spacing:.06em; color:var(--ink);
+      background:rgba(11,10,9,.72); border:1px solid rgba(255,255,255,.14); border-radius:999px; padding:11px 18px;
+      -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);}
+    .map-back:hover{color:var(--accent); border-color:var(--accent);}
+    .lang{position:fixed; top:18px; right:18px; z-index:10; display:inline-flex; padding:3px;
+      border-radius:999px; border:1px solid var(--hairline); background:rgba(11,10,9,.72);
+      -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);}
+    .lang button{border:none; background:transparent; color:var(--body); font-family:var(--mono);
+      font-size:12px; padding:9px 13px; border-radius:999px; cursor:pointer; line-height:1;}
+    .lang button{min-height:44px;min-width:44px;}
+    .locale-zh .lede,.locale-zh .room p{max-width:35em;letter-spacing:0;line-break:strict;}
+    .lang button[aria-pressed="true"]{background:var(--accent); color:#1a1109;}
+    @media(max-width:640px){ .stamp{display:none!important;} }
+    .stamp{position:fixed; right:20px; bottom:8px; z-index:10; font-family:var(--mono); font-size:10px;
+      color:var(--muted); opacity:.7; pointer-events:none;}
+    main{max-width:760px; margin:0 auto; padding:120px 24px 40px;}
+    .eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.24em; color:var(--gold); text-transform:uppercase; display:flex; align-items:center; gap:.85em;}
+    .eyebrow::before{content:""; width:1.6em; height:1px; background:var(--gold); opacity:.55;}
+    .locale-zh .eyebrow{letter-spacing:.14em;}
+    h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"opsz" 44; font-size:clamp(31px,2.2rem + 1.1vw,46px); font-weight:500; color:var(--ink); line-height:1.14; letter-spacing:-.011em; margin:var(--s3) 0 var(--s2); text-wrap:balance;}
+    .locale-zh h1{font-variation-settings:"opsz" 40; line-height:1.26; letter-spacing:.01em; text-wrap:normal;}
+    .lede{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"opsz" 24; font-size:19px; line-height:1.6; color:var(--read); max-width:62ch; text-wrap:pretty;}
+    .locale-zh .lede{line-height:1.9;}
+    .rooms{margin-top:var(--s6); display:grid; gap:var(--s3);}
+    .room{border:1px solid var(--hairline); border-radius:14px; padding:var(--s4);
+      background:linear-gradient(160deg, rgba(232,195,122,.05), rgba(11,10,9,0)); display:block;}
+    a.room:hover{border-color:var(--accent);}
+    .room h2{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"opsz" 24; font-size:21px; color:var(--ink); font-weight:500; letter-spacing:-.006em;}
+    .room .kind{font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:.14em; text-transform:uppercase; margin-top:6px;}
+    .room p{font-size:16px; line-height:1.8; margin-top:12px; max-width:58ch; color:var(--read); text-wrap:pretty;}
+    .locale-zh .room p{line-height:1.95;}
+    .room .go{display:inline-block; margin-top:14px; font-family:var(--mono); font-size:12.5px; color:var(--accent);}
+    .foot{max-width:760px; margin:0 auto; padding:36px 24px 72px; position:relative; z-index:1;}
+    .foot__rule{height:1px; background:rgba(255,255,255,.08); margin-bottom:22px;}
+    .foot__nav{display:flex; flex-wrap:wrap; gap:8px 20px; align-items:baseline;}
+    .foot__nav a, .foot__nav span.lbl{font-family:var(--mono); font-size:11.5px; letter-spacing:.06em; color:var(--muted);}
+    .foot__nav a:hover{color:var(--accent);}
+    .foot__nav .lbl{color:var(--gold); text-transform:uppercase; letter-spacing:.14em;}
+    .foot__nav a.cur{color:var(--ink);}
+    @media(max-width:640px){ .foot{padding:24px 20px 56px;} }
+  </style>
+  <link rel="stylesheet" href="../craft.css?v=3" />
+</head>
+<body>
+  <a class="map-back" data-magnet href="../index.html">⟵ <span class="i18n-en">Orrery</span><span class="i18n-zh">星盘</span></a>
+  <div class="lang" role="group" aria-label="Language">
+    <button type="button" id="btn-en" aria-pressed="true">EN</button>
+    <button type="button" id="btn-zh" aria-pressed="false">中文</button>
+  </div>
+
+  <main>
+    <div class="eyebrow"><span class="i18n-en">CREATION · PRODUCT</span><span class="i18n-zh">创造 · 产品</span></div>
+    <h1>Swindo</h1>
+    <p class="lede"><span class="i18n-en">A golf-motion software project in development, working on camera capture, individual body profiles and video-based motion analysis.</span><span class="i18n-zh">一个开发中的高尔夫动作软件项目，围绕相机采集、个人身体参数与视频动作分析展开。</span></p>
+    <div class="rooms">
+      <section class="room">
+        <h2><span class="i18n-en">My work</span><span class="i18n-zh">我的工作</span></h2>
+        <div class="kind"><span class="i18n-en">Product engineering · 2026</span><span class="i18n-zh">产品工程 · 2026</span></div>
+        <p><span class="i18n-en">I develop capture and calibration workflows for golf-motion data, together with product interfaces and website engineering.</span><span class="i18n-zh">我参与高尔夫动作数据的采集与校准流程开发，以及产品界面和官网工程。</span></p>
+      </section>
+      <section class="room">
+        <h2><span class="i18n-en">Capture, calibrate, review</span><span class="i18n-zh">采集、校准、查看</span></h2>
+        <p><span class="i18n-en">The work brings browser-based recording, saved body profiles and motion-result review into one development workflow.</span><span class="i18n-zh">这项工作将浏览器录制、身体参数档案与动作结果查看衔接为一个开发流程。</span></p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="foot">
+    <div class="foot__rule"></div>
+    <nav class="foot__nav" aria-label="More"><span class="lbl"><span class="i18n-en">Research</span><span class="i18n-zh">研究</span></span><a href="../index.html#index-research"><span class="i18n-en">Sciences · 18</span><span class="i18n-zh">科学研究 · 18</span></a><a href="../index.html#index-humanities"><span class="i18n-en">Humanities · 3</span><span class="i18n-zh">人文社科 · 3</span></a>
+      <span class="lbl"><span class="i18n-en">Books</span><span class="i18n-zh">著作</span></span>
+      <a href="../books/invitation.html">An Invitation After Abundance</a>
+      <a href="../books/sovereign.html">Sovereign Scintillation</a>
+      <span class="lbl"><span class="i18n-en">Products</span><span class="i18n-zh">产品</span></span>
+      <a href="omytea.html">Omytea</a>
+      <a class="cur" href="swindo.html">Swindo</a>
+      <a href="nyeclock.html"><span class="i18n-en">Nye Clock</span><span class="i18n-zh">弐时仪</span></a>
+      <a href="../music.html"><span class="i18n-en">Music</span><span class="i18n-zh">音乐</span></a>
+      <a href="../journey.html"><span class="i18n-en">Journey</span><span class="i18n-zh">履历</span></a>
+      <a href="../footprint.html"><span class="i18n-en">Footprint</span><span class="i18n-zh">足迹</span></a>
+      <a href="../index.html"><span class="i18n-en">Orrery ↗</span><span class="i18n-zh">星盘 ↗</span></a>
+      <a href="../cv.html"><span class="i18n-en">CV ↗</span><span class="i18n-zh">完整履历 ↗</span></a>
+    </nav>
+  </footer>
+
+  <script>
+    (function () {
+      var root = document.documentElement;
+      function apply(loc) {
+        root.className = "locale-" + loc; root.lang = loc === "zh" ? "zh-Hans" : "en";
+        document.getElementById("btn-en").setAttribute("aria-pressed", loc === "en" ? "true" : "false");
+        document.getElementById("btn-zh").setAttribute("aria-pressed", loc === "zh" ? "true" : "false");
+        try { localStorage.setItem("cv-locale", loc); } catch (e) {}
+      }
+      var saved = null; try { saved = localStorage.getItem("cv-locale"); } catch (e) {}
+      apply(saved === "zh" ? "zh" : "en");
+      document.getElementById("btn-en").addEventListener("click", function () { apply("en"); });
+      document.getElementById("btn-zh").addEventListener("click", function () { apply("zh"); });
+    })();
+  </script>
+  <script src="../craft.js?v=1" defer></script>
+  <script src="../search.js?v=5" defer></script>
+</body>
+</html>

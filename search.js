@@ -13,6 +13,7 @@
     { t: "Music", z: "音乐", h: "/music.html", g: "page" },
     { t: "Latest · recent activity", z: "近况 · 近期动态", h: "/updates.html", g: "page" },
     { t: "Omytea", z: "Omytea", h: "/products/omytea.html", g: "making" },
+    { t: "Swindo · golf-motion capture and calibration", z: "Swindo · 高尔夫动作采集与校准", h: "/products/swindo.html", g: "making" },
     { t: "Nye Clock", z: "弐时仪", h: "/products/nyeclock.html", g: "making" },
     { t: "Curriculum Vitae", z: "完整履历", h: "/cv.html", g: "cv" }
   ];
@@ -86,6 +87,7 @@
   var results = [], sel = 0;
 
   function render(q) {
+    if (!items) return;
     var ql = (q || "").trim().toLowerCase();
     var matched = !ql ? items.slice() : items.filter(function (it) {
       return ql.split(/\s+/).every(function (tok) { return it.blob.indexOf(tok) >= 0; });
@@ -120,7 +122,7 @@
     lastFocus = document.activeElement;
     mount(); ov.classList.add("on"); syncBtn(true); input.value = "";
     input.placeholder = isZh() ? "搜索研究 / 著作 / 创造…" : "Search research, writing, making…";
-    load().then(function () { render(""); }); setTimeout(function () { input.focus(); }, 20);
+    load().then(function () { render(input.value); }); setTimeout(function () { input.focus(); }, 20);
   }
   function close() {
     ov.classList.remove("on"); syncBtn(false);

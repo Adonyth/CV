@@ -7,12 +7,10 @@
          reveals the already-existing #cosmos-flat list (identity + all 21 research
          works + books + products + more) as a scrim overlay ABOVE the running sky.
          Esc, the ✕ button, or a click on the backdrop closes it. On the flat tier
-         (mobile / reduced-motion / no-WebGL) this file does nothing — there the flat
-         list already IS the page and space.js owns it.
+         (mobile / reduced-motion / no-WebGL) this layer exposes the flat list as the page.
 
-     (2) FIRST-LOAD FORK (P0-2) — on a first desktop visit with no saved motion choice,
-         one small panel offers "Enter the sky ✦" vs "Skip to index / 直接看目录". The
-         choice is remembered (localStorage), so it is shown exactly once.
+     (2) RECOVERY — failed or slow scene startup exposes the real directory with a retry.
+         Healthy startup opens directly in the sky; there is no first-load fork.
 
    The cosmos scene is untouched: everything here is DOM chrome at a high z-index. */
 (function () {
@@ -53,10 +51,23 @@
     return false;   // desktop with real GL → the sky renders → this chrome is live
   }
 
-  if (willFlat()) return;   // flat tier: space.js reveals #cosmos-flat as the page; nothing to layer
-
   var flat = document.getElementById("cosmos-flat");
   var indexBtn = document.getElementById("indexbtn");
+  var flatTier = willFlat();
+  // 2026-10-08: the actual content belongs to this DOM layer even if space.js never boots.
+  if (flatTier && flat) {
+    body.classList.add("is-flat");
+    flat.hidden = false;
+    var enter = document.getElementById("flat-enter3d");
+    if (enter) {
+      if (!webglOK() || reduced()) enter.hidden = true;
+      else enter.addEventListener("click", function (e) {
+        e.stopImmediatePropagation();
+        try { localStorage.setItem(MOTION_KEY, "calm"); } catch (err) {}
+        location.reload();
+      });
+    }
+  }
 
   /* ---------------- (1) INDEX overlay (a real modal) ---------------- */
   var lastFocus = null;
@@ -74,6 +85,7 @@
   }
 
   function openIndex(groupKey) {
+    if (body.classList.contains("is-flat")) { if (groupKey) scrollToGroup(groupKey); return; }
     if (!flat || indexOpen()) { if (groupKey) scrollToGroup(groupKey); return; }
     lastFocus = document.activeElement;
     flat.hidden = false;                       // clears .cosmos-flat[hidden]{display:none}
@@ -95,6 +107,7 @@
     setTimeout(function () { if (cx) cx.focus(); }, 20);
   }
   function closeIndex(fromPop) {
+    if (body.classList.contains("is-flat")) return;
     if (!flat || !indexOpen()) return;
     body.classList.remove("index-open");
     flat.hidden = true;                        // restore the hidden fallback state
@@ -164,6 +177,37 @@
   window.__openIndex = openIndex;
   window.__closeIndex = closeIndex;
   window.__toggleIndex = toggleIndex;
+
+  // Preserve an already-open directory if late scene startup hides the fallback element.
+  if (flat && window.MutationObserver) new MutationObserver(function () {
+    if (indexOpen() && flat.hidden) flat.hidden = false;
+  }).observe(flat, {attributes:true, attributeFilter:["hidden"]});
+
+  // 2026-10-08: failed/slow rendering must lead to real content and a reversible recovery action.
+  // A late ready signal removes the notice but leaves the visitor's open directory in place.
+  if (!flatTier) {
+    var bootStarted = Date.now(), recoveryShown = false;
+    var recovery = document.getElementById("scene-recovery");
+    var message = document.getElementById("scene-recovery-message");
+    var bootWatch = setInterval(function () {
+      var scene = window.__space;
+      if (scene && scene.ready) {
+        if (recovery) recovery.hidden = true;
+        clearInterval(bootWatch);
+        return;
+      }
+      var failed = scene && scene.error;
+      if (!recoveryShown && (failed || Date.now() - bootStarted >= 8000)) {
+        recoveryShown = true;
+        if (message) message.innerHTML = failed ?
+          '<span class="i18n-en">The sky could not start. All pages are available below.</span><span class="i18n-zh">星空未能启动。下方仍可浏览全部页面。</span>' :
+          '<span class="i18n-en">The sky is taking longer to load. Browse the pages while it loads.</span><span class="i18n-zh">星空加载较慢。等待期间仍可浏览全部页面。</span>';
+        if (recovery) recovery.hidden = false;
+        openIndex();
+      }
+      if (failed) clearInterval(bootWatch);
+    }, 500);
+  }
 
   // a shared link opens the overlay on load: /#index (top) or /#index-research
   // (scrolled to a group — used by content-page breadcrumbs)

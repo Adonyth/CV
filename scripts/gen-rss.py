@@ -2,7 +2,7 @@
 # data/updates.json -> updates.xml (RSS 2.0). Run after editing updates.json.
 import json, os, html, datetime
 
-SITE = "https://cv-2ad.pages.dev"
+SITE = "https://jiaxuanchen.pages.dev"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 U = json.load(open(os.path.join(ROOT, "data", "updates.json"), encoding="utf-8")).get("updates", [])
 
