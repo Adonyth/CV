@@ -57,7 +57,9 @@ fi
 
 # run FROM the staging folder: wrangler looks for functions/ in the current directory,
 # not in the uploaded one — deploying from the repo root would ship the redirect here too.
-( cd "$STAGE" && npx --yes wrangler@4 pages deploy . --project-name="$PROJECT" --branch="$BRANCH" \
+# WRANGLER_SEND_METRICS=false: wrangler's telemetry call can hang the process for many minutes after
+# "Deployment complete" (seen behind a local proxy, 2026-10-14), which would stall the verify step and CI.
+( cd "$STAGE" && WRANGLER_SEND_METRICS=false npx --yes wrangler@4 pages deploy . --project-name="$PROJECT" --branch="$BRANCH" \
     --commit-hash="$SHA" --commit-dirty=true ) 2>&1 | tee "$LOG"
 
 DEPLOY_URL="$(grep -oE 'https://[a-z0-9-]+\.'"$PROJECT"'\.pages\.dev' "$LOG" | tail -1 || true)"
