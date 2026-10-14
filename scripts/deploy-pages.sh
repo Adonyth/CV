@@ -57,10 +57,25 @@ fi
 
 # run FROM the staging folder: wrangler looks for functions/ in the current directory,
 # not in the uploaded one — deploying from the repo root would ship the redirect here too.
-# WRANGLER_SEND_METRICS=false: wrangler's telemetry call can hang the process for many minutes after
-# "Deployment complete" (seen behind a local proxy, 2026-10-14), which would stall the verify step and CI.
-( cd "$STAGE" && WRANGLER_SEND_METRICS=false npx --yes wrangler@4 pages deploy . --project-name="$PROJECT" --branch="$BRANCH" \
-    --commit-hash="$SHA" --commit-dirty=true ) 2>&1 | tee "$LOG"
+# Run wrangler in the background and decide completion OURSELVES: on this machine wrangler can hang for
+# many minutes AFTER printing "Deployment complete" (a post-deploy network call stuck behind a local
+# proxy — even `wrangler telemetry status` hangs), which would stall the verify step and any CI run.
+( cd "$STAGE" && WRANGLER_SEND_METRICS=false NO_UPDATE_NOTIFIER=1 npx --yes wrangler@4 pages deploy . \
+    --project-name="$PROJECT" --branch="$BRANCH" --commit-hash="$SHA" --commit-dirty=true ) >"$LOG" 2>&1 &
+WPID=$!
+for _ in $(seq 1 600); do                       # up to 10 min for big uploads
+  grep -q "Deployment complete" "$LOG" && break
+  kill -0 "$WPID" 2>/dev/null || break          # wrangler exited on its own (success or error)
+  sleep 1
+done
+grep -vE "Uploading\.\.\." "$LOG" || true
+if ! grep -q "Deployment complete" "$LOG"; then
+  echo "DEPLOY FAIL: wrangler did not report a completed deployment" >&2
+  kill "$WPID" 2>/dev/null || true; exit 1
+fi
+sleep 2   # let it finish printing the alias line, then stop whatever it is still waiting on
+pkill -f "pages deploy \. --project-name=$PROJECT" 2>/dev/null || true
+kill "$WPID" 2>/dev/null || true
 
 DEPLOY_URL="$(grep -oE 'https://[a-z0-9-]+\.'"$PROJECT"'\.pages\.dev' "$LOG" | tail -1 || true)"
 [ -n "$DEPLOY_URL" ] || { echo "VERIFY FAIL: could not find the deployment URL in wrangler output" >&2; exit 1; }
