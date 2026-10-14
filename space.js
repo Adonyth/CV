@@ -511,6 +511,18 @@
     var DEFAULT_BASE = { lat: 41.824, lon: -71.4128, city: "Providence" };   // the author's home, if the visitor can't be placed
     var baseGeo = null, groundEntered = false, tryGroundEntrance = null, groundDome = null, groundStars = null, groundMilky = null;
     var groundTerrain = null, _terrainMat = null, _heightmap = null, _hmMeta = null, _hmLoading = null;   // base-view REAL ETOPO terrain
+    /* the sky is live: cross-fade the first-paint poster out (styles.css .sky-poster), then — once the
+       entrance has settled — release the far-field textures (deep-sky clouds, planet maps) that used
+       to compete with the first frame for bandwidth. Idempotent; safe from every entrance path. */
+    var _skyLiveDone = false;
+    function skyLive() {
+      if (_skyLiveDone) return; _skyLiveDone = true;
+      document.body.classList.add("sky-live");
+      setTimeout(function () {
+        var rel = function () { try { if (natalSky && natalSky.releaseLazyTextures) natalSky.releaseLazyTextures(); } catch (e) {} };
+        if ("requestIdleCallback" in window) requestIdleCallback(rel, { timeout: 2500 }); else rel();
+      }, 1600);
+    }
     var _earthDayTex = null, _earthDayLoading = null;   // NASA-style day map for ground albedo (lazy)
     var groundDimTarget = 0, _earthUni = null, _traceMat = null;   // eased toward the target every frame in the frame loop
     var _localMap = null, _localMapMat = null, _localMapTex = null;   // base-view REAL local street map (geo-ui-maps / prettymaps)
@@ -1009,6 +1021,7 @@
         if (!groundEntered) {
           canvas.style.transition = "opacity 1s ease"; canvas.style.opacity = "1";
           entranceUntil = performance.now() + 4600;
+          skyLive();
         }
       }, 6500);
     } else { camera.position.set(0, 0, 60); }
@@ -1575,7 +1588,7 @@
       var webXYZ = arr[4] ? new Int16Array(arr[4]) : null;
       var webRGB = arr[5] ? new Uint8Array(arr[5]) : null;
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=147").then(function (mod) {
+      return import("./natal-sky.js?v=148").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1841,9 +1854,12 @@
         // sky is already usable while it streams in — it fades up with the ground-dim ease
         // ETOPO relief + Blue Marble albedo in parallel (arnis idea: real geography → walkable volume;
         // here: real elev + real albedo → night-ground patch, not Minecraft voxels)
-        Promise.all([loadHeightmap(), loadEarthDayMap()]).then(function (pair) {
-          if (pair[0] && controls.isGround()) buildGroundTerrain(baseGeo);
-        });
+        setTimeout(function () {   // after the entrance cross-fade: the heightmap must not race the first frame
+          if (!controls.isGround()) return;
+          Promise.all([loadHeightmap(), loadEarthDayMap()]).then(function (pair) {
+            if (pair[0] && controls.isGround()) buildGroundTerrain(baseGeo);
+          });
+        }, 1800);
         groundHint(true);
       }
       /* the launch: straight up off the base — the gaze pivots from the sky down to the
@@ -1902,6 +1918,7 @@
             groundEntered = true;
             canvas.style.transition = "opacity 1.25s ease";
             canvas.style.opacity = "1";
+            skyLive();
           });
       };
       window.__space.ground = {
@@ -2835,7 +2852,7 @@
     window.__space.camera = camera;
     window.__space.pump = function (n2) { var base = performance.now(); for (var q = 0; q < (n2 || 1); q++) frame(base + q * 16.7); };
     window.__space.snap = function () {
-      if (COSMOS && controls) controls.update(dtF);
+      if (COSMOS && controls) controls.update(1 / 60);   // was dtF — undefined in this scope (snap threw ReferenceError)
       if (composer) composer.render(); else renderer.render(scene, camera); return canvas.toDataURL("image/jpeg", 0.8);
     };
     window.__space.setOpacity = function (o) { canvas.style.opacity = String(o); };

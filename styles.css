@@ -875,3 +875,160 @@ body.cosmos #cosmos-flat:target{display:flex !important; z-index:40;}
 @media(max-width:700px){body.cosmos:not(.is-flat) #indexbtn{display:inline-flex;}body.cosmos:not(.is-flat) .cosmos-ui{flex-wrap:wrap;max-width:calc(100vw - 28px);}body.cosmos:not(.is-flat) .cosmos-id{padding-top:120px;}}
 
 body.index-open .cosmos-id,body.index-open .cosmos-ui,body.index-open .cosmos-nav{visibility:hidden;}
+
+/* ============================================================
+   FIRST-PAINT SKY POSTER (2026-10-14) — a real-GPU frame of the default base view
+   (scripts/capture-poster.mjs). Visible from the very first paint, softly out of focus;
+   when the live scene is up (body.sky-live, added by space.js skyLive()) it cross-fades
+   away while the canvas fades in, so the sky "comes into focus" instead of popping out
+   of a black screen. If the 3-D never arrives, the poster simply stays — still a sky.
+   ============================================================ */
+.sky-poster{position:fixed; inset:0; z-index:-2; pointer-events:none;
+  background:#030302 url("data/poster-sky.jpg") center/cover no-repeat;
+  opacity:1; filter:blur(2.5px) brightness(1.12); transform:scale(1.02);
+  transition:opacity .6s var(--ease-out), filter .9s var(--ease-out), transform 1.1s var(--ease-out);}
+/* entry fade without a keyframe animation: an animation's implicit end value is the CURRENT computed
+   value, so when sky-live landed mid-intro (fast networks) the poster animated 0→0 and never showed.
+   Two transitions hand over smoothly instead — an interrupted one resumes from where it was. */
+@starting-style{ .sky-poster{opacity:0; filter:blur(12px) brightness(1.12); transform:scale(1.05);} }
+body.sky-live .sky-poster{opacity:0; filter:blur(0) brightness(1); transform:scale(1);
+  /* the live canvas is up at the entrance but still fills in (milky way, constellation glow) for ~3 s;
+     hold the poster under it, then dissolve — the transparent sky shows the poster until the live one is full */
+  transition-duration:2.2s; transition-delay:1.2s;}
+body.is-flat .sky-poster{display:none;}
+@media(max-width:700px){ .sky-poster{background-image:url("data/poster-sky-portrait.jpg");} }
+@media(prefers-reduced-motion:reduce){ .sky-poster{transform:none; filter:none; transition:opacity .5s linear;} }
+
+/* ============================================================
+   CHROME REFINEMENT (2026-10-14) — calmer, more crafted controls over the live sky.
+   Owner rulings honoured: the identity card stays name + contact row only; every control and
+   every route is kept; nothing is added to the homepage. Only weight, grouping and material
+   change. Prefixed `html body.cosmos` so it wins the override history above without !important
+   (except where the base rule itself is !important).
+   ============================================================ */
+
+/* 1 · identity card — one hairline, no inner rule, a little more air */
+html body.cosmos .cosmos-id{padding:18px 22px 15px; border:1px solid rgba(255,255,255,.09);
+  background:linear-gradient(180deg, rgba(20,18,16,.58), rgba(9,8,7,.40));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 24px 60px -34px rgba(0,0,0,.9);}
+html body.cosmos .cosmos-links{border-top:0; padding-top:3px; gap:4px 16px;}
+html body.cosmos .cosmos-links a{color:rgba(214,204,188,.70); transition:color .2s ease;}
+html body.cosmos .cosmos-links a:hover{color:#f4ecdf;}
+
+/* 2 · language switch — the accent stops shouting from a utility control */
+html body.cosmos .lang{border-color:rgba(255,255,255,.08); background:transparent;}
+html body.cosmos .lang button{color:rgba(214,204,188,.52); background:transparent;}
+html body.cosmos .lang button:hover:not([aria-pressed="true"]){color:#f4ecdf;}
+html body.cosmos .lang button[aria-pressed="true"]{background:rgba(255,255,255,.09); color:#f4ecdf;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.10);}
+
+/* 3 · content nav — one glass strip of text, not a row of separate capsules */
+html body.cosmos .cosmos-nav{gap:2px; padding:4px; border-radius:999px; border:1px solid rgba(255,255,255,.09);
+  background:linear-gradient(180deg, rgba(20,18,16,.62), rgba(9,8,7,.46));
+  -webkit-backdrop-filter:blur(14px) saturate(1.15); backdrop-filter:blur(14px) saturate(1.15);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 18px 44px -28px rgba(0,0,0,.85);}
+html body.cosmos .cosmos-nav > a, html body.cosmos .cosmos-nav__head{
+  background:transparent; border-color:transparent; box-shadow:none; -webkit-backdrop-filter:none; backdrop-filter:none;
+  color:rgba(232,224,212,.80) !important; padding:7px 13px;}
+html body.cosmos .cosmos-nav > a:hover, html body.cosmos .cosmos-nav__head:hover,
+html body.cosmos .cosmos-nav__group.open .cosmos-nav__head{background:rgba(255,255,255,.07); border-color:transparent;
+  box-shadow:none; color:#f6ede1 !important;}
+/* leaves: a single panel instead of a stack of capsules */
+html body.cosmos .cosmos-nav__kids{isolation:isolate; gap:0; align-items:stretch; min-width:230px; padding:14px 6px 6px;}
+html body.cosmos .cosmos-nav__kids::before{content:""; position:absolute; inset:8px 0 0 0; z-index:-1; border-radius:14px;
+  background:linear-gradient(180deg, rgba(22,20,18,.94), rgba(10,9,8,.92)); border:1px solid rgba(255,255,255,.09);
+  box-shadow:0 26px 60px -30px rgba(0,0,0,.92);}
+html body.cosmos .cosmos-nav__kids a, html body.cosmos .cosmos-nav__kids button{background:transparent; border-color:transparent;
+  box-shadow:none; -webkit-backdrop-filter:none; backdrop-filter:none; border-radius:9px; padding:8px 12px;
+  color:rgba(225,216,202,.80); white-space:nowrap;}
+html body.cosmos .cosmos-nav__kids a:hover, html body.cosmos .cosmos-nav__kids button:hover{background:rgba(255,255,255,.06);
+  border-color:transparent; box-shadow:none; color:#f6ede1;}
+html body.cosmos.is-mobile-3d .cosmos-nav__kids{padding:6px 6px 14px;}
+html body.cosmos.is-mobile-3d .cosmos-nav__kids::before{inset:0 0 8px 0;}
+
+/* 4 · the ground hint — bottom-left (clear of the Moon the entrance gaze centres on), plain sans,
+   teaches once then goes quiet; the city stays as a soft "you are here" stamp */
+html body.cosmos .ground-hint{left:24px; right:auto; bottom:22px; transform:none; text-align:left; max-width:60vw;
+  font-family:var(--sans); font-size:12px; letter-spacing:.01em; color:rgba(214,204,188,.62);}
+html body.cosmos .ground-hint b{color:#e8c37a; font-weight:500; margin-right:.6em;}
+html body.cosmos .ground-hint span{transition:opacity 1s ease;}
+html body.cosmos.hint-quiet .ground-hint span{opacity:0;}
+@media(max-width:700px){ html body.cosmos .ground-hint{left:14px; bottom:18px; font-size:11px;}
+  html body.cosmos.is-mobile-3d .ground-hint{bottom:60px;} }
+.map-credit{position:fixed; right:16px; bottom:9px; z-index:6; font-family:var(--sans); font-size:10px; letter-spacing:.02em;
+  color:rgba(205,194,178,.42); opacity:0; pointer-events:none; transition:opacity .8s ease;}
+body.cosmos.on-ground .map-credit{opacity:1;}
+body.is-flat .map-credit, body.index-open .map-credit{display:none;}
+
+/* ============================================================
+   MOBILE / REDUCED-MOTION HOME (2026-10-14) — the flat home every phone visitor gets is now a
+   composed page instead of a bare list: the real night sky (scripts/capture-poster.mjs) as a
+   still cover, the name set on it, a quiet glass door into the live sky, and a calmer index.
+   Motion-free by construction. Scoped to body.is-flat, so the desktop "All pages" overlay
+   (body.index-open, same #cosmos-flat markup) is untouched.
+   ============================================================ */
+html body.cosmos.is-flat #cosmos-flat{padding:0 22px 56px; gap:0;}
+html body.cosmos.is-flat #cosmos-flat::before{content:""; position:absolute; left:0; right:0; top:0;
+  height:66vh; height:66svh; z-index:0; pointer-events:none;
+  background:
+    linear-gradient(180deg, rgba(11,10,9,.18) 0%, rgba(11,10,9,0) 26%, rgba(11,10,9,.40) 60%, var(--page) 100%),
+    #0b0a09 url("data/poster-sky-portrait.jpg") center 32%/cover no-repeat;}
+html body.cosmos.is-flat #cosmos-flat > *{position:relative; z-index:1;}
+html body.cosmos.is-flat .flat-id{margin-top:34vh; margin-top:34svh;}
+/* the cover text sits on the night sky in BOTH themes, so it is set light */
+html body.cosmos.is-flat .flat-name, html body.cosmos.is-flat .flat-name span[lang="zh"]{color:#f6efe4;}
+html body.cosmos.is-flat .flat-name{font-size:clamp(36px,11vw,50px); letter-spacing:-.015em; line-height:1.02;
+  margin:0 0 12px; text-shadow:0 2px 26px rgba(0,0,0,.6);}
+html body.cosmos.is-flat .flat-name span[lang="zh"]{opacity:.86;}
+html body.cosmos.is-flat .flat-contact{gap:6px 18px;}
+html body.cosmos.is-flat .flat-contact a{font-family:var(--sans); font-size:14px; letter-spacing:.01em;
+  color:rgba(240,232,220,.80); border-bottom:0; padding:4px 0;}
+html body.cosmos.is-flat .flat-enter{display:inline-flex; align-items:center; gap:10px; width:auto; align-self:flex-start;
+  margin:22px 0 38px; padding:12px 18px 12px 16px; border-radius:999px; text-align:left;
+  font-family:var(--sans); font-size:14px; font-weight:500; letter-spacing:.01em; color:#f6efe4;
+  background:rgba(14,12,10,.55); border:1px solid rgba(232,195,122,.38);
+  -webkit-backdrop-filter:blur(12px) saturate(1.2); backdrop-filter:blur(12px) saturate(1.2);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 14px 34px -18px rgba(0,0,0,.8);
+  transition:transform .15s ease, border-color .2s ease;}
+html body.cosmos.is-flat .flat-enter:active{transform:scale(.98); border-color:rgba(232,195,122,.7);}
+/* the index: clear group heads, quieter rows, a visible "this opens" affordance */
+html body.cosmos.is-flat .flat-menu{border-top:0;}
+html body.cosmos.is-flat .flat-group{font-family:var(--sans); font-size:12px; font-weight:600; letter-spacing:.08em;
+  margin:32px 0 4px; padding-bottom:9px; border-bottom:1px solid var(--hairline);}
+html body.cosmos.is-flat .flat-group:first-child{margin-top:0;}
+html body.cosmos.is-flat .flat-menu a{display:flex; align-items:baseline; gap:14px; font-size:17px; line-height:1.42;
+  padding:13px 2px; border-bottom:1px solid rgba(255,255,255,.06); text-wrap:pretty;}
+html body.cosmos.is-flat .flat-menu a::after{content:"→"; margin-left:auto; flex:none; font-family:var(--sans);
+  font-size:14px; color:var(--muted); opacity:.5; transition:transform .2s ease, opacity .2s ease;}
+html body.cosmos.is-flat .flat-menu a:active::after{transform:translateX(3px); opacity:1;}
+html body.cosmos.is-flat .flat-note{font-family:var(--sans); margin-top:34px; letter-spacing:.01em;}
+html body.cosmos.is-flat .cosmos-ui{background:rgba(14,12,10,.40); border-color:rgba(255,255,255,.10);}
+/* wide screens (reduced-motion desktops): landscape cover, a readable column */
+@media(min-width:701px){
+  html body.cosmos.is-flat #cosmos-flat::before{background:
+    linear-gradient(180deg, rgba(11,10,9,.15) 0%, rgba(11,10,9,0) 28%, rgba(11,10,9,.42) 62%, var(--page) 100%),
+    #0b0a09 url("data/poster-sky.jpg") center 40%/cover no-repeat;}
+  html body.cosmos.is-flat #cosmos-flat > *{width:100%; max-width:720px; margin-inline:auto;}
+  html body.cosmos.is-flat .flat-enter{margin-inline:0; align-self:auto; width:max-content;}
+}
+/* name lockup: English line, then the Chinese name on its own line (it used to break 陈嘉 / 轩) */
+html body.cosmos.is-flat .flat-name span[lang="zh"]{display:block; margin:10px 0 0 2px; font-size:.5em; letter-spacing:.14em; opacity:.82;}
+/* bury the poster's Moon under the fade so no grey disc sits behind the first group head */
+html body.cosmos.is-flat #cosmos-flat::before{background:
+    linear-gradient(180deg, rgba(11,10,9,.18) 0%, rgba(11,10,9,0) 24%, rgba(11,10,9,.45) 52%, rgba(11,10,9,.86) 74%, var(--page) 90%),
+    #0b0a09 url("data/poster-sky-portrait.jpg") center 30%/cover no-repeat;}
+/* the floating controls step aside while you read down the index, and return when you scroll up */
+html body.cosmos.is-flat .cosmos-ui{transition:transform .32s var(--ease-out), opacity .32s var(--ease-out);}
+html body.cosmos.is-flat.flat-reading .cosmos-ui{transform:translateY(-140%); opacity:0; pointer-events:none;}
+
+/* ============================================================
+   CV HERO LEGIBILITY (2026-10-14) — the ember field is the page's signature and stays at full
+   strength everywhere else; only behind the intro column does a soft radial veil (in the page's
+   own colour, so it holds in day and night) let the particles fall away, so the name, the lede
+   and the contact chips read cleanly instead of sitting on top of bright dots.
+   ============================================================ */
+.hero__in{position:relative;}
+.hero__in::before{content:""; position:absolute; inset:-70px -110px -60px -90px; z-index:-1; pointer-events:none;
+  background:radial-gradient(closest-side, color-mix(in srgb, var(--page) 86%, transparent) 0%,
+    color-mix(in srgb, var(--page) 62%, transparent) 58%, transparent 100%);}
+@media(max-width:700px){ .hero__in::before{inset:-40px -30px -40px -30px;} }

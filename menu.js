@@ -236,6 +236,27 @@
     var HINT_KEY = "cv-hint-seen";
     try { if (localStorage.getItem(HINT_KEY) === "1" && hint) hint.classList.add("is-faded"); } catch (e) {}
     addEventListener("pointerdown", function () { try { localStorage.setItem(HINT_KEY, "1"); } catch (e) {} }, { once: true });
+    /* the ground hint ("drag to look around · scroll to rise") teaches once, then gets out of the way:
+       it goes quiet on the first drag / scroll / key, or after 9 s — the sky is the page, not the caption.
+       Returning visitors who already drove the scene never see it at all. */
+    var quiet = function () { document.body.classList.add("hint-quiet"); };
+    try { if (localStorage.getItem(HINT_KEY) === "1") quiet(); } catch (e) {}
+    ["pointerdown", "wheel", "keydown"].forEach(function (ev) { addEventListener(ev, quiet, { once: true, passive: true }); });
+    setTimeout(quiet, 9000);
+  })();
+
+  /* flat (phone) home: the floating controls step aside while reading down the index and come back on any
+     scroll up or near the top — so they never sit on top of a title, yet search stays one flick away */
+  (function () {
+    var flat = document.getElementById("cosmos-flat"); if (!flat) return;
+    var last = 0;
+    flat.addEventListener("scroll", function () {
+      if (!document.body.classList.contains("is-flat")) return;
+      var y = flat.scrollTop, down = y > last + 4, up = y < last - 4;
+      if (y < 120 || up) document.body.classList.remove("flat-reading");
+      else if (down) document.body.classList.add("flat-reading");
+      last = y;
+    }, { passive: true });
   })();
 
   /* (the first-load fork dialog was removed by owner decision 2026-07-19: the site opens DIRECTLY

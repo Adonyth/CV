@@ -18,6 +18,22 @@
    ============================================================ */
 export function buildNatalSky(THREE, scene, data, opts) {
   var T = THREE, o = opts || {};
+  /* LAZY far-field textures: the deep-sky clouds and the real planet/ring photographs are invisible
+     or tiny from the base view, yet they used to download at mount and race the first frame. They now
+     wait until space.js says the sky is live (releaseLazyTextures), the visitor first drags/scrolls,
+     or a 9 s safety net — whichever comes first. Placeholders cover until each one lands. */
+  var _lazyTex = [], _lazyReleased = false;
+  function lazyTex(fn) { if (_lazyReleased) fn(); else _lazyTex.push(fn); }
+  function releaseLazyTextures() {
+    if (_lazyReleased) return; _lazyReleased = true;
+    var q = _lazyTex; _lazyTex = [];
+    for (var i = 0; i < q.length; i++) { try { q[i](); } catch (e) {} }
+  }
+  if (typeof window !== "undefined") {
+    setTimeout(releaseLazyTextures, 9000);
+    window.addEventListener("pointerdown", releaseLazyTextures, { once: true });
+    window.addEventListener("wheel", releaseLazyTextures, { once: true, passive: true });
+  }
   var R = o.R_STAR || 372;
   var EPS = 23.4393 * Math.PI / 180;          // obliquity of the ecliptic
   var mobile = !!o.mobile, calm = o.calm !== false;
@@ -451,10 +467,12 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // the REAL planet (solarsystemscope photographs, CC BY 4.0) replaces the painted
     // placeholder the moment it loads — procedural-only bodies (no shipped map) keep the paint
     if (!p.body.procOnly) (function (kind, mm) {
-      new T.TextureLoader().load("data/planet-" + kind + ".jpg", function (ptex) {
-        if ("colorSpace" in ptex && T.SRGBColorSpace) ptex.colorSpace = T.SRGBColorSpace;
-        ptex.wrapS = T.RepeatWrapping; ptex.anisotropy = 4;
-        mm.material.uniforms.uMap.value = ptex;
+      lazyTex(function () {
+        new T.TextureLoader().load("data/planet-" + kind + ".jpg", function (ptex) {
+          if ("colorSpace" in ptex && T.SRGBColorSpace) ptex.colorSpace = T.SRGBColorSpace;
+          ptex.wrapS = T.RepeatWrapping; ptex.anisotropy = 4;
+          mm.material.uniforms.uMap.value = ptex;
+        });
       });
     })(p.body.kind, mesh);
     if (p.body.ringInner) {
@@ -466,10 +484,12 @@ export function buildNatalSky(THREE, scene, data, opts) {
         uv2.setXY(vi, (rr - rIn) / (rOut - rIn), 0.5);
       }
       var ringMat = new T.MeshBasicMaterial({ map: ringTexture(), transparent: true, side: T.DoubleSide, depthWrite: false, fog: false });
-      new T.TextureLoader().load("data/saturn-ring.png", function (rtex) {
-        if ("colorSpace" in rtex && T.SRGBColorSpace) rtex.colorSpace = T.SRGBColorSpace;
-        rtex.anisotropy = 4;
-        ringMat.map = rtex; ringMat.needsUpdate = true;   // Cassini's real shadows and gaps
+      lazyTex(function () {
+        new T.TextureLoader().load("data/saturn-ring.png", function (rtex) {
+          if ("colorSpace" in rtex && T.SRGBColorSpace) rtex.colorSpace = T.SRGBColorSpace;
+          rtex.anisotropy = 4;
+          ringMat.map = rtex; ringMat.needsUpdate = true;   // Cassini's real shadows and gaps
+        });
       });
       var ring = new T.Mesh(rg, ringMat);
       ring.name = grp.name + "Ring";
@@ -982,7 +1002,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
         pts.renderOrder = -2;                      // the farthest backdrop, painted before the near sky
       } catch (e) { if (typeof window !== "undefined" && window.__space) window.__space.dsoError = String(e); }
     };
-    img.src = "data/" + d.tex;
+    lazyTex(function () { img.src = "data/" + d.tex; });
   });
 
   /* ---------------- the deep-space STARFIELD: thousands of faint stars filling the whole sky in
@@ -2663,6 +2683,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     group: group,
     starPoints: starPoints,
     ensureFarLayers: ensureFarLayers,
+    releaseLazyTextures: releaseLazyTextures,
     drainBuild: function () {
       var f = _buildQ.shift(); if (!f) return false;
       try { f(); } catch (e) { try { console.error("[natal-sky] builder failed (skipped):", e); } catch (_e) {} }

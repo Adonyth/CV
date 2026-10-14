@@ -29,7 +29,26 @@
       href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=52" />
+    <!-- first paint: the poster is a real-GPU frame of the default sky (scripts/capture-poster.mjs),
+         shown at ~0.5s and cross-faded into the live scene, so the visitor never stares at black -->
+    <link rel="preload" as="image" href="data/poster-sky.jpg" fetchpriority="high" />
+    <!-- flatten the module waterfall: these used to start one round-trip after another
+         (three → postprocessing → shaders → armature → natal sky); now they all fetch at once -->
+    <link rel="modulepreload" href="/vendor/three/three.module.js" />
+    <link rel="modulepreload" href="/vendor/three/addons/postprocessing/EffectComposer.js" />
+    <link rel="modulepreload" href="/vendor/three/addons/postprocessing/RenderPass.js" />
+    <link rel="modulepreload" href="/vendor/three/addons/postprocessing/UnrealBloomPass.js" />
+    <link rel="modulepreload" href="/vendor/three/addons/postprocessing/OutputPass.js" />
+    <link rel="modulepreload" href="/vendor/three/addons/postprocessing/ShaderPass.js" />
+    <link rel="modulepreload" href="/vendor/three/addons/postprocessing/Pass.js" />
+    <link rel="modulepreload" href="/vendor/three/addons/postprocessing/MaskPass.js" />
+    <link rel="modulepreload" href="/vendor/three/addons/shaders/CopyShader.js" />
+    <link rel="modulepreload" href="/vendor/three/addons/shaders/LuminosityHighPassShader.js" />
+    <link rel="modulepreload" href="/vendor/three/addons/shaders/OutputShader.js" />
+    <link rel="modulepreload" href="/nye-armature.js?v=44" />
+    <link rel="modulepreload" href="/natal-sky.js?v=148" />
+    <link rel="preload" as="fetch" href="/data/natal-sky.json?v=17" crossorigin />
+    <link rel="stylesheet" href="styles.css?v=60" />
     <link rel="stylesheet" href="craft.css?v=3" />
     <style>html.js body.cosmos:not(.to-map):not(.index-open) .cosmos-id,html.js body.cosmos:not(.to-map):not(.index-open) .cosmos-ui,html.js body.cosmos:not(.to-map):not(.index-open) .cosmos-nav{opacity:1!important;transition:none!important}</style>
     <script>
@@ -94,6 +113,7 @@
          and a concise description names the decorative 3-D scene for assistive tech. -->
     <a class="skip-link" href="#cosmos-flat" onclick="if(window.__openIndex){event.preventDefault();window.__openIndex();}">Skip to site index · 跳到目录</a>
     <p class="sr-only">This homepage is an interactive three-dimensional star chart of Jiaxuan Chen's research, books, and products. Use the All pages button, the navigation menu, or search to open any page directly. Keyboard: press slash to search, A for the atlas, B for the base view, H for the whole-sky view, and the bracket keys [ ] to step the cosmic scale.</p>
+    <div id="sky-poster" class="sky-poster" aria-hidden="true"></div>
     <canvas id="deep" aria-hidden="true"></canvas>
     <canvas id="field" aria-hidden="true"></canvas>
 
@@ -197,10 +217,13 @@
     <!-- shown while lying at the base looking up -->
     <div id="ground-hint" class="ground-hint no-print" aria-hidden="true">
       <b id="ground-city">⌂</b>
-      <span class="i18n-en">· your base — drag to look · scroll to lift · [ ] address · B base · H sky</span>
-      <span class="i18n-zh">· 你的基地 — 拖动环顾 · 滚轮升空 · [ ] 尺度 · B 基地 · H 全景</span>
-      <small class="ground-credit">· map © OpenStreetMap</small>
+      <span class="i18n-en">drag to look around · scroll to rise</span>
+      <span class="i18n-zh">拖动环顾 · 滚轮升空</span>
     </div>
+    <!-- the base map's licence credit: kept visible whenever the map is (on the ground), but as a
+         quiet corner line instead of the tail of the centre hint (the shortcut keys live in the
+         buttons' tooltips: B = base, H = overview) -->
+    <small id="map-credit" class="map-credit no-print">map © OpenStreetMap contributors</small>
 
     <!-- hovering the Earth summons this doorway (positioned & shown by space.js) -->
     <button id="earth-cta" class="earth-cta no-print" type="button" data-magnet>
@@ -304,7 +327,7 @@
       { "imports": { "three": "/vendor/three/three.module.js", "three/addons/": "/vendor/three/addons/" } }
     </script>
     <!-- Essential navigation boots before optional animation resources. -->
-    <script src="menu.js?v=10"></script>
+    <script src="menu.js?v=12"></script>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js" async></script>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js" async></script>
     <script src="home.js?v=7" defer></script>
@@ -312,7 +335,7 @@
     <script src="search.js?v=5" defer></script>
     <script src="craft.js?v=1" defer></script>
     <script src="cosmic-layers.js?v=7"></script>
-    <script type="module" src="space.js?v=223"></script>
+    <script type="module" src="space.js?v=225"></script>
     <script src="galaxy-atlas.js?v=4" defer></script>
   </body>
 </html>
