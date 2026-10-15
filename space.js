@@ -106,7 +106,223 @@
        footprints on a transparent canvas; #field (z-index 0) still paints above #deep (-2). */
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;   // near-neutral: ACES supplies the highlight rolloff; the low end must stay close to the tuned direct-path art
-    var composer = null, bloomPass = null, _acUniforms = null;
+    var composer = null, bloomPass = null, _acUniforms = null, _sceneRT = null, _quantUniforms = null;
+    /* ===== THE BASE-VIEW NIGHT SKY (build 227) =====
+       Painted per pixel inside the alpha composite, BEHIND everything the scene drew: a real dark-site
+       night instead of a flat page colour. From the visitor's own vantage (the base frame) it computes:
+       deep blue-black zenith → lifted haze at the limb, the green 557.7 nm airglow ring ~10° up, the warm
+       light dome of the city (strongest toward Boston, the region's biggest), and the Milky Way at its TRUE
+       place — the galactic frame comes from natal-sky's own transform, so the band runs through the very
+       constellations drawn above. The band itself is baked ONCE into a galactic-coordinate map
+       (bakeMilkyWay), so the per-pixel cost is one texture read. Off the ground uSkyAmt = 0 and this is
+       the old composite, bit for bit. */
+    var _skyUp = null, _skyNorth = null, _skyEast = null, _milkyRT = null, _milkyTried = false;
+    var _galX = new THREE.Vector3(1, 0, 0), _galY = new THREE.Vector3(0, 1, 0), _galZ = new THREE.Vector3(0, 0, 1);
+    var MILKY_B = 0.70;   // the baked map covers galactic latitude ±40°; the band is ~0 beyond
+    var SKY_GLSL_COMMON =
+      "vec3 L(vec3 s){ return pow(s / 255.0, vec3(2.2)); }\n";
+    function makeSkyComposite(sceneTex) {
+      return {
+        uniforms: {
+          tScene: { value: sceneTex }, uBg: { value: new THREE.Color(0x0b0a09) },
+          uSkyAmt: { value: 0 }, uInvProj: { value: new THREE.Matrix4() }, uCamRot: { value: new THREE.Matrix3() },
+          uUp: { value: new THREE.Vector3(0, 1, 0) }, uCityDir: { value: new THREE.Vector3(0, 0, 1) },
+          uGalX: { value: _galX }, uGalY: { value: _galY }, uGalZ: { value: _galZ },
+          tMilky: { value: null }, uMilkyGain: { value: 0 }, uHorizon: { value: -0.0925 }
+        },
+        vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+        fragmentShader: [
+          "uniform sampler2D tScene; uniform vec3 uBg; uniform float uSkyAmt;",
+          "uniform mat4 uInvProj; uniform mat3 uCamRot; uniform vec3 uUp; uniform vec3 uCityDir;",
+          "uniform vec3 uGalX; uniform vec3 uGalY; uniform vec3 uGalZ;",
+          "uniform sampler2D tMilky; uniform float uMilkyGain; uniform float uHorizon;",
+          "varying vec2 vUv;",
+          SKY_GLSL_COMMON,
+          "vec3 skyAt(vec3 d){",
+          "  float h = dot(d, uUp);",
+          "  float alt = asin(clamp(h, -1.0, 1.0)) - uHorizon;",          // altitude above the VISIBLE limb
+          "  vec3 hz = d - uUp * h; float hl = length(hz); hz = hl > 1e-4 ? hz / hl : uCityDir;",
+          // 1. the night: deep blue-black zenith, lifting to a cool grey-blue haze along the limb
+          "  float t = clamp(alt / 1.25, 0.0, 1.0);",
+          "  vec3 col = mix(L(vec3(17.0, 21.0, 31.0)), L(vec3(8.0, 11.0, 22.0)), smoothstep(0.0, 0.32, t));",
+          "  col = mix(col, L(vec3(4.0, 6.0, 13.0)), smoothstep(0.22, 1.0, t));",
+          // 2. airglow — the faint olive-green oxygen ring every long exposure records ~10° up
+          "  col += L(vec3(9.0, 17.0, 12.0)) * exp(-pow((alt - 0.17) / 0.075, 2.0));",
+          // 3. the light dome: warm city glow sitting on the horizon, strongest toward the big city
+          "  float az = max(0.0, dot(hz, uCityDir));",
+          "  float dome = exp(-max(alt, 0.0) / 0.08) * (0.32 + 0.68 * az * az * az);",
+          "  col += L(vec3(64.0, 38.0, 22.0)) * dome;",
+          // 4. the Milky Way, from the baked galactic map (sqrt-encoded for 8-bit dark precision)
+          "  if (uMilkyGain > 0.0) {",
+          "    vec3 g = vec3(dot(d, uGalX), dot(d, uGalY), dot(d, uGalZ));",
+          "    float b = asin(clamp(g.z, -1.0, 1.0));",
+          "    if (abs(b) < " + MILKY_B.toFixed(3) + ") {",
+          "      float l = atan(g.y, g.x);",
+          "      vec3 mw = texture2D(tMilky, vec2(l / 6.2831853 + 0.5, b / " + (2 * MILKY_B).toFixed(3) + " + 0.5)).rgb;",
+          "      mw *= mw;",
+          "      col += mw * uMilkyGain * smoothstep(-0.01, 0.34, alt) * (1.0 - 0.55 * dome);",   // extinction + glow washout at the limb
+          "    }",
+          "  }",
+          // below the visible limb: dark land with a thin ember of the city glow (terrain/city draw over it)
+          "  vec3 land = L(vec3(4.0, 3.6, 3.2)) + L(vec3(34.0, 20.0, 12.0)) * exp(min(alt, 0.0) / 0.018) * (0.3 + 0.7 * az);",
+          "  return mix(land, col, smoothstep(-0.010, 0.004, alt));",
+          "}",
+          "void main(){",
+          "  vec4 c = texture2D(tScene, vUv);",
+          "  vec3 bg = uBg;",
+          "  if (uSkyAmt > 0.001) {",
+          "    vec4 v = uInvProj * vec4(vUv * 2.0 - 1.0, 1.0, 1.0);",
+          "    vec3 d = normalize(uCamRot * (v.xyz / v.w));",
+          "    bg = mix(uBg, skyAt(d), uSkyAmt);",
+          "  }",
+          "  vec3 o = c.rgb * c.a + bg * (1.0 - c.a);",
+          "  if (uSkyAmt <= 0.001) o = floor(clamp(o, 0.0, 1.0) * 255.0 + 0.5) / 255.0;",   // space: exactly the old 8-bit composite target
+          "  gl_FragColor = vec4(o, 1.0);",
+          "}"
+        ].join("\n")
+      };
+    }
+    /* the Milky Way, baked once into a galactic (l, b) map. A model of how the band reads to the eye /
+       a short exposure from a dark site: a bright, thick central bulge (Sgr–Sco–Oph), the Cygnus star cloud,
+       a long thinning arc between; mottled star clouds; the Great Rift's dark lanes running along the plane
+       from Cygnus to Sagittarius; a warm old-star core fading to cooler arms; a few H-alpha knots. */
+    function bakeMilkyWay() {
+      _milkyTried = true;
+      var W = MOBILE ? 2048 : 4096, H = W / 4;
+      var rt = new THREE.WebGLRenderTarget(W, H, { type: THREE.UnsignedByteType, depthBuffer: false });
+      rt.texture.wrapS = THREE.RepeatWrapping; rt.texture.generateMipmaps = false;
+      rt.texture.minFilter = THREE.LinearFilter; rt.texture.magFilter = THREE.LinearFilter;
+      var mat = new THREE.ShaderMaterial({
+        depthTest: false, depthWrite: false,
+        vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }",
+        fragmentShader: [
+          "varying vec2 vUv;",
+          // Ashima / Stefan Gustavson 3-D simplex noise (MIT)
+          "vec3 mod289(vec3 x){ return x - floor(x * (1.0/289.0)) * 289.0; }",
+          "vec4 mod289(vec4 x){ return x - floor(x * (1.0/289.0)) * 289.0; }",
+          "vec4 permute(vec4 x){ return mod289(((x*34.0)+1.0)*x); }",
+          "vec4 taylorInvSqrt(vec4 r){ return 1.79284291400159 - 0.85373472095314 * r; }",
+          "float snoise(vec3 v){",
+          "  const vec2 C = vec2(1.0/6.0, 1.0/3.0); const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);",
+          "  vec3 i = floor(v + dot(v, C.yyy)); vec3 x0 = v - i + dot(i, C.xxx);",
+          "  vec3 g = step(x0.yzx, x0.xyz); vec3 l = 1.0 - g; vec3 i1 = min(g.xyz, l.zxy); vec3 i2 = max(g.xyz, l.zxy);",
+          "  vec3 x1 = x0 - i1 + C.xxx; vec3 x2 = x0 - i2 + C.yyy; vec3 x3 = x0 - D.yyy;",
+          "  i = mod289(i);",
+          "  vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));",
+          "  float n_ = 0.142857142857; vec3 ns = n_ * D.wyz - D.xzx;",
+          "  vec4 j = p - 49.0 * floor(p * ns.z * ns.z); vec4 x_ = floor(j * ns.z); vec4 y_ = floor(j - 7.0 * x_);",
+          "  vec4 x = x_ * ns.x + ns.yyyy; vec4 y = y_ * ns.x + ns.yyyy; vec4 h = 1.0 - abs(x) - abs(y);",
+          "  vec4 b0 = vec4(x.xy, y.xy); vec4 b1 = vec4(x.zw, y.zw);",
+          "  vec4 s0 = floor(b0) * 2.0 + 1.0; vec4 s1 = floor(b1) * 2.0 + 1.0; vec4 sh = -step(h, vec4(0.0));",
+          "  vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy; vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww;",
+          "  vec3 p0 = vec3(a0.xy, h.x); vec3 p1 = vec3(a0.zw, h.y); vec3 p2 = vec3(a1.xy, h.z); vec3 p3 = vec3(a1.zw, h.w);",
+          "  vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));",
+          "  p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;",
+          "  vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0); m = m * m;",
+          "  return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));",
+          "}",
+          "float fbm(vec3 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 6; i++){ s += a * snoise(p); p = p * 2.03 + 17.1; a *= 0.5; } return 0.5 + 0.5 * s; }",
+          "void main(){",
+          "  float l = (vUv.x - 0.5) * 6.2831853, b = (vUv.y - 0.5) * " + (2 * MILKY_B).toFixed(4) + ";",
+          "  vec3 gd = vec3(cos(b) * cos(l), cos(b) * sin(l), sin(b));",
+          "  float bulge = exp(-(pow(l / 0.36, 2.0) + pow(b / 0.16, 2.0)));",                    // the peanut bulge, ~±20° × ±9°
+          "  float nearC = exp(-pow(l / 0.9, 2.0));",
+          "  float cyg = exp(-pow((l - 1.36) / 0.40, 2.0));",                                   // the Cygnus star cloud, l≈78°
+          "  float sct = exp(-pow((l - 0.47) / 0.12, 2.0));",                                   // the Scutum star cloud, l≈27°
+          "  float cas = exp(-pow((l - 2.10) / 0.45, 2.0));",                                   // Cassiopeia–Cepheus
+          "  float lon = 0.14 + 0.46 * exp(-pow(l / 1.45, 2.0)) + 0.32 * cyg + 0.30 * sct + 0.10 * cas;",
+          "  float wid = 0.060 + 0.028 * cyg + 0.022 * nearC;",
+          "  float warp = 0.012 * sin(l * 2.0) + 0.006 * sin(l * 5.0 + 1.3);",
+          "  float n1 = fbm(gd * 3.4), n2 = fbm(gd * 9.0 + 5.2), n3 = fbm(gd * 30.0 + 1.7);",
+          "  float core = exp(-pow((b - warp) / wid, 2.0));",
+          "  float wide = exp(-pow((b - warp) / (wid * 2.6), 2.0));",
+          "  float clouds = 0.22 + 1.55 * pow(n1, 1.7) + 0.35 * (n2 - 0.5);",                    // clumpy star clouds, not a smooth tube
+          "  float I = (core * clouds + wide * 0.20) * lon + bulge * (0.85 + 0.55 * n2);",
+          // dust: the Great Rift splitting the band from Cygnus to Sagittarius (positive l), plus wisps everywhere
+          "  float rift = smoothstep(-0.15, 0.25, l) * (1.0 - smoothstep(1.35, 1.70, l));",
+          "  float dn = fbm(gd * 4.6 + 11.0), dw = fbm(gd * 2.2 + 41.0);",
+          "  float lc = b - 0.006 - 0.018 * sin(l * 2.3 + 0.4) - 0.012 * (dw - 0.5);",          // the lane meanders
+          "  float lane = exp(-pow(lc / (0.026 + 0.020 * bulge + 0.012 * cyg), 2.0));",
+          "  float lane2 = exp(-pow((lc + 0.034) / 0.012, 2.0)) * smoothstep(0.45, 0.75, dw);",  // a fainter parallel filament
+          "  float dust = (lane * (0.42 + 0.58 * smoothstep(0.22, 0.70, dn)) + 0.5 * lane2) * (0.18 + 0.82 * rift);",
+          "  dust += exp(-pow((b - warp) / (wid * 1.15), 2.0)) * smoothstep(0.50, 0.80, fbm(gd * 12.0 + 3.0)) * 0.55;",
+          "  dust += bulge * smoothstep(0.55, 0.85, fbm(gd * 7.0 + 31.0)) * 0.6;",                 // the dark lanes across the bulge (Pipe, Ophiuchus)
+          "  I *= clamp(1.0 - dust * 0.88, 0.05, 1.0);",
+          "  I *= 0.74 + 0.52 * n3;",
+          "  I *= 1.0 - smoothstep(" + (MILKY_B * 0.72).toFixed(3) + ", " + MILKY_B.toFixed(3) + ", abs(b));",
+          // colour (ClarkVision-true): a gold old-star core, tan-neutral arms, a cool thin rim; a few H-alpha knots
+          "  vec3 gold = vec3(1.0, 0.80, 0.56), tan = vec3(0.93, 0.86, 0.76), rim = vec3(0.62, 0.70, 0.88);",
+          "  vec3 col = mix(rim, tan, smoothstep(0.05, 0.6, core));",
+          "  col = mix(col, gold, clamp(bulge * 1.2 + 0.35 * nearC * core, 0.0, 1.0));",
+          "  col *= I;",
+          "  col += vec3(0.95, 0.28, 0.36) * pow(clamp(fbm(gd * 15.0 + 23.0), 0.0, 1.0), 8.0) * core * 3.0 * I;",
+          "  gl_FragColor = vec4(sqrt(clamp(col / 2.2, 0.0, 1.0)), 1.0);",
+          "}"
+        ].join("\n")
+      });
+      var quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat);
+      quad.frustumCulled = false;   // clip-space quad: never let the scene camera cull it
+      var bakeScene = new THREE.Scene(); bakeScene.add(quad);
+      var prevRT = renderer.getRenderTarget(), prevTM = renderer.toneMapping;
+      try {
+        renderer.toneMapping = THREE.NoToneMapping;
+        renderer.setRenderTarget(rt); renderer.clear(); renderer.render(bakeScene, camera);
+        _milkyRT = rt;
+      } catch (e) { window.__space.milkyError = String(e); rt.dispose(); }
+      renderer.setRenderTarget(prevRT); renderer.toneMapping = prevTM;
+      quad.geometry.dispose(); mat.dispose();
+    }
+    /* per frame, before the composite runs: feed it the camera ray basis, the base frame, the galactic frame */
+    var _skyM3 = new THREE.Matrix3();
+    function updateSkyUniforms(skyAmt) {
+      if (!_acUniforms) return;
+      var u = _acUniforms;
+      u.uSkyAmt.value = (_skyUp && skyAmt > 0.001 && !window.__skyOff) ? skyAmt : 0;
+      if (!u.uSkyAmt.value) return;
+      if (!_milkyRT && !_milkyTried && natalSky && natalSky.skyDir) bakeMilkyWay();
+      u.uInvProj.value.copy(camera.projectionMatrixInverse);
+      u.uCamRot.value.setFromMatrix4(camera.matrixWorld);
+      u.uUp.value.copy(_skyUp);
+      // the region's brightest light dome: Boston, ~37° east of north from Providence
+      u.uCityDir.value.copy(_skyNorth).multiplyScalar(Math.cos(0.646)).addScaledVector(_skyEast, Math.sin(0.646)).normalize();
+      if (_milkyRT && natalSky && natalSky.skyDir) {
+        natalSky.skyDir(17.7611, -29.0078, _galX);          // the galactic centre (Sgr A*)
+        natalSky.skyDir(12.8573, 27.1283, _galZ);           // the north galactic pole
+        _galZ.addScaledVector(_galX, -_galZ.dot(_galX)).normalize();
+        _galY.crossVectors(_galZ, _galX).normalize();       // l = 90° (toward Cygnus)
+        u.uGalX.value.copy(_galX); u.uGalY.value.copy(_galY); u.uGalZ.value.copy(_galZ);   // (the pass holds its own cloned vectors)
+        u.tMilky.value = _milkyRT.texture;
+        u.uMilkyGain.value = 0.085;
+      }
+    }
+    // the sky's own ease (time-based, ~1 s): the ground-dim ease is per-FRAME and crawls at the idle
+    // frame rate, which left the sky at 40% for half a minute after landing
+    var _skyAmt = 0, _skyT = 0, _skyState = { amt: 0, baked: false, gain: 0 };
+    window.__space.debugMilky = function () {   // verification: the baked galactic map, downsampled, as a data URL
+      if (!_milkyRT) return null;
+      var W = _milkyRT.width, H = _milkyRT.height, buf = new Uint8Array(W * H * 4);
+      renderer.readRenderTargetPixels(_milkyRT, 0, 0, W, H, buf);
+      var cv = document.createElement("canvas"); cv.width = 1024; cv.height = 256; var cx = cv.getContext("2d");
+      var img = cx.createImageData(1024, 256), sx = W / 1024, sy = H / 256, mx = 0;
+      for (var y = 0; y < 256; y++) for (var x = 0; x < 1024; x++) {
+        var si = (((H - 1 - Math.floor(y * sy)) * W) + Math.floor(x * sx)) * 4, di = (y * 1024 + x) * 4;
+        img.data[di] = buf[si]; img.data[di + 1] = buf[si + 1]; img.data[di + 2] = buf[si + 2]; img.data[di + 3] = 255; mx = Math.max(mx, buf[si]);
+      }
+      cx.putImageData(img, 0, 0); return { max: mx, url: cv.toDataURL("image/png") };
+    };
+    function renderComposed() {
+      renderer.setRenderTarget(_sceneRT); renderer.clear(); renderer.render(scene, camera); renderer.setRenderTarget(null);
+      var now = performance.now(), dt = _skyT ? Math.min(0.25, (now - _skyT) / 1000) : 0; _skyT = now;
+      var onGround = !!(controls && controls.isGround && controls.isGround());
+      _skyAmt += ((onGround ? 1 : 0) - _skyAmt) * Math.min(1, dt * 2.6);
+      if (_skyAmt < 0.002) _skyAmt = 0;
+      updateSkyUniforms(_skyAmt);
+      if (_quantUniforms) _quantUniforms.uKeep.value = _acUniforms && _acUniforms.uSkyAmt.value > 0 ? 1 : 0;
+      if (natalSky && natalSky.setGroundSky) natalSky.setGroundSky(_skyAmt);
+      _skyState.amt = _skyAmt; _skyState.baked = !!_milkyRT; _skyState.gain = _acUniforms ? _acUniforms.uMilkyGain.value : 0;
+      window.__space.sky = _skyState;
+      composer.render();
+    }
     function syncSceneBg() {
       // the page colour feeds the ALPHA-COMPOSITE pass (not scene.background) — re-synced on theme change
       if (!_acUniforms) return;
@@ -127,21 +343,43 @@
          explicitly: base render keeps its alpha, then rgb×a + pageColour×(1−a), and only THEN bloom —
          so bloom sees exactly what the eye saw on the direct path and lifts only its real hot cores.
          LDR (UnsignedByte) base keeps the clamped-accumulation art; samples:4 restores MSAA (WebGL2). */
+      /* BUILD 227: the scene still renders into its OWN fixed LDR target (_sceneRT — clamped accumulation,
+         MSAA, exactly as before), but every pass AFTER the alpha composite now runs in HalfFloat. An 8-bit
+         LINEAR buffer has no codes between black and ~13/255 sRGB, so the real night sky the composite now
+         paints behind the base view (gradient, airglow, city glow, the Milky Way) would have banded into
+         rings. Space views are unchanged: there the composite is the same rgb×a + page×(1−a) as ever. */
       var baseRT = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.UnsignedByteType, samples: 4 });
-      var c = new mods[0].EffectComposer(renderer, baseRT);
+      var postRT = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType });
+      var c = new mods[0].EffectComposer(renderer, postRT);
+      var _composerSetSize = c.setSize.bind(c);
+      c.setSize = function (w, h) {   // the scene target follows every resize / dynamic-resolution step
+        _composerSetSize(w, h);
+        baseRT.setSize(Math.max(1, Math.floor(w * c._pixelRatio)), Math.max(1, Math.floor(h * c._pixelRatio)));
+      };
       c.setPixelRatio(renderer.getPixelRatio());
       c.setSize(innerWidth, innerHeight);
-      c.addPass(new mods[1].RenderPass(scene, camera));
-      var alphaComposite = new mods[4].ShaderPass({
-        uniforms: { tDiffuse: { value: null }, uBg: { value: new THREE.Color(0x0b0a09) } },
-        vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
-        fragmentShader: "uniform sampler2D tDiffuse; uniform vec3 uBg; varying vec2 vUv;\n" +
-          "void main(){ vec4 c = texture2D(tDiffuse, vUv); gl_FragColor = vec4(c.rgb * c.a + uBg * (1.0 - c.a), 1.0); }"
-      });
+      // no RenderPass: renderComposed() draws the scene into baseRT itself, so the scene target never
+      // ping-pongs into the float buffers; the composite reads it through tScene ("tNone" = don't rebind)
+      var alphaComposite = new mods[4].ShaderPass(makeSkyComposite(baseRT.texture), "tNone");
+      alphaComposite.uniforms.tScene.value = baseRT.texture;   // ShaderPass deep-clones uniforms, and a render-target texture clones to null
+      _sceneRT = baseRT;
       _acUniforms = alphaComposite.uniforms;
       c.addPass(alphaComposite);
       bloomPass = new mods[2].UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.32, 0.86);
       c.addPass(bloomPass);
+      // SPACE STAYS BIT-FAITHFUL: the old pipeline stored composite AND bloom in 8-bit linear, which rounded
+      // away the faintest bloom halos (< 0.5/255) — the tuned "sparse dark" space look depends on that floor.
+      // Off the ground we round exactly as the old buffer did; on the ground (uKeep → 1) the float precision
+      // is kept so the night-sky gradient never bands.
+      var quantize = new mods[4].ShaderPass({
+        uniforms: { tDiffuse: { value: null }, uKeep: { value: 0 } },
+        vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+        fragmentShader: "uniform sampler2D tDiffuse; uniform float uKeep; varying vec2 vUv;\n" +
+          "void main(){ vec4 c = texture2D(tDiffuse, vUv); vec3 q = floor(clamp(c.rgb, 0.0, 1.0) * 255.0 + 0.5) / 255.0;\n" +
+          "  gl_FragColor = vec4(mix(q, c.rgb, uKeep), 1.0); }"
+      });
+      _quantUniforms = quantize.uniforms;
+      c.addPass(quantize);
       c.addPass(new mods[3].OutputPass());
       composer = c;
       syncSceneBg();
@@ -536,13 +774,13 @@
       var gr = g2.createLinearGradient(0, 0, 0, 256);           // canvas top row = texture v=1 = zenith
       // the band hugs the VISIBLE limb, not the level plane: at this eye height the
       // horizon dips ~14 deg (sqrt(2h/R)), so the glow sits where the planet's edge is
-      gr.addColorStop(0.0, "rgba(0,0,0,0)");                    // zenith: pure night
-      gr.addColorStop(0.36, "rgba(24,38,84,0.06)");             // high sky: night blue arrives
-      gr.addColorStop(0.47, "rgba(38,58,120,0.14)");            // the blue hour band
-      gr.addColorStop(0.512, "rgba(224,135,106,0.30)");         // warmth gathers at the edge
-      gr.addColorStop(0.529, "rgba(255,208,150,0.74)");         // the horizon LINE itself burns (dip ≈5.3° at the low eye)
-      gr.addColorStop(0.56, "rgba(140,82,56,0.22)");            // just below: embered land
-      gr.addColorStop(0.78, "rgba(30,18,12,0.05)");             // the dark of the near ground
+      // build 227: the composite now paints the real limb (haze, airglow, city light dome) behind the scene;
+      // this additive band only keeps a thin warm line where the land meets the sky
+      gr.addColorStop(0.0, "rgba(0,0,0,0)");
+      gr.addColorStop(0.50, "rgba(0,0,0,0)");
+      gr.addColorStop(0.522, "rgba(224,150,110,0.10)");
+      gr.addColorStop(0.529, "rgba(255,200,150,0.26)");         // the horizon line (dip ≈5.3° at the low eye)
+      gr.addColorStop(0.545, "rgba(120,72,48,0.06)");
       gr.addColorStop(1.0, "rgba(0,0,0,0)");
       g2.fillStyle = gr; g2.fillRect(0, 0, 4, 256);
       var tex = new THREE.CanvasTexture(c);
@@ -554,21 +792,22 @@
       groundDome.position.copy(pos);
       groundDome.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal);
       groundDome.renderOrder = 1;
+      groundDome.visible = false;   // build 227: retired — drawn with depthTest off it glowed IN FRONT of the buildings; the composite paints the limb behind the scene
       scene.add(groundDome);
       var east = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), normal);
       if (east.lengthSq() < 1e-6) east.set(1, 0, 0);
       east.normalize();
       var north = new THREE.Vector3().crossVectors(normal, east).normalize();
-      var gc = document.createElement("canvas"); gc.width = gc.height = 32;
-      var gx = gc.getContext("2d"), gg = gx.createRadialGradient(16, 16, 0, 16, 16, 16);
-      gg.addColorStop(0, "rgba(255,255,255,1)");
-      gg.addColorStop(0.28, "rgba(255,244,224,.72)");
-      gg.addColorStop(0.72, "rgba(255,220,176,.10)");
-      gg.addColorStop(1, "rgba(255,220,176,0)");
-      gx.fillStyle = gg; gx.fillRect(0, 0, 32, 32);
-      var starTex = new THREE.CanvasTexture(gc);
-      var nField = MOBILE ? 780 : 1400, nBand = MOBILE ? 1900 : 3600, n = nField + nBand;   // the band needs MANY dim stars packed tight to overlap into a glowing river
-      var gp = new Float32Array(n * 3), gc2 = new Float32Array(n * 3);
+      _skyUp = normal.clone(); _skyEast = east.clone(); _skyNorth = north.clone();   // the composite's sky frame
+      // the REAL galactic plane in this sky (same transform as the drawn constellations) — when the
+      // composite paints the Milky Way, the band stars must crowd along the very same arc
+      var galOK = !!(composer && natalSky && natalSky.skyDir), gX = null, gY = null, gZ = null;
+      if (galOK) {
+        gX = natalSky.skyDir(17.7611, -29.0078); gZ = natalSky.skyDir(12.8573, 27.1283);
+        gZ.addScaledVector(gX, -gZ.dot(gX)).normalize(); gY = new THREE.Vector3().crossVectors(gZ, gX).normalize();
+      }
+      var nField = MOBILE ? 1100 : 2200, nBand = MOBILE ? 2000 : 4200, n = nField + nBand;
+      var gp = new Float32Array(n * 3), gc2 = new Float32Array(n * 3), gs = new Float32Array(n);
       var seed = 0x91ab7;
       function grndRand() {
         seed = (seed * 1664525 + 1013904223) >>> 0;
@@ -576,63 +815,88 @@
       }
       // real stars span a range of spectral COLOURS — hot blue-white O/B/A → white → gold F/G → orange K → red M.
       function starRGB(t) {
-        if (t < 0.11) return [0.60, 0.73, 1.0];        // O/B hot blue-white
-        if (t < 0.29) return [0.80, 0.89, 1.0];        // A blue-white
+        if (t < 0.11) return [0.62, 0.75, 1.0];        // O/B hot blue-white
+        if (t < 0.29) return [0.82, 0.90, 1.0];        // A blue-white
         if (t < 0.54) return [1.0, 1.0, 0.97];         // white
-        if (t < 0.75) return [1.0, 0.93, 0.72];        // F/G yellow-gold
-        if (t < 0.90) return [1.0, 0.80, 0.52];        // K orange
-        return [1.0, 0.60, 0.43];                      // M red-orange
+        if (t < 0.75) return [1.0, 0.92, 0.74];        // F/G yellow-gold
+        if (t < 0.90) return [1.0, 0.80, 0.55];        // K orange
+        return [1.0, 0.64, 0.46];                      // M red-orange
       }
-      // the MILKY WAY — a luminous band arching across the sky (a great circle tilted off the horizon). Dense,
-      // dim, hazy stars packed near the circle overlap (additive) into the soft glowing river you see from a dark site.
-      var bandPole = new THREE.Vector3().addScaledVector(east, 0.86).addScaledVector(north, 0.50).addScaledVector(normal, 0.08).normalize();   // near-horizontal pole → the band's great circle passes ~overhead (through the zenith), so the Milky Way arches across the sky you see when you look up from the base
+      // fallback band (no composite sky): the old tilted great circle
+      var bandPole = new THREE.Vector3().addScaledVector(east, 0.86).addScaledVector(north, 0.50).addScaledVector(normal, 0.08).normalize();
       var b1 = new THREE.Vector3().crossVectors(bandPole, normal); if (b1.lengthSq() < 1e-4) b1.copy(east); b1.normalize();
       var b2 = new THREE.Vector3().crossVectors(bandPole, b1).normalize();
+      if (galOK) { bandPole.copy(gZ); b1.copy(gX); b2.copy(gY); }
       for (var si = 0; si < n; si++) {
         var band = si >= nField, v = new THREE.Vector3(), okAbove = false;
-        for (var tr = 0; tr < 14 && !okAbove; tr++) {
+        for (var tr = 0; tr < 16 && !okAbove; tr++) {
           if (band) {
-            var th = grndRand() * Math.PI * 2, off = (grndRand() + grndRand() + grndRand() - 1.5) * 0.11;   // gaussian half-width ~6° — tight so the stars overlap into a bright band
-            v.copy(b1).multiplyScalar(Math.cos(th)).addScaledVector(b2, Math.sin(th)).addScaledVector(bandPole, off).normalize();
+            // galactic longitude, denser toward the centre (Sgr) and in Cygnus; latitude ~gaussian, thicker at the bulge
+            var th = 0, acc = false;
+            for (var rj = 0; rj < 8 && !acc; rj++) {
+              th = (grndRand() * 2 - 1) * Math.PI;
+              var wl = 0.30 + 0.70 * Math.exp(-Math.pow(th / 1.2, 2)) + 0.25 * Math.exp(-Math.pow((th - 1.36) / 0.42, 2));
+              acc = grndRand() < wl;
+            }
+            var wB = 0.07 + 0.09 * Math.exp(-Math.pow(th / 0.5, 2));
+            var off = (grndRand() + grndRand() + grndRand() - 1.5) * wB * 1.4;
+            v.copy(b1).multiplyScalar(Math.cos(th)).addScaledVector(b2, Math.sin(th)).multiplyScalar(Math.cos(off)).addScaledVector(bandPole, Math.sin(off)).normalize();
           } else {
-            var az = grndRand() * Math.PI * 2, alt = 0.18 + Math.pow(grndRand(), 0.72) * 1.24, ca = Math.cos(alt), sa = Math.sin(alt);
+            var az = grndRand() * Math.PI * 2, alt = 0.16 + Math.pow(grndRand(), 0.72) * 1.26, ca = Math.cos(alt), sa = Math.sin(alt);
             v.copy(north).multiplyScalar(Math.cos(az) * ca).addScaledVector(east, Math.sin(az) * ca).addScaledVector(normal, sa).normalize();
           }
-          if (v.dot(normal) >= 0.14) okAbove = true;   // keep every star above the horizon (depthTest is off)
+          if (v.dot(normal) >= 0.12) okAbove = true;   // keep every star above the horizon (depthTest is off)
         }
         var rSky = 34 + grndRand() * 4, pk = si * 3;
         gp[pk] = pos.x + v.x * rSky; gp[pk + 1] = pos.y + v.y * rSky; gp[pk + 2] = pos.z + v.z * rSky;
-        if (!okAbove) { gc2[pk] = gc2[pk + 1] = gc2[pk + 2] = 0; continue; }   // couldn't clear the horizon → invisible
-        var lum = band ? (0.12 + 0.30 * Math.pow(grndRand(), 2.2)) : (0.32 + 0.68 * Math.pow(grndRand(), 3.2));
+        if (!okAbove) { gc2[pk] = gc2[pk + 1] = gc2[pk + 2] = 0; gs[si] = 0; continue; }
+        // a real magnitude hierarchy: almost all stars faint pinpricks, a few bright ones that carry the sky
+        var tb = Math.pow(grndRand(), band ? 9 : 6.5);
+        var lum = band ? (0.10 + 0.34 * Math.pow(grndRand(), 2.0) + 0.6 * tb) : (0.26 + 0.30 * grndRand() + 0.95 * tb);
+        gs[si] = band ? (1.05 + 0.9 * Math.pow(grndRand(), 3) + 2.0 * tb) : (1.25 + 0.6 * grndRand() + 3.3 * tb);
         var c = starRGB(grndRand());
         gc2[pk] = c[0] * lum; gc2[pk + 1] = c[1] * lum; gc2[pk + 2] = c[2] * lum;
       }
       var sg = new THREE.BufferGeometry();
       sg.setAttribute("position", new THREE.BufferAttribute(gp, 3));
       sg.setAttribute("color", new THREE.BufferAttribute(gc2, 3));
-      groundStars = new THREE.Points(sg, new THREE.PointsMaterial({
-        map: starTex, size: (MOBILE ? 3.1 : 3.8) * Math.min(devicePixelRatio || 1, 1.6),
-        sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.86,
-        depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, fog: false
-      }));
-      if ("toneMapped" in groundStars.material) groundStars.material.toneMapped = false;
+      sg.setAttribute("aSize", new THREE.BufferAttribute(gs, 1));
+      // round, soft-cored points sized per star (the old PointsMaterial drew every star the same 3.8px)
+      var starMat = new THREE.ShaderMaterial({
+        uniforms: { uPR: { value: renderer.getPixelRatio() }, uOpacity: { value: 0.92 } },
+        vertexShader: "uniform float uPR; attribute float aSize; varying vec3 vC;\n" +
+          "void main(){ vC = color; gl_PointSize = aSize * uPR * 1.6; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+        fragmentShader: "uniform float uOpacity; varying vec3 vC;\n" +
+          "void main(){ vec2 p = gl_PointCoord - 0.5; float r2 = dot(p, p) * 4.0; float a = exp(-r2 * 6.0); if (a < 0.012) discard;\n" +
+          "  gl_FragColor = vec4(vC, a * uOpacity); }",
+        vertexColors: true, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, fog: false
+      });
+      starMat.opacity = 0.92;   // the frame loop fades .opacity on launch; onBeforeRender carries it into the shader
+      groundStars = new THREE.Points(sg, starMat);
+      groundStars.onBeforeRender = function () { starMat.uniforms.uOpacity.value = starMat.opacity; starMat.uniforms.uPR.value = renderer.getPixelRatio(); };
       groundStars.name = "GroundSkyStars"; groundStars.frustumCulled = false; groundStars.renderOrder = 3;
       scene.add(groundStars);
-      // MILKY WAY HAZE: big, dim, soft sprites packed tight on the same band → they overlap (additive) into a
-      // smooth glowing river behind the sharp stars, so the Milky Way reads as a luminous band, not just dots.
+      if (galOK) return;   // the composite paints the Milky Way itself — no haze sprites
+      // FALLBACK (no composer): big, dim, soft sprites packed on the band so it still reads as a river
+      var gc = document.createElement("canvas"); gc.width = gc.height = 32;
+      var gx = gc.getContext("2d"), gg = gx.createRadialGradient(16, 16, 0, 16, 16, 16);
+      gg.addColorStop(0, "rgba(255,255,255,1)"); gg.addColorStop(0.28, "rgba(255,244,224,.72)");
+      gg.addColorStop(0.72, "rgba(255,220,176,.10)"); gg.addColorStop(1, "rgba(255,220,176,0)");
+      gx.fillStyle = gg; gx.fillRect(0, 0, 32, 32);
+      var starTex = new THREE.CanvasTexture(gc);
       var nh = MOBILE ? 340 : 700, hp = new Float32Array(nh * 3), hc = new Float32Array(nh * 3);
       for (var hi = 0; hi < nh; hi++) {
         var hv = new THREE.Vector3(), okh = false;
         for (var ht = 0; ht < 16 && !okh; ht++) {
-          var hth = grndRand() * Math.PI * 2, hoff = (grndRand() + grndRand() + grndRand() - 1.5) * 0.075;   // tighter than the stars → a defined river
+          var hth = grndRand() * Math.PI * 2, hoff = (grndRand() + grndRand() + grndRand() - 1.5) * 0.075;
           hv.copy(b1).multiplyScalar(Math.cos(hth)).addScaledVector(b2, Math.sin(hth)).addScaledVector(bandPole, hoff).normalize();
           if (hv.dot(normal) >= 0.14) okh = true;
         }
         var hr = 33 + grndRand() * 3, hk = hi * 3;
         hp[hk] = pos.x + hv.x * hr; hp[hk + 1] = pos.y + hv.y * hr; hp[hk + 2] = pos.z + hv.z * hr;
         if (!okh) { hc[hk] = hc[hk + 1] = hc[hk + 2] = 0; continue; }
-        var hl = 0.022 + 0.028 * grndRand();                                   // VERY dim — many overlap into a soft glow
-        hc[hk] = hl * 1.0; hc[hk + 1] = hl * 0.95; hc[hk + 2] = hl * 0.84;     // warm-white galactic glow
+        var hl = 0.022 + 0.028 * grndRand();
+        hc[hk] = hl * 1.0; hc[hk + 1] = hl * 0.95; hc[hk + 2] = hl * 0.84;
       }
       var hg = new THREE.BufferGeometry();
       hg.setAttribute("position", new THREE.BufferAttribute(hp, 3));
@@ -643,7 +907,7 @@
         depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, fog: false
       }));
       if ("toneMapped" in groundMilky.material) groundMilky.material.toneMapped = false;
-      groundMilky.name = "GroundMilkyHaze"; groundMilky.frustumCulled = false; groundMilky.renderOrder = 2;   // behind the sharp stars
+      groundMilky.name = "GroundMilkyHaze"; groundMilky.frustumCulled = false; groundMilky.renderOrder = 2;
       scene.add(groundMilky);
     }
     function removeGroundDome() {
@@ -814,10 +1078,10 @@
           "  alb=mix(alb,vec3(0.58,0.60,0.64),smoothstep(0.52,0.92,vElev)*0.38);\n" +
           "  vec3 col=alb*ao*(0.048+0.12*sky);\n" +
           "  col+=vec3(0.035,0.045,0.075)*sky*0.32*(1.0-ocean);\n" +
-          "  col+=vec3(0.95,0.58,0.36)*slope*(0.09+0.10*fbm(P*0.12))*(0.25+0.75*(1.0-ocean));\n" +
+          "  col+=vec3(0.95,0.58,0.36)*slope*(0.045+0.05*fbm(P*0.12))*(0.25+0.75*(1.0-ocean));\n" +
           "  float g=fbm(P*4.0)*0.26+0.20; col*=0.70+0.50*g;\n" +
           "  float d=length(cameraPosition-vWp), haze=smoothstep(0.026,0.145,d);\n" +
-          "  col=mix(col,vec3(0.85,0.42,0.22)*0.48,haze*0.72);\n" +
+          "  col=mix(col,vec3(0.034,0.022,0.019),haze*0.85);\n" +   // build 227: fade into the dark limb of the real night sky (was a bright amber wall)
           "  gl_FragColor=vec4(col*uFade,1.0);\n" +
           "}"
       });
@@ -876,8 +1140,8 @@
           "  vec3 src=texture2D(uMap,vUv).rgb;\n" +
           "  float lum=dot(src,vec3(0.30,0.54,0.16));\n" +
           // night remapping: dark wash → warm gold streets under starlight (not a daytime postcard)
-          "  vec3 night=mix(vec3(0.018,0.016,0.014), vec3(0.92,0.62,0.34), smoothstep(0.06,0.42,lum));\n" +
-          "  night=mix(night, src*vec3(1.05,0.78,0.55)*0.55, 0.28);\n" +
+          "  vec3 night=mix(vec3(0.010,0.009,0.008), vec3(0.62,0.38,0.18), smoothstep(0.10,0.48,lum));\n" +   // build 227: sodium-amber streets, not a gold postcard
+          "  night=mix(night, src*vec3(1.05,0.78,0.55)*0.30, 0.18);\n" +
           "  float d=distance(vUv,vec2(0.5));\n" +
           "  float rim=1.0-smoothstep(0.38,0.50,d);\n" +
           "  float center=smoothstep(0.50,0.12,d);\n" +
@@ -938,7 +1202,7 @@
         g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(P), 3));
         g.setAttribute("aInfo", new THREE.BufferAttribute(new Float32Array(I), 3));
         _cityMat = new THREE.ShaderMaterial({
-          uniforms: { uFade: { value: 0 }, uScale: { value: S }, uHorizon: { value: new THREE.Color(0.36, 0.20, 0.11) } },
+          uniforms: { uFade: { value: 0 }, uScale: { value: S }, uHorizon: { value: new THREE.Color(0.030, 0.021, 0.019) } },   // build 227: the real night limb (was bright amber)
           side: THREE.DoubleSide, depthWrite: true, depthTest: true, fog: false,
           vertexShader:
             "attribute vec3 aInfo; varying vec3 vLocal; varying vec3 vInfo; varying float vDist;\n" +
@@ -952,17 +1216,18 @@
             "void main(){\n" +
             "  float top=vInfo.x, wall=vInfo.y, seed=vInfo.z;\n" +
             "  vec3 m=vLocal/uScale;\n" +                                   // local metres (e, n, heightM)
-            "  vec3 col=mix(vec3(0.020,0.017,0.014), vec3(0.11,0.093,0.070), top);\n" +   // dark warm silhouette, skyline lightening
+            "  vec3 col=mix(vec3(0.0055,0.005,0.0055), vec3(0.022,0.020,0.024), top);\n" +   // build 227: true night silhouettes — the windows carry the light (was mid-grey up to 0.11)
             "  if(wall>0.5){\n" +
             "    float u=(m.x*0.9+m.y*1.1);\n" +
             "    float ci=floor(u/3.4), ri=floor(m.z/3.6);\n" +
-            "    float lit=step(0.66, h3(vec3(ci, ri, seed*97.0)));\n" +
+            "    float hh=h3(vec3(ci, ri, seed*97.0)); float lit=step(0.80, hh);\n" +   // ~20% of rooms lit at night
             "    float px=abs(fract(u/3.4)-0.5), py=abs(fract(m.z/3.6)-0.42);\n" +
             "    float pane=smoothstep(0.36,0.18,px)*smoothstep(0.36,0.14,py);\n" +
-            "    col+=lit*pane*vec3(1.0,0.66,0.32)*0.9;\n" +               // warm lit windows
+            "    vec3 wc=mix(vec3(1.0,0.62,0.30), vec3(0.78,0.84,1.0), step(0.965, hh));\n" +   // a few cool LED rooms among the warm
+            "    col+=lit*pane*wc*(0.55+0.35*fract(hh*13.7));\n" +
             "  }\n" +
             "  float haze=smoothstep(0.02,0.15,vDist);\n" +
-            "  col=mix(col, uHorizon, haze*0.72);\n" +                     // distant blocks dissolve into the amber horizon
+            "  col=mix(col, uHorizon, haze*0.80);\n" +                     // distant blocks dissolve into the night limb
             "  gl_FragColor=vec4(col*uFade, 1.0); }"
         });
         if ("toneMapped" in _cityMat) _cityMat.toneMapped = false;
@@ -1475,7 +1740,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=44").then(function (mod) {
+    import("./nye-armature.js?v=45").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -1588,7 +1853,7 @@
       var webXYZ = arr[4] ? new Int16Array(arr[4]) : null;
       var webRGB = arr[5] ? new Uint8Array(arr[5]) : null;
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=148").then(function (mod) {
+      return import("./natal-sky.js?v=149").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -1800,7 +2065,13 @@
       var baseBtn = document.getElementById("cosmos-base");
       function groundHint(on) {
         if (groundHintEl) groundHintEl.classList.toggle("is-on", !!on);
-        if (on && groundCityEl) groundCityEl.textContent = (baseGeo && baseGeo.city) ? ("⌂ " + baseGeo.city) : "⌂";
+        if (on && groundCityEl) {   // an instrument stamp: where you lie, to the hundredth of a degree
+          var gc = "";
+          if (baseGeo && isFinite(baseGeo.lat) && isFinite(baseGeo.lon)) {
+            gc = Math.abs(baseGeo.lat).toFixed(2) + "°" + (baseGeo.lat >= 0 ? "N" : "S") + " " + Math.abs(baseGeo.lon).toFixed(2) + "°" + (baseGeo.lon >= 0 ? "E" : "W");
+          }
+          groundCityEl.textContent = [(baseGeo && baseGeo.city) || "", gc].filter(Boolean).join("  ·  ") || "⌂";
+        }
         document.body.classList.toggle("on-ground", !!on);
         // you're standing AT the beacon: hide it on the ground or its screen-filling
         // additive glow washes the whole night white (it pulses, too — the wandering haze)
@@ -2825,7 +3096,7 @@
       if (natalSky) natalSky.tick(_clk);
       if (composer) {
         if (bloomPass) bloomPass.enabled = (window.__cvQuality || 0) < 2;   // shed the bloom pass under real load
-        composer.render();
+        renderComposed();
       } else renderer.render(scene, camera);
       requestAnimationFrame(frame);
     }
@@ -2853,7 +3124,7 @@
     window.__space.pump = function (n2) { var base = performance.now(); for (var q = 0; q < (n2 || 1); q++) frame(base + q * 16.7); };
     window.__space.snap = function () {
       if (COSMOS && controls) controls.update(1 / 60);   // was dtF — undefined in this scope (snap threw ReferenceError)
-      if (composer) composer.render(); else renderer.render(scene, camera); return canvas.toDataURL("image/jpeg", 0.8);
+      if (composer) renderComposed(); else renderer.render(scene, camera); return canvas.toDataURL("image/jpeg", 0.8);
     };
     window.__space.setOpacity = function (o) { canvas.style.opacity = String(o); };
     window.__space.setFusion = deepFusion.setFusion;

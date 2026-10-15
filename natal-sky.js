@@ -23,6 +23,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
      wait until space.js says the sky is live (releaseLazyTextures), the visitor first drags/scrolls,
      or a 9 s safety net — whichever comes first. Placeholders cover until each one lands. */
   var _lazyTex = [], _lazyReleased = false;
+  var _groundSky = 0;   // 0 in space … 1 lying at the base (space.js drives it)
   function lazyTex(fn) { if (_lazyReleased) fn(); else _lazyTex.push(fn); }
   function releaseLazyTextures() {
     if (_lazyReleased) return; _lazyReleased = true;
@@ -532,7 +533,15 @@ export function buildNatalSky(THREE, scene, data, opts) {
     var abGeo = new T.BufferGeometry();
     abGeo.setAttribute("position", new T.BufferAttribute(pos, 3));
     abGeo.setAttribute("color", new T.BufferAttribute(col, 3));
-    var abMat = new T.PointsMaterial({ size: 0.9, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false, blending: T.NormalBlending, fog: false });   // rocky specks, not additive glow
+    // build 227: a ROUND speck (an untextured point is a square — from the base view the belt read as grey pixel blocks)
+    var abTex = null;
+    if (typeof document !== "undefined") {
+      var abC = document.createElement("canvas"); abC.width = abC.height = 32;
+      var abX = abC.getContext("2d"), abG = abX.createRadialGradient(16, 16, 0, 16, 16, 16);
+      abG.addColorStop(0, "rgba(255,255,255,1)"); abG.addColorStop(0.62, "rgba(255,255,255,1)"); abG.addColorStop(1, "rgba(255,255,255,0)");
+      abX.fillStyle = abG; abX.fillRect(0, 0, 32, 32); abTex = new T.CanvasTexture(abC);
+    }
+    var abMat = new T.PointsMaterial({ map: abTex, alphaTest: abTex ? 0.08 : 0, size: 0.9, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false, blending: T.NormalBlending, fog: false });   // rocky specks, not additive glow
     if ("toneMapped" in abMat) abMat.toneMapped = false;
     var abPts = new T.Points(abGeo, abMat);
     abPts.name = "AsteroidBelt";
@@ -2684,6 +2693,15 @@ export function buildNatalSky(THREE, scene, data, opts) {
     starPoints: starPoints,
     ensureFarLayers: ensureFarLayers,
     releaseLazyTextures: releaseLazyTextures,
+    setGroundSky: function (t) { _groundSky = Math.max(0, Math.min(1, +t || 0)); },
+    /* world-space unit direction of a real sky position (RA hours, Dec degrees) in THIS sky's frame —
+       the same transform the constellation stars use, so anything placed with it (the base-view
+       Milky Way, galactic poles) lines up with the drawn figures */
+    skyDir: function (raH, decDeg, out) {
+      var e = raDecToEcl(raH, decDeg);
+      belt.updateWorldMatrix(true, false);
+      return (out || new T.Vector3()).copy(eclVec(e.lon, e.lat, 1)).transformDirection(belt.matrixWorld);
+    },
     drainBuild: function () {
       var f = _buildQ.shift(); if (!f) return false;
       try { f(); } catch (e) { try { console.error("[natal-sky] builder failed (skipped):", e); } catch (_e) {} }
@@ -2808,7 +2826,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
         if (_sfMat) {
           var _sfOn = _cl < 5000 || _wMW > 0;
           _sfObj.visible = _sfOn;
-          _sfMat.opacity = _sfBase * (1 - 0.55 * _bdT);
+          _sfMat.opacity = _sfBase * (1 - 0.55 * _bdT) * (1 - 0.42 * _groundSky);   // lying at the base the deep field steps back: the real sky leads with its bright stars and the Milky Way
         }
         if (!_nsMat) { var _nso = group.getObjectByName("natalStars"); if (_nso && _nso.material) { _nsObj = _nso; _nsMat = _nso.material; _nsBase = _nso.material.opacity; } }
         if (_nsMat) {

@@ -715,17 +715,10 @@ body.cosmos::after{
   content:""; position:fixed; inset:0; z-index:3; pointer-events:none; opacity:.018;
   background-image:var(--grain); background-size:140px 140px; mix-blend-mode:screen;
 }
-body.cosmos.on-ground::after{
-  opacity:.22;
-  background-image:
-    radial-gradient(circle at 12% 18%, rgba(255,250,234,.88) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 66% 28%, rgba(210,226,255,.74) 0 1px, transparent 1.7px),
-    radial-gradient(circle at 37% 64%, rgba(255,226,184,.70) 0 1px, transparent 1.6px),
-    radial-gradient(circle at 84% 72%, rgba(255,255,255,.62) 0 .8px, transparent 1.5px),
-    var(--grain);
-  background-size:420px 310px, 310px 230px, 500px 380px, 260px 190px, 140px 140px;
-  background-position:0 0, 90px 40px, -40px 80px, 25px 15px, 0 0;
-}
+/* build 227: the on-ground film-grain + painted-dot overlay (opacity .22, screen blend) lifted the whole
+   night to a muddy brown-grey (~15/255) — the real sky is now painted by the WebGL composite, so the
+   base view carries no CSS veil at all */
+body.cosmos.on-ground::after{opacity:0;}
 body.cosmos .cosmos-name{
   font-size:2rem; letter-spacing:0; font-variation-settings:"opsz" 48;
   text-shadow:0 1px 0 rgba(255,255,255,.05), 0 18px 42px rgba(0,0,0,.58);
@@ -959,6 +952,71 @@ html body.cosmos.hint-quiet .ground-hint span{opacity:0;}
   color:rgba(205,194,178,.42); opacity:0; pointer-events:none; transition:opacity .8s ease;}
 body.cosmos.on-ground .map-credit{opacity:1;}
 body.is-flat .map-credit, body.index-open .map-credit{display:none;}
+
+/* ============================================================
+   INSTRUMENT CHROME (build 227) — the chrome steps back so the sky can lead.
+   One line across the top: the name set as TYPE on the sky (no card) · the four content doors as plain
+   words, centred · the tools in one hairline capsule. One segmented dock at the bottom. Same DOM, same
+   routes, same shortcuts — only material, weight and placement change.
+   ============================================================ */
+html body.cosmos{--ink-hi:#f3ece1; --ink-mid:rgba(228,219,205,.76); --ink-low:rgba(214,204,188,.50); --hair:rgba(255,255,255,.085); --amber:#ebbc8c;}
+
+/* 1 · identity — type on the sky, legible through a soft night vignette instead of a box */
+html body.cosmos .cosmos-id, html body.cosmos .cosmos-id.glass{background:none; border:0; box-shadow:none;
+  -webkit-backdrop-filter:none; backdrop-filter:none; padding:4px 2px 0; isolation:isolate;}
+html body.cosmos .cosmos-id.glass::after{display:none;}
+html body.cosmos .cosmos-id::before{content:""; position:absolute; inset:-46px -90px -40px -70px; z-index:-1; pointer-events:none;
+  background:radial-gradient(closest-side, rgba(2,3,7,.66), rgba(2,3,7,.30) 55%, rgba(2,3,7,0));}
+html body.cosmos .cosmos-name{font-size:clamp(1.7rem,2.5vw,2.3rem); font-weight:500; letter-spacing:-.008em; margin:0 0 .1rem;
+  color:var(--ink-hi); text-shadow:0 1px 22px rgba(0,0,0,.6);}
+html body.cosmos .cosmos-name__zh{font-weight:400; letter-spacing:.1em; color:rgba(243,236,225,.80); margin-left:.32em;}
+html body.cosmos .cosmos-links{margin-top:8px; padding-top:0; border-top:0; gap:2px 0; font-size:12px;}
+html body.cosmos .cosmos-links a{letter-spacing:.05em; color:var(--ink-low); padding:2px 0;}
+html body.cosmos .cosmos-links a + a::before{content:"·"; display:inline-block; margin:0 .72em; color:rgba(214,204,188,.26);}
+html body.cosmos .cosmos-links a.cosmos-links__cv{color:var(--amber) !important; font-weight:500;}
+html body.cosmos .cosmos-links a:hover{color:var(--ink-hi);}
+
+/* 2 · tools — one hairline capsule, flat chips inside */
+html body.cosmos .cosmos-ui, html body.cosmos .cosmos-ui.glass{padding:4px 5px; gap:1px; border:1px solid var(--hair);
+  background:rgba(7,8,12,.44); box-shadow:0 14px 40px -26px rgba(0,0,0,.9);
+  -webkit-backdrop-filter:blur(12px) saturate(1.1); backdrop-filter:blur(12px) saturate(1.1);}
+html body.cosmos .cosmos-ui.glass::after{display:none;}
+html body.cosmos .cosmos-ui .uipill, html body.cosmos .cosmos-ui .iconbtn{color:var(--ink-mid); font-size:12.5px; letter-spacing:.02em;
+  background:transparent; border-color:transparent; box-shadow:none;}
+html body.cosmos .cosmos-ui .uipill{padding:6px 11px;}
+html body.cosmos .cosmos-ui .uipill:hover, html body.cosmos .cosmos-ui .iconbtn:hover{background:rgba(255,255,255,.07); border-color:transparent; color:var(--ink-hi);}
+html body.cosmos .cosmos-ui .uikbd{border-color:rgba(255,255,255,.12); color:var(--ink-low); background:transparent;}
+html body.cosmos .cosmos-ui__sep{background:var(--hair);}
+
+/* 3 · the four content doors — plain words, centred on the top line when there is room */
+html body.cosmos .cosmos-nav{align-items:center;}
+html body.cosmos .cosmos-nav > a, html body.cosmos .cosmos-nav__head{display:inline-flex; align-items:center; line-height:1.25; font-size:13px; letter-spacing:.07em; font-weight:500; padding:8px 14px;}
+html body.cosmos .cosmos-nav__head i{font-size:9px; margin-left:6px;}
+@media(min-width:1240px){
+  html body.cosmos .cosmos-nav{left:50%; right:auto; top:calc(var(--edge) + 3px); transform:translateX(-50%);
+    background:none; border:0; box-shadow:none; -webkit-backdrop-filter:none; backdrop-filter:none; padding:0; gap:2px;}
+  html body.cosmos .cosmos-nav > a, html body.cosmos .cosmos-nav__head{text-shadow:0 1px 14px rgba(0,0,0,.7);}
+  html body.cosmos .cosmos-nav > a:hover, html body.cosmos .cosmos-nav__head:hover,
+  html body.cosmos .cosmos-nav__group.open .cosmos-nav__head{background:rgba(255,255,255,.06);}
+}
+
+/* 4 · the dock — one segmented control */
+/* (each button is its own hairline pill: they fade in/out independently, so a shared capsule would keep an empty half) */
+html body.cosmos .cosmos-dock{gap:6px;}
+html body.cosmos .cosmos-dock .cosmos-home{border:1px solid var(--hair); background:rgba(7,8,12,.44);
+  -webkit-backdrop-filter:blur(12px) saturate(1.1); backdrop-filter:blur(12px) saturate(1.1); box-shadow:0 14px 40px -26px rgba(0,0,0,.9);
+  color:var(--ink-mid); font-family:var(--sans); font-size:12.5px; letter-spacing:.06em; padding:8px 16px;}
+html body.cosmos .cosmos-dock .cosmos-home:hover{background:rgba(20,21,26,.6); color:var(--ink-hi); border-color:rgba(255,255,255,.16);
+  box-shadow:0 14px 40px -26px rgba(0,0,0,.9);}
+
+/* 5 · hints and the ground stamp — a quiet instrument line */
+html body.cosmos .cosmos-hint{color:var(--ink-low); letter-spacing:.14em; font-size:10.5px;}
+html body.cosmos .ground-hint{font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-low);}
+html body.cosmos .ground-hint b{color:var(--amber); font-weight:500; margin-right:1.1em;}
+
+/* 6 · the cosmic-address rail — lighter ticks */
+html body.cosmos .cosmos-rail{filter:none;}
+html body.cosmos .cosmos-rail__l{color:var(--ink-low);}
 
 /* ============================================================
    MOBILE / REDUCED-MOTION HOME (2026-10-14) — the flat home every phone visitor gets is now a

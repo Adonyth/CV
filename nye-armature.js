@@ -1143,10 +1143,15 @@ export function mountNyeArmature(THREE, scene, opts) {
       mesh.position.set(radius * Math.cos(a), radius * Math.sin(a), z);
       mesh.rotation.z = a - Math.PI / 2;
       mesh.userData.nyeGearTooth = kind;
+      mesh.onBeforeRender = glyphNearFadeBefore;   // build 227: near-field fade, same as the glyphs
+      mesh.onAfterRender = glyphNearFadeAfter;
       parent.add(mesh);
     }
   }
 
+  // glyph near-fade scratch — `var` + lazy init: this sits after the factory's return statement, so a
+  // const here would never initialise (TDZ) even though the hoisted functions below are reachable
+  var _gnfPos = null, _gnfScale = null, _gnfQuat = null, _gnfNdc = null;
   function makeGlyphSprite(char, color, sizeScale, active) {
     const cv = document.createElement("canvas");
     cv.width = 128;
@@ -1184,7 +1189,35 @@ export function mountNyeArmature(THREE, scene, opts) {
     sprite.center.set(0.5, 0.5);
     sprite.userData.char = char;
     sprite.userData.baseOpacity = mat.opacity;
+    // build 227 — a lens's near field: a ring passing close to the camera blew its glyphs up into
+    // huge half-cut discs across the overview. Fade a glyph by its on-screen size (≈90 px → gone by
+    // ≈200 px) — scaled only for this draw, so the ring-fade system that owns .opacity is untouched.
+    sprite.onBeforeRender = glyphNearFadeBefore;
+    sprite.onAfterRender = glyphNearFadeAfter;
     return sprite;
+  }
+  function glyphNearFadeBefore(renderer, scene, camera) {
+    const m = this.material; this.userData._gnfOp = m.opacity;
+    if (!camera || !camera.isPerspectiveCamera) return;
+    if (!_gnfPos) { _gnfPos = new T.Vector3(); _gnfScale = new T.Vector3(); _gnfQuat = new T.Quaternion(); _gnfNdc = new T.Vector3(); }
+    this.matrixWorld.decompose(_gnfPos, _gnfQuat, _gnfScale);
+    const d = _gnfPos.distanceTo(camera.position); if (d <= 1e-6) { m.opacity = 0; return; }
+    let sz = _gnfScale.y;                          // a sprite's world size is its scale
+    if (this.isMesh) {                             // a gear tooth: its bounding diameter in world units
+      if (!this.geometry.boundingSphere) this.geometry.computeBoundingSphere();
+      sz = this.geometry.boundingSphere.radius * 2 * _gnfScale.y;
+    }
+    const px = (sz / d) / (2 * Math.tan(camera.fov * Math.PI / 360)) * (typeof innerHeight !== "undefined" ? innerHeight : 900);
+    // only PERIPHERAL giants fade: a gear you fly to sits centred and must stay crisp at any size
+    _gnfNdc.copy(_gnfPos).project(camera);
+    const edge = Math.max(Math.abs(_gnfNdc.x), Math.abs(_gnfNdc.y));
+    const w = Math.min(1, Math.max(0, (edge - 0.42) / 0.36));
+    const lo = this.isMesh ? 14 : 70, span = this.isMesh ? 30 : 90;   // teeth are smaller than glyph discs
+    const t = Math.min(1, Math.max(0, (px - lo) / span)) * (w * w * (3 - 2 * w));
+    m.opacity = this.userData._gnfOp * (1 - t * t * (3 - 2 * t));
+  }
+  function glyphNearFadeAfter() {
+    if (this.userData._gnfOp != null) this.material.opacity = this.userData._gnfOp;
   }
 
   function makeTextSprite(text, color, scale, extra) {
