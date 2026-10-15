@@ -28,3 +28,9 @@ point-cloud "particle portrait" of the object, placed at its real right-ascensio
 The **CC BY** works (Andromeda — Adam Evans; Horsehead — ESA/Webb et al.; Lagoon — NOIRLab/N. A. Sharp) are used with attribution as above.
 
 The Milky Way itself is **not** an image — the solar system sits inside it, so it is rendered as a large procedural band of warm point-stars laid along the galactic plane (brighter toward the galactic centre in Sagittarius), generated at runtime with no source photograph.
+
+## Base-view streets, buildings and streetlights (build 229)
+The ground around the base view is generated live for wherever the visitor stands from
+**OpenStreetMap** data (© OpenStreetMap contributors, licensed under the Open Database License — https://www.openstreetmap.org/copyright),
+served as vector tiles in the **OpenMapTiles** schema (© OpenMapTiles) by **OpenFreeMap** (https://openfreemap.org).
+Tiles are fetched through this site's own edge function; streetlight positions are derived from the road geometry.
