@@ -947,61 +947,72 @@ export function mountNyeArmature(THREE, scene, opts) {
       "varying vec2 vUv;",
       "varying vec3 vWn;",
       "varying vec3 vWp;",
+      "varying vec3 vWt;",
       "void main(){",
       "  vUv=uv;",
       "  vec4 wp=modelMatrix*vec4(position,1.0);",
       "  vWp=wp.xyz;",
       "  vWn=normalize(mat3(modelMatrix)*normal);",
+      // east tangent (the direction of increasing u on a three.js sphere) for the real-relief normal map
+      "  vec3 te=cross(vec3(0.0,1.0,0.0),normal); vWt=dot(te,te)>1e-8 ? normalize(mat3(modelMatrix)*te) : vec3(0.0);",
       "  gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);",
       "}"
     ].join("\n");
     const moonFrag = [
-      "varying vec2 vUv; varying vec3 vWn; varying vec3 vWp;",
+      "varying vec2 vUv; varying vec3 vWn; varying vec3 vWp; varying vec3 vWt;",
       "uniform vec3 uSunDirWorld;",
       "uniform sampler2D uAlbedoMap; uniform float uUseAlbedoMap;",
-      "float mh(vec2 p){ return fract(sin(dot(p,vec2(41.2,289.1)))*758.5453);}",
-      "float mn2(vec2 p){ return mh(p)+0.5*mh(p*2.3)+0.25*mh(p*5.1);}",
-      "float mn4(vec2 p){ return mn2(p)+0.125*mn2(p*9.2);}",
+      "uniform sampler2D uNormalMap; uniform float uUseNormalMap;",
       "void main(){",
-      "  vec3 N=normalize(vWn);",
+      "  vec3 Ng=normalize(vWn);",
       "  vec3 V=normalize(cameraPosition-vWp);",
       "  vec3 L=normalize(uSunDirWorld);",
-      "  float ndl=dot(N,L);",
-      "  vec3 base;",
-      "  if(uUseAlbedoMap>0.5){",
-      "    base=texture2D(uAlbedoMap,vUv).rgb;",
-      "    float mic=0.90+0.10*mn2(vUv*155.0);",
-      "    base*=mic;",
-      "  }else{",
-      "    float cr=mn4(vUv*14.0); float mar=mn2(vUv*3.7); float pit=mn2(vUv*33.0+mar);",
-      "    base=mix(vec3(0.46,0.46,0.50),vec3(0.74,0.74,0.80),mar*0.40);",
-      "    base*=0.82+cr*0.20;",
-      "    base-=vec3(0.045)*smoothstep(0.32,0.74,pit);",
+      // build 230 — REAL RELIEF: LRO/LOLA laser altimetry (NASA PDS, ldem_16) → a tangent-space normal map, so
+      // craters, maria rims and mountain chains catch and lose the light where the terminator crosses them
+      "  vec3 N=Ng;",
+      "  if(uUseNormalMap>0.5 && dot(vWt,vWt)>0.5){",
+      "    vec3 T=normalize(vWt-Ng*dot(vWt,Ng)); vec3 B=cross(Ng,T);",
+      "    vec3 nm=texture2D(uNormalMap,vUv).xyz*2.0-1.0;",
+      "    N=normalize(T*nm.x+B*nm.y+Ng*nm.z);",
       "  }",
-      "  float sunLit=max(ndl,0.0);",
-      "  float twilight=smoothstep(-0.24,0.20,ndl);",
-      "  vec3 diff=base*(0.045+sunLit*1.02);",
-      "  float darkAmt=1.0-twilight;",
-      "  vec3 earthGlow=vec3(0.075,0.105,0.19)*darkAmt*0.52;",
-      "  float fr=pow(1.0-max(dot(N,V),0.0),3.05);",
-      "  vec3 rimCol=vec3(0.50,0.58,0.72)*fr*0.50;",
-      "  float sp=pow(max(dot(reflect(-L,N),V),0.0),88.0)*0.15*smoothstep(0.03,0.28,ndl);",
-      "  vec3 c=diff+earthGlow+rimCol+vec3(sp);",
+      "  vec3 base=texture2D(uAlbedoMap,vUv).rgb;",
+      // the Moon is NOT a Lambertian ball: regolith follows Lommel–Seeliger — a full Moon is a flat bright disc,
+      // relief shows where the light grazes. (No specular, no blue rim: the real Moon has neither.)
+      "  float mu0=max(dot(N,L),0.0), mu=max(dot(Ng,V),0.0);",
+      "  float ls=2.0*mu0/(mu0+mu+0.06);",
+      "  float lam=max(dot(N,L),0.0);",
+      "  float lit=mix(ls,lam*1.15,0.35)*smoothstep(-0.02,0.05,dot(Ng,L));",
+      "  float darkAmt=1.0-smoothstep(-0.20,0.15,dot(Ng,L));",
+      "  vec3 earthshine=base*vec3(0.050,0.060,0.085)*darkAmt;",   // the Earth-lit night side: faint, slightly blue
+      "  vec3 c=base*lit*0.98+earthshine;",
       "  gl_FragColor=vec4(c,1.0);",
       "}"
     ].join("\n");
     const uniforms = {
       uSunDirWorld: { value: new T.Vector3(0, 0, 1) },
       uAlbedoMap: { value: bakeMoonAlbedo() },   // placeholder until the real Moon arrives
-      uUseAlbedoMap: { value: 1 }
+      uUseAlbedoMap: { value: 1 },
+      uNormalMap: { value: null }, uUseNormalMap: { value: 0 }
     };
     // the REAL Moon: an actual lunar photograph (solarsystemscope, CC BY 4.0) replaces the
     // painted highlands the moment it loads — no baked painting survives a human eye
     new T.TextureLoader().load("data/moon-map.jpg", function (mtex) {
       if ("SRGBColorSpace" in T) mtex.colorSpace = T.SRGBColorSpace;
       mtex.anisotropy = 4;
-      uniforms.uAlbedoMap.value = mtex;
+      if (!uniforms.uAlbedoMap.value || !uniforms.uAlbedoMap.value.userData || !uniforms.uAlbedoMap.value.userData.hd) uniforms.uAlbedoMap.value = mtex;
     });
+    // build 230 — then the HD Moon, after the first paint has settled: a 2K albedo (the same colour, crisped by the
+    // finest band of the LROC WAC global mosaic, NASA/GSFC/ASU) and the LOLA relief normal map (NASA PDS)
+    setTimeout(function () {
+      const ld = new T.TextureLoader();
+      ld.load("data/moon-albedo-2k.jpg", function (tx) {
+        if ("SRGBColorSpace" in T) tx.colorSpace = T.SRGBColorSpace;
+        tx.anisotropy = 8; tx.userData.hd = true; uniforms.uAlbedoMap.value = tx;
+      });
+      ld.load("data/moon-normal-2k.jpg", function (tx) {   // linear data, NOT sRGB
+        tx.anisotropy = 8; uniforms.uNormalMap.value = tx; uniforms.uUseNormalMap.value = 1;
+      });
+    }, 3000);
     const mat = new T.ShaderMaterial({ uniforms, vertexShader: moonVert, fragmentShader: moonFrag });
     disableToneMapping(mat);
     const mesh = new T.Mesh(new T.SphereGeometry(radius, 96, 96), mat);

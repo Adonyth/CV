@@ -117,6 +117,16 @@
        (bakeMilkyWay), so the per-pixel cost is one texture read. Off the ground uSkyAmt = 0 and this is
        the old composite, bit for bit. */
     var _skyUp = null, _skyNorth = null, _skyEast = null, _milkyRT = null, _milkyTried = false;
+    /* build 230 — the REAL naked-eye sky: the Yale Bright Star Catalogue (5th ed., Harvard CfA; 9,096 stars to
+       mag 6.5) packed as Int16 quads [RA h·1365, Dec °·360, mag·100, class·10+subclass] (data/stars-bsc5.bin) */
+    var _bsc = null, _bscLoading = null;
+    function loadBSC() {
+      if (_bsc) return Promise.resolve(_bsc);
+      if (_bscLoading) return _bscLoading;
+      _bscLoading = fetch("data/stars-bsc5.bin").then(function (r) { return r.ok ? r.arrayBuffer() : null; })
+        .then(function (ab) { _bsc = ab ? new Int16Array(ab) : null; return _bsc; }).catch(function () { return null; });
+      return _bscLoading;
+    }
     var _galX = new THREE.Vector3(1, 0, 0), _galY = new THREE.Vector3(0, 1, 0), _galZ = new THREE.Vector3(0, 0, 1);
     var MILKY_B = 0.70;   // the baked map covers galactic latitude ±40°; the band is ~0 beyond
     var SKY_GLSL_COMMON =
@@ -309,6 +319,10 @@
     // the sky's own ease (time-based, ~1 s): the ground-dim ease is per-FRAME and crawls at the idle
     // frame rate, which left the sky at 40% for half a minute after landing
     var _skyAmt = 0, _skyT = 0, _skyState = { amt: 0, baked: false, gain: 0 };
+    // build 230: the ground-dim ease (night falling over the local world) was 0.035 PER FRAME — at the idle render
+    // governor (~2.5 fps) the base stayed half-lit (a bright blue globe surface underfoot) for ~30 s. Time-based now.
+    var _gdT = 0;
+    function _gdRate() { var now = performance.now(), dt = _gdT ? Math.min(0.25, (now - _gdT) / 1000) : 0.016; _gdT = now; return Math.min(1, dt * 2.4); }
     window.__space.debugMilky = function () {   // verification: the baked galactic map, downsampled, as a data URL
       if (!_milkyRT) return null;
       var W = _milkyRT.width, H = _milkyRT.height, buf = new Uint8Array(W * H * 4);
@@ -817,6 +831,13 @@
         gX = natalSky.skyDir(17.7611, -29.0078); gZ = natalSky.skyDir(12.8573, 27.1283);
         gZ.addScaledVector(gX, -gZ.dot(gX)).normalize(); gY = new THREE.Vector3().crossVectors(gZ, gX).normalize();
       }
+      if (galOK && _bsc) { buildRealStars(pos, normal); return; }
+      if (galOK) loadBSC().then(function () {   // arrives after landing → swap the placeholder field for the real sky
+        if (_bsc && groundStars && controls.isGround() && !groundStars.userData.real) {
+          scene.remove(groundStars); groundStars.geometry.dispose(); groundStars.material.dispose(); groundStars = null;
+          buildRealStars(pos, normal);
+        }
+      });
       var nField = MOBILE ? 1100 : 2200, nBand = MOBILE ? 2000 : 4200, n = nField + nBand;
       var gp = new Float32Array(n * 3), gc2 = new Float32Array(n * 3), gs = new Float32Array(n);
       var seed = 0x91ab7;
@@ -921,6 +942,88 @@
       groundMilky.name = "GroundMilkyHaze"; groundMilky.frustumCulled = false; groundMilky.renderOrder = 2;
       scene.add(groundMilky);
     }
+    /* the real sky from the base: every catalogue star at its true place in THIS sky (natalSky.skyDir — the
+       transform the drawn figures use), brightness and size from its magnitude (perceptually compressed: the
+       eye, not the photometer), colour from its spectral class (gently desaturated, as the eye sees it), and
+       depth-tested so roofs, ridges and the limb really hide what is behind them. The ~25 brightest carry a
+       camera's glare: a soft halo and four faint diffraction spikes (the SpaceEngine / astrophoto signature). */
+    var _glareTex = null, groundGlare = null;
+    function glareTexture() {
+      if (_glareTex) return _glareTex;
+      var N = 128, cv = document.createElement("canvas"); cv.width = cv.height = N;
+      var x = cv.getContext("2d"), img = x.createImageData(N, N), h = N / 2;
+      for (var yy = 0; yy < N; yy++) for (var xx = 0; xx < N; xx++) {
+        var dx = (xx + 0.5 - h) / h, dy = (yy + 0.5 - h) / h, r = Math.sqrt(dx * dx + dy * dy);
+        var halo = 1 / (1 + Math.pow(r / 0.055, 2.1)) * Math.pow(Math.max(0, 1 - r), 2);
+        var sp = (Math.exp(-Math.pow(dy * h / 0.9, 2)) * Math.exp(-Math.abs(dx) * 3.2) + Math.exp(-Math.pow(dx * h / 0.9, 2)) * Math.exp(-Math.abs(dy) * 3.2)) * 0.30 * Math.max(0, 1 - r);
+        var v = Math.min(1, halo + sp), k = (yy * N + xx) * 4;
+        img.data[k] = img.data[k + 1] = img.data[k + 2] = 255; img.data[k + 3] = Math.round(v * 255);
+      }
+      x.putImageData(img, 0, 0);
+      _glareTex = new THREE.CanvasTexture(cv);
+      return _glareTex;
+    }
+    function buildRealStars(pos, normal) {
+      var d = _bsc, n = d.length / 4, P = [], C = [], S = [], GP = [], GC = [], GS = [], v = new THREE.Vector3();
+      var CL = [[0.61, 0.69, 1.0], [0.68, 0.76, 1.0], [0.80, 0.85, 1.0], [0.97, 0.96, 1.0], [1.0, 0.94, 0.86], [1.0, 0.80, 0.60], [1.0, 0.70, 0.46]];
+      for (var i = 0; i < n; i++) {
+        var mag = d[i * 4 + 2] / 100; if (mag > 6.6) continue;
+        natalSky.skyDir(d[i * 4] / 1365, d[i * 4 + 1] / 360, v);
+        if (v.dot(normal) < -0.03) continue;                       // well below the limb: the land hides it anyway
+        var sc = d[i * 4 + 3], c0 = Math.min(6, Math.floor(sc / 10)), f = (sc % 10) / 10, c1 = Math.min(6, c0 + 1);
+        var col = [0, 1, 2].map(function (j) { var cc = CL[c0][j] * (1 - f) + CL[c1][j] * f; return cc * 0.68 + 0.32; });   // the eye desaturates starlight
+        var t = Math.max(0, Math.min(1, (6.6 - mag) / 8.1)), inten = 0.24 + 0.76 * Math.pow(t, 1.35);
+        var rr = 36;
+        P.push(pos.x + v.x * rr, pos.y + v.y * rr, pos.z + v.z * rr);
+        C.push(col[0] * inten, col[1] * inten, col[2] * inten);
+        S.push(1.45 + 3.1 * Math.pow(t, 1.9));
+        if (mag < 1.7) {
+          GP.push(pos.x + v.x * rr, pos.y + v.y * rr, pos.z + v.z * rr);
+          var gI = 0.35 + 0.65 * Math.pow((1.7 - mag) / 3.2, 0.8);
+          GC.push(col[0] * gI, col[1] * gI, col[2] * gI);
+          GS.push(18 + 54 * Math.pow((1.7 - mag) / 3.2, 1.1));
+        }
+      }
+      var sg = new THREE.BufferGeometry();
+      sg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(P), 3));
+      sg.setAttribute("color", new THREE.BufferAttribute(new Float32Array(C), 3));
+      sg.setAttribute("aSize", new THREE.BufferAttribute(new Float32Array(S), 1));
+      var starMat = new THREE.ShaderMaterial({
+        uniforms: { uPR: { value: renderer.getPixelRatio() }, uOpacity: { value: 1 } },
+        vertexShader: "uniform float uPR; attribute float aSize; varying vec3 vC;\n" +
+          "void main(){ vC = color; gl_PointSize = aSize * uPR * 1.6; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+        fragmentShader: "uniform float uOpacity; varying vec3 vC;\n" +
+          // a ~2 px point never samples its own centre: a narrow gaussian left its pixels at alpha ≈ 0.04, and the
+          // alpha-gated composite (rgb×a) erased 640 of 644 stars. A broad, flat-topped core keeps every star.
+          "void main(){ vec2 p = gl_PointCoord - 0.5; float r2 = dot(p, p) * 4.0; float a = pow(clamp(1.0 - r2, 0.0, 1.0), 1.6); if (a < 0.02) discard;\n" +
+          "  gl_FragColor = vec4(vC, a * uOpacity); }",
+        vertexColors: true, transparent: true, depthWrite: false, depthTest: true, blending: THREE.AdditiveBlending, fog: false
+      });
+      starMat.opacity = 1;
+      groundStars = new THREE.Points(sg, starMat);
+      groundStars.onBeforeRender = function () { starMat.uniforms.uOpacity.value = starMat.opacity; starMat.uniforms.uPR.value = renderer.getPixelRatio(); };
+      groundStars.name = "GroundSkyStars"; groundStars.userData.real = true; groundStars.frustumCulled = false; groundStars.renderOrder = 3;
+      scene.add(groundStars);
+      if (GP.length) {
+        var gg = new THREE.BufferGeometry();
+        gg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(GP), 3));
+        gg.setAttribute("color", new THREE.BufferAttribute(new Float32Array(GC), 3));
+        gg.setAttribute("aSize", new THREE.BufferAttribute(new Float32Array(GS), 1));
+        var gMat = new THREE.ShaderMaterial({
+          uniforms: { uPR: { value: renderer.getPixelRatio() }, uTex: { value: glareTexture() }, uOpacity: { value: 1 } },
+          vertexShader: "uniform float uPR; attribute float aSize; varying vec3 vC;\n" +
+            "void main(){ vC = color; gl_PointSize = aSize * uPR; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+          fragmentShader: "uniform sampler2D uTex; uniform float uOpacity; varying vec3 vC;\n" +
+            "void main(){ float a = texture2D(uTex, gl_PointCoord).a; if (a < 0.004) discard; gl_FragColor = vec4(vC, a * uOpacity); }",
+          vertexColors: true, transparent: true, depthWrite: false, depthTest: true, blending: THREE.AdditiveBlending, fog: false
+        });
+        groundGlare = new THREE.Points(gg, gMat);
+        groundGlare.onBeforeRender = function () { gMat.uniforms.uOpacity.value = starMat.opacity; gMat.uniforms.uPR.value = renderer.getPixelRatio(); };
+        groundGlare.name = "GroundStarGlare"; groundGlare.frustumCulled = false; groundGlare.renderOrder = 3.1;
+        scene.add(groundGlare);
+      }
+      window.__space.realStars = P.length / 3;
+    }
     function removeGroundDome() {
       if (groundDome) {
         scene.remove(groundDome);
@@ -934,6 +1037,7 @@
         groundStars.material.dispose(); groundStars.geometry.dispose();
         groundStars = null;
       }
+      if (groundGlare) { scene.remove(groundGlare); groundGlare.geometry.dispose(); groundGlare.material.dispose(); groundGlare = null; }
       if (groundMilky) {
         scene.remove(groundMilky);
         groundMilky.material.dispose(); groundMilky.geometry.dispose();
@@ -1443,6 +1547,7 @@
       }).catch(function () { return DEFAULT_BASE; });
     }
     var basePromise = COSMOS ? resolveBase() : Promise.resolve(null);
+    if (COSMOS) loadBSC();   // 73 KB, in parallel with the scene — the real sky is ready by landing
 
     if (COSMOS) {
       // the visitor wakes on the GROUND (ground entrance below); the canvas stays dark
@@ -1914,7 +2019,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=46").then(function (mod) {
+    import("./nye-armature.js?v=47").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -2027,7 +2132,7 @@
       var webXYZ = arr[4] ? new Int16Array(arr[4]) : null;
       var webRGB = arr[5] ? new Uint8Array(arr[5]) : null;
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=149").then(function (mod) {
+      return import("./natal-sky.js?v=150").then(function (mod) {
         natalSky = mod.buildNatalSky(THREE, scene, natalData, {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -3166,7 +3271,7 @@
           if (_em && _em.material.uniforms && _em.material.uniforms.uGroundDim) _earthUni = _em.material.uniforms;
         }
         if (_earthUni) {
-          _earthUni.uGroundDim.value += (groundDimTarget - _earthUni.uGroundDim.value) * 0.035;
+          _earthUni.uGroundDim.value += (groundDimTarget - _earthUni.uGroundDim.value) * _gdRate();
           // the REAL footprint blazes at 0.95 in space, fades to ~0.17 when lying at the base — an
           // owner-local visitor genuinely rests on the owner's real roads (A). Exact 0.95 when gDim=0.
           if (_traceMat) _traceMat.opacity = 0.95 * (1.0 - 0.82 * _earthUni.uGroundDim.value);

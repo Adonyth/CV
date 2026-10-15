@@ -2826,7 +2826,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
         if (_sfMat) {
           var _sfOn = _cl < 5000 || _wMW > 0;
           _sfObj.visible = _sfOn;
-          _sfMat.opacity = _sfBase * (1 - 0.55 * _bdT) * (1 - 0.42 * _groundSky);   // lying at the base the deep field steps back: the real sky leads with its bright stars and the Milky Way
+          _sfMat.opacity = _sfBase * (1 - 0.55 * _bdT) * (1 - 0.50 * _groundSky);   // on the ground: a faint procedural background under the real catalogue stars (SpaceEngine does the same past its catalogues)   // lying at the base the deep field steps back: the real sky leads with its bright stars and the Milky Way
         }
         if (!_nsMat) { var _nso = group.getObjectByName("natalStars"); if (_nso && _nso.material) { _nsObj = _nso; _nsMat = _nso.material; _nsBase = _nso.material.opacity; } }
         if (_nsMat) {

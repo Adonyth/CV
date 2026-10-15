@@ -34,3 +34,13 @@ The ground around the base view is generated live for wherever the visitor stand
 **OpenStreetMap** data (© OpenStreetMap contributors, licensed under the Open Database License — https://www.openstreetmap.org/copyright),
 served as vector tiles in the **OpenMapTiles** schema (© OpenMapTiles) by **OpenFreeMap** (https://openfreemap.org).
 Tiles are fetched through this site's own edge function; streetlight positions are derived from the road geometry.
+
+## The real sky and the real Moon (build 230)
+- **Stars:** the *Yale Bright Star Catalogue*, 5th revised edition (D. Hoffleit & W. H. Warren Jr., 1991), via the
+  Harvard–Smithsonian Center for Astrophysics (http://tdc-www.harvard.edu/catalogs/bsc5.html) — repacked as
+  `data/stars-bsc5.bin` (RA, Dec, magnitude, spectral class of 9,096 stars).
+- **Lunar relief:** LRO Lunar Orbiter Laser Altimeter gridded topography `LDEM_16` (NASA / GSFC / MIT LOLA team),
+  via the NASA PDS Geosciences Node — converted to the normal map `data/moon-normal-2k.jpg`. NASA data, public domain.
+- **Lunar detail:** LROC Wide Angle Camera global mosaic `WAC_GLOBAL_E000N0000_008P` (NASA / GSFC / Arizona State
+  University), used only for the finest crater detail in `data/moon-albedo-2k.jpg` (colour from `data/moon-map.jpg`,
+  credited above). NASA data, public domain.
