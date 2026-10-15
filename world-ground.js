@@ -120,7 +120,8 @@ export function loadWorldGround(lat0, lon0, opts) {
   var rt = R / mPerTile, tx0 = Math.floor(c.x - rt), tx1 = Math.floor(c.x + rt), ty0 = Math.floor(c.y - rt), ty1 = Math.floor(c.y + rt);   // exactly the tiles the disc touches (2–3 per axis)
   var jobs = [];
   for (var ty = ty0; ty <= ty1; ty++) for (var tx = tx0; tx <= tx1; tx++) (function (tx, ty) {
-    jobs.push(fetchTile(tx, ty).then(function (ab) { return { x: tx, y: ty, layers: decodeTile(new Uint8Array(ab), ["building", "transportation", "water"]) }; })
+    var timed = Promise.race([fetchTile(tx, ty), new Promise(function (res, rej) { setTimeout(function () { rej(new Error("tile timeout")); }, 12000); })]);
+    jobs.push(timed.then(function (ab) { return { x: tx, y: ty, layers: decodeTile(new Uint8Array(ab), ["building", "transportation", "water"]) }; })
       .catch(function () { return null; }));
   })(tx, ty);
   var cosL = Math.cos(lat0 * DEG), kx = DEG * EARTH_R * cosL, ky = DEG * EARTH_R, n2 = Math.pow(2, Z);

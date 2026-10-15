@@ -1298,7 +1298,7 @@
       var key = geo.lat.toFixed(4) + "," + geo.lon.toFixed(4);
       if (_world && _world.key === key) return Promise.resolve(_world);
       if (_worldLoading && _worldLoading.key === key) return _worldLoading.p;
-      var p = import("./world-ground.js?v=2").then(function (mod) {
+      var p = import("./world-ground.js?v=3").then(function (mod) {
         return mod.loadWorldGround(geo.lat, geo.lon, { radius: 1500, maxBuildings: MOBILE ? 3500 : 9000, mapSize: MOBILE ? 1024 : 2048 });
       }).then(function (w) { if (w) { w.key = key; _world = w; } return w; })
         .catch(function (e) { window.__space.worldError = String(e); return null; });
@@ -1538,7 +1538,7 @@
       } catch (eC) {}
       return Promise.race([
         fetch("/api/where", { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }),
-        new Promise(function (res) { setTimeout(function () { res(null); }, 1800); })
+        new Promise(function (res) { setTimeout(function () { res(null); }, 4500); })   // measured ~1.6 s through a proxy: give it room
       ]).then(function (j) {
         if (!j || !isFinite(j.lat) || !isFinite(j.lon) || j.lat === null) return DEFAULT_BASE;
         var g = { lat: +j.lat, lon: +j.lon, city: j.city || "" };
@@ -2507,7 +2507,7 @@
       });
       /* the entrance: once the armature is up and the visitor's place is known, wake on the ground */
       tryGroundEntrance = function () {
-        Promise.race([basePromise, new Promise(function (res) { setTimeout(function () { res(null); }, 2600); })])
+        Promise.race([basePromise, new Promise(function (res) { setTimeout(function () { res(null); }, 5000); })])   // the poster covers the wait; landing in the wrong city is worse
           .then(function (g) {
             // require BOTH the armature and the natal sky: tryAlignChart rotates the whole
             // orrery when the second one arrives — entering earlier would leave the camera
