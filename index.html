@@ -32,6 +32,12 @@
     <!-- first paint: the poster is a real-GPU frame of the default sky (scripts/capture-poster.mjs),
          shown at ~0.5s and cross-faded into the live scene, so the visitor never stares at black -->
     <link rel="preload" as="image" href="data/poster-sky.jpg" fetchpriority="high" />
+    <!-- the import map MUST come before the first modulepreload: once any module fetch starts, Chrome
+         ignores a later import map, `three/addons/...` stops resolving, and the bloom/ACES pipeline
+         silently falls back to the plain renderer — the whole cosmos (and the footprint glow) goes dim -->
+    <script type="importmap">
+      { "imports": { "three": "/vendor/three/three.module.js", "three/addons/": "/vendor/three/addons/" } }
+    </script>
     <!-- flatten the module waterfall: these used to start one round-trip after another
          (three → postprocessing → shaders → armature → natal sky); now they all fetch at once -->
     <link rel="modulepreload" href="/vendor/three/three.module.js" />
@@ -323,9 +329,6 @@
       <p class="flat-note"><span class="i18n-en">The living orrery — the interactive sky — opens on a desktop browser.</span><span class="i18n-zh">可交互的动态星盘请在桌面浏览器中开启。</span></p>
     </div>
 
-    <script type="importmap">
-      { "imports": { "three": "/vendor/three/three.module.js", "three/addons/": "/vendor/three/addons/" } }
-    </script>
     <!-- Essential navigation boots before optional animation resources. -->
     <script src="menu.js?v=12"></script>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js" async></script>
