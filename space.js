@@ -757,7 +757,7 @@
        On load we resolve the visitor's place from their IP (client-side, city-level,
        cached) and the site OPENS lying on the ground at that spot, looking up at the
        natal sky. Everything else — lift-off, tours, the whole orrery — starts from there. */
-    var DEFAULT_BASE = { lat: 41.824, lon: -71.4128, city: "Providence" };   // the author's home, if the visitor can't be placed
+    var DEFAULT_BASE = { lat: 41.824, lon: -71.4128, city: "Providence" };   // the author's home: used only when the visitor can't be placed
     var baseGeo = null, groundEntered = false, tryGroundEntrance = null, groundDome = null, groundStars = null, groundMilky = null;
     var groundTerrain = null, _terrainMat = null, _heightmap = null, _hmMeta = null, _hmLoading = null;   // base-view REAL ETOPO terrain
     /* the sky is live: cross-fade the first-paint poster out (styles.css .sky-poster), then — once the
@@ -1117,7 +1117,7 @@
       // the REAL local street map goes on LAST (built with the terrain, cleared with it) so the terrain
       // rebuild's removeGroundTerrain() can't wipe it — your actual streets underfoot at the base.
       var _sp = nyeArmature.earthSurfacePoint(geo.lat, geo.lon, 0.0002);   // on the GROUND (well below the ~0.004 eye), so the map is the floor you stand on, not a ceiling
-      if (_sp) { if (!_localMap) buildLocalMapGround(_sp); if (!_city && !_cityPending) buildBaseCity(_sp); }   // normally already built on landing
+      if (_sp && !_localMap && !_city && !_cityPending && !_nearPending) buildNearWorld(_sp);   // normally already built on landing
     }
     function removeTerrainMesh() {
       if (groundTerrain) {
@@ -1136,13 +1136,18 @@
     // toward the horizon under the natal sky. The regional ETOPO patch carries the far relief; this
     // carries the near human geography. Scale is exaggerated (a 3 km map → a neighborhood-to-horizon
     // patch) because the base view is a symbolic first-person tableau, not a survey.
-    function buildLocalMapGround(sp) {
+    var _localMapOwnTex = null;
+    function buildLocalMapGround(sp, srcTex, raw) {
       removeLocalMapGround();
-      if (!_localMapTex) {
-        _localMapTex = new THREE.TextureLoader().load("data/base-map-providence.jpg", function (t) {
-          if ("colorSpace" in t && THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace;
-        });
-      }
+      var mapTex = srcTex;
+      if (!mapTex) {                                    // the baked Providence map (offline fallback)
+        if (!_localMapTex) {
+          _localMapTex = new THREE.TextureLoader().load("data/base-map-providence.jpg", function (t) {
+            if ("colorSpace" in t && THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace;
+          });
+        }
+        mapTex = _localMapTex;
+      } else _localMapOwnTex = srcTex;
       var up = sp.normal.clone().normalize();
       var east = new THREE.Vector3(0, 1, 0).cross(up); if (east.lengthSq() < 1e-6) east.set(1, 0, 0); east.normalize();
       var north = up.clone().cross(east).normalize();   // map north → geographic north at the base
@@ -1152,13 +1157,15 @@
       var R = 0.155;
       var geo = new THREE.PlaneGeometry(2 * R, 2 * R, 1, 1);
       _localMapMat = new THREE.ShaderMaterial({
-        uniforms: { uMap: { value: _localMapTex }, uFade: { value: 0 } },
+        uniforms: { uMap: { value: mapTex }, uFade: { value: 0 }, uRaw: { value: raw ? 1 : 0 } },
         transparent: true, depthWrite: false, fog: false,
         vertexShader: "varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
         fragmentShader:
-          "varying vec2 vUv; uniform sampler2D uMap; uniform float uFade;\n" +
+          "varying vec2 vUv; uniform sampler2D uMap; uniform float uFade; uniform float uRaw;\n" +
           "void main(){\n" +
           "  vec3 src=texture2D(uMap,vUv).rgb;\n" +
+          // build 229: a world-ground map is drawn already in night colours (dark land, water, lamp-lit asphalt)
+          "  if(uRaw>0.5){ float d0=distance(vUv,vec2(0.5)); gl_FragColor=vec4(src*1.15, (1.0-smoothstep(0.40,0.50,d0))*uFade); return; }\n" +
           "  float lum=dot(src,vec3(0.30,0.54,0.16));\n" +
           // night remapping: dark wash → warm gold streets under starlight (not a daytime postcard)
           "  vec3 night=mix(vec3(0.010,0.009,0.008), vec3(0.62,0.38,0.18), smoothstep(0.10,0.48,lum));\n" +   // build 227: sodium-amber streets, not a gold postcard
@@ -1178,6 +1185,38 @@
     }
     function removeLocalMapGround() {
       if (_localMap) { scene.remove(_localMap); _localMap.geometry.dispose(); _localMap.material.dispose(); _localMap = null; _localMapMat = null; }
+      if (_localMapOwnTex) { _localMapOwnTex.dispose(); _localMapOwnTex = null; }
+    }
+    /* ===== build 229 — the NEAR WORLD for wherever the base is: real OSM streets, buildings and streetlights
+       (world-ground.js, tiles through /api/tile). The baked Providence data stays as the offline fallback. ===== */
+    var _world = null, _worldLoading = null, _nearPending = false;
+    function loadNearWorld(geo) {
+      var key = geo.lat.toFixed(4) + "," + geo.lon.toFixed(4);
+      if (_world && _world.key === key) return Promise.resolve(_world);
+      if (_worldLoading && _worldLoading.key === key) return _worldLoading.p;
+      var p = import("./world-ground.js?v=2").then(function (mod) {
+        return mod.loadWorldGround(geo.lat, geo.lon, { radius: 1500, maxBuildings: MOBILE ? 3500 : 9000, mapSize: MOBILE ? 1024 : 2048 });
+      }).then(function (w) { if (w) { w.key = key; _world = w; } return w; })
+        .catch(function (e) { window.__space.worldError = String(e); return null; });
+      _worldLoading = { key: key, p: p };
+      return p;
+    }
+    function buildNearWorld(sp) {
+      var geo = baseGeo || DEFAULT_BASE;
+      var isPvd = Math.abs(geo.lat - DEFAULT_BASE.lat) < 0.05 && Math.abs(geo.lon - DEFAULT_BASE.lon) < 0.07;
+      _nearPending = true;
+      loadNearWorld(geo).then(function (w) {
+        _nearPending = false;
+        if (!controls.isGround()) return;
+        if (w && w.map && (w.b.length || w.roads)) {
+          var tex = new THREE.CanvasTexture(w.map);
+          if ("colorSpace" in tex && THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
+          tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+          buildLocalMapGround(sp, tex, true);
+          buildBaseCity(sp, { b: w.b }, w.lamps);
+          window.__space.world = { buildings: w.b.length, lamps: w.lamps.length / 3, roads: w.roads, tiles: w.tiles };
+        } else if (isPvd) { buildLocalMapGround(sp); buildBaseCity(sp); }   // offline: the baked Providence data
+      });
     }
     // BASE CITY (geo-ui-map 3D): real OSM building footprints (data/base-buildings-providence.json, in local
     // ENU metres) extruded as low prisms on the same tangent frame + scale as the street map — so standing at
@@ -1190,8 +1229,8 @@
       return _cityLoading;
     }
     var CITY_SCALE = 0.155 / 1500;   // metres → scene units, matched to the street-map disc (R=0.155 ≙ 1500 m)
-    var _cityPending = false;
-    function buildBaseCity(sp) {
+    var _cityPending = false, _lampMat = null, _moonL = new THREE.Vector3(0, 0, 1), _cityInvQ = new THREE.Quaternion();
+    function buildBaseCity(sp, data, lamps) {
       removeBaseCity();
       _cityPending = true;
       var up = sp.normal.clone().normalize();
@@ -1199,7 +1238,7 @@
       var north = up.clone().cross(east).normalize();
       var qpos = sp.position.clone().addScaledVector(up, 0.00108);   // bases sit just on the street map
       var quat = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(east, north, up));
-      loadCityData().then(function (j) {
+      (data ? Promise.resolve(data) : loadCityData()).then(function (j) {
         _cityPending = false;
         if (!j || !j.b || !controls.isGround()) return;
         var S = CITY_SCALE, B = j.b, P = [], I = [];   // position (local), aInfo (topFrac, kind: 1 facade · 0.5 plant · 0 roof, seed)
@@ -1249,7 +1288,8 @@
         g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(P), 3));
         g.setAttribute("aInfo", new THREE.BufferAttribute(new Float32Array(I), 3));
         _cityMat = new THREE.ShaderMaterial({
-          uniforms: { uFade: { value: 0 }, uScale: { value: S }, uHorizon: { value: new THREE.Color(0.030, 0.021, 0.019) } },   // build 227: the real night limb (was bright amber)
+          uniforms: { uFade: { value: 0 }, uScale: { value: S }, uHorizon: { value: new THREE.Color(0.030, 0.021, 0.019) },   // build 227: the real night limb (was bright amber)
+                      uMoonL: { value: _moonL }, uMoonI: { value: 0 } },   // build 229: moonlight in the city's local frame
           side: THREE.DoubleSide, depthWrite: true, depthTest: true, fog: false,
           extensions: { derivatives: true },
           vertexShader:
@@ -1264,7 +1304,7 @@
              a thin roofline edge catching the city's light dome. */
           fragmentShader:
             "precision highp float; varying vec3 vLocal; varying vec3 vInfo; varying float vDist;\n" +
-            "uniform float uFade; uniform float uScale; uniform vec3 uHorizon;\n" +
+            "uniform float uFade; uniform float uScale; uniform vec3 uHorizon; uniform vec3 uMoonL; uniform float uMoonI;\n" +
             "float h3(vec3 p){ return fract(sin(dot(p,vec3(12.9898,78.233,37.719)))*43758.5453); }\n" +
             "void main(){\n" +
             "  float top=vInfo.x, kind=vInfo.y, seed=vInfo.z;\n" +
@@ -1298,6 +1338,9 @@
             "    col=vec3(0.0095,0.0100,0.0125)+vec3(0.005,0.0035,0.0025)*s1;\n" +
             "  }\n" +
             "  col+=smoothstep(0.955,1.0,top)*step(0.25,kind)*vec3(0.048,0.034,0.026);\n" +   // the roofline edge
+            // build 229: the Moon lights the city — faces turned to it catch a faint cool light, so the blocks read as VOLUMES
+            "  col+=vec3(0.011,0.013,0.019)*max(dot(N,normalize(uMoonL)),0.0)*uMoonI*(kind>0.75 ? 1.0 : 1.25);\n" +
+            "  col+=vec3(0.0035,0.0040,0.0055)*max(N.z,0.0)*(0.4+0.6*uMoonI);\n" +   // skylight on roofs
             "  float haze=smoothstep(0.02,0.15,vDist);\n" +
             "  col=mix(col, uHorizon, haze*0.80);\n" +
             "  gl_FragColor=vec4(col*uFade, 1.0); }"
@@ -1306,11 +1349,49 @@
         _city = new THREE.Mesh(g, _cityMat);
         _city.quaternion.copy(quat); _city.position.copy(qpos);
         _city.name = "BaseCity"; _city.renderOrder = 0.6; _city.frustumCulled = false; _city.visible = false;
+        _cityInvQ.copy(quat).invert();
+        // build 229 — STREETLIGHTS on the real roads (world-ground.js): a lamp head ~7 m up each post, sodium
+        // amber or LED white, sized by true distance (sub-pixel ones fade rather than vanish), occluded by the
+        // buildings, bright enough to bloom. Their light pools are already painted into the ground map.
+        if (lamps && lamps.length) {
+          var nL = lamps.length / 3, LP = new Float32Array(nL * 3), LC = new Float32Array(nL * 3);
+          for (var li = 0; li < nL; li++) {
+            var led = lamps[li * 3 + 2] > 0.5, hj = (li * 0.6180339887) % 1;
+            LP[li * 3] = lamps[li * 3] * S; LP[li * 3 + 1] = lamps[li * 3 + 1] * S; LP[li * 3 + 2] = (6.2 + 1.8 * hj) * S;
+            var cc = led ? [1.15, 1.18, 1.25] : [1.6, 0.95, 0.40];
+            LC[li * 3] = cc[0]; LC[li * 3 + 1] = cc[1]; LC[li * 3 + 2] = cc[2];
+          }
+          var lgeo = new THREE.BufferGeometry();
+          lgeo.setAttribute("position", new THREE.BufferAttribute(LP, 3));
+          lgeo.setAttribute("color", new THREE.BufferAttribute(LC, 3));
+          _lampMat = new THREE.ShaderMaterial({
+            uniforms: { uFade: { value: 0 }, uPR: { value: renderer.getPixelRatio() }, uPx: { value: 900 }, uS: { value: S } },
+            vertexColors: true, transparent: true, depthWrite: false, depthTest: true, blending: THREE.AdditiveBlending, fog: false,
+            vertexShader:
+              "uniform float uPR; uniform float uPx; uniform float uS; varying vec3 vC; varying float vI;\n" +
+              "void main(){ vec4 mv=modelViewMatrix*vec4(position,1.0); float d=max(-mv.z,1e-7);\n" +
+              "  float px=0.9*uS/d*uPx;\n" +                                   // a ~0.9 m glare core at its true distance
+              "  vI=clamp(px/1.4,0.22,1.0);\n" +
+              "  gl_PointSize=clamp(px*3.2,1.7,13.0)*uPR; vC=color; gl_Position=projectionMatrix*mv; }",
+            fragmentShader:
+              "uniform float uFade; varying vec3 vC; varying float vI;\n" +
+              "void main(){ vec2 p=gl_PointCoord-0.5; float r2=dot(p,p)*4.0; float a=exp(-r2*8.0)+0.22*exp(-r2*2.0); if(a<0.012) discard;\n" +
+              "  gl_FragColor=vec4(vC*vI, min(1.0,a*1.3)*uFade); }"
+          });
+          if ("toneMapped" in _lampMat) _lampMat.toneMapped = false;
+          var lampPts = new THREE.Points(lgeo, _lampMat);
+          lampPts.name = "BaseStreetlights"; lampPts.frustumCulled = false; lampPts.renderOrder = 0.7;
+          lampPts.onBeforeRender = function () { _lampMat.uniforms.uPR.value = renderer.getPixelRatio(); _lampMat.uniforms.uPx.value = innerHeight / (2 * Math.tan(camera.fov * Math.PI / 360)); };
+          _city.add(lampPts);
+        }
         scene.add(_city);
       });
     }
     function removeBaseCity() {
-      if (_city) { scene.remove(_city); _city.geometry.dispose(); _city.material.dispose(); _city = null; _cityMat = null; }
+      if (_city) {
+        _city.traverse(function (o) { if (o !== _city && o.geometry) { o.geometry.dispose(); if (o.material) o.material.dispose(); } });
+        scene.remove(_city); _city.geometry.dispose(); _city.material.dispose(); _city = null; _cityMat = null; _lampMat = null;
+      }
     }
     function fetchBase() {
       function viaIpwho() {
@@ -1334,11 +1415,32 @@
       }).catch(function () { return null; });
     }
     function resolveBase() {
-      // The base view is the AUTHOR's home, coherently: his natal sky, his real footprint, and his real
-      // streets (the baked Providence map) all belong together. So the base is Providence for every visitor —
-      // not their IP-geolocated city (which would put a stranger's label over the author's Providence streets,
-      // and his birth-sky over a random horizon). Pinning it also drops the third-party IP lookup (privacy).
-      return Promise.resolve(DEFAULT_BASE);
+      /* build 229 — the base is where the VISITOR actually stands (owner, 2026-10-15: "我的物理位置都不在
+         providence了…没有真的根据实际情况切换所在base"). Build 197 had pinned everyone to Providence because the
+         only street map was Providence's and the lookup was third-party; both are gone now: the near world is
+         built from real OpenStreetMap tiles for any place (world-ground.js), and the location comes from this
+         site's own edge function (/api/where: Cloudflare's city-level geolocation of the request, nothing
+         stored). ?base=lat,lon[,City] overrides it (testing / sharing a view). Unknown → Providence. */
+      try {
+        var q = new URLSearchParams(location.search).get("base");
+        if (q) {
+          var qa = q.split(","), qla = parseFloat(qa[0]), qlo = parseFloat(qa[1]);
+          if (isFinite(qla) && isFinite(qlo) && Math.abs(qla) <= 85) return Promise.resolve({ lat: qla, lon: qlo, city: (qa.slice(2).join(",") || "").trim() });
+        }
+      } catch (eQ) {}
+      try {
+        var cached = JSON.parse(sessionStorage.getItem("cv-where") || "null");
+        if (cached && isFinite(cached.lat) && isFinite(cached.lon)) return Promise.resolve(cached);
+      } catch (eC) {}
+      return Promise.race([
+        fetch("/api/where", { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }),
+        new Promise(function (res) { setTimeout(function () { res(null); }, 1800); })
+      ]).then(function (j) {
+        if (!j || !isFinite(j.lat) || !isFinite(j.lon) || j.lat === null) return DEFAULT_BASE;
+        var g = { lat: +j.lat, lon: +j.lon, city: j.city || "" };
+        try { sessionStorage.setItem("cv-where", JSON.stringify(g)); } catch (eS) {}
+        return g;
+      }).catch(function () { return DEFAULT_BASE; });
     }
     var basePromise = COSMOS ? resolveBase() : Promise.resolve(null);
 
@@ -2242,7 +2344,7 @@
         // it no longer waits behind the far relief (which used to need a 4.7 MB global heightmap first)
         try {
           var spNear = nyeArmature.earthSurfacePoint(baseGeo.lat, baseGeo.lon, 0.0002);
-          if (spNear) { buildLocalMapGround(spNear); buildBaseCity(spNear); }
+          if (spNear) buildNearWorld(spNear);
         } catch (eN) { window.__space.nearGroundError = String(eN); }
         // real modeled terrain around this base (ETOPO1), lazy-loaded once then built; the
         // sky is already usable while it streams in — it fades up with the ground-dim ease
@@ -3079,6 +3181,15 @@
           if (_cityMat) {
             _cityMat.uniforms.uFade.value = _earthUni.uGroundDim.value;        // the extruded city dims/hides with the base
             if (_city) _city.visible = _earthUni.uGroundDim.value > 0.02;
+            if (_lampMat) _lampMat.uniforms.uFade.value = _earthUni.uGroundDim.value;
+            // moonlight: the real Moon's direction from the base, in the city's local frame (east, north, up)
+            if (_city && _city.visible && nyeArmature && nyeArmature.group) {
+              var mo = nyeArmature.group.getObjectByName("NyeMoon");
+              if (mo) {
+                mo.getWorldPosition(_moonL); _moonL.sub(camera.position).normalize().applyQuaternion(_cityInvQ);
+                _cityMat.uniforms.uMoonI.value = Math.max(0, Math.min(1, _moonL.z * 4.0 + 0.15));   // set below the horizon → dark
+              }
+            }
           }
         }
         // the entrance/glide owns the radius this frame → update() must NOT ease against it;

@@ -13,8 +13,8 @@
 # What gets uploaded = the files tracked at HEAD (git archive), so uncommitted work,
 # .wolf/, .claude/, PROGRESS-BOARD.md and other gitignored/private files can never leak.
 # Repo-only files are then stripped: notes/drafts (*.md except CREDITS.md, which carries
-# the image-licence attributions), build scripts, package files, CI config, and functions/
-# (the old-hostname redirect belongs to the git-connected `cv` project only).
+# the image-licence attributions), build scripts, package files, CI config, and the old-hostname
+# redirect middleware (functions/_middleware.js belongs to the git-connected `cv` project only).
 set -euo pipefail
 
 PROJECT="jiaxuanchen"
@@ -46,8 +46,12 @@ git archive HEAD | tar -x -C "$STAGE"
 
 # strip repo-only files
 find "$STAGE" -maxdepth 1 -name '*.md' ! -name 'CREDITS.md' -delete
-rm -rf "$STAGE/scripts" "$STAGE/functions" "$STAGE/.github" \
+rm -rf "$STAGE/scripts" "$STAGE/.github" \
        "$STAGE/package.json" "$STAGE/package-lock.json" "$STAGE/.gitignore"
+# functions/: ship the site's own edge API (functions/api — /api/where, /api/tile) but NOT the
+# old-hostname redirect middleware, which belongs to the git-connected `cv` project only (as middleware
+# it would also run on every static request here and burn the Functions quota)
+rm -f "$STAGE/functions/_middleware.js"
 
 echo "staged $(find "$STAGE" -type f | wc -l | tr -d ' ') files from ${SHA:0:7} → $PROJECT ($BRANCH)"
 if [ "$DRY" = 1 ]; then
