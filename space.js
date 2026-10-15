@@ -1298,7 +1298,7 @@
       var key = geo.lat.toFixed(4) + "," + geo.lon.toFixed(4);
       if (_world && _world.key === key) return Promise.resolve(_world);
       if (_worldLoading && _worldLoading.key === key) return _worldLoading.p;
-      var p = import("./world-ground.js?v=5").then(function (mod) {
+      var p = import("./world-ground.js?v=6").then(function (mod) {
         return mod.loadWorldGround(geo.lat, geo.lon, { radius: 1500, maxBuildings: MOBILE ? 3500 : 9000, mapSize: MOBILE ? 1024 : 2048 });
       }).then(function (w) { if (w) { w.key = key; _world = w; } return w; })
         .catch(function (e) { window.__space.worldError = String(e); return null; });

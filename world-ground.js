@@ -120,7 +120,7 @@ export function loadWorldGround(lat0, lon0, opts) {
   var rt = R / mPerTile, tx0 = Math.floor(c.x - rt), tx1 = Math.floor(c.x + rt), ty0 = Math.floor(c.y - rt), ty1 = Math.floor(c.y + rt);   // exactly the tiles the disc touches (2–3 per axis)
   var jobs = [];
   for (var ty = ty0; ty <= ty1; ty++) for (var tx = tx0; tx <= tx1; tx++) (function (tx, ty) {
-    var timed = Promise.race([fetchTile(tx, ty), new Promise(function (res, rej) { setTimeout(function () { rej(new Error("tile timeout")); }, 45000); })]);   /* only a truly hung request: dense downtown tiles on a slow link legitimately take 20 s+ */
+    var timed = Promise.race([fetchTile(tx, ty), new Promise(function (res, rej) { setTimeout(function () { rej(new Error("tile timeout")); }, 120000); })]);   /* only a truly hung request: on a slow proxied link a dense tile measured ~40 s */
     jobs.push(timed.then(function (ab) { return { x: tx, y: ty, layers: decodeTile(new Uint8Array(ab), ["building", "transportation", "water"]) }; })
       .catch(function () { return null; }));
   })(tx, ty);
