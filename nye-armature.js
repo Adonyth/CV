@@ -508,8 +508,10 @@ export function mountNyeArmature(THREE, scene, opts) {
       "varying vec2 vUv;",
       "varying vec3 vWn;",
       "varying vec3 vWp;",
+      "varying vec3 vObjN;",
       "void main(){",
       "  vUv=uv;",
+      "  vObjN=normalize(position);",
       "  vec4 wp=modelMatrix*vec4(position,1.0);",
       "  vWp=wp.xyz;",
       "  vWn=normalize(mat3(modelMatrix)*normal);",
@@ -519,7 +521,7 @@ export function mountNyeArmature(THREE, scene, opts) {
 
 
     const sunCoreFrag = [
-      "varying vec2 vUv; varying vec3 vWn; varying vec3 vWp;",
+      "varying vec2 vUv; varying vec3 vWn; varying vec3 vWp; varying vec3 vObjN;",
       "uniform sampler2D uMap;",
       "uniform float uExposure;",
       "uniform vec3 uWarmTint;",
@@ -528,13 +530,23 @@ export function mountNyeArmature(THREE, scene, opts) {
       "  vec3 N=normalize(vWn);",
       "  vec3 V=normalize(cameraPosition-vWp);",
       "  float mu=max(dot(N,V),0.0);",
-      "  vec3 col=texture2D(uMap,vUv).rgb*1.18;",
-      "  float ld=0.34+0.66*pow(mu,0.62);",                   // photospheric limb darkening
-      "  col*=ld;",
-      "  col=mix(col,vec3(0.98,0.34,0.08),pow(1.0-mu,2.9)*0.55);",  // limb reddening
-      "  col+=vec3(0.30,0.26,0.22)*pow(mu,2.6);",             // hot core lift
+      "  vec3 tex=texture2D(uMap,vUv).rgb; float hp=dot(tex,vec3(0.333));",   // the baked heat pattern: lanes and faculae
+      // build 228: fine granulation cells on the sphere itself (the 1024px bake is soft up close)
+      "  vec3 q=normalize(vObjN)*64.0;",
+      "  vec3 qi=floor(q), qf=fract(q); qf=qf*qf*(3.0-2.0*qf);",
+      "  float n000=fract(sin(dot(qi,vec3(127.1,311.7,74.7)))*43758.5453), n100=fract(sin(dot(qi+vec3(1,0,0),vec3(127.1,311.7,74.7)))*43758.5453);",
+      "  float n010=fract(sin(dot(qi+vec3(0,1,0),vec3(127.1,311.7,74.7)))*43758.5453), n110=fract(sin(dot(qi+vec3(1,1,0),vec3(127.1,311.7,74.7)))*43758.5453);",
+      "  float n001=fract(sin(dot(qi+vec3(0,0,1),vec3(127.1,311.7,74.7)))*43758.5453), n101=fract(sin(dot(qi+vec3(1,0,1),vec3(127.1,311.7,74.7)))*43758.5453);",
+      "  float n011=fract(sin(dot(qi+vec3(0,1,1),vec3(127.1,311.7,74.7)))*43758.5453), n111=fract(sin(dot(qi+vec3(1,1,1),vec3(127.1,311.7,74.7)))*43758.5453);",
+      "  float gn=mix(mix(mix(n000,n100,qf.x),mix(n010,n110,qf.x),qf.y),mix(mix(n001,n101,qf.x),mix(n011,n111,qf.x),qf.y),qf.z);",
+      // a photosphere's colour runs deep orange at the limb → gold → near-white at the centre; bright enough
+      // that the bloom pass gives it its glow (it used to sit below the threshold and read as a matte plate)
+      "  vec3 col=mix(vec3(1.0,0.40,0.09), vec3(1.0,0.70,0.30), smoothstep(0.0,0.45,mu));",
+      "  col=mix(col, vec3(1.0,0.93,0.80), smoothstep(0.70,1.0,mu));",
+      "  float ld=0.34+0.66*pow(mu,0.55);",                   // photospheric limb darkening
+      "  col*=ld*(0.80+0.36*gn)*(0.82+0.34*hp);",
       "  col=mix(col,col*uWarmTint,0.18);",
-      "  col=acesApprox(col*uExposure);",
+      "  col*=uExposure*0.98;",                                 // tone-mapped ONCE by the pipeline
       "  gl_FragColor=vec4(col,1.0);",
       "}"
     ].join("\n");
@@ -562,7 +574,7 @@ export function mountNyeArmature(THREE, scene, opts) {
       "  vec3 N=normalize(vWn);",
       "  vec3 V=normalize(cameraPosition-vWp);",
       "  float mu=max(dot(N,V),0.0);",
-      "  float f=pow(1.0-mu,3.4);",
+      "  float f=pow(1.0-mu,3.4)*smoothstep(0.0,0.16,mu);",   // build 228: fades out AT the limb (was a crisp bright ring)
       "  float g=texture2D(uWisp,vUv*vec2(3.0,2.0)).r;",
       "  vec3 c=vec3(2.05,0.70,0.30)*f*(0.80+0.20*g);",
       "  c=acesApprox(c*0.86);",
@@ -601,7 +613,7 @@ export function mountNyeArmature(THREE, scene, opts) {
       "  float phi=atan(vWn.y,vWn.x);",
       "  float stream=0.80+0.20*sin(phi*14.0)*sin(phi*8.0+vWn.z*5.5);",
       "  stream=mix(1.0,stream,uStreamAmt);",
-      "  float alpha=limbW*wisps*uOpacity*stream;",
+      "  float alpha=limbW*wisps*uOpacity*stream*smoothstep(0.0,0.32,mu);",   // build 228: zero at the silhouette — no hard ring where the shell ends
       "  gl_FragColor=vec4(uColor,clamp(alpha,0.0,1.0));",
       "}"
     ].join("\n");

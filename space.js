@@ -230,8 +230,9 @@
           "  float cyg = exp(-pow((l - 1.36) / 0.40, 2.0));",                                   // the Cygnus star cloud, l≈78°
           "  float sct = exp(-pow((l - 0.47) / 0.12, 2.0));",                                   // the Scutum star cloud, l≈27°
           "  float cas = exp(-pow((l - 2.10) / 0.45, 2.0));",                                   // Cassiopeia–Cepheus
-          "  float lon = 0.14 + 0.46 * exp(-pow(l / 1.45, 2.0)) + 0.32 * cyg + 0.30 * sct + 0.10 * cas;",
-          "  float wid = 0.060 + 0.028 * cyg + 0.022 * nearC;",
+          "  float car = exp(-pow((l + 1.15) / 0.40, 2.0));",                                   // Carina–Crux–Centaurus, l≈290–310°: the rich southern band
+          "  float lon = 0.14 + 0.46 * exp(-pow(l / 1.45, 2.0)) + 0.32 * cyg + 0.30 * sct + 0.10 * cas + 0.34 * car;",
+          "  float wid = 0.060 + 0.028 * cyg + 0.022 * nearC + 0.018 * car;",
           "  float warp = 0.012 * sin(l * 2.0) + 0.006 * sin(l * 5.0 + 1.3);",
           "  float n1 = fbm(gd * 3.4), n2 = fbm(gd * 9.0 + 5.2), n3 = fbm(gd * 30.0 + 1.7);",
           "  float core = exp(-pow((b - warp) / wid, 2.0));",
@@ -256,6 +257,16 @@
           "  col = mix(col, gold, clamp(bulge * 1.2 + 0.35 * nearC * core, 0.0, 1.0));",
           "  col *= I;",
           "  col += vec3(0.95, 0.28, 0.36) * pow(clamp(fbm(gd * 15.0 + 23.0), 0.0, 1.0), 8.0) * core * 3.0 * I;",
+          // build 228 — RESOLVED STARS: a long exposure shows the band as countless individual stars, not a smooth
+          // fog. One hash per texel; density follows the band's own brightness, magnitudes are power-law.
+          "  vec2 tx = floor(vUv * vec2(" + (MOBILE ? "2048.0, 512.0" : "4096.0, 1024.0") + "));",
+          "  float h1 = fract(sin(dot(tx, vec2(12.9898, 78.233))) * 43758.5453);",
+          "  float h2 = fract(sin(dot(tx, vec2(39.3468, 11.1350))) * 24634.6345);",
+          "  float h3s = fract(sin(dot(tx, vec2(73.1560, 52.2350))) * 15731.7431);",
+          "  float dens = clamp(0.012 + 0.30 * I, 0.0, 0.42) * (1.0 - smoothstep(" + (MILKY_B * 0.55).toFixed(3) + ", " + MILKY_B.toFixed(3) + ", abs(b)));",   // no seam where the map ends
+          "  float st = step(1.0 - dens, h1) * (0.35 + 2.2 * pow(h2, 7.0));",
+          "  vec3 sc = h3s < 0.18 ? vec3(0.78, 0.86, 1.0) : (h3s > 0.80 ? vec3(1.0, 0.82, 0.62) : vec3(1.0, 0.96, 0.90));",
+          "  col += sc * st * (0.55 + 0.45 * clamp(I, 0.0, 1.0));",
           "  gl_FragColor = vec4(sqrt(clamp(col / 2.2, 0.0, 1.0)), 1.0);",
           "}"
         ].join("\n")
@@ -1178,13 +1189,27 @@
       var quat = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(east, north, up));
       loadCityData().then(function (j) {
         if (!j || !j.b || !controls.isGround()) return;
-        var S = CITY_SCALE, B = j.b, P = [], I = [];   // position (local), aInfo (topFrac, wallFlag, seed)
+        var S = CITY_SCALE, B = j.b, P = [], I = [];   // position (local), aInfo (topFrac, kind: 1 facade · 0.5 plant · 0 roof, seed)
+        // a box on the roof (stair/lift house, plant room): walls with no windows + a flat lid
+        function roofBox(cx0, cy0, hx, hy, z0, hh, seed0) {
+          var X = [cx0 - hx, cx0 + hx, cx0 + hx, cx0 - hx], Y = [cy0 - hy, cy0 - hy, cy0 + hy, cy0 + hy], z1 = z0 + hh;
+          for (var q = 0; q < 4; q++) {
+            var q1 = (q + 1) % 4;
+            P.push(X[q], Y[q], z0, X[q1], Y[q1], z0, X[q1], Y[q1], z1,  X[q], Y[q], z0, X[q1], Y[q1], z1, X[q], Y[q], z1);
+            I.push(0, 0.5, seed0, 0, 0.5, seed0, 1, 0.5, seed0,  0, 0.5, seed0, 1, 0.5, seed0, 1, 0.5, seed0);
+          }
+          P.push(X[0], Y[0], z1, X[1], Y[1], z1, X[2], Y[2], z1,  X[0], Y[0], z1, X[2], Y[2], z1, X[3], Y[3], z1);
+          I.push(1, 0, seed0, 1, 0, seed0, 1, 0, seed0,  1, 0, seed0, 1, 0, seed0, 1, 0, seed0);
+        }
         for (var bi = 0; bi < B.length; bi++) {
-          var r = B[bi].r, H = B[bi].h * S, m = r.length >> 1;
+          var r = B[bi].r, Hm = B[bi].h, H = Hm * S, m = r.length >> 1;
           if (m < 3) continue;
           var seed = (bi * 0.6180339887) % 1;
-          var cx = 0, cy = 0;
-          for (var k = 0; k < m; k++) { cx += r[k * 2]; cy += r[k * 2 + 1]; }
+          var cx = 0, cy = 0, x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+          for (var k = 0; k < m; k++) {
+            var rx = r[k * 2], ry = r[k * 2 + 1]; cx += rx; cy += ry;
+            if (rx < x0) x0 = rx; if (rx > x1) x1 = rx; if (ry < y0) y0 = ry; if (ry > y1) y1 = ry;
+          }
           cx = cx / m * S; cy = cy / m * S;
           for (var e0 = 0; e0 < m; e0++) {
             var e1 = (e0 + 1) % m;
@@ -1196,6 +1221,15 @@
             P.push(cx, cy, H, ax, ay, H, bx, by, H);
             I.push(1, 0, seed, 1, 0, seed, 1, 0, seed);
           }
+          // build 228 — the skyline gets its roof clutter: mid-rises and towers carry a plant room / stair house
+          // (two on big floor plates), sized from the real footprint, so the silhouette stops reading as clean boxes
+          var bw = x1 - x0, bd = y1 - y0;
+          if (Hm > 13 && bw > 9 && bd > 9) {
+            var rs = (bi * 0.7548776662) % 1, rt = (bi * 0.5698402910) % 1;
+            var hx = Math.max(2.2, bw * (0.12 + 0.10 * rs)) * S, hy = Math.max(2.2, bd * (0.12 + 0.10 * rt)) * S;
+            roofBox(cx + (rs - 0.5) * bw * 0.25 * S, cy + (rt - 0.5) * bd * 0.25 * S, hx, hy, H, (2.6 + 2.8 * rs) * S, seed);
+            if (bw * bd > 900) roofBox(cx - (rs - 0.5) * bw * 0.32 * S, cy + (0.5 - rt) * bd * 0.30 * S, hx * 0.6, hy * 0.7, H, (1.6 + 1.4 * rt) * S, seed);
+          }
         }
         if (!P.length) return;
         var g = new THREE.BufferGeometry();
@@ -1204,30 +1238,55 @@
         _cityMat = new THREE.ShaderMaterial({
           uniforms: { uFade: { value: 0 }, uScale: { value: S }, uHorizon: { value: new THREE.Color(0.030, 0.021, 0.019) } },   // build 227: the real night limb (was bright amber)
           side: THREE.DoubleSide, depthWrite: true, depthTest: true, fog: false,
+          extensions: { derivatives: true },
           vertexShader:
             "attribute vec3 aInfo; varying vec3 vLocal; varying vec3 vInfo; varying float vDist;\n" +
             "void main(){ vLocal=position; vInfo=aInfo; vec4 wp=modelMatrix*vec4(position,1.0);\n" +
             "  vDist=distance(wp.xyz, cameraPosition);\n" +
             "  gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
+          /* build 228 — a night facade with the grain of a photograph, not a grid of identical lit squares:
+             every building draws its own storey height, bay width, how awake it is and its light temperature
+             (2700 K homes, 3500 K, 5000 K offices); whole office floors left on; unlit panes are dark glass
+             holding a little sky; shopfronts at street level; the street-level dark where walls meet the ground;
+             a thin roofline edge catching the city's light dome. */
           fragmentShader:
             "precision highp float; varying vec3 vLocal; varying vec3 vInfo; varying float vDist;\n" +
             "uniform float uFade; uniform float uScale; uniform vec3 uHorizon;\n" +
             "float h3(vec3 p){ return fract(sin(dot(p,vec3(12.9898,78.233,37.719)))*43758.5453); }\n" +
             "void main(){\n" +
-            "  float top=vInfo.x, wall=vInfo.y, seed=vInfo.z;\n" +
-            "  vec3 m=vLocal/uScale;\n" +                                   // local metres (e, n, heightM)
-            "  vec3 col=mix(vec3(0.0055,0.005,0.0055), vec3(0.022,0.020,0.024), top);\n" +   // build 227: true night silhouettes — the windows carry the light (was mid-grey up to 0.11)
-            "  if(wall>0.5){\n" +
-            "    float u=(m.x*0.9+m.y*1.1);\n" +
-            "    float ci=floor(u/3.4), ri=floor(m.z/3.6);\n" +
-            "    float hh=h3(vec3(ci, ri, seed*97.0)); float lit=step(0.80, hh);\n" +   // ~20% of rooms lit at night
-            "    float px=abs(fract(u/3.4)-0.5), py=abs(fract(m.z/3.6)-0.42);\n" +
-            "    float pane=smoothstep(0.36,0.18,px)*smoothstep(0.36,0.14,py);\n" +
-            "    vec3 wc=mix(vec3(1.0,0.62,0.30), vec3(0.78,0.84,1.0), step(0.965, hh));\n" +   // a few cool LED rooms among the warm
-            "    col+=lit*pane*wc*(0.55+0.35*fract(hh*13.7));\n" +
+            "  float top=vInfo.x, kind=vInfo.y, seed=vInfo.z;\n" +
+            "  vec3 m=vLocal/uScale;\n" +                                   // local metres (east, north, height)
+            "  vec3 N=normalize(cross(dFdx(vLocal), dFdy(vLocal)));\n" +
+            "  float s1=h3(vec3(seed,1.7,3.1)), s2=h3(vec3(seed,8.3,0.7)), s3=h3(vec3(seed,4.4,9.2));\n" +
+            "  vec3 base=mix(vec3(0.0060,0.0058,0.0062), vec3(0.0150,0.0142,0.0150), s1);\n" +
+            "  float ao=0.42+0.58*smoothstep(0.0,7.0,m.z);\n" +
+            "  vec3 col=base;\n" +
+            "  if(kind>0.75){\n" +
+            "    float floorH=3.0+1.3*s1, bayW=2.3+2.4*s2;\n" +
+            "    float u=abs(N.x)>abs(N.y) ? m.y : m.x;\n" +
+            "    float fi=floor(m.z/floorH), fy=fract(m.z/floorH), bi=floor(u/bayW), bx=fract(u/bayW);\n" +
+            "    float wr=0.16+0.12*s3;\n" +
+            "    float pane=smoothstep(wr-0.05,wr,bx)*smoothstep(1.0-wr+0.05,1.0-wr,bx)*smoothstep(0.18,0.26,fy)*smoothstep(0.90,0.80,fy);\n" +
+            "    float room=h3(vec3(bi,fi,seed*97.0));\n" +
+            "    float awake=mix(0.05,0.40,pow(s3,1.3));\n" +
+            "    float office=step(0.93,h3(vec3(fi,seed*31.0,2.0)))*step(0.62,s2);\n" +
+            "    float lit=max(step(1.0-awake,room), office*step(0.2,room))*step(0.5,fi);\n" +
+            "    vec3 tint=s2<0.60 ? vec3(1.0,0.62,0.30) : (s2<0.90 ? vec3(1.0,0.78,0.52) : vec3(0.84,0.89,1.0));\n" +
+            "    float hv=h3(vec3(bi,fi,seed*7.0)); float var=0.32+0.68*hv*hv;\n" +   // most rooms dim-lit, a few bright
+            "    float blind=step(0.55,h3(vec3(bi,fi,seed*3.0)));\n" +
+            "    float inner=mix(0.55+0.45*smoothstep(0.22,0.86,fy), 0.30+0.70*step(0.62,fy), blind);\n" +   // ceiling light falls down the pane; some rooms behind half-drawn blinds
+            "    col=mix(col*ao, vec3(0.016,0.019,0.027), pane*0.85);\n" +
+            "    col+=pane*lit*tint*var*inner*0.72;\n" +
+            "    float shop=(1.0-step(0.5,fi))*step(0.55,h3(vec3(bi,seed,5.0)));\n" +
+            "    col+=shop*pane*vec3(1.0,0.70,0.40)*0.50;\n" +
+            "  } else if(kind>0.25){\n" +
+            "    col=base*1.35*ao;\n" +
+            "  } else {\n" +
+            "    col=vec3(0.0095,0.0100,0.0125)+vec3(0.005,0.0035,0.0025)*s1;\n" +
             "  }\n" +
+            "  col+=smoothstep(0.955,1.0,top)*step(0.25,kind)*vec3(0.048,0.034,0.026);\n" +   // the roofline edge
             "  float haze=smoothstep(0.02,0.15,vDist);\n" +
-            "  col=mix(col, uHorizon, haze*0.80);\n" +                     // distant blocks dissolve into the night limb
+            "  col=mix(col, uHorizon, haze*0.80);\n" +
             "  gl_FragColor=vec4(col*uFade, 1.0); }"
         });
         if ("toneMapped" in _cityMat) _cityMat.toneMapped = false;
@@ -1740,7 +1799,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=45").then(function (mod) {
+    import("./nye-armature.js?v=46").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -2114,6 +2173,51 @@
             pitch: Math.max(0.46, Math.min(1.28, Math.asin(Math.max(-1, Math.min(1, best.dot(nrm)))) + 0.10))  // aim at the visible Moon/constellation itself, not past it into an empty zenith
           };
         }
+        /* build 228 — the waking gaze faces the MILKY WAY at its true place (owner: "初始视角对着银河，保持真实位置").
+           Scan the real galactic plane for the brightest stretch standing 15–35° over the skyline (the bulge, the
+           Scutum and Cygnus clouds weigh most) and frame it like a night photograph: the city along the bottom
+           ~18% of the frame, the band rising out of it. Falls back to the Moon/constellation aim above. */
+        try {
+          if (natalSky && natalSky.skyDir) {
+            var gX2 = natalSky.skyDir(17.7611, -29.0078), gZ2 = natalSky.skyDir(12.8573, 27.1283);
+            gZ2.addScaledVector(gX2, -gZ2.dot(gX2)).normalize();
+            var gY2 = new THREE.Vector3().crossVectors(gZ2, gX2).normalize();
+            var mwAim = null, mwS = -9, md = new THREE.Vector3(), sunDirB = null;
+            try { var sunO = nyeArmature.group.getObjectByName("NyeSun"); if (sunO) sunDirB = sunO.getWorldPosition(new THREE.Vector3()).sub(sp.position).normalize(); } catch (eS) {}
+            for (var li = -72; li < 72; li++) {
+              var Lg = li * Math.PI / 72;
+              md.copy(gX2).multiplyScalar(Math.cos(Lg)).addScaledVector(gY2, Math.sin(Lg));
+              var altM = Math.asin(Math.max(-1, Math.min(1, md.dot(nrm))));
+              if (altM < 0.17) continue;                 // lower than that the city's light dome swallows it
+              var brM = 0.2 + Math.exp(-Math.pow(Lg / 0.6, 2)) + 0.45 * Math.exp(-Math.pow((Lg - 1.36) / 0.4, 2)) + 0.35 * Math.exp(-Math.pow((Lg - 0.47) / 0.15, 2)) + 0.45 * Math.exp(-Math.pow((Lg + 1.15) / 0.4, 2));
+              var scM = brM * (0.35 + 0.65 * Math.exp(-Math.pow((altM - 0.42) / 0.3, 2)));
+              if (scM > mwS) { mwS = scM; mwAim = md.clone(); }
+            }
+            if (mwAim) {
+              // the band's brightest stretch sits beside the (symbolic, user-sized ~15°) natal Sun in Sagittarius:
+              // keep the core in frame but turn the gaze AWAY from the Sun until its disc leaves the frame
+              var focusM = mwAim.clone();
+              if (sunDirB) {
+                var aS = Math.acos(Math.max(-1, Math.min(1, mwAim.dot(sunDirB))));
+                if (aS < 1.06) {
+                  var away = mwAim.clone().multiplyScalar(mwAim.dot(sunDirB)).sub(sunDirB);
+                  if (away.lengthSq() > 1e-8) {
+                    away.normalize();
+                    var dl = Math.min(0.55, 1.06 - aS);
+                    mwAim = mwAim.clone().multiplyScalar(Math.cos(dl)).addScaledVector(away, Math.sin(dl)).normalize();
+                  }
+                }
+              }
+              var vfov = camera.fov * Math.PI / 180;
+              var horizonDip = -0.0925;                   // the visible limb at the low eye (see the composite's uHorizon)
+              var below = Math.atan(0.64 * Math.tan(vfov / 2));   // put the limb ~82% of the way down the frame
+              var altT = Math.asin(Math.max(-1, Math.min(1, focusM.dot(nrm))));   // the frame must still hold the bright core
+              var pitchC = horizonDip + below;            // the limb at ~82% of the frame height: the city along the bottom
+              if (altT - pitchC > 0.78 * vfov / 2) pitchC = altT - 0.78 * vfov / 2;   // …unless the band would leave the top
+              aim = { yaw: Math.atan2(mwAim.dot(east), mwAim.dot(north)), pitch: pitchC };
+            }
+          }
+        } catch (eM) { window.__aimErr = String(eM); }
         controls.setGroundMode({
           position: sp.position, normal: sp.normal,
           yaw: (opts && opts.yaw != null) ? opts.yaw : (aim ? aim.yaw : 0.35),
