@@ -2118,28 +2118,37 @@
     var natalRoot = new THREE.Group(); natalRoot.name = "natalRoot"; scene.add(natalRoot);
     var DOSSIER = {};   // the data-hook registry (keyed by pick-id) → the focus card; blank entries render nothing
     var _galSfx = (MOBILE || /[?&]gallite=1/.test(location.search)) ? "_lite" : "";
-    Promise.all([
-      fetch("data/natal-sky.json?v=17").then(function (r) { return r.json(); }),
-      fetch("data/large-scale.json?v=1").then(function (r) { return r.json(); }).catch(function () { return null; }),
+    /* build 231 — the ground entrance waits for the natal sky, and the natal sky used to wait for ~720 KB of galaxy-
+       survey / cosmic-web arrays that only matter past camLen ≈ 2200 (built lazily by ensureCosmicWeb). On a slow
+       link that held the first landing back by tens of seconds. Mount with the chart + LSS outline only; the survey
+       arrays stream in behind and are written into the SAME opts object the lazy builder reads (if someone reaches
+       the cosmic web before they land, the procedural skeleton covers, as it always did on a failed load). */
+    var natalOpts = null;
+    var surveyP = Promise.all([
       fetch("data/galaxies_xyz" + _galSfx + ".i16?v=3").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; }),
       fetch("data/galaxies_rgb" + _galSfx + ".u8?v=3").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; }),
       fetch("data/weblines_xyz" + _galSfx + ".i16?v=3").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; }),
       fetch("data/weblines_rgb" + _galSfx + ".u8?v=3").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; })
+    ]);
+    Promise.all([
+      fetch("data/natal-sky.json?v=17").then(function (r) { return r.json(); }),
+      fetch("data/large-scale.json?v=1").then(function (r) { return r.json(); }).catch(function () { return null; })
     ]).then(function (arr) {
       var natalData = arr[0], lssData = arr[1];
-      var galXYZ = arr[2] ? new Int16Array(arr[2]) : null;
-      var galRGB = arr[3] ? new Uint8Array(arr[3]) : null;
-      var webXYZ = arr[4] ? new Int16Array(arr[4]) : null;
-      var webRGB = arr[5] ? new Uint8Array(arr[5]) : null;
       DOSSIER = natalData.dossier || {};
       return import("./natal-sky.js?v=150").then(function (mod) {
-        natalSky = mod.buildNatalSky(THREE, scene, natalData, {
+        natalOpts = {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
           mobile: MOBILE, calm: (TIER !== "full"),
           camera: camera, interactive: true, lss: lssData,
-          galXYZ: galXYZ, galRGB: galRGB, webXYZ: webXYZ, webRGB: webRGB
+          galXYZ: null, galRGB: null, webXYZ: null, webRGB: null
+        };
+        surveyP.then(function (sv) {
+          natalOpts.galXYZ = sv[0] ? new Int16Array(sv[0]) : null; natalOpts.galRGB = sv[1] ? new Uint8Array(sv[1]) : null;
+          natalOpts.webXYZ = sv[2] ? new Int16Array(sv[2]) : null; natalOpts.webRGB = sv[3] ? new Uint8Array(sv[3]) : null;
         });
+        natalSky = mod.buildNatalSky(THREE, scene, natalData, natalOpts);
         natalSky.applyTheme(root.getAttribute("data-theme") === "dark");
         window.__space.natal = natalSky;
         if (natalSky.onConstellationClick) natalSky.onConstellationClick(function (cid) { window.__space.focusCon(cid); });
