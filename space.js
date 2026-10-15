@@ -953,7 +953,7 @@
       if (_earthDayLoading) return _earthDayLoading;
       _earthDayLoading = new Promise(function (resolve) {
         var loader = new THREE.TextureLoader();
-        loader.load("data/earth-map.jpg", function (tex) {
+        loader.load("data/earth-map.jpg?v=2", function (tex) {   // build 228: the armature's exact URL → an HTTP-cache hit, not a second 1.2 MB download
           tex.colorSpace = THREE.SRGBColorSpace || tex.colorSpace;
           tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.ClampToEdgeWrapping;
           tex.minFilter = THREE.LinearMipmapLinearFilter; tex.magFilter = THREE.LinearFilter;
@@ -966,9 +966,15 @@
     function loadHeightmap() {
       if (_heightmap) return Promise.resolve(_heightmap);
       if (_hmLoading) return _hmLoading;
-      _hmLoading = fetch("data/earth-heightmap.json").then(function (r) { return r.json(); }).then(function (meta) {
+      // build 228: the terrain only ever spans ±11° around the base, and the base is Providence for every
+      // visitor — a 77 KB regional crop of the same ETOPO grid replaces the 4.7 MB global file that used
+      // to hold the whole near ground (city and streets included) hostage on slow networks
+      var g0 = baseGeo || DEFAULT_BASE;
+      var regional = g0 && g0.lat >= 39 && g0.lat <= 45 && g0.lon >= -75.2 && g0.lon <= -66.8;
+      var hmBase = regional ? "data/earth-heightmap-ne" : "data/earth-heightmap";
+      _hmLoading = fetch(hmBase + ".json").then(function (r) { return r.json(); }).then(function (meta) {
         _hmMeta = meta;
-        return fetch("data/earth-heightmap.i16").then(function (r) { return r.arrayBuffer(); }).then(function (buf) {
+        return fetch(hmBase + ".i16").then(function (r) { return r.arrayBuffer(); }).then(function (buf) {
           _heightmap = new Int16Array(buf); window.__space.heightmapPts = _heightmap.length; return _heightmap;
         });
       }).catch(function (e) { window.__space.hmError = String(e); _hmLoading = null; return null; });
@@ -980,6 +986,7 @@
       var fr = (lat - m.lat0) / (m.lat1 - m.lat0) * (m.nlat - 1);
       var fc = (lon - m.lon0) / (m.lon1 - m.lon0) * (m.nlon - 1);
       fr = Math.max(0, Math.min(m.nlat - 1.0001, fr));
+      if (m.crop) fc = Math.max(0, Math.min(m.nlon - 1.0001, fc));   // a regional crop clamps; only the global grid wraps
       var r0 = Math.floor(fr), c0 = ((Math.floor(fc) % m.nlon) + m.nlon) % m.nlon;
       var dr = fr - Math.floor(fr), dc = fc - Math.floor(fc);
       var r1 = Math.min(m.nlat - 1, r0 + 1), c1 = (c0 + 1) % m.nlon;
@@ -988,7 +995,7 @@
       return a * (1 - dr) + b * dr;
     }
     function buildGroundTerrain(geo) {
-      removeGroundTerrain();
+      removeTerrainMesh();   // build 228: only the relief — the street map and city are built on landing and must survive this
       if (!nyeArmature || !nyeArmature.earthSurfacePoint || !_heightmap) return;
       var Rv = nyeArmature.earthRadiusVis || 0.95;
       var EARTH_M = 6371000, EXAG = 26;                 // vertical exaggeration — true relief is invisibly small vs the radius
@@ -1110,14 +1117,17 @@
       // the REAL local street map goes on LAST (built with the terrain, cleared with it) so the terrain
       // rebuild's removeGroundTerrain() can't wipe it — your actual streets underfoot at the base.
       var _sp = nyeArmature.earthSurfacePoint(geo.lat, geo.lon, 0.0002);   // on the GROUND (well below the ~0.004 eye), so the map is the floor you stand on, not a ceiling
-      if (_sp) { buildLocalMapGround(_sp); buildBaseCity(_sp); }
+      if (_sp) { if (!_localMap) buildLocalMapGround(_sp); if (!_city && !_cityPending) buildBaseCity(_sp); }   // normally already built on landing
     }
-    function removeGroundTerrain() {
+    function removeTerrainMesh() {
       if (groundTerrain) {
         scene.remove(groundTerrain);
         groundTerrain.geometry.dispose(); groundTerrain.material.dispose();
         groundTerrain = null; _terrainMat = null;
       }
+    }
+    function removeGroundTerrain() {
+      removeTerrainMesh();
       removeLocalMapGround();
       removeBaseCity();
     }
@@ -1180,14 +1190,17 @@
       return _cityLoading;
     }
     var CITY_SCALE = 0.155 / 1500;   // metres → scene units, matched to the street-map disc (R=0.155 ≙ 1500 m)
+    var _cityPending = false;
     function buildBaseCity(sp) {
       removeBaseCity();
+      _cityPending = true;
       var up = sp.normal.clone().normalize();
       var east = new THREE.Vector3(0, 1, 0).cross(up); if (east.lengthSq() < 1e-6) east.set(1, 0, 0); east.normalize();
       var north = up.clone().cross(east).normalize();
       var qpos = sp.position.clone().addScaledVector(up, 0.00108);   // bases sit just on the street map
       var quat = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(east, north, up));
       loadCityData().then(function (j) {
+        _cityPending = false;
         if (!j || !j.b || !controls.isGround()) return;
         var S = CITY_SCALE, B = j.b, P = [], I = [];   // position (local), aInfo (topFrac, kind: 1 facade · 0.5 plant · 0 roof, seed)
         // a box on the roof (stair/lift house, plant room): walls with no windows + a flat lid
@@ -2225,6 +2238,12 @@
           onLiftoff: function () { ascendThen(null, 12); }
         });
         makeGroundDome(sp.position, sp.normal);   // the horizon glows all around the base
+        // build 228: the near world — your real streets and city — goes up NOW, from ~0.5 MB of local data;
+        // it no longer waits behind the far relief (which used to need a 4.7 MB global heightmap first)
+        try {
+          var spNear = nyeArmature.earthSurfacePoint(baseGeo.lat, baseGeo.lon, 0.0002);
+          if (spNear) { buildLocalMapGround(spNear); buildBaseCity(spNear); }
+        } catch (eN) { window.__space.nearGroundError = String(eN); }
         // real modeled terrain around this base (ETOPO1), lazy-loaded once then built; the
         // sky is already usable while it streams in — it fades up with the ground-dim ease
         // ETOPO relief + Blue Marble albedo in parallel (arnis idea: real geography → walkable volume;
