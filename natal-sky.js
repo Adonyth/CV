@@ -412,6 +412,74 @@ export function buildNatalSky(THREE, scene, data, opts) {
         "void main(){ vec3 c=texture2D(uMap, vUv).rgb; float limb=pow(max(dot(normalize(vN),normalize(vV)),0.0),0.6); gl_FragColor=vec4(c*(0.22+0.78*limb),1.0); }"
     });
   }
+  /* build 236 — SUNLIT BODIES (the SpaceEngine baseline): every planet is lit by the actual Sun position, not by
+     the camera. Gas giants follow Minnaert limb darkening; airless rock follows Lommel–Seeliger (flat bright disc at
+     full phase); bodies with air carry a sunlit limb haze in their own colour; the night side is truly dark (a faint
+     floor keeps a silhouette readable). A ringed planet receives its ring's shadow, and casts its own onto the ring. */
+  var _sunPosU = { value: new T.Vector3(0, 0, 0) };
+  var PLANET_LOOK = {   // [model 0=rock 1=gas, atmosphere rgb, atmosphere amount]
+    mercury: [0, [0, 0, 0], 0], venus: [1, [1.0, 0.92, 0.72], 0.55], mars: [0, [0.98, 0.66, 0.48], 0.20],
+    jupiter: [1, [0.96, 0.88, 0.74], 0.16], saturn: [1, [0.96, 0.88, 0.70], 0.16], uranus: [1, [0.62, 0.86, 0.94], 0.34],
+    neptune: [1, [0.42, 0.62, 1.0], 0.34], pluto: [0, [0, 0, 0], 0], charon: [0, [0, 0, 0], 0]
+  };
+  function planetMaterial(tex, kind) {
+    var lk = PLANET_LOOK[kind] || [1, [0.9, 0.9, 0.9], 0.1];
+    return new T.ShaderMaterial({
+      uniforms: {
+        uMap: { value: tex }, uSunPos: _sunPosU, uModel: { value: lk[0] },
+        uAtmo: { value: new T.Vector3(lk[1][0], lk[1][1], lk[1][2]) }, uAtmoAmt: { value: lk[2] },
+        uRing: { value: 0 }, uRingTex: { value: null }, uRingN: { value: new T.Vector3(0, 1, 0) },
+        uCenter: { value: new T.Vector3() }, uRingR: { value: new T.Vector2(1, 2) }
+      },
+      vertexShader: "varying vec3 vWn; varying vec3 vWp; varying vec2 vUv;\n" +
+        "void main(){ vUv=uv; vec4 wp=modelMatrix*vec4(position,1.0); vWp=wp.xyz; vWn=normalize(mat3(modelMatrix)*normal); gl_Position=projectionMatrix*viewMatrix*wp; }",
+      fragmentShader: [
+        "uniform sampler2D uMap; uniform vec3 uSunPos; uniform float uModel; uniform vec3 uAtmo; uniform float uAtmoAmt;",
+        "uniform float uRing; uniform sampler2D uRingTex; uniform vec3 uRingN; uniform vec3 uCenter; uniform vec2 uRingR;",
+        "varying vec3 vWn; varying vec3 vWp; varying vec2 vUv;",
+        "void main(){",
+        "  vec3 N=normalize(vWn), V=normalize(cameraPosition-vWp), L=normalize(uSunPos-vWp);",
+        "  vec3 alb=texture2D(uMap,vUv).rgb;",
+        "  float mu0=dot(N,L), mu=max(dot(N,V),1e-3), m0=max(mu0,0.0);",
+        "  float lit = uModel<0.5 ? mix(2.0*m0/(m0+mu+0.05), m0, 0.4)",            // Lommel–Seeliger regolith
+        "                         : min(pow(m0,0.86)*pow(mu,-0.14), 1.35);",         // Minnaert (k≈0.86) cloud decks
+        "  lit*=smoothstep(-0.02,0.06,mu0);",
+        "  vec3 col=alb*lit*1.05 + alb*0.010;",                                      // the night side is night
+        "  float fres=pow(1.0-mu,2.6);",
+        "  col+=uAtmo*uAtmoAmt*fres*smoothstep(-0.30,0.40,mu0);",                     // sunlit limb haze (terminator twilight included)
+        "  col+=uAtmo*uAtmoAmt*0.25*smoothstep(-0.25,0.05,mu0)*(1.0-smoothstep(0.05,0.35,mu0))*fres;",   // a thin twilight band
+        "  if(uRing>0.5){",                                                           // the ring's shadow on the cloud tops
+        "    float dn=dot(L,uRingN);",
+        "    if(abs(dn)>1e-4){ float t=dot(uCenter-vWp,uRingN)/dn;",
+        "      if(t>0.0){ float r=length(vWp+L*t-uCenter);",
+        "        if(r>uRingR.x && r<uRingR.y){ float a=texture2D(uRingTex,vec2((r-uRingR.x)/(uRingR.y-uRingR.x),0.5)).a; col*=1.0-0.82*a; } } }",
+        "  }",
+        "  gl_FragColor=vec4(col,1.0);",
+        "}"
+      ].join("\n")
+    });
+  }
+  var _tmpC = new T.Vector3(), _tmpS = new T.Vector3(), _tmpQ = new T.Quaternion();
+  function ringMaterial(tex) {
+    return new T.ShaderMaterial({
+      uniforms: { uMap: { value: tex }, uSunPos: _sunPosU, uCenter: { value: new T.Vector3() }, uPR: { value: 1 }, uN: { value: new T.Vector3(0, 0, 1) } },
+      transparent: true, side: T.DoubleSide, depthWrite: false,
+      vertexShader: "varying vec3 vWp; varying vec2 vUv; void main(){ vUv=uv; vec4 wp=modelMatrix*vec4(position,1.0); vWp=wp.xyz; gl_Position=projectionMatrix*viewMatrix*wp; }",
+      fragmentShader: [
+        "uniform sampler2D uMap; uniform vec3 uSunPos; uniform vec3 uCenter; uniform float uPR; uniform vec3 uN;",
+        "varying vec3 vWp; varying vec2 vUv;",
+        "void main(){",
+        "  vec4 t=texture2D(uMap,vUv); if(t.a<0.004) discard;",
+        "  vec3 L=normalize(uSunPos-vWp), V=normalize(cameraPosition-vWp);",
+        "  float sunSide=sign(dot(L,uN)), viewSide=sign(dot(V,uN));",
+        "  float lit=sunSide==viewSide ? 0.35+0.65*abs(dot(L,uN))*2.2 : 0.18+0.55*(1.0-t.a);",   // lit face, or light diffusing THROUGH the thin parts
+        "  vec3 oc=vWp-uCenter; float b=dot(oc,L), c=dot(oc,oc)-uPR*uPR, h=b*b-c;",
+        "  float shadow=(h>0.0 && -b-sqrt(h)>0.0) ? 0.06 : 1.0;",                     // the planet's own shadow across the rings
+        "  gl_FragColor=vec4(t.rgb*min(lit,1.25)*shadow, t.a);",
+        "}"
+      ].join("\n")
+    });
+  }
   function ringTexture() {
     var W = 1024, H = 16, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
     var ctx = cv.getContext("2d"), img = ctx.createImageData(W, H);
@@ -455,7 +523,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     grp.name = "Natal" + p.id.charAt(0).toUpperCase() + p.id.slice(1);
     grp.position.copy(eclVec(lon2, lat2, p.body.dist));
     var terra = (p.body.kind === "mercury" || p.body.kind === "venus" || p.body.kind === "mars" || p.body.kind === "pluto" || p.body.kind === "charon");
-    var mesh = new T.Mesh(new T.SphereGeometry(p.body.radius, 48, 32), giantMaterial(terra ? terrestrialTexture(p.body.kind) : giantTexture(p.body.kind)));
+    var mesh = new T.Mesh(new T.SphereGeometry(p.body.radius, 96, 64), planetMaterial(terra ? terrestrialTexture(p.body.kind) : giantTexture(p.body.kind), p.body.kind));
     mesh.name = grp.name + "Mesh";
     if (!p.decorative) mesh.userData.nyePick = p.id;   // decorative outer planets are scenery, not content anchors
     grp.add(mesh);
@@ -484,23 +552,34 @@ export function buildNatalSky(THREE, scene, data, opts) {
         var rr = Math.sqrt(pos2.getX(vi) * pos2.getX(vi) + pos2.getY(vi) * pos2.getY(vi));
         uv2.setXY(vi, (rr - rIn) / (rOut - rIn), 0.5);
       }
-      var ringMat = new T.MeshBasicMaterial({ map: ringTexture(), transparent: true, side: T.DoubleSide, depthWrite: false, fog: false });
+      var ringMat = ringMaterial(ringTexture());
       lazyTex(function () {
         new T.TextureLoader().load("data/saturn-ring.png", function (rtex) {
           if ("colorSpace" in rtex && T.SRGBColorSpace) rtex.colorSpace = T.SRGBColorSpace;
           rtex.anisotropy = 4;
-          ringMat.map = rtex; ringMat.needsUpdate = true;   // Cassini's real shadows and gaps
+          ringMat.uniforms.uMap.value = rtex; mesh.material.uniforms.uRingTex.value = rtex;   // Cassini's real shadows and gaps
         });
       });
       var ring = new T.Mesh(rg, ringMat);
       ring.name = grp.name + "Ring";
       ring.rotation.x = (p.body.ringTiltDeg || 26.7) * Math.PI / 180;  // the belt's ecliptic is the XY plane; tilt off it
+      // ring ↔ planet shadows need both in world space: refreshed per draw (the system is static, so this is cheap)
+      (function (ringMesh, planetMesh, rI, rO) {
+        var pu = planetMesh.material.uniforms, ru = ringMat.uniforms;
+        pu.uRing.value = 1; pu.uRingTex.value = ru.uMap.value;
+        ringMesh.onBeforeRender = function () {
+          planetMesh.getWorldPosition(_tmpC); ringMesh.getWorldQuaternion(_tmpQ); ringMesh.getWorldScale(_tmpS);
+          ru.uCenter.value.copy(_tmpC); ru.uN.value.set(0, 0, 1).applyQuaternion(_tmpQ); ru.uPR.value = p.body.radius * _tmpS.x;
+          pu.uCenter.value.copy(_tmpC); pu.uRingN.value.copy(ru.uN.value); pu.uRingR.value.set(rI * _tmpS.x, rO * _tmpS.x);
+          if (!pu.uRingTex.value || pu.uRingTex.value !== ru.uMap.value) pu.uRingTex.value = ru.uMap.value;
+        };
+      })(ring, mesh, rIn, rOut);
       if (!p.decorative) ring.userData.nyePick = p.id;
       grp.add(ring);
     }
     if (p.body.moon) {   // a bound companion (Charon over Pluto) offset along the local ecliptic tangent
       var mo = p.body.moon;
-      var mmesh = new T.Mesh(new T.SphereGeometry(mo.radius, 32, 24), giantMaterial(terrestrialTexture(mo.kind)));
+      var mmesh = new T.Mesh(new T.SphereGeometry(mo.radius, 48, 32), planetMaterial(terrestrialTexture(mo.kind), mo.kind));
       mmesh.name = grp.name + "Moon";
       mmesh.userData.nyePick = mo.kind;                 // Charon is independently clickable + focusable
       var radial = eclVec(lon2, lat2, 1).normalize();
@@ -2693,6 +2772,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     starPoints: starPoints,
     ensureFarLayers: ensureFarLayers,
     releaseLazyTextures: releaseLazyTextures,
+    setSunWorld: function (v) { _sunPosU.value.copy(v); },   // the planets are lit from wherever the Sun really is
     setGroundSky: function (t) { _groundSky = Math.max(0, Math.min(1, +t || 0)); },
     /* world-space unit direction of a real sky position (RA hours, Dec degrees) in THIS sky's frame —
        the same transform the constellation stars use, so anything placed with it (the base-view

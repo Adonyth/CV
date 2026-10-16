@@ -1971,6 +1971,7 @@
         // ...and let the sunward embers catch the light (dust + planets share one sun)
         deepFusion.uniforms.uSunDir.value.copy(sunW.clone().normalize());
         deepFusion.uniforms.uSunGlow.value = 0.85;
+        if (natalSky && natalSky.setSunWorld) natalSky.setSunWorld(sunW);   // build 236: the planets are sunlit
       } catch (e) { window.__space.alignError = String(e); }
     }
 
@@ -2136,7 +2137,7 @@
     ]).then(function (arr) {
       var natalData = arr[0], lssData = arr[1];
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=150").then(function (mod) {
+      return import("./natal-sky.js?v=151").then(function (mod) {
         natalOpts = {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -2665,6 +2666,16 @@
             outward.multiplyScalar(0.5).addScaledVector(toSun, 0.85).normalize();
           }
           outward.multiplyScalar(Math.cos(0.22)).addScaledVector(ringN, Math.sin(0.22)).normalize();
+        } else if (objName !== "NyeSun") {
+          /* build 236: the planets are sunlit now, so arrive on their DAY side (a three-quarter phase, as SpaceEngine
+             frames a body) — the old Earth→body sightline looked at their night side and saw a thin crescent */
+          var sunO2 = nyeArmature.group.getObjectByName("NyeSun");
+          outward.applyAxisAngle(ringN, -0.5);
+          if (sunO2) {
+            var toSun2 = sunO2.getWorldPosition(new THREE.Vector3()).sub(w).normalize();
+            outward.multiplyScalar(0.42).addScaledVector(toSun2, 0.92).normalize();
+          }
+          outward.multiplyScalar(Math.cos(0.30)).addScaledVector(ringN, Math.sin(0.30)).normalize();
         } else {
           outward.applyAxisAngle(ringN, -0.5);   /* this side keeps the year-seal beside, not before, the body */
           outward.multiplyScalar(Math.cos(0.42)).addScaledVector(ringN, Math.sin(0.42)).normalize();
