@@ -44,3 +44,9 @@ Tiles are fetched through this site's own edge function; streetlight positions a
 - **Lunar detail:** LROC Wide Angle Camera global mosaic `WAC_GLOBAL_E000N0000_008P` (NASA / GSFC / Arizona State
   University), used only for the finest crater detail in `data/moon-albedo-2k.jpg` (colour from `data/moon-map.jpg`,
   credited above). NASA data, public domain.
+
+## Earth clouds, water mask and relief (build 237)
+`data/earth-clouds-2k.jpg`, `data/earth-ocean-2k.jpg` and `data/earth-normal-2k.jpg` are converted from the
+`earth_clouds_2048.png`, `earth_specular_2048.jpg` and `earth_normal_2048.jpg` textures shipped with the three.js
+examples (r160, https://github.com/mrdoob/three.js — MIT licence), which derive from NASA's Blue Marble imagery
+(NASA Earth Observatory, public domain).

@@ -2020,7 +2020,7 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=47").then(function (mod) {
+    import("./nye-armature.js?v=50").then(function (mod) {
       try {
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
           instant: new Date(2002, 0, 2, 15, 45, 0, 0),
@@ -2544,6 +2544,7 @@
       };
 
       /* ===== the TOUR: the nav asks, the camera travels, the door opens ===== */
+      window.__space.glideToBody = function (n, d, f) { lastTouch = performance.now(); userMoved = true; if (controls.isGround()) { controls.exitGroundMode(); groundHint(false); } glideToBody(n, d, f); };   // verification hook
       window.__space.tour = function (name, href) {
         lastTouch = performance.now(); userMoved = true; glide.onDone = null;
         // (body/star/constellation destinations fly via flyTo, which departs vertically

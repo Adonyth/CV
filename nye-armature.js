@@ -705,18 +705,21 @@ export function mountNyeArmature(THREE, scene, opts) {
       "varying vec2 vUv;",
       "varying vec3 vWn;",
       "varying vec3 vWp;",
+      "varying vec3 vWt;",
       "void main(){",
       "  vUv=uv;",
       "  vec4 wp=modelMatrix*vec4(position,1.0);",
       "  vWp=wp.xyz;",
       "  vWn=normalize(mat3(modelMatrix)*normal);",
+      "  vec3 te=cross(vec3(0.0,1.0,0.0),normal); vWt=dot(te,te)>1e-8 ? normalize(mat3(modelMatrix)*te) : vec3(0.0);",
       "  gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);",
       "}"
     ].join("\n");
 
     const earthFrag = [
-      "varying vec2 vUv; varying vec3 vWn; varying vec3 vWp;",
+      "varying vec2 vUv; varying vec3 vWn; varying vec3 vWp; varying vec3 vWt;",
       "uniform vec3 uSunDirWorld; uniform float uTime;",
+      "uniform sampler2D uOceanMap; uniform float uUseOceanMap; uniform sampler2D uNormalMap; uniform float uUseNormalMap;",
       "uniform sampler2D uAlbedoMap; uniform float uUseAlbedoMap;",
       "uniform sampler2D uCloudMap; uniform float uUseCloudMap;",
       "uniform sampler2D uNightMap; uniform float uUseNightMap;",
@@ -740,6 +743,7 @@ export function mountNyeArmature(THREE, scene, opts) {
       "  if(uUseAlbedoMap>0.5){",
       "    alb=texture2D(uAlbedoMap,vUv).rgb;",
       "    land=1.0-smoothstep(0.05,0.22,alb.b-max(alb.r,alb.g));",
+      "    if(uUseOceanMap>0.5) land=1.0-texture2D(uOceanMap,vUv).r;",   // build 237: the real land/water mask (NASA Blue Marble)
       "    isOcean=1.0-land;",
       "  }else{",
       "    float n=efbm(vUv*7.0+vec2(1.7,3.3));",
@@ -761,16 +765,31 @@ export function mountNyeArmature(THREE, scene, opts) {
       "  }",
       "  float mu=dot(N,L);",
       "  float terminator=smoothstep(-0.085,0.155,mu);",
-      "  float dayAmt=max(mu,0.0);",
-      "  vec3 dayDiff=alb*(0.028+1.05*dayAmt);",
-      "  float spec=pow(max(dot(reflect(-L,N),V),0.0),220.0)*0.16*isOcean*terminator;",   // tight, dim sun-glint: water, not plastic wrap
+      // build 237 — relief: the land is lit through a real terrain normal map (oceans stay flat)
+      "  vec3 Nl=N; vec3 Tt=vec3(0.0); vec3 Bt=vec3(0.0);",
+      "  if(dot(vWt,vWt)>0.5){ Tt=normalize(vWt-N*dot(vWt,N)); Bt=cross(N,Tt); }",
+      "  if(uUseNormalMap>0.5 && dot(Tt,Tt)>0.5){ vec3 nm=texture2D(uNormalMap,vUv).xyz*2.0-1.0; nm.xy*=1.6; Nl=normalize(mix(N, normalize(Tt*nm.x+Bt*nm.y+N*nm.z), land)); }",
+      "  float dayAmt=max(dot(Nl,L),0.0)*smoothstep(-0.05,0.08,mu);",
+      // clouds (density) and the shadows they cast, offset toward the Sun across the surface
+      "  float cv=0.0, cshadow=0.0;",
+      "  if(uUseCloudMap>0.5){",
+      "    cv=texture2D(uCloudMap,vUv).r;",
+      "    vec2 toSun=dot(Tt,Tt)>0.5 ? vec2(dot(L,Tt),dot(L,Bt)) : vec2(0.0);",
+      "    cshadow=texture2D(uCloudMap,vUv-toSun*0.0035).r;",
+      "  }",
+      "  vec3 dayDiff=alb*(0.028+1.05*dayAmt)*(1.0-0.42*cshadow);",
+      // the Sun's glint on open water: a Fresnel-weighted sharp core + broad sheen, dimmed under cloud
+      "  vec3 Hh=normalize(L+V); float nh=max(dot(N,Hh),0.0);",
+      "  float fr0=0.02+0.98*pow(1.0-max(dot(N,V),0.0),5.0);",
+      "  float spec=(pow(nh,380.0)*1.6+pow(nh,36.0)*0.07)*(0.30+0.70*fr0)*isOcean*terminator*(1.0-0.85*cv);",
       "  vec3 daySurf=dayDiff+vec3(spec);",
       "  float nightAmt=1.0-terminator;",
       "  vec3 nightSurf;",
       "  if(uUseNightMap>0.5){",
       "    vec3 nl=texture2D(uNightMap,vUv).rgb;",
       "    float lum=dot(nl,vec3(0.3,0.5,0.2));",
-      "    vec3 lights=nl*vec3(1.0,0.84,0.60)*smoothstep(0.01,0.5,lum)*0.62;",   // cities must BURN on the night side
+      "    float cityW=smoothstep(0.55,0.85,nl.r/max(nl.b,0.02));",   // build 237: city light is white (r≈b ≈ 0.96); the moonlit land, ice and sea this map also carries are blue (r/b ≈ 0.05–0.26) — keep only the cities
+      "    vec3 lights=nl*vec3(1.0,0.84,0.60)*smoothstep(0.01,0.5,lum)*0.62*(1.0-0.65*cv)*cityW;",   // cities must BURN on the night side (dimmed under cloud)
       "    nightSurf=alb*0.038+lights*nightAmt;",
       "  }else{",
       "    float cityN=en(vUv*80.0+vec2(uTime*0.001,0.0))*en(vUv*22.0);",
@@ -778,10 +797,11 @@ export function mountNyeArmature(THREE, scene, opts) {
       "    nightSurf=alb*0.032+vec3(0.75,0.62,0.38)*cityMask*0.045;",
       "  }",
       "  if(uUseCloudMap>0.5){",
-      "    vec4 cl=texture2D(uCloudMap,vUv);",
-      "    float cv=clamp(cl.r*cl.a+cl.g*0.1,0.0,1.0);",
-      "    daySurf=mix(daySurf,vec3(0.92,0.94,1.0)*terminator,cv*0.55);",
-      "    nightSurf=mix(nightSurf,vec3(0.0),cv*0.4);",
+      // clouds are lit by the Sun like everything else: white at noon, warm at the terminator, dark at night
+      "    vec3 cTint=mix(vec3(1.0,0.60,0.36),vec3(1.0,0.985,0.97),smoothstep(0.0,0.30,mu));",
+      "    vec3 cloudLit=cTint*(0.035+1.02*max(mu,0.0))*terminator;",
+      "    daySurf=mix(daySurf,cloudLit,cv*0.94);",
+      "    nightSurf=mix(nightSurf,nightSurf*0.4,cv);",
       "  }",
       "  vec3 surface=mix(nightSurf,daySurf,terminator);",
       // soft camera-side fill so the real continents (and the footprint riding on them) read
@@ -818,9 +838,19 @@ export function mountNyeArmature(THREE, scene, opts) {
       uUseCloudMap: { value: 0 },
       uNightMap: { value: earthTexPlaceholder },
       uUseNightMap: { value: 0 },
+      uOceanMap: { value: earthTexPlaceholder }, uUseOceanMap: { value: 0 },
+      uNormalMap: { value: earthTexPlaceholder }, uUseNormalMap: { value: 0 },
       uGroundDim: { value: 0 }
     };
     const mat = new T.ShaderMaterial({ uniforms, vertexShader: earthVert, fragmentShader: earthFrag });
+    // build 237 — clouds, the land/water mask and terrain relief (NASA Blue Marble via three.js r160 examples),
+    // after the first paint has settled
+    setTimeout(function () {
+      const ld = new T.TextureLoader();
+      ld.load("data/earth-clouds-2k.jpg", function (tx) { tx.wrapS = T.RepeatWrapping; tx.anisotropy = 8; uniforms.uCloudMap.value = tx; uniforms.uUseCloudMap.value = 1; });
+      ld.load("data/earth-ocean-2k.jpg", function (tx) { tx.wrapS = T.RepeatWrapping; uniforms.uOceanMap.value = tx; uniforms.uUseOceanMap.value = 1; });
+      ld.load("data/earth-normal-2k.jpg", function (tx) { tx.wrapS = T.RepeatWrapping; tx.anisotropy = 8; uniforms.uNormalMap.value = tx; uniforms.uUseNormalMap.value = 1; });
+    }, 2500);
     disableToneMapping(mat);
 
     /* real equirectangular Earth, so the baked GPS footprint lands on the ACTUAL continents.
@@ -875,29 +905,34 @@ export function mountNyeArmature(THREE, scene, opts) {
         depthWrite: false,
         side: T.BackSide,
         vertexShader: [
-          "varying vec3 vWn; varying vec3 vWp;",
+          "varying vec3 vWn; varying vec3 vWp; varying vec3 vC; varying float vR;",
           "void main(){",
           "  vec4 wp = modelMatrix * vec4(position, 1.0);",
           "  vWp = wp.xyz;",
           "  vWn = normalize(mat3(modelMatrix) * normal);",
+          "  vC = (modelMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz; vR = length(modelMatrix[0].xyz) * " + radius.toFixed(6) + ";",
           "  gl_Position = projectionMatrix * viewMatrix * wp;",
           "}"
         ].join("\n"),
         fragmentShader: [
-          "varying vec3 vWn; varying vec3 vWp;",
+          "varying vec3 vWn; varying vec3 vWp; varying vec3 vC; varying float vR;",
           "uniform vec3 uSunDirWorld; uniform float uIntensity; uniform float uFar;",
           "void main(){",
-          "  vec3 N = normalize(vWn);",
-          "  vec3 V = normalize(cameraPosition - vWp);",
           "  vec3 L = normalize(uSunDirWorld);",
-          "  float mu = dot(N, V);",
-          "  float rim = pow(1.0 - abs(mu), 3.0);",                          // limb concentration
-          "  float ndl = dot(N, L);",
-          "  float day = 0.12 + 0.88 * smoothstep(-0.32, 0.28, ndl);",       // day-side glow, night-side fade
+          // build 237 — the glow follows the ray, not the shell: its closest approach to the planet's centre gives the
+          // altitude of the air it grazes; brightness falls off exponentially with that altitude (scale height ~2.4% R),
+          // so the limb glows and the shell's own edge is dark (the old fresnel-on-the-shell put a hard ring there)
+          "  vec3 D = normalize(vWp - cameraPosition);",
+          "  float tca = dot(vC - cameraPosition, D); vec3 P = cameraPosition + D * max(tca, 0.0);",
+          "  float b = length(P - vC);",
+          "  float alt = (b - vR) / vR;",
+          "  float g = alt >= 0.0 ? exp(-alt / 0.024) : 0.30 + 0.70 * smoothstep(-0.30, 0.0, alt);",
+          "  float ndl = dot(normalize(P - vC), L);",
+          "  float day = 0.08 + 0.92 * smoothstep(-0.28, 0.25, ndl);",       // day-side glow, night-side fade
           "  vec3 blue = vec3(0.30, 0.55, 1.0);",
-          "  float band = (1.0 - smoothstep(0.0, 0.42, abs(ndl))) * smoothstep(-0.5, -0.05, ndl - 0.0);", // terminator belt
-          "  vec3 warm = vec3(1.0, 0.42, 0.16) * band * 0.30;",
-          "  vec3 col = (blue * day * 0.55 + warm) * rim * uIntensity * uFar;",
+          "  float band = (1.0 - smoothstep(0.0, 0.40, abs(ndl))) * smoothstep(-0.5, -0.05, ndl);", // terminator belt
+          "  vec3 warm = vec3(1.0, 0.42, 0.16) * band * 0.34;",
+          "  vec3 col = (blue * day * 0.62 + warm) * g * uIntensity * uFar;",
           // ALPHA = LUMINANCE (premultiplied form): with the site's alpha-composite pipeline, writing
           // alpha 1.0 across a full-screen shell defeats the alpha gate for EVERYTHING behind it —
           // that leak was the base-view blue film. Alpha may only be written where light actually is.
@@ -916,17 +951,19 @@ export function mountNyeArmature(THREE, scene, opts) {
         uniforms: { uFar: { value: 1.0 } },
         transparent: true, blending: T.AdditiveBlending, depthWrite: false, side: T.BackSide,
         vertexShader: [
-          "varying vec3 vWn; varying vec3 vWp;",
+          "varying vec3 vWn; varying vec3 vWp; varying vec3 vC; varying float vR;",
           "void main(){ vec4 wp = modelMatrix * vec4(position, 1.0); vWp = wp.xyz;",
           "  vWn = normalize(mat3(modelMatrix) * normal);",
+          "  vC = (modelMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz; vR = length(modelMatrix[0].xyz) * " + radius.toFixed(6) + ";",
           "  gl_Position = projectionMatrix * viewMatrix * wp; }"
         ].join("\n"),
         fragmentShader: [
-          "varying vec3 vWn; varying vec3 vWp;",
+          "varying vec3 vWn; varying vec3 vWp; varying vec3 vC; varying float vR;",
           "uniform float uFar;",
-          "void main(){ vec3 N = normalize(vWn); vec3 V = normalize(cameraPosition - vWp);",
-          "  float rim = pow(1.0 - abs(dot(N, V)), 2.2);",
-          "  vec3 col = vec3(0.20, 0.40, 0.80) * 0.14 * rim * uFar;",
+          "void main(){ vec3 D = normalize(vWp - cameraPosition);",
+          "  float tca = dot(vC - cameraPosition, D); float b = length(cameraPosition + D * max(tca, 0.0) - vC);",
+          "  float alt = (b - vR) / vR; float g = alt >= 0.0 ? exp(-alt / 0.07) : 0.25;",   // the faint outer glow, fading to nothing by the shell
+          "  vec3 col = vec3(0.20, 0.40, 0.80) * 0.12 * g * uFar;",
           "  float aA = max(col.r, max(col.g, col.b));",
           "  gl_FragColor = aA > 0.0001 ? vec4(col / aA, aA) : vec4(0.0); }"
         ].join("\n")
