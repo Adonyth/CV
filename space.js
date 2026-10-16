@@ -92,6 +92,19 @@
     // NEVER set scene.background — one black on the page (CSS --page)
 
     var camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 200000);  // far plane: MAXCAM 118000 (beyond-horizon tier) + the CMB horizon shell on the far side (56000) → 174000; headroom to 200000 so nothing ever clips. All far-tier materials are additive + depthWrite:false, so the huge near/far ratio costs no z-fighting
+    /* ===== TRUE SCALE (build 240) =====
+       `camera` stays the NAVIGATION camera: the controls, glides, rail and every tier threshold keep running in
+       the ladder space they were tuned in. Two render cameras are derived from it every frame:
+         · farCam  — the sky (stars, constellations, deep sky, the cosmic tiers) on layer 1. Inside the Solar
+                     System it only turns, never moves: the stars hang at infinity, as they really do.
+         · nearCam — the Solar System on layer 0 at TRUE scale (real distances, real sizes), placed through the
+                     ladder map in truescale.js, drawn in depth slices so 0.006 … 10⁸ units never z-fight.
+       ?scale=legacy keeps the old compressed orrery for comparison. */
+    var TRUE_SCALE = !/[?&]scale=legacy\b/.test(location.search);
+    var nearCam = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 1e9); nearCam.layers.set(0);
+    var farCam = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 200000); farCam.layers.set(1);
+    var _ts = null;   // the mounted true-scale world: { L, bodies, clusters, farRoots } — null until the Solar System is placed
+    var _tsMods = null, _tsFailed = !TRUE_SCALE, _tsSpaceSky = 0;   // _tsSpaceSky: 1 while the sky hangs at infinity (inside the Solar System)
 
     /* ================= SPACEENGINE-GRADE PIPELINE (build 220) =================
        ACES filmic tonemapping + selective HDR bloom via EffectComposer. The additive layers
@@ -138,16 +151,24 @@
           uSkyAmt: { value: 0 }, uInvProj: { value: new THREE.Matrix4() }, uCamRot: { value: new THREE.Matrix3() },
           uUp: { value: new THREE.Vector3(0, 1, 0) }, uCityDir: { value: new THREE.Vector3(0, 0, 1) },
           uGalX: { value: _galX }, uGalY: { value: _galY }, uGalZ: { value: _galZ },
-          tMilky: { value: null }, uMilkyGain: { value: 0 }, uHorizon: { value: -0.0925 }
+          tMilky: { value: null }, uMilkyGain: { value: 0 }, uHorizon: { value: -0.0925 }, uSpaceSky: { value: 0 }
         },
         vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
         fragmentShader: [
           "uniform sampler2D tScene; uniform vec3 uBg; uniform float uSkyAmt;",
           "uniform mat4 uInvProj; uniform mat3 uCamRot; uniform vec3 uUp; uniform vec3 uCityDir;",
           "uniform vec3 uGalX; uniform vec3 uGalY; uniform vec3 uGalZ;",
-          "uniform sampler2D tMilky; uniform float uMilkyGain; uniform float uHorizon;",
+          "uniform sampler2D tMilky; uniform float uMilkyGain; uniform float uHorizon; uniform float uSpaceSky;",
           "varying vec2 vUv;",
           SKY_GLSL_COMMON,
+          // the Milky Way from the baked galactic map (sqrt-encoded for 8-bit dark precision)
+          "vec3 milkyAt(vec3 d){",
+          "  vec3 g = vec3(dot(d, uGalX), dot(d, uGalY), dot(d, uGalZ));",
+          "  float b = asin(clamp(g.z, -1.0, 1.0));",
+          "  if (abs(b) >= " + MILKY_B.toFixed(3) + ") return vec3(0.0);",
+          "  vec3 mw = texture2D(tMilky, vec2(atan(g.y, g.x) / 6.2831853 + 0.5, b / " + (2 * MILKY_B).toFixed(3) + " + 0.5)).rgb;",
+          "  return mw * mw;",
+          "}",
           "vec3 skyAt(vec3 d){",
           "  float h = dot(d, uUp);",
           "  float alt = asin(clamp(h, -1.0, 1.0)) - uHorizon;",          // altitude above the VISIBLE limb
@@ -163,16 +184,7 @@
           "  float dome = exp(-max(alt, 0.0) / 0.08) * (0.32 + 0.68 * az * az * az);",
           "  col += L(vec3(64.0, 38.0, 22.0)) * dome;",
           // 4. the Milky Way, from the baked galactic map (sqrt-encoded for 8-bit dark precision)
-          "  if (uMilkyGain > 0.0) {",
-          "    vec3 g = vec3(dot(d, uGalX), dot(d, uGalY), dot(d, uGalZ));",
-          "    float b = asin(clamp(g.z, -1.0, 1.0));",
-          "    if (abs(b) < " + MILKY_B.toFixed(3) + ") {",
-          "      float l = atan(g.y, g.x);",
-          "      vec3 mw = texture2D(tMilky, vec2(l / 6.2831853 + 0.5, b / " + (2 * MILKY_B).toFixed(3) + " + 0.5)).rgb;",
-          "      mw *= mw;",
-          "      col += mw * uMilkyGain * smoothstep(-0.01, 0.34, alt) * (1.0 - 0.55 * dome);",   // extinction + glow washout at the limb
-          "    }",
-          "  }",
+          "  if (uMilkyGain > 0.0) col += milkyAt(d) * uMilkyGain * smoothstep(-0.01, 0.34, alt) * (1.0 - 0.55 * dome);",   // extinction + glow washout at the limb
           // below the visible limb: dark land with a thin ember of the city glow (terrain/city draw over it)
           "  vec3 land = L(vec3(4.0, 3.6, 3.2)) + L(vec3(34.0, 20.0, 12.0)) * exp(min(alt, 0.0) / 0.018) * (0.3 + 0.7 * az);",
           "  return mix(land, col, smoothstep(-0.010, 0.004, alt));",
@@ -180,13 +192,15 @@
           "void main(){",
           "  vec4 c = texture2D(tScene, vUv);",
           "  vec3 bg = uBg;",
-          "  if (uSkyAmt > 0.001) {",
+          "  if (uSkyAmt > 0.001 || uSpaceSky > 0.001) {",
           "    vec4 v = uInvProj * vec4(vUv * 2.0 - 1.0, 1.0, 1.0);",
           "    vec3 d = normalize(uCamRot * (v.xyz / v.w));",
-          "    bg = mix(uBg, skyAt(d), uSkyAmt);",
+          // true scale: in space the band hangs at infinity behind the Solar System — no air, no horizon, no dome
+          "    vec3 sp = uBg + (uMilkyGain > 0.0 ? milkyAt(d) * uMilkyGain * 1.15 * uSpaceSky : vec3(0.0));",
+          "    bg = uSkyAmt > 0.001 ? mix(sp, skyAt(d), uSkyAmt) : sp;",
           "  }",
           "  vec3 o = c.rgb * c.a + bg * (1.0 - c.a);",
-          "  if (uSkyAmt <= 0.001) o = floor(clamp(o, 0.0, 1.0) * 255.0 + 0.5) / 255.0;",   // space: exactly the old 8-bit composite target
+          "  if (uSkyAmt <= 0.001 && uSpaceSky <= 0.001) o = floor(clamp(o, 0.0, 1.0) * 255.0 + 0.5) / 255.0;",   // legacy space: exactly the old 8-bit composite target
           "  gl_FragColor = vec4(o, 1.0);",
           "}"
         ].join("\n")
@@ -299,13 +313,16 @@
       if (!_acUniforms) return;
       var u = _acUniforms;
       u.uSkyAmt.value = (_skyUp && skyAmt > 0.001 && !window.__skyOff) ? skyAmt : 0;
-      if (!u.uSkyAmt.value) return;
+      u.uSpaceSky.value = (_ts && !window.__skyOff) ? _tsSpaceSky * (1 - skyAmt) : 0;
+      if (!u.uSkyAmt.value && !u.uSpaceSky.value) return;
       if (!_milkyRT && !_milkyTried && natalSky && natalSky.skyDir) bakeMilkyWay();
       u.uInvProj.value.copy(camera.projectionMatrixInverse);
       u.uCamRot.value.setFromMatrix4(camera.matrixWorld);
-      u.uUp.value.copy(_skyUp);
-      // the region's brightest light dome: Boston, ~37° east of north from Providence
-      u.uCityDir.value.copy(_skyNorth).multiplyScalar(Math.cos(0.646)).addScaledVector(_skyEast, Math.sin(0.646)).normalize();
+      if (_skyUp) {
+        u.uUp.value.copy(_skyUp);
+        // the region's brightest light dome: Boston, ~37° east of north from Providence
+        u.uCityDir.value.copy(_skyNorth).multiplyScalar(Math.cos(0.646)).addScaledVector(_skyEast, Math.sin(0.646)).normalize();
+      }
       if (_milkyRT && natalSky && natalSky.skyDir) {
         natalSky.skyDir(17.7611, -29.0078, _galX);          // the galactic centre (Sgr A*)
         natalSky.skyDir(12.8573, 27.1283, _galZ);           // the north galactic pole
@@ -335,15 +352,135 @@
       }
       cx.putImageData(img, 0, 0); return { max: mx, url: cv.toDataURL("image/png") };
     };
+    /* ===== TRUE SCALE: frames, cameras, slices (build 240) ===== */
+    var _tsV = new THREE.Vector3(), _tsA = new THREE.Vector3(), _tsB = new THREE.Vector3(), _tsD = new THREE.Vector3();
+    var _nav = { a: null, b: null, p: 1, start: new THREE.Vector3(), dest: new THREE.Vector3() };
+    function tsWarp(pL, out) {                       // the Earth's frame: same direction, true distance
+      var r = pL.length();
+      return r < 1e-12 ? out.copy(pL) : out.copy(pL).multiplyScalar(_ts.L.G(r) / r);
+    }
+    function tsBodyFrame(b, pL, out) {               // a focused body's frame (truescale.bodyDistance)
+      _tsD.copy(pL).sub(b.proxy); var rho = _tsD.length();
+      if (rho < 1e-12) return out.copy(b.T);
+      return out.copy(b.T).addScaledVector(_tsD, _ts.bodyDistance(_ts.L, b.s, b.kappa, rho) / rho);
+    }
+    function tsFrame(f, pL, out) { return f ? tsBodyFrame(f, pL, out) : tsWarp(pL, out); }
+    function tsBodyAt(pL) {                          // the body whose ladder proxy sits at this point (null = Earth frame)
+      if (!_ts || !pL) return null;
+      for (var i = 0; i < _ts.bodies.length; i++) { var b = _ts.bodies[i]; if (pL.distanceToSquared(b.proxy) < b.tol2) return b; }
+      return null;
+    }
+    function tsGlideDest() {                         // where the active glide is taking the pivot
+      if (glide.param && glide.param.flight) return glide.param.body;
+      if (glide.param) return glide.param.t1;
+      if (glide.frames > 0 && glide.targetTo) return glide.targetTo;
+      return null;
+    }
+    function tsUpdateNav() {
+      // the frame only changes when a glide CARRIES the pivot somewhere new; orbit / zoom / pan keep it
+      var P = controls ? controls.target : HOME;
+      var dest = (controls && controls.isGround()) ? HOME : tsGlideDest();
+      if (dest) {
+        var fb = tsBodyAt(dest);
+        if (fb !== _nav.b) {
+          _nav.a = _nav.p >= 0.5 ? _nav.b : _nav.a;
+          _nav.b = fb; _nav.p = 0; _nav.start.copy(P);
+        }
+        _nav.dest.copy(dest);
+      }
+      if (_nav.p < 1) {
+        var d0 = _nav.start.distanceTo(_nav.dest), d1 = P.distanceTo(_nav.dest);
+        _nav.p = Math.max(_nav.p, d0 < 1e-9 ? 1 : Math.min(1, 1 - d1 / d0));
+        if (_nav.p > 0.9999) { _nav.p = 1; _nav.a = _nav.b; }
+      }
+    }
+    function tsFocusWeight() {                       // how much a non-Earth body frame owns the view
+      var w = _nav.b ? 1 : 0, wa = _nav.a ? 1 : 0, e = _nav.p * _nav.p * (3 - 2 * _nav.p);
+      return wa + (w - wa) * e;
+    }
+    function syncCams() {
+      tsUpdateNav();
+      var e = _nav.p * _nav.p * (3 - 2 * _nav.p);
+      tsFrame(_nav.b, camera.position, _tsB);
+      if (e < 1) { tsFrame(_nav.a, camera.position, _tsA); _tsB.lerp(_tsA, 1 - e); }
+      nearCam.position.copy(_tsB);
+      nearCam.quaternion.copy(camera.quaternion);
+      // the sky only TURNS inside the Solar System (stars at infinity); past ~150 ladder units it starts to
+      // travel with the navigation camera, fully by 400 — the old cosmic ladder takes over from there
+      var cl = camera.position.length(), k = Math.max(0, Math.min(1, (cl - 150) / 250));
+      k = k * k * (3 - 2 * k) * (1 - tsFocusWeight());
+      _tsSpaceSky = 1 - k;
+      farCam.position.copy(camera.position).multiplyScalar(k);
+      farCam.quaternion.copy(camera.quaternion);
+      if (nearCam.fov !== camera.fov || nearCam.aspect !== camera.aspect) { nearCam.fov = camera.fov; nearCam.aspect = camera.aspect; }
+      farCam.fov = camera.fov; farCam.aspect = camera.aspect;
+      farCam.near = k > 0 ? camera.near : Math.max(camera.near, 0.5); farCam.far = camera.far;
+      farCam.updateProjectionMatrix();
+      nearCam.updateMatrixWorld(); farCam.updateMatrixWorld();
+    }
+    // depth slices: only the depth ranges that actually hold something, each ≤ 2500:1 so 24-bit depth stays exact
+    var _slices = [], _iv = [];
+    function nearSlices(ground) {
+      var cp = nearCam.position, n0 = ground ? 0.006 : 0.2, hiMax = 0;
+      _iv.length = 0;
+      for (var i = 0; i < _ts.clusters.length; i++) {
+        var c = _ts.clusters[i], d = cp.distanceTo(c.pos);
+        if (c.body && !ground) n0 = Math.min(n0, Math.max(0.0015, 0.3 * (d - c.body)));   // never clip a surface you stand close to
+        if (d + c.R > 0) _iv.push([Math.max(1e-4, d - c.R), d + c.R]);
+      }
+      _iv.push([0, 2]);                                 // the camera's own neighbourhood (the lens-flare sprites)
+      for (var j = 0; j < _iv.length; j++) { if (_iv[j][0] < n0) _iv[j][0] = n0; if (_iv[j][1] > hiMax) hiMax = _iv[j][1]; }
+      _iv.sort(function (a, b) { return a[0] - b[0]; });
+      _slices.length = 0;
+      var lo = -1, hi = -1;
+      function emit(a, b) { var x = a; while (x < b) { var y = Math.min(b, x * 2500); _slices.push(x, y); x = y; } }
+      for (var m = 0; m < _iv.length; m++) {
+        var a = _iv[m][0], b = _iv[m][1]; if (b <= a) continue;
+        if (lo < 0) { lo = a; hi = b; } else if (a <= hi * 1.001) hi = Math.max(hi, b); else { emit(lo, hi); lo = a; hi = b; }
+      }
+      if (lo >= 0) emit(lo, hi);
+      return _slices;
+    }
+    function renderWorld() {
+      if (!_ts) { renderer.render(scene, camera); return; }
+      syncCams();
+      var ac = renderer.autoClear, fog = scene.fog; renderer.autoClear = false;
+      renderer.render(scene, farCam);                   // 1 · the sky, at infinity
+      scene.fog = null;                                 // 2 · the Solar System, true scale, far slice → near slice
+      var sl = nearSlices(!!(controls && controls.isGround()));
+      for (var i = sl.length - 2; i >= 0; i -= 2) {
+        renderer.clearDepth();
+        nearCam.near = sl[i]; nearCam.far = sl[i + 1] * 1.0005; nearCam.updateProjectionMatrix();
+        renderer.render(scene, nearCam);
+      }
+      scene.fog = fog; renderer.autoClear = ac;
+    }
+    function tsDistanceInfo() {                       // the true distance the visitor stands from what they orbit
+      if (!_ts) return null;
+      var f = _nav.p >= 0.5 ? _nav.b : _nav.a, anchor = f ? f.T : HOME;
+      var km = nearCam.position.distanceTo(anchor) * _ts.kpu, kmSun = nearCam.position.distanceTo(_ts.sun.T) * _ts.kpu;
+      return { from: f ? f.name : "Earth", km: km, text: _ts.fmt(km), sunKm: kmSun, sunText: _ts.fmt(kmSun) };
+    }
+    window.__space.tsDist = tsDistanceInfo;
+    var TS_NEAR_ROOTS = { NyeArmature: 1, SunFlareChain: 1, GroundTerrain: 1, LocalMapGround: 1, BaseCity: 1, GroundHorizonDome: 1 };
+    function markFarLayers() {                         // the sky lives on layer 1: every scene root except the Solar System + the ground
+      var bg = natalSky && natalSky.bodyGroup;
+      function walk(o, far) {
+        if (o === bg) far = false;
+        o.layers.set(far ? 1 : 0);
+        for (var i = 0; i < o.children.length; i++) walk(o.children[i], far);
+      }
+      for (var r = 0; r < scene.children.length; r++) { var c = scene.children[r]; walk(c, !TS_NEAR_ROOTS[c.name]); }
+    }
     function renderComposed() {
-      renderer.setRenderTarget(_sceneRT); renderer.clear(); renderer.render(scene, camera); renderer.setRenderTarget(null);
+      renderer.setRenderTarget(_sceneRT); renderer.clear(); renderWorld(); renderer.setRenderTarget(null);
       var now = performance.now(), dt = _skyT ? Math.min(0.25, (now - _skyT) / 1000) : 0; _skyT = now;
       var onGround = !!(controls && controls.isGround && controls.isGround());
       _skyAmt += ((onGround ? 1 : 0) - _skyAmt) * Math.min(1, dt * 2.6);
       if (_skyAmt < 0.002) _skyAmt = 0;
       updateSkyUniforms(_skyAmt);
-      if (_quantUniforms) _quantUniforms.uKeep.value = _acUniforms && _acUniforms.uSkyAmt.value > 0 ? 1 : 0;
-      if (natalSky && natalSky.setGroundSky) natalSky.setGroundSky(_skyAmt);
+      if (_quantUniforms) _quantUniforms.uKeep.value = _acUniforms && (_acUniforms.uSkyAmt.value > 0 || _acUniforms.uSpaceSky.value > 0) ? 1 : 0;
+      if (natalSky && natalSky.setGroundSky) natalSky.setGroundSky(Math.max(_skyAmt, _ts ? _tsSpaceSky : 0));   // the procedural field steps back wherever the real catalogue leads
       _skyState.amt = _skyAmt; _skyState.baked = !!_milkyRT; _skyState.gain = _acUniforms ? _acUniforms.uMilkyGain.value : 0;
       window.__space.sky = _skyState;
       composer.render();
@@ -430,6 +567,7 @@
       var zoomRef = 118;          // px-equivalent that counts as 1.0 firm unit
       var zoomHi = 1.85;          // per-EVENT upper clamp on units (anti-fling); no lower floor
       var zoomEase = 0.215;       // per-frame log-space easing coefficient (critically-damped feel)
+      var zoomGov = null;         // true scale: fn(radius) → step multiplier (caps the TRUE distance change per notch)
       /* ---- GROUND MODE (the base 根据地): lying at a place on the Earth, looking up ----
          The camera stands ON the globe; drag = look around the sky (yaw/pitch, first person),
          wheel/pinch OUT = lift off (handled by the onLiftoff callback the page provides).
@@ -489,6 +627,7 @@
       var scope = {
         target: target,
         setDistanceLimits: function (mn, mx) { minDistance = mn; maxDistance = mx; },
+        setZoomGovernor: function (fn) { zoomGov = fn; },
         setInteractionTuning: function (o2) {
           if (!o2) return;
           if (o2.rotateSpeed != null) rotateSpeed = o2.rotateSpeed;
@@ -609,7 +748,7 @@
           var d = getPinchDist();
           if (pinchLastDist > 0 && d > 0) {
             var off = safeOrbitOffset();
-            var ratio = Math.pow(Math.max(0.25, Math.min(4, pinchLastDist / d)), pinchGamma);
+            var ratio = Math.pow(Math.max(0.25, Math.min(4, pinchLastDist / d)), pinchGamma * (zoomGov ? zoomGov(off.length()) : 1));
             var r0 = off.length(); if (!isFinite(r0) || r0 < 1e-8) return;
             var r = Math.max(minDistance, Math.min(maxDistance, r0 * ratio));
             off.normalize(); cam.position.copy(target).add(off.multiplyScalar(r));
@@ -664,6 +803,7 @@
         var dLn = Math.sign(norm) * zoomStepLn * unit;
         // seed the target from the LIVE radius on first use, or right after an external drive ends
         var r0 = cam.position.distanceTo(target);
+        if (zoomGov) dLn *= zoomGov(zoomTarget > 0 && !externalDrive ? zoomTarget : r0);
         if (zoomTarget < 0 || externalDrive) zoomTarget = r0;
         // accumulate in log space; clamp the TARGET (not the camera) so it can never slam/clip
         zoomTarget = Math.exp(Math.max(Math.log(minDistance), Math.min(Math.log(maxDistance), Math.log(zoomTarget) + dLn)));
@@ -1023,6 +1163,39 @@
         scene.add(groundGlare);
       }
       window.__space.realStars = P.length / 3;
+    }
+    /* TRUE SCALE: the real catalogue as the sky of SPACE too — all 9,096 Bright Star Catalogue stars at infinity
+       (a far-layer sphere the sky camera only turns inside), the same star look as the base view minus the air.
+       It replaces the procedural ember "snow" that used to stand in for stars around the orrery. */
+    var _spaceStars = null, _spaceGlare = null;
+    function buildSpaceStars() {
+      if (_spaceStars || !_bsc || !natalSky || !natalSky.skyDir) return;
+      var d = _bsc, n = d.length / 4, P = [], C = [], S = [], GP = [], GC = [], GS = [], v = new THREE.Vector3(), R = 4000;
+      var CL = [[0.61, 0.69, 1.0], [0.68, 0.76, 1.0], [0.80, 0.85, 1.0], [0.97, 0.96, 1.0], [1.0, 0.94, 0.86], [1.0, 0.80, 0.60], [1.0, 0.70, 0.46]];
+      for (var i = 0; i < n; i++) {
+        var mag = d[i * 4 + 2] / 100; if (mag > 6.6) continue;
+        natalSky.skyDir(d[i * 4] / 1365, d[i * 4 + 1] / 360, v);
+        var sc = d[i * 4 + 3], c0 = Math.min(6, Math.floor(sc / 10)), f = (sc % 10) / 10, c1 = Math.min(6, c0 + 1);
+        var col = [0, 1, 2].map(function (j) { var cc = CL[c0][j] * (1 - f) + CL[c1][j] * f; return cc * 0.78 + 0.22; });   // above the air: a touch more colour
+        var t = Math.max(0, Math.min(1, (6.6 - mag) / 8.1)), inten = 0.22 + 0.78 * Math.pow(t, 1.4);
+        P.push(v.x * R, v.y * R, v.z * R); C.push(col[0] * inten, col[1] * inten, col[2] * inten); S.push(1.3 + 2.9 * Math.pow(t, 2.0));
+        if (mag < 1.6) { GP.push(v.x * R, v.y * R, v.z * R); var gI = 0.3 + 0.6 * Math.pow((1.6 - mag) / 3.1, 0.8); GC.push(col[0] * gI, col[1] * gI, col[2] * gI); GS.push(14 + 40 * Math.pow((1.6 - mag) / 3.1, 1.1)); }
+      }
+      function pts(PP, CC, SS, frag, extraU, name, order) {
+        var g = new THREE.BufferGeometry();
+        g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(PP), 3));
+        g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(CC), 3));
+        g.setAttribute("aSize", new THREE.BufferAttribute(new Float32Array(SS), 1));
+        var u = { uPR: { value: renderer.getPixelRatio() }, uOpacity: { value: 0 } }; for (var k in extraU) u[k] = extraU[k];
+        var m = new THREE.ShaderMaterial({ uniforms: u, vertexColors: true, transparent: true, depthWrite: false, depthTest: true, blending: THREE.AdditiveBlending, fog: false,
+          vertexShader: "uniform float uPR; attribute float aSize; varying vec3 vC;\nvoid main(){ vC = color; gl_PointSize = aSize * uPR * " + (name === "SpaceStars" ? "1.6" : "1.0") + "; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+          fragmentShader: frag });
+        var o = new THREE.Points(g, m); o.name = name; o.frustumCulled = false; o.renderOrder = order; o.layers.set(1);
+        o.onBeforeRender = function () { u.uPR.value = renderer.getPixelRatio(); };
+        scene.add(o); return o;
+      }
+      _spaceStars = pts(P, C, S, "uniform float uOpacity; varying vec3 vC;\nvoid main(){ vec2 p = gl_PointCoord - 0.5; float r2 = dot(p, p) * 4.0; float a = pow(clamp(1.0 - r2, 0.0, 1.0), 1.6); if (a < 0.02) discard;\n  gl_FragColor = vec4(vC, a * uOpacity); }", {}, "SpaceStars", 3);
+      if (GP.length) _spaceGlare = pts(GP, GC, GS, "uniform sampler2D uTex; uniform float uOpacity; varying vec3 vC;\nvoid main(){ float a = texture2D(uTex, gl_PointCoord).a; if (a < 0.004) discard; gl_FragColor = vec4(vC, a * uOpacity); }", { uTex: { value: glareTexture() } }, "SpaceStarGlare", 3.1);
     }
     function removeGroundDome() {
       if (groundDome) {
@@ -1556,6 +1729,7 @@
       camera.position.set(HOME.x - 150, HOME.y + 116, HOME.z - 132);
       camera.lookAt(HOME);
       controls = createPremiumOrbitControls(camera, canvas, THREE);
+      if (_ts) controls.setZoomGovernor(tsZoomGovernor);
       controls.target.copy(HOME);
       controls.setDistanceLimits(5.0, (window.CosmicLOD ? window.CosmicLOD.MAXCAM : 46000));   // 5.0 floor clears the Moon (2.99); ceiling widened to the cosmic-address MAXCAM (46000) so the log zoom reaches the observable-universe tier
       // silkier desktop feel: slightly softer damping + gentler log-zoom ease (still returns to rest)
@@ -1921,6 +2095,232 @@
 
     // once BOTH the orrery and the natal sky exist: swing the orrery so its real Sun
     // points exactly at the drawn Capricornus (and report how close the Moon lands to Leo)
+    var TS_KM_LOCAL = 6378.137 / 0.95;                 // km per armature-local unit (the Earth's radius is 0.95)
+    var TS_UTC = Date.UTC(2002, 0, 2, 7, 45, 0);       // the birth instant: 15:45 Beijing
+    var TS_POLES = {                                   // IAU/WGCCRE north poles (RA°, Dec°, J2000) — the true spin axes
+      mercury: [281.010, 61.416], venus: [272.76, 67.16], mars: [317.681, 52.887], jupiter: [268.057, 64.495],
+      saturn: [40.589, 83.537], uranus: [257.311, -15.175], neptune: [299.36, 43.46], pluto: [132.993, -6.163]
+    };
+    function tsEclToLocal(x, y, z) {                   // J2000 ecliptic km → equatorial → the armature's (x, z, −y) local units
+      var ce = Math.cos(ECL_TILT), se = Math.sin(ECL_TILT), ye = y * ce - z * se, ze = y * se + z * ce;
+      return [x / TS_KM_LOCAL, ze / TS_KM_LOCAL, -ye / TS_KM_LOCAL];
+    }
+    function tsArmatureSpec(E) {
+      var d = new Date(TS_UTC), AU = E.AU_KM, eh = E.planetHelio("earth", d), mg = E.moonGeo(d);
+      var earth = tsEclToLocal(eh.x * AU, eh.y * AU, eh.z * AU), m = tsEclToLocal(mg.x, mg.y, mg.z);
+      return { earth: earth, moon: [earth[0] + m[0], earth[1] + m[1], earth[2] + m[2]],
+               sunR: E.BODY.sun.r / TS_KM_LOCAL, moonR: E.BODY.moon.r / TS_KM_LOCAL, auLocal: AU / TS_KM_LOCAL };
+    }
+    /* once the orrery is aligned to the chart: place the planets at true scale and register every body for
+       navigation. Each body gets a LADDER PROXY — the point in navigation space whose true-scale image is the
+       body — so every glide, focus and pick in the old code flies to the right place unchanged. */
+    function setupTrueScale() {
+      if (_ts || _tsFailed || !_tsMods || !nyeArmature || !natalSky || !natalSky.applyTrueScale) return;
+      try {
+        var E = _tsMods.eph, armScale = MOBILE ? 2.4 : 3.0, kpu = TS_KM_LOCAL / armScale;
+        var L = _tsMods.ladder.makeLadder(kpu, window.CosmicLOD ? window.CosmicLOD.LAYERS : []);
+        var d = new Date(TS_UTC), AU = E.AU_KM, eh = E.planetHelio("earth", d);
+        var geo = { sun: [-eh.x * AU, -eh.y * AU, -eh.z * AU] };
+        ["mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"].forEach(function (n) {
+          var pp = E.planetHelio(n, d); geo[n] = [(pp.x - eh.x) * AU, (pp.y - eh.y) * AU, (pp.z - eh.z) * AU];
+        });
+        var rkm = {}; Object.keys(E.BODY).forEach(function (k2) { rkm[k2] = E.BODY[k2].r; });
+        var planets = natalSky.applyTrueScale({ unitPerKm: 1 / kpu, geo: geo, radiusKm: rkm, poles: TS_POLES, charonKm: 19591, auKm: AU });
+        scene.updateMatrixWorld(true);
+        var RoE = 0.95 * armScale, bodies = [], clusters = [], AUw = AU / kpu;   // RoE: the Earth's radius (scene units)
+        function add(name, obj, Rt, Ro, proxy) {
+          var T = obj.getWorldPosition(new THREE.Vector3()), r = T.length();
+          var px = proxy || T.clone().multiplyScalar(L.Ginv(r) / r);
+          // κ: the linear (framing-exact) zone reaches ~6 tuned radii out, so every authored focus distance frames
+          // the real body exactly; past it the global ladder's growth takes over
+          var b = { name: name, obj: obj, T: T, Rt: Rt, Ro: Ro, s: Rt / Ro, kappa: Math.min(1, 8 / (6 * Ro)), proxy: px,
+                    tol2: Math.pow(Math.max(1e-4, 1e-3 * px.length()), 2) };
+          bodies.push(b); return b;
+        }
+        var bSun = add("NyeSun", nyeArmature.group.getObjectByName("NyeSun"), E.BODY.sun.r / kpu, 18 * 0.1346 * armScale);
+        var bMoon = add("NyeMoon", nyeArmature.group.getObjectByName("NyeMoon"), E.BODY.moon.r / kpu, 0.95 * 11 * 0.0525 * armScale);
+        var bPluto = null;
+        planets.forEach(function (pl) { var b = add(pl.name, pl.obj, pl.Rt, pl.Ro); if (pl.id === "pluto") bPluto = b; });
+        var charon = natalSky.group.getObjectByName("NatalPlutoMoon");
+        if (charon && bPluto) {
+          var cT = charon.getWorldPosition(new THREE.Vector3());
+          add("NatalPlutoMoon", charon, E.BODY.charon.r / kpu, 0.08, bPluto.proxy.clone().add(cT.sub(bPluto.T).divideScalar(bPluto.s)));
+        }
+        // depth clusters: what occupies which depth range (the slicer only draws where something is)
+        clusters.push({ pos: new THREE.Vector3(), R: 8, body: RoE });                    // the Earth, its air, the ground, the hour ring
+        clusters.push({ pos: new THREE.Vector3(), R: bMoon.T.length() * 1.35 });         // the day ring rides the lunar orbit
+        clusters.push({ pos: new THREE.Vector3(), R: 1.75 * AUw });                      // the year ring: Earth-centred, through the Sun
+        clusters.push({ pos: bSun.T.clone(), R: 3.8 * AUw });                            // the month ring + the asteroid belt
+        bodies.forEach(function (b) { clusters.push({ pos: b.T, R: b.Rt * (b.name === "NatalPluto" ? 24 : b.name === "NyeSun" ? 2.6 : 3.4), body: b.Rt }); });
+        _ts = { L: L, bodyDistance: _tsMods.ladder.bodyDistance, bodySlope: _tsMods.ladder.bodySlope, fmt: _tsMods.ladder.formatDistance,
+                kpu: kpu, bodies: bodies, clusters: clusters, sun: bSun, moon: bMoon };
+        // the orbits: one period of each Keplerian path, in the same geocentric frame as the bodies
+        if (natalSky.addTrueOrbits) {
+          var ORB = [["mercury", 0x9a958e], ["venus", 0xd9c08a], ["earth", 0x6f9fdc], ["mars", 0xc4724e], ["jupiter", 0xc9a77a],
+                     ["saturn", 0xd8c48f], ["uranus", 0x8fd0d6], ["neptune", 0x6f8fe0], ["pluto", 0x9b8f86]], orbs = [];
+          ORB.forEach(function (o) {
+            var SMA = { mercury: 0.387, venus: 0.723, earth: 1, mars: 1.524, jupiter: 5.203, saturn: 9.537, uranus: 19.19, neptune: 30.07, pluto: 39.48 };
+            var n0 = o[0] === "pluto" ? 720 : 360, P = 365.25 * Math.pow(SMA[o[0]], 1.5);   // one sidereal period (Kepler III)
+            var km = new Float64Array(n0 * 3);
+            for (var i = 0; i < n0; i++) {
+              var q = E.planetHelio(o[0], new Date(TS_UTC + (i / n0) * P * 86400000));
+              km[i * 3] = (q.x - eh.x) * AU; km[i * 3 + 1] = (q.y - eh.y) * AU; km[i * 3 + 2] = (q.z - eh.z) * AU;
+            }
+            orbs.push({ id: o[0], km: km, color: o[1] });
+          });
+          var mk = new Float64Array(240 * 3);
+          for (var mi = 0; mi < 240; mi++) { var mq = E.moonGeo(new Date(TS_UTC + (mi / 240) * 27.3217 * 86400000)); mk[mi * 3] = mq.x; mk[mi * 3 + 1] = mq.y; mk[mi * 3 + 2] = mq.z; }
+          orbs.push({ id: "moon", km: mk, color: 0xa9a49c });
+          _ts.orbits = natalSky.addTrueOrbits(orbs, 1 / kpu);
+        }
+        tsBuildOverlay();
+        markFarLayers();
+        if (controls && controls.setZoomGovernor) controls.setZoomGovernor(tsZoomGovernor);
+        window.__space.ts = { bodies: bodies.map(function (b) { return { name: b.name, s: +b.s.toFixed(3), proxyR: +b.proxy.length().toFixed(2), trueKm: Math.round(b.T.length() * kpu) }; }),
+                              anchors: L.anchors.map(function (a) { return [a[0], _ts.fmt(a[1])]; }) };
+      } catch (e) { _tsFailed = true; _ts = null; window.__space.tsError = String(e && e.stack || e); }
+    }
+    /* ===== the true-scale overlay: what makes a real-scale Solar System legible =====
+       A real planet is usually far under a pixel. As SpaceEngine does, each body keeps a dot and a quiet name when
+       it is too small to see; the orbits trace the system; the Sun becomes a star once its disc is too small to
+       read; one instrument line says how far away you truly are. */
+    var TS_NAMES = { NyeSun: ["Sun", "太阳", 10], Earth: ["Earth", "地球", 9], NatalJupiter: ["Jupiter", "木星", 8], NatalSaturn: ["Saturn", "土星", 7],
+      NyeMoon: ["Moon", "月球", 6], NatalVenus: ["Venus", "金星", 5], NatalMars: ["Mars", "火星", 5], NatalMercury: ["Mercury", "水星", 4],
+      NatalUranus: ["Uranus", "天王星", 4], NatalNeptune: ["Neptune", "海王星", 4], NatalPluto: ["Pluto", "冥王星", 3], NatalPlutoMoon: ["Charon", "卡戎", 2] };
+    var _tsTags = [], _tsTagHost = null, _tsReadout = null, _tsStar = null, _tsP = new THREE.Vector3();
+    var _tsPV = new THREE.Vector3();
+    function tsProject(v, out) {   // NDC x/y through nearCam, false if behind — independent of the slice's near/far
+      _tsPV.copy(v).applyMatrix4(nearCam.matrixWorldInverse);
+      if (_tsPV.z > -1e-9) return false;
+      var fh = Math.tan(nearCam.fov * Math.PI / 360);
+      out.set(_tsPV.x / (-_tsPV.z * fh * nearCam.aspect), _tsPV.y / (-_tsPV.z * fh), 0);
+      return true;
+    }
+    function tsBuildOverlay() {
+      _tsTagHost = document.createElement("div"); _tsTagHost.className = "ts-tags no-print"; _tsTagHost.setAttribute("aria-hidden", "true");
+      document.body.appendChild(_tsTagHost);
+      var list = _ts.bodies.slice(); list.push({ name: "Earth", T: new THREE.Vector3(), Rt: 0.95 * (MOBILE ? 2.4 : 3.0), obj: { visible: true } });
+      list.forEach(function (b) {
+        var nm = TS_NAMES[b.name]; if (!nm) return;
+        var el = document.createElement("div"); el.className = "ts-tag";
+        el.innerHTML = '<i></i><span class="i18n-en">' + nm[0] + '</span><span class="i18n-zh">' + nm[1] + '</span>';
+        _tsTagHost.appendChild(el);
+        _tsTags.push({ b: b, el: el, rank: nm[2], on: false, x: 0, y: 0 });
+      });
+      _tsTags.sort(function (a2, b2) { return b2.rank - a2.rank; });
+      _tsReadout = document.createElement("div"); _tsReadout.className = "ts-readout no-print"; _tsReadout.setAttribute("aria-live", "off");
+      document.body.appendChild(_tsReadout);
+      // the Sun as a STAR: a screen-sized glare at its true place, for when its true disc is too small to see
+      var cv = document.createElement("canvas"); cv.width = cv.height = 128; var cx = cv.getContext("2d");
+      var gr = cx.createRadialGradient(64, 64, 0, 64, 64, 64);
+      gr.addColorStop(0, "rgba(255,252,244,1)"); gr.addColorStop(0.07, "rgba(255,240,214,0.95)"); gr.addColorStop(0.2, "rgba(255,206,150,0.38)");
+      gr.addColorStop(0.5, "rgba(255,170,110,0.08)"); gr.addColorStop(1, "rgba(255,160,100,0)");
+      cx.fillStyle = gr; cx.fillRect(0, 0, 128, 128);
+      cx.globalCompositeOperation = "lighter"; cx.strokeStyle = "rgba(255,236,210,0.22)"; cx.lineWidth = 1.2;   // faint diffraction spikes
+      cx.beginPath(); cx.moveTo(4, 64); cx.lineTo(124, 64); cx.moveTo(64, 4); cx.lineTo(64, 124); cx.stroke();
+      var st = new THREE.CanvasTexture(cv); st.colorSpace = THREE.SRGBColorSpace;
+      var sm = new THREE.SpriteMaterial({ map: st, transparent: true, depthWrite: false, depthTest: true, blending: THREE.AdditiveBlending, sizeAttenuation: false, fog: false });
+      if ("toneMapped" in sm) sm.toneMapped = false;
+      _tsStar = new THREE.Sprite(sm); _tsStar.name = "SunStar"; _tsStar.position.copy(_ts.sun.T); _tsStar.renderOrder = 5;
+      _tsStar.frustumCulled = false;
+      nyeArmature.group.add(_tsStar); nyeArmature.group.worldToLocal(_tsStar.position);   // lives in the Solar System (near layer)
+    }
+    function tsOverlayTick() {
+      if (!_ts || !_tsTagHost) return;
+      var ground = !!(controls && controls.isGround());
+      var info = tsDistanceInfo(), f = _nav.p >= 0.5 ? _nav.b : _nav.a, Ra = f ? f.Rt : 0.95 * (MOBILE ? 2.4 : 3.0);
+      var dA = nearCam.position.distanceTo(f ? f.T : HOME), sunAU = info.sunKm / 149597870.7;
+      // the system's annotations fade in once you stand ~300 radii off what you orbit, and out past ~3000 AU
+      var lnR = Math.log(Math.max(1e-9, dA / Ra)), aIn = Math.max(0, Math.min(1, (lnR - Math.log(260)) / (Math.log(2600) - Math.log(260))));
+      var aOut = 1 - Math.max(0, Math.min(1, (Math.log(sunAU) - Math.log(400)) / (Math.log(4000) - Math.log(400))));
+      var A = ground || soloBody === "dso" || soloBody === "galcore" ? 0 : aIn * aOut;
+      var fh = Math.tan(nearCam.fov * Math.PI / 360), H = innerHeight, W = innerWidth, placed = [];
+      for (var i = 0; i < _tsTags.length; i++) {
+        var t = _tsTags[i], b = t.b, show = A > 0.02 && b.obj.visible !== false;
+        if (show) show = tsProject(b.T, _tsP) && Math.abs(_tsP.x) < 1.05 && Math.abs(_tsP.y) < 1.05;
+        var x = (_tsP.x * 0.5 + 0.5) * W, y = (-_tsP.y * 0.5 + 0.5) * H, rpx = 0;
+        if (show) {
+          rpx = b.Rt / Math.max(1e-9, b.T.distanceTo(nearCam.position)) / fh * H * 0.5;
+          if (rpx > 60) show = false;                                  // it fills the view — it needs no name
+          for (var j = 0; show && j < placed.length; j++) if (Math.abs(placed[j][0] - x) < 54 && Math.abs(placed[j][1] - y) < 13) show = false;
+        }
+        if (show) {
+          placed.push([x, y]);
+          t.el.style.transform = "translate3d(" + (x + Math.max(rpx, 2) - 2).toFixed(1) + "px," + y.toFixed(1) + "px,0)";
+          t.el.style.opacity = A.toFixed(3);
+          t.el.classList.toggle("is-dot", rpx < 2.2);
+        }
+        if (show !== t.on) { t.on = show; t.el.classList.toggle("is-on", show); }
+      }
+      // orbits: global fade × each orbit melts as you near its own planet
+      if (_ts.orbits) {
+        for (var o = 0; o < _ts.orbits.children.length; o++) {
+          var ln = _ts.orbits.children[o], id = ln.userData.orbitOf, bb = null;
+          for (var q = 0; q < _ts.bodies.length; q++) if (_ts.bodies[q].name.toLowerCase() === "natal" + id || (id === "moon" && _ts.bodies[q] === _ts.moon)) bb = _ts.bodies[q];
+          var near = 1;
+          if (id === "earth" || id === "moon") { var de = nearCam.position.length() / (0.95 * (MOBILE ? 2.4 : 3.0)); near = Math.max(0, Math.min(1, (Math.log(de) - Math.log(id === "moon" ? 90 : 400)) / 1.6)); }
+          else if (bb) { var dp = nearCam.position.distanceTo(bb.T) / bb.Rt; near = Math.max(0, Math.min(1, (Math.log(dp) - Math.log(120)) / 2.3)); }
+          ln.material.opacity = 0.34 * A * near;
+          ln.visible = ln.material.opacity > 0.004;
+        }
+      }
+      // the Sun as a star: fades in as its disc shrinks under ~5 px; sized by its brightness from here
+      if (_tsStar) {
+        var dS = nearCam.position.distanceTo(_ts.sun.T), discPx = 2 * _ts.sun.Rt / Math.max(1e-9, dS) / fh * H * 0.5;
+        var starA = Math.max(0, Math.min(1, (7 - discPx) / 4)) * (1 - Math.max(0, Math.min(1, (camera.position.length() - 600) / 1400))) * (ground ? 0 : 1);
+        var px = Math.max(14, Math.min(70, 70 / Math.pow(Math.max(1, sunAU), 0.22)));
+        var sc = px * 2 * fh / H, ps = new THREE.Vector3(); nyeArmature.group.getWorldScale(ps);
+        _tsStar.scale.set(sc / ps.x, sc / ps.x, 1);
+        _tsStar.material.opacity = starA; _tsStar.visible = starA > 0.01;
+      }
+      // the sky of space: the real catalogue at infinity (off on the ground, where the base view's own sky leads)
+      if (!_spaceStars && _bsc) buildSpaceStars();
+      if (_spaceStars) {
+        var so = 0.95 * _tsSpaceSky * (1 - _skyAmt);
+        _spaceStars.material.uniforms.uOpacity.value = so; _spaceStars.visible = so > 0.01;
+        if (_spaceGlare) { _spaceGlare.material.uniforms.uOpacity.value = so * 0.85; _spaceGlare.visible = so > 0.01; }
+      }
+      // the ember dust was the old orrery's stand-in for a starry backdrop: inside the true Solar System it goes
+      if (deepFusion && deepFusion.group && camera.position.length() < 600) deepFusion.group.visible = false;
+      // the instrument line: how far you truly stand
+      if (_tsReadout) {
+        var on = !ground && info && camera.position.length() > 8.6;
+        if (on) {
+          var nmA = TS_NAMES[info.from] || TS_NAMES.Earth;
+          var txt = '<b>' + '<span class="i18n-en">' + nmA[0] + '</span><span class="i18n-zh">' + nmA[1] + '</span></b>' +
+            '<span class="i18n-en">' + info.text + '</span><span class="i18n-zh">' + tsFmtZh(info.km) + '</span>';
+          if (txt !== _tsReadout._t) { _tsReadout.innerHTML = txt; _tsReadout._t = txt; }
+        }
+        if (!!on !== !!_tsReadout._on) { _tsReadout._on = !!on; _tsReadout.classList.toggle("is-on", !!on); }
+      }
+    }
+    function tsFmtZh(km) {                             // 中文读数：公里 · 万公里 · 亿公里 · 天文单位 · 光年
+      if (!(km > 0)) return "";
+      var au = km / 149597870.7, ly = km / 9460730472580.8;
+      if (km < 1e4) return km.toFixed(0) + " 公里";
+      if (km < 1e8) return (km / 1e4).toFixed(km < 1e5 ? 1 : 0) + " 万公里";
+      if (au < 0.1) return (km / 1e8).toFixed(2) + " 亿公里";
+      if (au < 5000) return (au < 10 ? au.toFixed(2) : au.toFixed(au < 100 ? 1 : 0)) + " 天文单位";
+      if (ly < 1e4) return (ly < 10 ? ly.toFixed(2) : ly.toFixed(ly < 100 ? 1 : 0)) + " 光年";
+      if (ly < 1e8) return (ly / 1e4).toFixed(ly < 1e5 ? 1 : 0) + " 万光年";
+      return (ly / 1e8).toFixed(ly < 1e9 ? 1 : 0) + " 亿光年";
+    }
+    /* the zoom governor: one wheel notch never moves the TRUE distance by more than ×3.3 inside the Solar
+       System (the ladder's steep stretches would otherwise leap from the Earth to Saturn in four notches) */
+    function tsZoomGovernor(rho) {
+      if (!_ts) return 1;
+      var f = _nav.b && _nav.p >= 1 ? _nav.b : null, cl = camera.position.length();
+      var sl = f ? _ts.bodySlope(_ts.L, f.s, f.kappa, rho) : _ts.L.slope(Math.max(1e-6, cl));
+      var m = Math.min(1, 3.53 / Math.max(1e-6, sl));
+      var far = Math.max(0, Math.min(1, (cl - 300) / 300));
+      return m + (1 - m) * far;
+    }
+    /* where navigation should fly for a body: its ladder proxy (legacy: the body itself) */
+    function navPos(obj, out) {
+      out = out || new THREE.Vector3();
+      if (_ts) for (var i = 0; i < _ts.bodies.length; i++) if (_ts.bodies[i].obj === obj) return out.copy(_ts.bodies[i].proxy);
+      return obj.getWorldPosition(out);
+    }
     function tryAlignChart() {
       if (!nyeArmature || !natalSky || !natalSky.getPlanetDir) return;
       try {
@@ -1963,6 +2363,8 @@
         if (earthMesh && earthMesh.material.uniforms && earthMesh.material.uniforms.uSunDirWorld) {
           var eW = earthMesh.getWorldPosition(new THREE.Vector3());
           earthMesh.material.uniforms.uSunDirWorld.value.copy(sunW.clone().sub(eW).normalize());
+          var atmoM = nyeArmature.group.getObjectByName("NyeEarthAtmosphere");   // the air too — it kept the pre-alignment (local) direction
+          if (atmoM && atmoM.material.uniforms.uSunDirWorld) atmoM.material.uniforms.uSunDirWorld.value.copy(earthMesh.material.uniforms.uSunDirWorld.value);
         }
         if (moonObj && moonObj.material && moonObj.material.uniforms && moonObj.material.uniforms.uSunDirWorld) {
           var mW = moonObj.getWorldPosition(new THREE.Vector3());
@@ -1972,6 +2374,7 @@
         deepFusion.uniforms.uSunDir.value.copy(sunW.clone().normalize());
         deepFusion.uniforms.uSunGlow.value = 0.85;
         if (natalSky && natalSky.setSunWorld) natalSky.setSunWorld(sunW);   // build 236: the planets are sunlit
+        setupTrueScale();
       } catch (e) { window.__space.alignError = String(e); }
     }
 
@@ -2020,12 +2423,21 @@
       setTimeout(once, 4500);
     }
 
-    import("./nye-armature.js?v=50").then(function (mod) {
+    var _tsModsP = TRUE_SCALE
+      ? Promise.all([import("./ephemeris.js?v=1"), import("./truescale.js?v=1")]).then(function (m) { return { eph: m[0], ladder: m[1] }; }).catch(function () { return null; })
+      : Promise.resolve(null);
+    Promise.all([import("./nye-armature.js?v=52"), _tsModsP]).then(function (mods2) {
+      var mod = mods2[0];
+      _tsMods = mods2[1]; if (!_tsMods) _tsFailed = true;
       try {
+        var armScale = MOBILE ? 2.4 : 3.0;
         nyeArmature = mod.mountNyeArmature(THREE, scene, {
-          instant: new Date(2002, 0, 2, 15, 45, 0, 0),
+          // the birth instant is 15:45 in BEIJING = 07:45 UTC. The legacy path built it in the visitor's own zone,
+          // which turned the Earth up to 12 h wrong for anyone not in UTC+8.
+          instant: _tsMods ? new Date(Date.UTC(2002, 0, 2, 7, 45, 0)) : new Date(2002, 0, 2, 15, 45, 0, 0),
           warm: true,
-          scale: MOBILE ? 2.4 : 3.0
+          scale: armScale,
+          trueScale: _tsMods ? tsArmatureSpec(_tsMods.eph) : null
         });
         /* GEOCENTRIC: shift the solar system so the EARTH sits at the world origin —
            the axis everything orbits. The Sun then stands toward tropical Capricorn
@@ -2137,12 +2549,12 @@
     ]).then(function (arr) {
       var natalData = arr[0], lssData = arr[1];
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=151").then(function (mod) {
+      return import("./natal-sky.js?v=153").then(function (mod) {
         natalOpts = {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
           mobile: MOBILE, calm: (TIER !== "full"),
-          camera: camera, interactive: true, lss: lssData,
+          camera: TRUE_SCALE ? farCam : camera, interactive: true, lss: lssData,   // true scale: the sky module sees (and picks with) the sky camera
           galXYZ: null, galRGB: null, webXYZ: null, webRGB: null
         };
         surveyP.then(function (sv) {
@@ -2182,6 +2594,8 @@
       /* hovering the Earth summons the footprint doorway; hovering the Sun, the journey doorway */
       var earthCta = document.getElementById("earth-cta"), sunCta = document.getElementById("sun-cta"), ctaOn = false, sunCtaOn = false, ctaTick = 0;
       var _ctaRay = new THREE.Raycaster(), _ctaNdc = new THREE.Vector2(), _ctaV = new THREE.Vector3();
+      _ctaRay.layers.enableAll();
+      var TS_PLANET_PICKS = { jupiter: 1, saturn: 1, mercury: 1, venus: 1, mars: 1, uranus: 1, neptune: 1, pluto: 1, charon: 1 };
       var ctaOffT = null, sunCtaOffT = null;   // hysteresis: doors linger briefly, no flicker
       function setCta(on) {
         if (!earthCta) return;
@@ -2219,9 +2633,7 @@
           if (sunCtaOn && sunCta) { sunCtaOn = false; sunCta.classList.remove("is-on"); }
           if (!ptrDown) {
             _ctaNdc.x = (e.clientX / innerWidth) * 2 - 1; _ctaNdc.y = -(e.clientY / innerHeight) * 2 + 1;
-            _ctaRay.setFromCamera(_ctaNdc, camera);
-            var gHits = _ctaRay.intersectObject(nyeArmature.group, true);
-            if (natalSky && natalSky.bodyGroup) gHits = gHits.concat(_ctaRay.intersectObject(natalSky.bodyGroup, true));
+            var gHits = tsPickHits(_ctaRay, _ctaNdc, e.clientX, e.clientY, false);
             var overSky = false;
             for (var gI = 0; gI < gHits.length; gI++) {
               var gO = gHits[gI].object, gPk = null;
@@ -2234,8 +2646,7 @@
           return;
         }
         _ctaNdc.x = (e.clientX / innerWidth) * 2 - 1; _ctaNdc.y = -(e.clientY / innerHeight) * 2 + 1;
-        _ctaRay.setFromCamera(_ctaNdc, camera);
-        var hits = _ctaRay.intersectObject(nyeArmature.group, true);
+        var hits = tsPickHits(_ctaRay, _ctaNdc, e.clientX, e.clientY, false);
         var onEarth = false, onSun = false;
         for (var hI = 0; hI < hits.length; hI++) {
           if (hits[hI].object.name === "NyeEarthPickShell") continue;   // the oversized shell is not the globe
@@ -2247,13 +2658,13 @@
         }
         if (onEarth) {
           if (!_ctaEarthRef) _ctaEarthRef = nyeArmature.group.getObjectByName("NyeEarthMesh");
-          var ew = _ctaEarthRef.getWorldPosition(_ctaV).project(camera);
+          var ew = _ctaEarthRef.getWorldPosition(_ctaV).project(_ts ? nearCam : camera);
           earthCta.style.left = ((ew.x * 0.5 + 0.5) * innerWidth) + "px";
           earthCta.style.top = ((-ew.y * 0.5 + 0.5) * innerHeight - 46) + "px";
         }
         if (onSun && sunCta) {
           if (!_ctaSunRef) _ctaSunRef = nyeArmature.group.getObjectByName("NyeSunCore");
-          var sw = _ctaSunRef.getWorldPosition(_ctaV).project(camera);
+          var sw = _ctaSunRef.getWorldPosition(_ctaV).project(_ts ? nearCam : camera);
           sunCta.style.left = ((sw.x * 0.5 + 0.5) * innerWidth) + "px";
           sunCta.style.top = ((-sw.y * 0.5 + 0.5) * innerHeight - 58) + "px";
         }
@@ -2268,14 +2679,12 @@
           }
         }
         if (!overClickable && natalSky) {
-          if (natalSky.bodyGroup) {
-            var gh = _ctaRay.intersectObject(natalSky.bodyGroup, true);
-            for (var gI = 0; gI < gh.length; gI++) {
-              var go = gh[gI].object, gp = null;
-              while (go && !gp) { gp = go.userData && go.userData.nyePick; go = go.parent; }
-              if (gp === "jupiter" || gp === "saturn") { overClickable = true; break; }
-            }
+          for (var gI = 0; gI < hits.length; gI++) {         // the planets (hits already holds the Solar System)
+            var go = hits[gI].object, gp = null;
+            while (go && !gp) { gp = go.userData && go.userData.nyePick; go = go.parent; }
+            if (gp && TS_PLANET_PICKS[gp]) { overClickable = true; break; }
           }
+          if (_ts && !overClickable) _ctaRay.setFromCamera(_ctaNdc, farCam);   // the sky is cast from the sky camera
           if (!overClickable && natalSky.dsoPicks) {
             var dh = _ctaRay.intersectObject(natalSky.dsoPicks, true);
             for (var dhi = 0; dhi < dh.length; dhi++) { if (dsoPickInScale(dh[dhi].object)) { overClickable = true; break; } }
@@ -2640,6 +3049,44 @@
 
       // clean-click routing: a drag is never a click
       var pickRay = new THREE.Raycaster(), pickNdc = new THREE.Vector2(), _lastPickAt = 0;
+      pickRay.layers.enableAll();
+      /* every pickable hit under a screen point, nearest first. True scale: the Solar System is cast from the
+         true-scale camera, the sky from the sky camera (always behind), and a planet too small to hit by ray
+         is still caught within ~16 px of its true position — a real-scale planet is often under a pixel. */
+      var _tpV = new THREE.Vector3();
+      function tsPickHits(ray, ndc, sx, sy, withFar) {
+        var near, far = [];
+        if (!_ts) {
+          ray.setFromCamera(ndc, camera);
+          near = ray.intersectObject(nyeArmature.group, true);
+          if (natalSky && natalSky.bodyGroup) near = near.concat(ray.intersectObject(natalSky.bodyGroup, true));
+          if (withFar && natalSky && natalSky.dsoPicks) near = near.concat(ray.intersectObject(natalSky.dsoPicks, true));
+          if (withFar && natalSky && natalSky.conPicks) near = near.concat(ray.intersectObject(natalSky.conPicks, true));
+          return near.sort(function (h1, h2) { return h1.distance - h2.distance; });
+        }
+        ray.setFromCamera(ndc, nearCam);
+        near = ray.intersectObject(nyeArmature.group, true);
+        if (natalSky && natalSky.bodyGroup) near = near.concat(ray.intersectObject(natalSky.bodyGroup, true));
+        var fh = Math.tan(nearCam.fov * Math.PI / 360);
+        for (var i = 0; i < _ts.bodies.length; i++) {
+          var b = _ts.bodies[i]; if (!b.obj.visible) continue;
+          if (!tsProject(b.T, _tpV)) continue;
+          var px = (_tpV.x * 0.5 + 0.5) * innerWidth, py = (-_tpV.y * 0.5 + 0.5) * innerHeight, dd = b.T.distanceTo(nearCam.position);
+          var rpx = b.Rt / Math.max(1e-9, dd) / fh * innerHeight * 0.5;
+          if (rpx < 16 && Math.hypot(px - sx, py - sy) < 16) {
+            var po = null; b.obj.traverse(function (c) { if (!po && c.userData && c.userData.nyePick) po = c; });
+            if (po) near.push({ object: po, distance: dd, point: b.T.clone() });
+          }
+        }
+        near.sort(function (h1, h2) { return h1.distance - h2.distance; });
+        if (withFar) {
+          ray.setFromCamera(ndc, farCam);
+          if (natalSky && natalSky.dsoPicks) far = far.concat(ray.intersectObject(natalSky.dsoPicks, true));
+          if (natalSky && natalSky.conPicks) far = far.concat(ray.intersectObject(natalSky.conPicks, true));
+          far.sort(function (h1, h2) { return h1.distance - h2.distance; });
+        }
+        return near.concat(far);
+      }
       var _flare = null;   // custom sun lens-flare chain (built at armature mount)
       var FOCUS_MIN = { NyeSun: 9.5, NyeMoon: 2.2, NatalJupiter: 4.5, NatalSaturn: 4.5, NatalMercury: 0.9, NatalVenus: 1.6, NatalMars: 1.1, NatalUranus: 1.9, NatalNeptune: 1.8, NatalPluto: 0.5, NatalPlutoMoon: 0.35 };   // closest approach per body (must clear each surface + the near-plane)
       function glideToBody(objName, viewDist, nFrames) {
@@ -2651,7 +3098,8 @@
         var _bodyPick = ({ NyeSun: "sun", NyeMoon: "moon", NatalJupiter: "jupiter", NatalSaturn: "saturn", NatalMercury: "mercury", NatalVenus: "venus", NatalMars: "mars", NatalUranus: "uranus", NatalNeptune: "neptune", NatalPluto: "pluto", NatalPlutoMoon: "charon" })[objName];
         if (_bodyPick) showDossier(_bodyPick, null);   // its dossier (blank now) can be filled later
         controls.setDistanceLimits(FOCUS_MIN[objName] || 5.0, 15000);   // AFTER clearSel — clearSel resets the floor to the earth-anchored 5.0; 15000 lets you pull back from any focused body to the full-system overview
-        var w = obj.getWorldPosition(new THREE.Vector3());
+        var w = navPos(obj);                                  // true scale: the body's ladder proxy (legacy: the body)
+        var wT = obj.getWorldPosition(new THREE.Vector3());   // …while sunlight directions come from the TRUE geometry
         /* stand OUTSIDE the body along the Earth→body line, swung aside within the
            gear-ring plane AND lifted above it — the sightline can never pass through
            the Earth, the Sun, or the glyph medallions riding the rings */
@@ -2663,7 +3111,7 @@
           /* arrive from the sunlit side — the moon shows her lit face, Earth hangs behind */
           var sunObj = nyeArmature.group.getObjectByName("NyeSun");
           if (sunObj) {
-            var toSun = sunObj.getWorldPosition(new THREE.Vector3()).sub(w).normalize();
+            var toSun = sunObj.getWorldPosition(new THREE.Vector3()).sub(wT).normalize();
             outward.multiplyScalar(0.5).addScaledVector(toSun, 0.85).normalize();
           }
           outward.multiplyScalar(Math.cos(0.22)).addScaledVector(ringN, Math.sin(0.22)).normalize();
@@ -2673,7 +3121,7 @@
           var sunO2 = nyeArmature.group.getObjectByName("NyeSun");
           outward.applyAxisAngle(ringN, -0.5);
           if (sunO2) {
-            var toSun2 = sunO2.getWorldPosition(new THREE.Vector3()).sub(w).normalize();
+            var toSun2 = sunO2.getWorldPosition(new THREE.Vector3()).sub(wT).normalize();
             outward.multiplyScalar(0.42).addScaledVector(toSun2, 0.92).normalize();
           }
           outward.multiplyScalar(Math.cos(0.30)).addScaledVector(ringN, Math.sin(0.30)).normalize();
@@ -2756,9 +3204,15 @@
           var tz = info.titleZh.length > 17 ? info.titleZh.slice(0, 16) + "…" : info.titleZh;
           starCta.innerHTML = '<span class="i18n-en">Open · ' + te + ' ↗</span><span class="i18n-zh">打开 · ' + tz + ' ↗</span>';
         }
-        var dir = info.world.clone().normalize();
+        var dir = info.world.clone().normalize(), tb = tsBodyAt(info.world), camTo;
+        if (tb) {
+          // true scale: a planet door is approached like any body — from its sunlit side, ~4 radii out
+          var toSunT = _ts.sun.T.clone().sub(tb.T).normalize(), side = dir.clone().negate().multiplyScalar(0.45).add(toSunT).normalize();
+          controls.setDistanceLimits(Math.max(0.3, tb.Ro * 1.5), 15000);
+          camTo = info.world.clone().addScaledVector(side, tb.Ro * 3.8);
+        } else camTo = info.world.clone().sub(dir.multiplyScalar(38));
         flyTo({
-          camTo: info.world.clone().sub(dir.multiplyScalar(38)),
+          camTo: camTo,
           targetTo: info.world.clone(), lookAt: info.world.clone(),
           fovKick: 5, onDone: null
         });
@@ -2775,7 +3229,7 @@
       function focusGiant(objName, id, titleEn, titleZh, href, con) {
         var o = natalSky && natalSky.group.getObjectByName(objName); if (!o) return;
         if (con && natalSky) { natalSky.highlight(con, true); setTimeout(function () { natalSky.highlight(con, false); }, 4200); }
-        focusStar({ id: id, href: href, titleEn: titleEn, titleZh: titleZh, world: o.getWorldPosition(new THREE.Vector3()) });
+        focusStar({ id: id, href: href, titleEn: titleEn, titleZh: titleZh, world: navPos(o) });
       }
       window.__space.focusGiant = focusGiant;
       /* a deep-sky wonder becomes the pivot: fly OUT past it along the Earth→cloud line, swung
@@ -3042,12 +3496,7 @@
         }
         if (!nyeArmature) return;
         pickNdc.x = (e.clientX / innerWidth) * 2 - 1; pickNdc.y = -(e.clientY / innerHeight) * 2 + 1;
-        pickRay.setFromCamera(pickNdc, camera);
-        var hits = pickRay.intersectObject(nyeArmature.group, true);
-        if (natalSky && natalSky.bodyGroup) hits = hits.concat(pickRay.intersectObject(natalSky.bodyGroup, true));
-        if (natalSky && natalSky.dsoPicks) hits = hits.concat(pickRay.intersectObject(natalSky.dsoPicks, true));
-        if (natalSky && natalSky.conPicks) hits = hits.concat(pickRay.intersectObject(natalSky.conPicks, true));
-        hits.sort(function (h1, h2) { return h1.distance - h2.distance; });
+        var hits = tsPickHits(pickRay, pickNdc, e.clientX, e.clientY, true);
         for (var i = 0; i < hits.length; i++) {
           if (hits[i].object.name === "NyeEarthPickShell") continue;   // the oversized shell is not the globe
           var pick = null, o = hits[i].object, pickOwner = null;
@@ -3312,7 +3761,7 @@
             if (_city && _city.visible && nyeArmature && nyeArmature.group) {
               var mo = nyeArmature.group.getObjectByName("NyeMoon");
               if (mo) {
-                mo.getWorldPosition(_moonL); _moonL.sub(camera.position).normalize().applyQuaternion(_cityInvQ);
+                mo.getWorldPosition(_moonL); _moonL.sub(_ts ? nearCam.position : camera.position).normalize().applyQuaternion(_cityInvQ);
                 _cityMat.uniforms.uMoonI.value = Math.max(0, Math.min(1, _moonL.z * 4.0 + 0.15));   // set below the horizon → dark
               }
             }
@@ -3323,7 +3772,7 @@
         controls.setExternalDrive(glideActive() || (!userMoved && nowMs < entranceUntil));
         controls.update(dtF);
         easeAddressPivot();
-        if (!beltCentered && natalSky && nyeArmature) {   // one-shot: the WHOLE planetary system (planets + belt) orbits the SUN, not the Earth
+        if (!beltCentered && (!TRUE_SCALE || _tsFailed) && natalSky && nyeArmature) {   // one-shot: the WHOLE planetary system (planets + belt) orbits the SUN, not the Earth
           var _bodies = natalSky.group.getObjectByName("NatalBodies");
           var _sunM = nyeArmature.group.getObjectByName("NyeSunCore");
           if (_bodies && _sunM) {
@@ -3409,24 +3858,26 @@
       // Moon→Leo stay put. Absolute-time driven so it stays smooth under the idle frame governor.
       if (deepFusion && deepFusion.group) deepFusion.group.rotation.y = _clk * 0.006;
       if (nyeArmature) nyeArmature.tick(_clk);
-      if (nyeArmature && nyeArmature.atmoFar) nyeArmature.atmoFar(camera.position);
+      if (_ts) { syncCams(); tsOverlayTick(); }   // the true-scale cameras for this frame (flare, air, moonlight, labels read them)
+      var fc = _ts ? nearCam : camera, fDist = _ts ? 1.0 : 50;
+      if (nyeArmature && nyeArmature.atmoFar) nyeArmature.atmoFar(fc.position);
       if (_flare) {
         var fs = _flare;
         if (!fs.sun) { fs.sun = nyeArmature && nyeArmature.group.getObjectByName("NyeSunCore"); fs.earth = nyeArmature && nyeArmature.group.getObjectByName("NyeEarthMesh"); fs.moon = nyeArmature && nyeArmature.group.getObjectByName("NyeMoon"); }
         var sunVisible = fs.sun && fs.sun.visible && fs.sun.parent;
         if (sunVisible) {
           fs.sun.getWorldPosition(fs.v);
-          fs.dir.copy(fs.v).sub(camera.position);
-          var behind = fs.dir.dot(camera.getWorldDirection(_pivT)) <= 0;   // _pivT reused as scratch here (frame-local)
-          var ndc = fs.v.project(camera);                                   // fs.v now holds NDC
+          fs.dir.copy(fs.v).sub(fc.position);
+          var behind = fs.dir.dot(fc.getWorldDirection(_pivT)) <= 0;   // _pivT reused as scratch here (frame-local)
+          var ndc = fs.v.project(fc);                                   // fs.v now holds NDC
           var inView = !behind && ndc.x > -1.25 && ndc.x < 1.25 && ndc.y > -1.25 && ndc.y < 1.25;
           if (inView) {
             var nowF = performance.now();
             if (nowF - fs.occT > 120) {                                     // throttled occlusion: is the Sun hidden by Earth/Moon?
               fs.occT = nowF;
               fs.sun.getWorldPosition(fs.dir);
-              fs.ray.set(camera.position, fs.dir.sub(camera.position).normalize());
-              var occHit = false, sunDist = camera.position.distanceTo(fs.sun.getWorldPosition(_pivT));
+              fs.ray.set(fc.position, fs.dir.sub(fc.position).normalize());
+              var occHit = false, sunDist = fc.position.distanceTo(fs.sun.getWorldPosition(_pivT));
               var tests = [fs.earth, fs.moon];
               for (var ti = 0; ti < tests.length; ti++) {
                 if (!tests[ti] || !tests[ti].visible) continue;
@@ -3438,14 +3889,14 @@
             fs.occ += ((fs._occTarget == null ? 1 : fs._occTarget) - fs.occ) * 0.18;
             var edge = Math.max(Math.abs(ndc.x), Math.abs(ndc.y));
             var fade = fs.occ * (1 - Math.max(0, (edge - 0.92)) / 0.33);
-            var fovH = Math.tan(camera.fov * Math.PI / 360);
+            var fovH = Math.tan(fc.fov * Math.PI / 360);
             for (var fi = 0; fi < fs.sprites.length; fi++) {
               var sp2 = fs.sprites[fi], d2 = sp2.userData._def;
               if (fade <= 0.02) { sp2.visible = false; continue; }
               var gx = ndc.x * (1 - d2[2]), gy = ndc.y * (1 - d2[2]);
-              _pivT.set(gx, gy, 0.5).unproject(camera).sub(camera.position).normalize();
-              sp2.position.copy(camera.position).addScaledVector(_pivT, 50);
-              var w = 2 * 50 * fovH * (d2[1] / innerHeight);
+              _pivT.set(gx, gy, 0.5).unproject(fc).sub(fc.position).normalize();
+              sp2.position.copy(fc.position).addScaledVector(_pivT, fDist);
+              var w = 2 * fDist * fovH * (d2[1] / innerHeight);
               sp2.scale.set(w, w, 1);
               sp2.material.opacity = d2[4] * fade;
               sp2.visible = true;
@@ -3453,11 +3904,17 @@
           } else for (var fh = 0; fh < fs.sprites.length; fh++) fs.sprites[fh].visible = false;
         } else for (var fo = 0; fo < fs.sprites.length; fo++) fs.sprites[fo].visible = false;
       }
+      if (_ts && frameNo % 30 === 0) markFarLayers();   // lazily built sky tiers join the sky layer
+      else if (!_ts && TRUE_SCALE) {                    // until the true-scale world is up, the sky camera IS the camera
+        farCam.position.copy(camera.position); farCam.quaternion.copy(camera.quaternion);
+        farCam.fov = camera.fov; farCam.aspect = camera.aspect; farCam.near = camera.near; farCam.far = camera.far;
+        farCam.updateProjectionMatrix(); farCam.updateMatrixWorld();
+      }
       if (natalSky) natalSky.tick(_clk);
       if (composer) {
         if (bloomPass) bloomPass.enabled = (window.__cvQuality || 0) < 2;   // shed the bloom pass under real load
         renderComposed();
-      } else renderer.render(scene, camera);
+      } else { if (_ts) renderer.clear(); renderWorld(); }
       requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
@@ -3481,10 +3938,11 @@
     window.__space.canvas = canvas;
     window.__space.controls = controls;
     window.__space.camera = camera;
+    window.__space.scene = scene;   // verification: scene-graph inventory
     window.__space.pump = function (n2) { var base = performance.now(); for (var q = 0; q < (n2 || 1); q++) frame(base + q * 16.7); };
     window.__space.snap = function () {
       if (COSMOS && controls) controls.update(1 / 60);   // was dtF — undefined in this scope (snap threw ReferenceError)
-      if (composer) renderComposed(); else renderer.render(scene, camera); return canvas.toDataURL("image/jpeg", 0.8);
+      if (composer) renderComposed(); else { if (_ts) renderer.clear(); renderWorld(); } return canvas.toDataURL("image/jpeg", 0.8);
     };
     window.__space.setOpacity = function (o) { canvas.style.opacity = String(o); };
     window.__space.setFusion = deepFusion.setFusion;

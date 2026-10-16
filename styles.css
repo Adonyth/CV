@@ -1014,6 +1014,25 @@ html body.cosmos .cosmos-hint{color:var(--ink-low); letter-spacing:.14em; font-s
 html body.cosmos .ground-hint{font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-low);}
 html body.cosmos .ground-hint b{color:var(--amber); font-weight:500; margin-right:1.1em;}
 
+/* 5b · TRUE SCALE (build 241) — a real planet is usually far under a pixel: as SpaceEngine does, each body keeps a
+   dot and a quiet name when it is too small to see, and one instrument line says how far away you truly are */
+.ts-tags{position:fixed; inset:0; z-index:3; pointer-events:none; overflow:hidden;}
+.ts-tag{position:absolute; left:0; top:0; display:flex; align-items:center; margin-top:-7px; line-height:14px; white-space:nowrap;
+  font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:rgba(232,222,206,.74);
+  text-shadow:0 1px 8px rgba(0,0,0,.9), 0 0 2px rgba(0,0,0,.9); visibility:hidden; will-change:transform;}
+.ts-tag.is-on{visibility:visible;}
+.ts-tag i{display:block; flex:none; width:5px; height:5px; margin-left:-2.5px; border-radius:50%; opacity:0;
+  background:rgba(244,234,214,.92); box-shadow:0 0 6px rgba(255,220,170,.55);}
+.ts-tag.is-dot i{opacity:1;}
+.ts-tag span{padding-left:7px;}
+.ts-readout{position:fixed; left:calc(var(--edge, 24px) + 2px); bottom:26px; z-index:6; pointer-events:none; opacity:0; transition:opacity .6s ease;
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:rgba(214,204,188,.56);}
+.ts-readout b{color:#ebbc8c; font-weight:500; margin-right:1.1em;}
+.ts-readout.is-on{opacity:1;}
+body.on-ground .ts-readout, body.to-map .ts-readout, body.to-map .ts-tags{opacity:0 !important;}
+body.is-mobile-3d .ts-readout{bottom:62px; left:16px;}
+@media print{.ts-tags, .ts-readout{display:none !important;}}
+
 /* 6 · the cosmic-address rail — lighter ticks */
 html body.cosmos .cosmos-rail{filter:none;}
 html body.cosmos .cosmos-rail__l{color:var(--ink-low);}

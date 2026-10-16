@@ -627,6 +627,91 @@ export function buildNatalSky(THREE, scene, data, opts) {
     bodyGroup.add(abPts);
   }
 
+  /* TRUE SCALE (build 240): space.js hands in the real geocentric positions (km, J2000 ecliptic), radii and
+     IAU spin axes. Each planet moves to where it truly stood at the birth instant, at its true size; the
+     asteroid belt becomes a heliocentric ring between 2.1 and 3.3 AU. Returns what the navigation needs:
+     each body's group, its true radius and the radius its old framing was tuned for (scene units). */
+  function applyTrueScale(sp) {
+    belt.updateMatrixWorld(true);
+    var ws = new T.Vector3(); belt.getWorldScale(ws);
+    var k = sp.unitPerKm / ws.x, out = [];
+    function eclKm(v) { return new T.Vector3(v[0] * k, v[2] * k, v[1] * k); }   // eclVec's axis order: (x, z, y)
+    function poleVec(pl) { var e = raDecToEcl(pl[0] / 15, pl[1]); return eclVec(e.lon, e.lat, 1).normalize(); }
+    bodyGroup.position.set(0, 0, 0);
+    (data.planets || []).forEach(function (p) {
+      if (!p.body || !sp.geo[p.id]) return;
+      var g = bodyGroup.getObjectByName("Natal" + p.id.charAt(0).toUpperCase() + p.id.slice(1)); if (!g) return;
+      var rk = sp.radiusKm[p.body.kind] || sp.radiusKm[p.id]; if (!rk) return;
+      var sc = rk * k / p.body.radius;
+      g.position.copy(eclKm(sp.geo[p.id]));
+      g.scale.setScalar(sc);
+      var pole = sp.poles && sp.poles[p.id];
+      if (pole) {
+        var pv = poleVec(pole), mesh = g.getObjectByName(g.name + "Mesh"), ring = g.getObjectByName(g.name + "Ring");
+        if (mesh) mesh.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), pv);   // the bands circle the true spin axis
+        if (ring) ring.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), pv);   // rings lie in the equator plane
+      }
+      var cm = g.getObjectByName(g.name + "Moon");
+      if (cm && sp.radiusKm.charon && sp.charonKm) {   // Charon: true size and true 19,600 km separation
+        var cdir = cm.position.clone().normalize(), cd = sp.charonKm * k / sc;
+        g.children.forEach(function (c) { if (c !== cm && c.position.lengthSq() > 1e-9 && c.userData.nyePick === "charon") c.position.copy(cdir).multiplyScalar(cd); });
+        cm.position.copy(cdir).multiplyScalar(cd);
+        cm.scale.setScalar(sp.radiusKm.charon * k / sc / p.body.moon.radius);
+      }
+      out.push({ id: p.id, name: g.name, obj: g, Rt: rk * k * ws.x, Ro: p.body.radius * ws.x });
+    });
+    var ab = bodyGroup.getObjectByName("AsteroidBelt");
+    if (ab && sp.geo.sun) {
+      var sun = eclKm(sp.geo.sun), auL = sp.auKm * k, n = mobile ? 3200 : 6400, rng = gRng(4242);
+      var pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
+      var GAPS = [2.502, 2.825, 2.958, 3.279];   // Kirkwood gaps (3:1, 5:2, 7:3, 2:1 resonances with Jupiter)
+      for (var i = 0; i < n; i++) {
+        var a;
+        do { a = 2.1 + 1.2 * Math.pow(rng(), 0.9); } while (GAPS.some(function (gp) { return Math.abs(a - gp) < 0.018; }));
+        var lon = rng() * Math.PI * 2, e = 0.16 * rng(), r = a * (1 + e * Math.cos(rng() * Math.PI * 2));
+        var lat = (rng() + rng() + rng() - 1.5) * 0.17;   // inclinations clustered within ~10°
+        var v = eclVec(lon, lat, r * auL).add(sun);
+        pos[i * 3] = v.x; pos[i * 3 + 1] = v.y; pos[i * 3 + 2] = v.z;
+        var gl = 0.45 + 0.4 * rng();
+        col[i * 3] = gl * 0.78; col[i * 3 + 1] = gl * 0.66; col[i * 3 + 2] = gl * 0.52;
+      }
+      ab.geometry.dispose();
+      var ng = new T.BufferGeometry();
+      ng.setAttribute("position", new T.BufferAttribute(pos, 3)); ng.setAttribute("color", new T.BufferAttribute(col, 3));
+      ab.geometry = ng; ab.frustumCulled = false;
+      ab.material.sizeAttenuation = false; ab.material.size = mobile ? 1.6 : 1.4; ab.material.needsUpdate = true;
+      // a real belt is invisible from the Earth: it reads only once you stand far enough out to see it whole
+      var _abC = new T.Vector3(), _abS = sun.clone();
+      ab.onBeforeRender = function (r2, s2, cam) {
+        bodyGroup.localToWorld(_abC.copy(_abS));
+        var dAU = cam.position.distanceTo(_abC) / (auL * ws.x);
+        // …and it thins as it shrinks: 6,400 specks crowded into a few degrees would read as a solid ring
+        var bpx = (2.7 / Math.max(0.01, dAU)) / Math.tan((cam.fov || 50) * Math.PI / 360) * (typeof innerHeight !== "undefined" ? innerHeight : 800) * 0.5;
+        var thin = Math.max(0, Math.min(1, (bpx - 25) / 150));
+        ab.material.opacity = 0.55 * Math.max(0, Math.min(1, (dAU - 3.2) / 3.0)) * thin * thin;
+      };
+    }
+    return out;
+  }
+  /* true orbits: [{ id, km: Float64Array of geocentric J2000-ecliptic xyz (km), color }] → one faint line loop each,
+     in the same frame as the bodies. The caller owns their opacity (they fade with scale). */
+  function addTrueOrbits(list, unitPerKm) {
+    belt.updateMatrixWorld(true);
+    var ws = new T.Vector3(); belt.getWorldScale(ws);
+    var k = unitPerKm / ws.x, grp = new T.Group(); grp.name = "TrueOrbits";
+    list.forEach(function (o) {
+      var n = o.km.length / 3, pos = new Float32Array(n * 3);
+      for (var i = 0; i < n; i++) { pos[i * 3] = o.km[i * 3] * k; pos[i * 3 + 1] = o.km[i * 3 + 2] * k; pos[i * 3 + 2] = o.km[i * 3 + 1] * k; }
+      var g = new T.BufferGeometry(); g.setAttribute("position", new T.BufferAttribute(pos, 3));
+      var m = new T.LineBasicMaterial({ color: o.color, transparent: true, opacity: 0, depthWrite: false, fog: false });
+      if ("toneMapped" in m) m.toneMapped = false;
+      var line = new T.LineLoop(g, m); line.name = "Orbit_" + o.id; line.frustumCulled = false; line.userData.orbitOf = o.id;
+      grp.add(line);
+    });
+    bodyGroup.add(grp);
+    return grp;
+  }
+
   // orient the whole sky so the Sun-sign (Capricornus) greets the camera (+z) at rest, then drift slowly
   (function () {
     var sunP = (data.planets || []).filter(function (p) { return p.id === "sun"; })[0];
@@ -2595,6 +2680,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
   var tip = null, raycaster = null, ndc = null, hovered = -1, onMove = null, onClick = null, pickFn = null;
   if (interactive) {
     raycaster = new T.Raycaster(); raycaster.params.Points.threshold = mobile ? 14 : 11;
+    raycaster.layers.enableAll();   // true scale: the star field renders on the far layer
     ndc = new T.Vector2();
     tip = document.createElement("div"); tip.className = "natal-tip"; tip.setAttribute("role", "status");
     tip.style.cssText = "position:fixed;pointer-events:none;z-index:5;opacity:0;transition:opacity .18s ease;transform:translate(12px,12px);max-width:280px;";
@@ -3033,6 +3119,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
     },
     group: group,
     bodyGroup: bodyGroup,
+    applyTrueScale: applyTrueScale,
+    addTrueOrbits: addTrueOrbits,
     dsoPicks: dsoPickGroup,
     conPicks: conPickGroup,
     getConCentroid: function (id) {

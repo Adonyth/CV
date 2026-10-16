@@ -84,15 +84,25 @@ export function mountNyeArmature(THREE, scene, opts) {
   let moonUniformsRef = null;
 
   const ephem = computeFrozenEphemeris(instant);
+  /* TRUE SCALE (build 240): the caller hands in true positions from ephemeris.js, already in this group's local
+     units (equatorial J2000 mapped x, z, −y; 1 unit = Earth radius / 0.95). The Earth stays the anchor; the Sun,
+     the Moon and the gear rings take their real distances and sizes. */
+  const TS = options.trueScale || null;
+  if (TS) {
+    ephem.earth.set(TS.earth[0], TS.earth[1], TS.earth[2]);
+    ephem.moon.set(TS.moon[0], TS.moon[1], TS.moon[2]);
+    if (TS.eclipticNormal) ephem.eclipticNormal.set(TS.eclipticNormal[0], TS.eclipticNormal[1], TS.eclipticNormal[2]).normalize();
+  }
   const earthRadiusVis = 0.95;   // shrunk: the Sun (SUN_BASE_R 2.05) now clearly dwarfs the Earth; day/hour rings + footprint scale with it
   const earthToMoon = ephem.moon.clone().sub(ephem.earth);
   const emLen = earthToMoon.length();
   if (emLen < 1e-9) earthToMoon.set(1, 0, 0);
   else earthToMoon.multiplyScalar(1 / emLen);
-  const visibleMoonDistance = Math.max(emLen, earthRadiusVis * 11.0);   // a real journey away (真实为 60 地球半径 — 11 保住星盘构图), apparent size stays the true 0.5°
+  const visibleMoonDistance = TS ? emLen : Math.max(emLen, earthRadiusVis * 11.0);   // true scale: the real distance; legacy: a real journey away (真实为 60 地球半径 — 11 保住星盘构图)
   const moonVisiblePosition = ephem.earth.clone().add(earthToMoon.clone().multiplyScalar(visibleMoonDistance));
 
   const sun = buildSun();
+  if (TS) sun.group.scale.setScalar(TS.sunR / SUN_BASE_R);   // the real Sun: 109 Earths across
   solarSystem.add(sun.group);
 
   // ---- WAVE 1 (eager, always present): the luminaries + Earth. Sun/Moon must exist at EVERY scale. ----
@@ -100,12 +110,12 @@ export function mountNyeArmature(THREE, scene, opts) {
   earth.group.position.copy(ephem.earth);
   solarSystem.add(earth.group);
 
-  const moon = buildMoon(earthRadiusVis * 11.0 * 0.0525);   // ~6° from the ground: the moon OWNS its patch of sky
+  const moon = buildMoon(TS ? TS.moonR : earthRadiusVis * 11.0 * 0.0525);   // true: 0.27 Earths (0.5° from the ground); legacy ~6°
   moon.mesh.position.copy(moonVisiblePosition);
   solarSystem.add(moon.mesh);
 
   setLightDirections();
-  earth.mesh.rotation.y = siderealOrFallbackRotationY(instant);
+  earth.mesh.rotation.y = siderealOrFallbackRotationY(options.siderealInstant || instant);   // the true UTC instant: a browser-local Date put the Earth 12 h off for visitors far from Beijing
   solarSystem.updateMatrixWorld(true);
   markSubtree(group, { nyeArmature: true });   // mark the luminaries; the rings re-mark themselves when they build
 
@@ -129,6 +139,7 @@ export function mountNyeArmature(THREE, scene, opts) {
       toothScale: 1.0, glyphStemScale: 0.92, glyphBranchScale: 1.0, couplingOpacity: 0.18
     });
     eclipticGroup.add(monthGear.group);
+    if (TS) monthGear.group.scale.setScalar(TS.auLocal / AU_SCALE);   // true scale: the month ring circles the Sun at 1 AU
 
     solarSystem.updateMatrixWorld(true);
     const earthInEcliptic = ephem.earth.clone();
@@ -160,6 +171,7 @@ export function mountNyeArmature(THREE, scene, opts) {
     couplingOpacity: 0.12
   });
   yearEclipticGroup.add(yearGear.group);
+  if (TS) yearGear.group.scale.setScalar(TS.auLocal / AU_SCALE);
   var sunAngle = earthOrbitAngle + Math.PI;
   yearGear.stemSwivel.rotation.z = sunAngle - yearPillar.stemIndex * (TAU / 10);
   yearGear.branchSwivel.rotation.z = sunAngle - yearPillar.branchIndex * (TAU / 12);
@@ -182,6 +194,7 @@ export function mountNyeArmature(THREE, scene, opts) {
     couplingOpacity: 0.2
   });
   dayClockOrbitPlaneGroup.add(dayGear.group);
+  if (TS) dayGear.group.scale.setScalar(visibleMoonDistance / (earthRadiusVis * 11.0));   // the 日环 still rides just inside the (true, 60 R⊕) lunar orbit
   group.updateMatrixWorld(true);
   const moonInDayPlane = moon.mesh.getWorldPosition(new T.Vector3());
   dayClockOrbitPlaneGroup.worldToLocal(moonInDayPlane);
@@ -226,12 +239,14 @@ export function mountNyeArmature(THREE, scene, opts) {
 
     const orbitTrace = buildOrbitTrace(AU_SCALE, 0xe0876a, 0.12, "EarthOrbitTrace");
     orbitTrace.quaternion.copy(eclipticGroup.quaternion);
+    if (TS) orbitTrace.scale.setScalar(TS.auLocal / AU_SCALE);
     solarSystem.add(orbitTrace);
     // lift the month-plane + orbit-trace off the Earth along the ecliptic normal (this used to run in space.js
     // post-mount; baked here now that the rings build lazily, so space.js's null eclPlane lookup can't skip it)
     var eclN = new T.Vector3(0, 0, 1).applyQuaternion(eclipticGroup.quaternion).normalize();
-    eclipticGroup.position.addScaledVector(eclN, 3.1);
-    orbitTrace.position.addScaledVector(eclN, 3.1);
+    var lift = 3.1 * (TS ? TS.auLocal / AU_SCALE : 1);
+    eclipticGroup.position.addScaledVector(eclN, lift);
+    orbitTrace.position.addScaledVector(eclN, lift);
 
     /* prominence of the EIGHT CHARACTERS: 日柱庚 brightest, then 日午 + 月子,
        then the rest of the natal pairs; every unrelated glyph recedes */
@@ -525,28 +540,42 @@ export function mountNyeArmature(THREE, scene, opts) {
       "uniform sampler2D uMap;",
       "uniform float uExposure;",
       "uniform vec3 uWarmTint;",
-      "vec3 acesApprox(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14),0.0,1.0); }",
+      "float h13(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }",
+      "vec3 h33(vec3 p){ return fract(sin(vec3(dot(p, vec3(127.1, 311.7, 74.7)), dot(p, vec3(269.5, 183.3, 246.1)), dot(p, vec3(113.5, 271.9, 124.6)))) * 43758.5453); }",
+      "float vn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);",
+      "  return mix(mix(mix(h13(i), h13(i + vec3(1, 0, 0)), f.x), mix(h13(i + vec3(0, 1, 0)), h13(i + vec3(1, 1, 0)), f.x), f.y),",
+      "             mix(mix(h13(i + vec3(0, 0, 1)), h13(i + vec3(1, 0, 1)), f.x), mix(h13(i + vec3(0, 1, 1)), h13(i + vec3(1, 1, 1)), f.x), f.y), f.z); }",
+      "vec2 worley(vec3 p){ vec3 i = floor(p), f = fract(p); float d1 = 8.0, d2 = 8.0;",   // F1, F2: convective cells and their lanes
+      "  for (int x = -1; x <= 1; x++) for (int y = -1; y <= 1; y++) for (int z = -1; z <= 1; z++) {",
+      "    vec3 g = vec3(float(x), float(y), float(z)), r = g + h33(i + g) - f; float d = dot(r, r);",
+      "    if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) d2 = d; }",
+      "  return vec2(sqrt(d1), sqrt(d2)); }",
       "void main(){",
       "  vec3 N=normalize(vWn);",
       "  vec3 V=normalize(cameraPosition-vWp);",
       "  float mu=max(dot(N,V),0.0);",
-      "  vec3 tex=texture2D(uMap,vUv).rgb; float hp=dot(tex,vec3(0.333));",   // the baked heat pattern: lanes and faculae
-      // build 228: fine granulation cells on the sphere itself (the 1024px bake is soft up close)
-      "  vec3 q=normalize(vObjN)*64.0;",
-      "  vec3 qi=floor(q), qf=fract(q); qf=qf*qf*(3.0-2.0*qf);",
-      "  float n000=fract(sin(dot(qi,vec3(127.1,311.7,74.7)))*43758.5453), n100=fract(sin(dot(qi+vec3(1,0,0),vec3(127.1,311.7,74.7)))*43758.5453);",
-      "  float n010=fract(sin(dot(qi+vec3(0,1,0),vec3(127.1,311.7,74.7)))*43758.5453), n110=fract(sin(dot(qi+vec3(1,1,0),vec3(127.1,311.7,74.7)))*43758.5453);",
-      "  float n001=fract(sin(dot(qi+vec3(0,0,1),vec3(127.1,311.7,74.7)))*43758.5453), n101=fract(sin(dot(qi+vec3(1,0,1),vec3(127.1,311.7,74.7)))*43758.5453);",
-      "  float n011=fract(sin(dot(qi+vec3(0,1,1),vec3(127.1,311.7,74.7)))*43758.5453), n111=fract(sin(dot(qi+vec3(1,1,1),vec3(127.1,311.7,74.7)))*43758.5453);",
-      "  float gn=mix(mix(mix(n000,n100,qf.x),mix(n010,n110,qf.x),qf.y),mix(mix(n001,n101,qf.x),mix(n011,n111,qf.x),qf.y),qf.z);",
-      // a photosphere's colour runs deep orange at the limb → gold → near-white at the centre; bright enough
-      // that the bloom pass gives it its glow (it used to sit below the threshold and read as a matte plate)
-      "  vec3 col=mix(vec3(1.0,0.40,0.09), vec3(1.0,0.70,0.30), smoothstep(0.0,0.45,mu));",
-      "  col=mix(col, vec3(1.0,0.93,0.80), smoothstep(0.70,1.0,mu));",
-      "  float ld=0.34+0.66*pow(mu,0.55);",                   // photospheric limb darkening
-      "  col*=ld*(0.80+0.36*gn)*(0.82+0.34*hp);",
+      "  vec3 n=normalize(vObjN);",
+      "  vec3 tex=texture2D(uMap,vUv).rgb; float hp=dot(tex,vec3(0.333));",   // the baked heat pattern: the large-scale mottling
+      // build 241 — a photosphere you can stand three radii from. GRANULATION: bright convective cells split by dark
+      // intergranular lanes (Worley F2−F1), faded out by screen size so it never aliases into noise from afar
+      "  vec3 gq = n * 150.0; float cpx = length(fwidth(gq));",
+      "  vec2 w = worley(gq); float lane = smoothstep(0.02, 0.42, w.y - w.x);",
+      "  float fine = vn(gq * 3.1);",
+      "  float gran = mix(1.0, (0.80 + 0.24 * lane) * (1.04 - 0.16 * w.x) * (0.95 + 0.10 * fine), 1.0 - smoothstep(0.35, 0.9, cpx));",   // real granulation contrast is ~15%
+      "  float sg = vn(n * 18.0) * 0.6 + vn(n * 41.0) * 0.4;",                         // supergranulation / the magnetic network
+      // SUNSPOTS: rare, in the two active belts (≈8°–32° latitude): a dark umbra inside a mottled penumbra,
+      // ringed by bright faculae that only show near the limb — as in any white-light photograph
+      "  float lat = abs(n.y), belt = smoothstep(0.12, 0.2, lat) * (1.0 - smoothstep(0.48, 0.58, lat));",
+      "  float sn = vn(n * 7.0 + 3.1) * 0.62 + vn(n * 17.0 + 7.7) * 0.28 + vn(n * 44.0) * 0.10;",
+      "  float pen = belt * smoothstep(0.735, 0.765, sn), umb = belt * smoothstep(0.785, 0.80, sn);",
+      "  float fac = belt * smoothstep(0.62, 0.73, sn) * (1.0 - pen) * pow(1.0 - mu, 1.6);",
+      // LIMB DARKENING per channel: the limb is cooler, so it darkens most in blue and turns orange-red
+      "  vec3 ld = vec3(0.42 + 0.58 * pow(mu, 0.40), 0.26 + 0.74 * pow(mu, 0.58), 0.12 + 0.88 * pow(mu, 0.80));",
+      "  vec3 col = vec3(1.0, 0.86, 0.64) * ld * gran * (0.93 + 0.14 * sg) * (0.90 + 0.18 * hp);",
+      "  col *= 1.0 - 0.45 * pen - 0.42 * umb;",
+      "  col += fac * vec3(0.34, 0.26, 0.15);",
       "  col=mix(col,col*uWarmTint,0.18);",
-      "  col*=uExposure*0.98;",                                 // tone-mapped ONCE by the pipeline
+      "  col*=uExposure*1.38;",                                 // HDR: the centre must clear the bloom threshold (0.86) — that is what makes it BLAZE, not a matte plate
       "  gl_FragColor=vec4(col,1.0);",
       "}"
     ].join("\n");
@@ -561,6 +590,7 @@ export function mountNyeArmature(THREE, scene, opts) {
       vertexShader: sunVert,
       fragmentShader: sunCoreFrag
     });
+    sunCoreMat.extensions = { derivatives: true };   // fwidth: the granulation fades by its own on-screen size (WebGL1 needs the extension)
     disableToneMapping(sunCoreMat);
     const sunCoreMesh = new T.Mesh(new T.SphereGeometry(SUN_BASE_R, 120, 120), sunCoreMat);
     sunCoreMesh.name = "NyeSunCore";
@@ -622,10 +652,10 @@ export function mountNyeArmature(THREE, scene, opts) {
        ADDITIVE blend reads as glow, low opacity, high limb-power so each shell hugs the
        limb and fades toward its interior — a soft corona that thins smoothly outward */
     const coronaDef = [
-      [1.10, 0.62, 1.55, 1.16, 0.74, 0.55, 1.6, 96],
-      [1.66, 0.30, 1.40, 0.94, 0.56, 0.48, 2.0, 64],
-      [2.90, 0.13, 1.18, 0.74, 0.42, 0.34, 2.6, 48],
-      [4.60, 0.055, 1.12, 0.80, 0.50, 0.20, 1.05, 32]   // vast soft halo: the sun GLOWS from any distance (depth-correct, unlike a sprite)
+      [1.10, 0.62, 1.60, 1.02, 0.56, 0.55, 1.6, 96],
+      [1.66, 0.17, 1.55, 0.80, 0.38, 0.48, 2.0, 64],   // build 241: the outer shells read as a murky olive band under the
+      [2.90, 0.07, 1.35, 0.64, 0.30, 0.34, 2.6, 48],   // alpha-gated composite — kept faint and warm; the bloom glare carries the glow
+      [4.60, 0.04, 1.25, 0.66, 0.36, 0.20, 1.05, 32]   // vast soft halo: the sun GLOWS from any distance (depth-correct, unlike a sprite)
     ];
     for (let i = 0; i < coronaDef.length; i++) {
       const cd = coronaDef[i];
@@ -927,7 +957,11 @@ export function mountNyeArmature(THREE, scene, opts) {
           "  float b = length(P - vC);",
           "  float alt = (b - vR) / vR;",
           "  float g = alt >= 0.0 ? exp(-alt / 0.024) : 0.30 + 0.70 * smoothstep(-0.30, 0.0, alt);",
-          "  float ndl = dot(normalize(P - vC), L);",
+          // over the disc the closest-approach point is a flat plane through the centre — lighting it drew the
+          // terminator as a straight line; light the air at the real surface point the ray reaches instead
+          "  vec3 Nn = normalize(P - vC);",
+          "  if (b < vR) { float th = tca - sqrt(max(vR * vR - b * b, 0.0)); Nn = normalize(cameraPosition + D * max(th, 0.0) - vC); }",
+          "  float ndl = dot(Nn, L);",
           "  float day = 0.08 + 0.92 * smoothstep(-0.28, 0.25, ndl);",       // day-side glow, night-side fade
           "  vec3 blue = vec3(0.30, 0.55, 1.0);",
           "  float band = (1.0 - smoothstep(0.0, 0.40, abs(ndl))) * smoothstep(-0.5, -0.05, ndl);", // terminator belt
@@ -1273,7 +1307,10 @@ export function mountNyeArmature(THREE, scene, opts) {
     const edge = Math.max(Math.abs(_gnfNdc.x), Math.abs(_gnfNdc.y));
     const w = Math.min(1, Math.max(0, (edge - 0.42) / 0.36));
     const lo = this.isMesh ? 14 : 70, span = this.isMesh ? 30 : 90;   // teeth are smaller than glyph discs
-    const t = Math.min(1, Math.max(0, (px - lo) / span)) * (w * w * (3 - 2 * w));
+    let t = Math.min(1, Math.max(0, (px - lo) / span)) * (w * w * (3 - 2 * w));
+    // true scale: the rings are Solar-System sized, so passing one of their glyphs means a medallion millions of km
+    // wide swelling across the screen. Any glyph past ~a quarter of the view melts, centred or not.
+    if (TS) t = Math.max(t, Math.min(1, Math.max(0, (px - (this.isMesh ? 36 : 200)) / (this.isMesh ? 60 : 160))));
     m.opacity = this.userData._gnfOp * (1 - t * t * (3 - 2 * t));
   }
   function glyphNearFadeAfter() {

@@ -50,3 +50,10 @@ Tiles are fetched through this site's own edge function; streetlight positions a
 `earth_clouds_2048.png`, `earth_specular_2048.jpg` and `earth_normal_2048.jpg` textures shipped with the three.js
 examples (r160, https://github.com/mrdoob/three.js — MIT licence), which derive from NASA's Blue Marble imagery
 (NASA Earth Observatory, public domain).
+
+## True-scale Solar System (build 241)
+Positions are computed in the page, not shipped as data. Planets: E. M. Standish, "Keplerian Elements for
+Approximate Positions of the Major Planets" (JPL Solar System Dynamics), Table 1. Moon: J. Meeus, *Astronomical
+Algorithms* (2nd ed.), ch. 47, principal periodic terms. Planetary spin axes: the IAU Working Group on
+Cartographic Coordinates and Rotational Elements report (Archinal et al., *Celestial Mechanics and Dynamical
+Astronomy* 130:22, 2018). Body radii: the same report and NASA planetary fact sheets.
