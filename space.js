@@ -1228,13 +1228,16 @@
       "Ross 248": "罗斯 248", "Groombridge 34": "格鲁姆布里奇 34", "Lacaille 9352": "拉卡伊 9352", "Lacaille 8760": "拉卡伊 8760",
       Miaplacidus: "南船五", Avior: "海石一", Alsephina: "天社一", Alnair: "鹤一", Atria: "三角形三", Peacock: "孔雀十一", Tiaki: "鹤二",
       Sargas: "尾宿五", Menkent: "库楼三", "Struve 2398 A": "斯特鲁维 2398 A", "Struve 2398 B": "斯特鲁维 2398 B", "EZ Aqr": "宝瓶座 EZ" };
+    // the catalogue is fetched at page start (it is only 284 KB, but on a slow line it must not queue behind the scene);
+    // it is BUILT once the true-scale world exists
+    var _hygP = TRUE_SCALE ? Promise.all([
+      fetch("data/stars-hyg.bin").then(function (r) { return r.ok ? r.arrayBuffer() : null; }),
+      fetch("data/stars-hyg-names.json").then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })
+    ]).catch(function (e) { window.__space.trueStarsError = String(e); return [null, null]; }) : null;
     function loadTrueStars() {
-      if (_trueStars || loadTrueStars._p) return;
-      loadTrueStars._p = Promise.all([
-        fetch("data/stars-hyg.bin").then(function (r) { return r.ok ? r.arrayBuffer() : null; }),
-        fetch("data/stars-hyg-names.json").then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })
-      ]).then(function (res) { if (res[0] && natalSky && natalSky.skyDir) buildTrueStars(res[0], res[1]); })
-        .catch(function (e) { window.__space.trueStarsError = String(e); });
+      if (_trueStars || loadTrueStars._p || !_hygP) return;
+      loadTrueStars._p = _hygP.then(function (res) { if (res && res[0] && natalSky && natalSky.skyDir) buildTrueStars(res[0], res[1]); })
+        .catch(function (e) { window.__space.trueStarsError = String(e && e.stack || e); });
     }
     function buildTrueStars(buf, names) {
       var n = new Uint32Array(buf, 0, 1)[0];
