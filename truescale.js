@@ -15,16 +15,22 @@ export var LY_KM = 9460730472580.8;
 
 /* the anchors: [ladder distance, TRUE distance in km]. The far tiers come from the cosmic-address table:
    a camera at camLenPeak framing a structure of sceneRadius stands realScale × peak / sceneRadius away. */
-export function ladderAnchors(kmPerUnit, layers) {
+export function ladderAnchors(kmPerUnit, layers, rates) {
+  // rates (optional): a tier's own internal scale, scene units per light-year. When given, the tier's rail stop sits at
+  // exactly the true distance from which its LINEAR model looks the way the ladder framed it (peak / rate) — so a camera
+  // placed at true distance × rate stands at the very same spot at every stop.
   var a = [[8, 8 * kmPerUnit], [40, 15 * AU_KM], [128, 60 * AU_KM]];
-  var last = 128;
+  var last = 128, lastRate = 0;
   (layers || []).forEach(function (ly) {
-    if (!ly || !(ly.realScaleLy > 0) || !(ly.camLenPeak > last) || !(ly.sceneRadius > 0)) return;
+    if (!ly || !(ly.camLenPeak > last)) return;
     if (ly.id === "earth" || ly.id === "solar") return;
-    a.push([ly.camLenPeak, ly.realScaleLy * LY_KM * ly.camLenPeak / ly.sceneRadius]);
+    var r = rates && rates[ly.id];
+    if (r > 0) { a.push([ly.camLenPeak, ly.camLenPeak / r * LY_KM]); lastRate = r; }
+    else if (ly.realScaleLy > 0 && ly.sceneRadius > 0) a.push([ly.camLenPeak, ly.realScaleLy * LY_KM * ly.camLenPeak / ly.sceneRadius]);
+    else return;
     last = ly.camLenPeak;
   });
-  if (last < 118000) a.push([118000, 2.0e11 * LY_KM]);   // beyond the observable horizon: a gentle cap, not an extrapolation
+  if (last < 118000) a.push([118000, lastRate > 0 ? 118000 / lastRate * LY_KM : 2.0e11 * LY_KM]);   // beyond the observable horizon
   return a;
 }
 
@@ -60,8 +66,8 @@ function pchip(xs, ys, d0) {
 }
 
 /* the ladder: G (ladder → true scene units), Ginv, and the local log–log slope dlnG/dlnr */
-export function makeLadder(kmPerUnit, layers) {
-  var A = ladderAnchors(kmPerUnit, layers);
+export function makeLadder(kmPerUnit, layers, rates) {
+  var A = ladderAnchors(kmPerUnit, layers, rates);
   var R0 = A[0][0];
   var xs = A.map(function (p) { return Math.log(p[0]); }), ys = A.map(function (p) { return Math.log(p[1] / kmPerUnit); });
   var P = pchip(xs, ys, 1);   // slope 1 at r = 8 joins the identity smoothly

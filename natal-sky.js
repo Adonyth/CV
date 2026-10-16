@@ -1031,6 +1031,24 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var p = new T.Points(g, mat(sizePx, op)); p.name = name; p.frustumCulled = false; if (order != null) p.renderOrder = order; belt.add(p);
       return p;
     }
+    // the named clusters and superclusters become landmarks you can click and fly to (invisible pick spheres at their
+    // true supergalactic seats, same interaction as every nebula); a supercluster sharing its cluster's seat is skipped
+    if (LSS) {
+      var _seen = [];
+      function lssPick(e, r, kind) {
+        if (!e || !e.sg || !e.name) return;
+        var pos = P3(e.sg);
+        for (var q = 0; q < _seen.length; q++) if (_seen[q].distanceTo(pos) < K * 1.5) return;
+        _seen.push(pos);
+        var sh = new T.Mesh(new T.SphereGeometry(r, 10, 8), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
+        sh.position.copy(pos); sh.name = "DSOPick_lss_" + e.id;
+        sh.userData.nyePick = "dso_lss_" + e.id; sh.userData.dsoViewDist = r * 2.8; sh.userData.dsoFocusMin = r * 0.45;
+        sh.userData.dsoMinCam = 600; sh.userData.dsoName = e.name; sh.userData.lssKind = kind;
+        dsoPickGroup.add(sh);
+      }
+      (LSS.clusters || []).forEach(function (c) { lssPick(c, K * (0.8 + 1.8 * (c.rich || 0.5)), "cluster"); });
+      (LSS.superclusters || []).forEach(function (sc2) { lssPick(sc2, K * (3.5 + 6 * (sc2.rich || 0.5)), "supercluster"); });
+    }
     if (o.galXYZ && o.galRGB && o.galXYZ.length >= 3) {
       // the galaxy field (real 2MRS) — crisp cores + multi-tier bloom = refined glowing web
       buildLayer(o.galXYZ, o.galRGB, mobile ? 1.85 : 2.35, 1.0, "LargeScaleStructure", -3, mobile ? 5.2 : 6.4, 0.155, 2, true);
@@ -2842,6 +2860,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
 
   /* ---------------- lifecycle ---------------- */
   var _galBuilt = false; var _impV = new T.Vector3();
+  var _tsGal = false;   // true scale owns the galaxy's recession (no ladder "member-knot" dimming)
   var _figFade = 1, _sfGain = 1, _tsDV = new T.Vector3(), _tsSoloDso = null;
   function backdropMulDso(rec) { return (_tsSoloDso && _tsSoloDso !== rec.id) ? 0.35 : 1; }   // admiring one wonder: the others step back   // _sfGain: true scale — the procedural field gives way once the real stars swing by   // true scale: the zodiac figures hang at infinity — they melt once you leave the Solar System
   var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null, _sfObj = null, _sfMat = null, _sfBase = 1, _bdT = 0, _keepGal = false, _galMats = null, _localHide = null, _nsObj = null, _nsMat = null, _nsBase = 1, _lhTries = 0, _tierSeen = {}, _lssObjs = null, _tierScaleOn = true;
@@ -3069,7 +3088,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
           // MEMBER-KNOT — bright enough to anchor the Local Group frame, never the blown-white blob of
           // 118k full-opacity points; (2) fade the knot out entirely (11500→14500) before the Sheet owns
           // the frame. Continuous at the MW handoff (tail ≈ 0.97 at 6800).
-          var _gTail = LOD ? ((1 - 0.72 * LOD.smooth(6500, 9200, _cl)) * (1 - LOD.smooth(11500, 14500, _cl))) : 1;
+          var _gTail = _tsGal ? 1 : (LOD ? ((1 - 0.72 * LOD.smooth(6500, 9200, _cl)) * (1 - LOD.smooth(11500, 14500, _cl))) : 1);   // true scale: the galaxy shrinks by perspective; the caller fades it by apparent size
           var _gqv = window.__cvQuality || 0;                                    // FIX E: the 22px MilkyWayGlow (_galMats[1], ~42M writes) is the biggest non-survey fill bomb
           // IMPOSTOR VIEW-ANGLE FADE (the sticker fix, part 2): a flat plane reads as a membrane when
           // seen edge-on. Fade the impostor by |cos| of the view angle to the galactic normal — face-on
@@ -3138,7 +3157,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
           }
         }
         if (_localHide) {
-          var _dsoOn = _wMW > 0;
+          var _dsoOn = _wMW > 0 || _tsGal;   // true scale: Andromeda stays a real galaxy at its real distance (no ladder hand-off)
           var _cMW2 = LOD ? LOD.collapse(_cl, "milky-way", 0.16) : 1;
           for (var _hi = 0; _hi < _localHide.dso.length; _hi++) {
             var _de = _localHide.dso[_hi];
@@ -3159,7 +3178,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
             _localHide.core.o.scale.setScalar(_cMW2);
           }
           if (_localHide.andro) {
-            var _aOn = _wMW > 0;
+            var _aOn = _wMW > 0 || _tsGal;
             _localHide.andro.visible = _aOn;
             if (_aOn) {
               _localHide.andro.material.opacity = _localHide.androBase;
@@ -3238,6 +3257,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     setFigureFade: function (f) { _figFade = Math.max(0, Math.min(1, +f || 0)); },
     setStarfieldGain: function (g) { _sfGain = Math.max(0, Math.min(1, +g || 0)); },
     applyTrueDSO: applyTrueDSO,
+    setTrueGalaxy: function (on) { _tsGal = !!on; },
     setSoloDso: function (id) { _tsSoloDso = id || null; },
     setStarScale: function (v) { uniforms.uRefDepth.value = 840 * v; },
     stats: { stars: N, segments: totalSegs, dataNodes: nodeIndex.filter(Boolean).length, planets: planetSprites.length, constellations: cons.length },
