@@ -57,3 +57,11 @@ Approximate Positions of the Major Planets" (JPL Solar System Dynamics), Table 1
 Algorithms* (2nd ed.), ch. 47, principal periodic terms. Planetary spin axes: the IAU Working Group on
 Cartographic Coordinates and Rotational Elements report (Archinal et al., *Celestial Mechanics and Dynamical
 Astronomy* 130:22, 2018). Body radii: the same report and NASA planetary fact sheets.
+
+## Stars at their true distances (build 242)
+`data/stars-hyg.bin` and `data/stars-hyg-names.json` are derived from the **HYG Stellar Database v4.0**
+(David Nash / astronexus, https://github.com/astronexus/HYG-Database), licensed **CC BY-SA 4.0**
+(https://creativecommons.org/licenses/by-sa/4.0/). Changes: kept every star brighter than magnitude 7.0 plus every
+star within 25 pc (17,753 stars), stored as equatorial J2000 positions in parsecs, absolute magnitude and B−V colour,
+plus the proper names of the brightest and nearest. These two derived files are shared under the same CC BY-SA 4.0
+licence.

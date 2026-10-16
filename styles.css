@@ -1025,6 +1025,8 @@ html body.cosmos .ground-hint b{color:var(--amber); font-weight:500; margin-righ
   background:rgba(244,234,214,.92); box-shadow:0 0 6px rgba(255,220,170,.55);}
 .ts-tag.is-dot i{opacity:1;}
 .ts-tag span{padding-left:7px;}
+.ts-tag--star{color:rgba(206,216,232,.62); font-size:9.5px;}
+.ts-tag--star.is-home{color:#ebbc8c;}
 .ts-readout{position:fixed; left:calc(var(--edge, 24px) + 2px); bottom:26px; z-index:6; pointer-events:none; opacity:0; transition:opacity .6s ease;
   font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:rgba(214,204,188,.56);}
 .ts-readout b{color:#ebbc8c; font-weight:500; margin-right:1.1em;}

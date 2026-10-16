@@ -104,7 +104,7 @@
     var nearCam = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 1e9); nearCam.layers.set(0);
     var farCam = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 200000); farCam.layers.set(1);
     var _ts = null;   // the mounted true-scale world: { L, bodies, clusters, farRoots } — null until the Solar System is placed
-    var _tsMods = null, _tsFailed = !TRUE_SCALE, _tsSpaceSky = 0;   // _tsSpaceSky: 1 while the sky hangs at infinity (inside the Solar System)
+    var _tsMods = null, _tsFailed = !TRUE_SCALE, _tsSpaceSky = 0, _tsKFar = 0;   // _tsSpaceSky: 1 while the sky hangs at infinity (inside the Solar System)
 
     /* ================= SPACEENGINE-GRADE PIPELINE (build 220) =================
        ACES filmic tonemapping + selective HDR bloom via EffectComposer. The additive layers
@@ -407,14 +407,24 @@
       nearCam.quaternion.copy(camera.quaternion);
       // the sky only TURNS inside the Solar System (stars at infinity); past ~150 ladder units it starts to
       // travel with the navigation camera, fully by 400 — the old cosmic ladder takes over from there
-      var cl = camera.position.length(), k = Math.max(0, Math.min(1, (cl - 150) / 250));
-      k = k * k * (3 - 2 * k) * (1 - tsFocusWeight());
-      _tsSpaceSky = 1 - k;
+      // Phase 2: the GALAXY at true scale. The Milky-Way tier is built linear (radius 2600 units ↔ 50 kly, the Sun 26 kly
+      // out), so below its rail stop the sky camera stands at the visitor's TRUE distance × 0.052 units/ly — the galaxy
+      // grows around you at its real size, and it meets the ladder exactly at the 67-kly stop (above it, the ladder rules).
+      // A deep-sky wonder is still admired up close in ladder space (its own flight), so that focus pulls it along.
+      var cl = camera.position.length(), fd = cl;
+      if (cl < 3500) fd = Math.min(cl, _ts.L.G(cl) * _ts.kpu / 9460730472580.8 * (2600 / 5e4));
+      _tsKFar += ((soloBody === "dso" || soloBody === "galcore" ? 1 : 0) - _tsKFar) * 0.06;
+      var kf = _tsKFar * _tsKFar * (3 - 2 * _tsKFar);
+      fd = (fd + (cl - fd) * kf) * (1 - tsFocusWeight());
+      var k = cl > 1e-9 ? fd / cl : 0;
+      // the baked Milky-Way band is the sky from INSIDE the disc; it hands over as the galaxy tier fades in (400 → 1500)
+      var kb = Math.max(0, Math.min(1, (fd - 400) / 1100));
+      _tsSpaceSky = 1 - kb * kb * (3 - 2 * kb);
       farCam.position.copy(camera.position).multiplyScalar(k);
       farCam.quaternion.copy(camera.quaternion);
       if (nearCam.fov !== camera.fov || nearCam.aspect !== camera.aspect) { nearCam.fov = camera.fov; nearCam.aspect = camera.aspect; }
       farCam.fov = camera.fov; farCam.aspect = camera.aspect;
-      farCam.near = k > 0 ? camera.near : Math.max(camera.near, 0.5); farCam.far = camera.far;
+      farCam.near = fd > 40 ? camera.near : Math.max(camera.near, 0.5); farCam.far = camera.far;
       farCam.updateProjectionMatrix();
       nearCam.updateMatrixWorld(); farCam.updateMatrixWorld();
     }
@@ -445,7 +455,8 @@
       if (!_ts) { renderer.render(scene, camera); return; }
       syncCams();
       var ac = renderer.autoClear, fog = scene.fog; renderer.autoClear = false;
-      renderer.render(scene, farCam);                   // 1 · the sky, at infinity
+      renderer.render(scene, farCam);                   // 1 · the sky, at infinity (and the far cosmic tiers)
+      if (_trueStars && syncTrueStars() > 0.01) renderer.render(_trueStars.scene, _trueStars.cam);   // 1b · the stars, at their true distances
       scene.fog = null;                                 // 2 · the Solar System, true scale, far slice → near slice
       var sl = nearSlices(!!(controls && controls.isGround()));
       for (var i = sl.length - 2; i >= 0; i -= 2) {
@@ -1196,6 +1207,104 @@
       }
       _spaceStars = pts(P, C, S, "uniform float uOpacity; varying vec3 vC;\nvoid main(){ vec2 p = gl_PointCoord - 0.5; float r2 = dot(p, p) * 4.0; float a = pow(clamp(1.0 - r2, 0.0, 1.0), 1.6); if (a < 0.02) discard;\n  gl_FragColor = vec4(vC, a * uOpacity); }", {}, "SpaceStars", 3);
       if (GP.length) _spaceGlare = pts(GP, GC, GS, "uniform sampler2D uTex; uniform float uOpacity; varying vec3 vC;\nvoid main(){ float a = texture2D(uTex, gl_PointCoord).a; if (a < 0.004) discard; gl_FragColor = vec4(vC, a * uOpacity); }", { uTex: { value: glareTexture() } }, "SpaceStarGlare", 3.1);
+    }
+    /* ===== TRUE SCALE · PHASE 2: the stars at their real distances (HYG v4.0, CC BY-SA 4.0) =====
+       17,753 stars — every one brighter than magnitude 7 plus every star within 25 pc — placed in parsecs in their
+       own scene and drawn by their own camera, which stands at the visitor's TRUE position relative to the Sun.
+       The GPU computes each star's apparent magnitude from there (m = M + 5·log10(d/10 pc)), so from inside the
+       Solar System this IS the real night sky, and once you leave it the near stars swing by in true parallax,
+       the constellations come apart, and the Sun becomes one magnitude-4.8 star among the rest. */
+    var KM_PER_PC = 3.0856775814913673e13;
+    var _trueStars = null;   // { scene, cam, core, glare, sun, names: [{i, en, p}] }
+    var TS_STAR_ZH = { Sirius: "天狼星", Canopus: "老人星", Arcturus: "大角星", "Rigil Kentaurus": "南门二", Vega: "织女星", Capella: "五车二",
+      Rigel: "参宿七", Procyon: "南河三", Achernar: "水委一", Betelgeuse: "参宿四", Hadar: "马腹一", Altair: "河鼓二", Acrux: "十字架二",
+      Aldebaran: "毕宿五", Spica: "角宿一", Antares: "心宿二", Pollux: "北河三", Fomalhaut: "北落师门", Mimosa: "十字架三", Deneb: "天津四",
+      Toliman: "南门二 B", Regulus: "轩辕十四", Adhara: "弧矢七", Castor: "北河二", Gacrux: "十字架一", Shaula: "尾宿八", Bellatrix: "参宿五",
+      Elnath: "五车五", Alnilam: "参宿二", Alnitak: "参宿一", Alioth: "玉衡", Dubhe: "天枢", Alkaid: "摇光", Mirfak: "天船三", Wezen: "弧矢一",
+      Polaris: "北极星", Alphard: "星宿一", Hamal: "娄宿三", Algol: "大陵五", Kochab: "北极二", Saiph: "参宿六", Mirzam: "军市一", Nunki: "斗宿四",
+      Menkalinan: "五车三", Alhena: "井宿三", Rasalhague: "候", Alpheratz: "壁宿二", Mirach: "奎宿九", Diphda: "土司空", Algieba: "轩辕十二",
+      "Kaus Australis": "箕宿三", Ran: "天苑四", "Barnard's Star": "巴纳德星", "Proxima Centauri": "比邻星", "Wolf 359": "沃尔夫 359",
+      "Lalande 21185": "拉朗德 21185", "Luyten's Star": "鲁坦星", "Kapteyn's Star": "卡普坦星", "Ross 128": "罗斯 128", "Ross 154": "罗斯 154",
+      "Ross 248": "罗斯 248", "Groombridge 34": "格鲁姆布里奇 34", "Lacaille 9352": "拉卡伊 9352", "Lacaille 8760": "拉卡伊 8760",
+      Miaplacidus: "南船五", Avior: "海石一", Alsephina: "天社一", Alnair: "鹤一", Atria: "三角形三", Peacock: "孔雀十一", Tiaki: "鹤二",
+      Sargas: "尾宿五", Menkent: "库楼三", "Struve 2398 A": "斯特鲁维 2398 A", "Struve 2398 B": "斯特鲁维 2398 B", "EZ Aqr": "宝瓶座 EZ" };
+    function loadTrueStars() {
+      if (_trueStars || loadTrueStars._p) return;
+      loadTrueStars._p = Promise.all([
+        fetch("data/stars-hyg.bin").then(function (r) { return r.ok ? r.arrayBuffer() : null; }),
+        fetch("data/stars-hyg-names.json").then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })
+      ]).then(function (res) { if (res[0] && natalSky && natalSky.skyDir) buildTrueStars(res[0], res[1]); })
+        .catch(function (e) { window.__space.trueStarsError = String(e); });
+    }
+    function buildTrueStars(buf, names) {
+      var n = new Uint32Array(buf, 0, 1)[0];
+      var xyz = new Float32Array(buf, 4, n * 3), M = new Int16Array(buf, 4 + n * 12, n), CI = new Int16Array(buf, 4 + n * 14, n);
+      var sc = new THREE.Scene(), root = new THREE.Group(); sc.add(root);
+      // HYG is equatorial J2000 (x → RA 0h, z → north pole): orient it exactly as this sky's own frame does
+      var ex = natalSky.skyDir(0, 0, new THREE.Vector3()), ey = natalSky.skyDir(6, 0, new THREE.Vector3()), ez = natalSky.skyDir(0, 90, new THREE.Vector3());
+      root.matrixAutoUpdate = false; root.matrix.makeBasis(ex, ey, ez); root.updateMatrixWorld(true);
+      var col = new Float32Array(n * 3), am = new Float32Array(n);
+      for (var i = 0; i < n; i++) {
+        var ci = CI[i] / 1000, t = Math.max(0, Math.min(1, (ci + 0.3) / 2.2));   // B−V → a blackbody-ish tint (blue-white … orange-red)
+        var r = t < 0.35 ? 0.66 + t : 1.0, g = t < 0.5 ? 0.74 + 0.5 * t : 1.0 - 0.62 * (t - 0.5), bl = t < 0.3 ? 1.0 : Math.max(0.42, 1.0 - 1.1 * (t - 0.3));
+        col[i * 3] = r * 0.78 + 0.22; col[i * 3 + 1] = g * 0.78 + 0.22; col[i * 3 + 2] = bl * 0.78 + 0.22;   // the eye desaturates starlight
+        am[i] = M[i] / 100;
+      }
+      var geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(xyz), 3));
+      geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+      geo.setAttribute("aAbs", new THREE.BufferAttribute(am, 1));
+      geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
+      var U = { uPR: { value: renderer.getPixelRatio() }, uOpacity: { value: 0 }, uPx: { value: 1 }, uTex: { value: glareTexture() } };
+      // apparent magnitude from where the camera truly stands, then the same star look as the base view
+      var vs = "uniform float uPR; uniform float uPx; attribute float aAbs; varying vec3 vC; varying float vT; varying float vF;\n" +
+        "void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); float d = max(length(mv.xyz), 1e-7);\n" +
+        "  float m = aAbs + 5.0 * log(d / 10.0) / 2.302585;\n" +
+        "  float t = clamp((7.0 - m) / 8.1, 0.0, 1.6); vT = t; vF = clamp((7.2 - m) / 0.9, 0.0, 1.0);\n" +
+        "  vC = color * (0.22 + 0.78 * pow(min(t, 1.0), 1.4)) * (1.0 + 0.6 * max(t - 1.0, 0.0));\n" +
+        "  gl_PointSize = (m > 7.2 ? 0.0 : SIZE) * uPR * uPx;\n" +
+        "  gl_Position = projectionMatrix * mv; }";
+      function mat(size, frag) {
+        return new THREE.ShaderMaterial({ uniforms: U, vertexColors: true, transparent: true, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+          vertexShader: vs.replace("SIZE", size), fragmentShader: frag });
+      }
+      var core = new THREE.Points(geo, mat("(1.3 + 2.9 * pow(min(t, 1.0), 2.0) + 6.0 * max(t - 1.0, 0.0)) * 1.6",
+        "uniform float uOpacity; varying vec3 vC; varying float vT; varying float vF;\nvoid main(){ vec2 p = gl_PointCoord - 0.5; float a = pow(clamp(1.0 - dot(p, p) * 4.0, 0.0, 1.0), 1.6); if (a < 0.02) discard;\n" +
+        "  gl_FragColor = vec4(vC, a * uOpacity * vF); }"));
+      var glare = new THREE.Points(geo, mat("(t > 0.69 ? 14.0 + 40.0 * pow(clamp((t - 0.69) / 0.6, 0.0, 1.6), 1.1) : 0.0)",
+        "uniform float uOpacity; uniform sampler2D uTex; varying vec3 vC; varying float vT; varying float vF;\nvoid main(){ float a = texture2D(uTex, gl_PointCoord).a; if (a < 0.004) discard;\n" +
+        "  gl_FragColor = vec4(vC, a * uOpacity * 0.85 * clamp((vT - 0.69) / 0.12, 0.0, 1.0)); }"));
+      core.frustumCulled = glare.frustumCulled = false; root.add(core); root.add(glare);
+      // the Sun as one of them: absolute magnitude 4.83, G2 V — shown once you stand outside its system
+      var sg = new THREE.BufferGeometry();
+      sg.setAttribute("position", new THREE.BufferAttribute(new Float32Array([0, 0, 0]), 3));
+      sg.setAttribute("color", new THREE.BufferAttribute(new Float32Array([1.0, 0.94, 0.84]), 3));
+      sg.setAttribute("aAbs", new THREE.BufferAttribute(new Float32Array([4.83]), 1));
+      var SU = { uPR: U.uPR, uOpacity: { value: 0 }, uPx: U.uPx, uTex: U.uTex };
+      var sunPts = new THREE.Points(sg, new THREE.ShaderMaterial({ uniforms: SU, vertexColors: true, transparent: true, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+        vertexShader: vs.replace("SIZE", "(3.0 + 30.0 * pow(clamp(t, 0.0, 1.6), 1.5))"),
+        fragmentShader: "uniform float uOpacity; uniform sampler2D uTex; varying vec3 vC; varying float vT; varying float vF;\nvoid main(){ float a = max(texture2D(uTex, gl_PointCoord).a, pow(clamp(1.0 - dot(gl_PointCoord - 0.5, gl_PointCoord - 0.5) * 9.0, 0.0, 1.0), 2.0)); if (a < 0.004) discard; gl_FragColor = vec4(vC, a * uOpacity); }" }));
+      sunPts.frustumCulled = false; root.add(sunPts);
+      var cam = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 1e-9, 1e6);
+      var nm = [];
+      if (names && names.names) names.names.forEach(function (e) { var i = e[0]; if (i < n) nm.push({ i: i, en: e[1], zh: TS_STAR_ZH[e[1]] || e[1], p: new THREE.Vector3(xyz[i * 3], xyz[i * 3 + 1], xyz[i * 3 + 2]).applyMatrix4(root.matrix), M: M[i] / 100 }); });
+      _trueStars = { scene: sc, cam: cam, core: core, glare: glare, sun: sunPts, U: U, SU: SU, names: nm, n: n };
+      window.__space.trueStars = n;
+    }
+    function syncTrueStars() {             // the star camera stands where the visitor truly is, in parsecs from the Sun
+      var T = _trueStars, c = T.cam;
+      c.position.copy(nearCam.position).sub(_ts.sun.T).multiplyScalar(_ts.kpu / KM_PER_PC);
+      c.quaternion.copy(camera.quaternion); c.fov = camera.fov; c.aspect = camera.aspect; c.updateProjectionMatrix(); c.updateMatrixWorld();
+      var dpc = c.position.length();
+      // inside the Solar System they are the sky of space (off on the ground, where the base view's own sky leads);
+      // past ~1 kpc the catalogue thins into the Milky Way tier that takes over
+      var op = 0.95 * (1 - _skyAmt) * (1 - Math.max(0, Math.min(1, (Math.log(dpc) - Math.log(900)) / (Math.log(3500) - Math.log(900)))));
+      T.U.uOpacity.value = op; T.U.uPR.value = renderer.getPixelRatio();
+      T.U.uPx.value = Math.max(0.6, Math.min(1.4, innerHeight / 900));
+      // the Sun's own point appears as its true disc and glare leave (≈ 2,000 → 20,000 AU out)
+      var au = dpc * 206264.8;
+      T.SU.uOpacity.value = op * Math.max(0, Math.min(1, (Math.log(au) - Math.log(2000)) / (Math.log(20000) - Math.log(2000))));
+      return op;
     }
     function removeGroundDome() {
       if (groundDome) {
@@ -2174,6 +2283,7 @@
           _ts.orbits = natalSky.addTrueOrbits(orbs, 1 / kpu);
         }
         tsBuildOverlay();
+        loadTrueStars();
         markFarLayers();
         if (controls && controls.setZoomGovernor) controls.setZoomGovernor(tsZoomGovernor);
         window.__space.ts = { bodies: bodies.map(function (b) { return { name: b.name, s: +b.s.toFixed(3), proxyR: +b.proxy.length().toFixed(2), trueKm: Math.round(b.T.length() * kpu) }; }),
@@ -2187,14 +2297,48 @@
     var TS_NAMES = { NyeSun: ["Sun", "太阳", 10], Earth: ["Earth", "地球", 9], NatalJupiter: ["Jupiter", "木星", 8], NatalSaturn: ["Saturn", "土星", 7],
       NyeMoon: ["Moon", "月球", 6], NatalVenus: ["Venus", "金星", 5], NatalMars: ["Mars", "火星", 5], NatalMercury: ["Mercury", "水星", 4],
       NatalUranus: ["Uranus", "天王星", 4], NatalNeptune: ["Neptune", "海王星", 4], NatalPluto: ["Pluto", "冥王星", 3], NatalPlutoMoon: ["Charon", "卡戎", 2] };
+    var _tsT0 = performance.now();
     var _tsTags = [], _tsTagHost = null, _tsReadout = null, _tsStar = null, _tsP = new THREE.Vector3();
     var _tsPV = new THREE.Vector3();
-    function tsProject(v, out) {   // NDC x/y through nearCam, false if behind — independent of the slice's near/far
-      _tsPV.copy(v).applyMatrix4(nearCam.matrixWorldInverse);
-      if (_tsPV.z > -1e-9) return false;
-      var fh = Math.tan(nearCam.fov * Math.PI / 360);
-      out.set(_tsPV.x / (-_tsPV.z * fh * nearCam.aspect), _tsPV.y / (-_tsPV.z * fh), 0);
+    function tsProject(v, out, cam) {   // NDC x/y through a camera (default nearCam), false if behind — independent of the slice's near/far
+      cam = cam || nearCam;
+      _tsPV.copy(v).applyMatrix4(cam.matrixWorldInverse);
+      if (_tsPV.z > -1e-12 * Math.max(1, _tsPV.length())) return false;
+      var fh = Math.tan(cam.fov * Math.PI / 360);
+      out.set(_tsPV.x / (-_tsPV.z * fh * cam.aspect), _tsPV.y / (-_tsPV.z * fh), 0);
       return true;
+    }
+    /* out among the stars: the brightest named stars in view (and the Sun, home) carry a quiet name */
+    var _starTags = [], _starSun = { en: "Sun", zh: "太阳", p: new THREE.Vector3(), M: 4.83 }, _stV = new THREE.Vector3();
+    function tsStarTags(placed) {
+      if (!_trueStars || !_tsTagHost) return;
+      var T = _trueStars, cp = T.cam.position, dpc = cp.length(), W = innerWidth, H = innerHeight;
+      var A = (controls && controls.isGround()) || soloBody === "dso" || soloBody === "galcore" ? 0 : Math.max(0, Math.min(1, (Math.log(Math.max(dpc, 1e-12)) - Math.log(0.012)) / (Math.log(0.06) - Math.log(0.012)))) * T.U.uOpacity.value;
+      var cand = [];
+      if (A > 0.02) {
+        var list = T.names.concat([_starSun]);
+        for (var i = 0; i < list.length; i++) {
+          var st = list[i], d = Math.max(1e-9, st.p.distanceTo(cp)), m = st.M + 5 * Math.log10(d / 10);
+          if ((m < 3.6 || st === _starSun) && tsProject(st.p, _stV, T.cam) && Math.abs(_stV.x) < 0.98 && Math.abs(_stV.y) < 0.96)
+            cand.push({ st: st, m: st === _starSun ? -99 : m, x: (_stV.x * 0.5 + 0.5) * W, y: (-_stV.y * 0.5 + 0.5) * H });
+        }
+        cand.sort(function (a2, b2) { return a2.m - b2.m; });
+      }
+      var shown = 0;
+      for (var c = 0; c < cand.length && shown < 10; c++) {
+        var q = cand[c], clash = false;
+        for (var j = 0; j < placed.length; j++) if (Math.abs(placed[j][0] - q.x) < 64 && Math.abs(placed[j][1] - q.y) < 14) { clash = true; break; }
+        if (clash) continue;
+        placed.push([q.x, q.y]);
+        var tg = _starTags[shown];
+        if (!tg) { tg = document.createElement("div"); tg.className = "ts-tag ts-tag--star"; tg.innerHTML = '<i></i><span class="i18n-en"></span><span class="i18n-zh"></span>'; _tsTagHost.appendChild(tg); _starTags.push(tg); }
+        if (tg._st !== q.st) { tg._st = q.st; tg.children[1].textContent = q.st.en; tg.children[2].textContent = q.st.zh; tg.classList.toggle("is-home", q.st === _starSun); }
+        tg.style.transform = "translate3d(" + (q.x + 3).toFixed(1) + "px," + q.y.toFixed(1) + "px,0)";
+        tg.style.opacity = A.toFixed(3);
+        if (!tg._on) { tg._on = true; tg.classList.add("is-on"); }
+        shown++;
+      }
+      for (var k2 = shown; k2 < _starTags.length; k2++) if (_starTags[k2]._on) { _starTags[k2]._on = false; _starTags[k2].classList.remove("is-on"); }
     }
     function tsBuildOverlay() {
       _tsTagHost = document.createElement("div"); _tsTagHost.className = "ts-tags no-print"; _tsTagHost.setAttribute("aria-hidden", "true");
@@ -2252,6 +2396,7 @@
         }
         if (show !== t.on) { t.on = show; t.el.classList.toggle("is-on", show); }
       }
+      tsStarTags(placed);
       // orbits: global fade × each orbit melts as you near its own planet
       if (_ts.orbits) {
         for (var o = 0; o < _ts.orbits.children.length; o++) {
@@ -2267,21 +2412,27 @@
       // the Sun as a star: fades in as its disc shrinks under ~5 px; sized by its brightness from here
       if (_tsStar) {
         var dS = nearCam.position.distanceTo(_ts.sun.T), discPx = 2 * _ts.sun.Rt / Math.max(1e-9, dS) / fh * H * 0.5;
-        var starA = Math.max(0, Math.min(1, (7 - discPx) / 4)) * (1 - Math.max(0, Math.min(1, (camera.position.length() - 600) / 1400))) * (ground ? 0 : 1);
+        var farOut = _trueStars ? Math.max(0, Math.min(1, (Math.log(Math.max(sunAU, 1e-9)) - Math.log(2000)) / (Math.log(20000) - Math.log(2000))))   // the true-star Sun takes over
+                                : Math.max(0, Math.min(1, (camera.position.length() - 600) / 1400));
+        var starA = Math.max(0, Math.min(1, (7 - discPx) / 4)) * (1 - farOut) * (ground ? 0 : 1);
         var px = Math.max(14, Math.min(70, 70 / Math.pow(Math.max(1, sunAU), 0.22)));
         var sc = px * 2 * fh / H, ps = new THREE.Vector3(); nyeArmature.group.getWorldScale(ps);
         _tsStar.scale.set(sc / ps.x, sc / ps.x, 1);
         _tsStar.material.opacity = starA; _tsStar.visible = starA > 0.01;
       }
       // the sky of space: the real catalogue at infinity (off on the ground, where the base view's own sky leads)
-      if (!_spaceStars && _bsc) buildSpaceStars();
+      if (!_spaceStars && _bsc && !_trueStars && loadTrueStars._p && performance.now() - _tsT0 > 15000) buildSpaceStars();   // fallback only if the true catalogue never arrives
       if (_spaceStars) {
-        var so = 0.95 * _tsSpaceSky * (1 - _skyAmt);
+        var so = _trueStars ? 0 : 0.95 * _tsSpaceSky * (1 - _skyAmt);
         _spaceStars.material.uniforms.uOpacity.value = so; _spaceStars.visible = so > 0.01;
         if (_spaceGlare) { _spaceGlare.material.uniforms.uOpacity.value = so * 0.85; _spaceGlare.visible = so > 0.01; }
       }
       // the ember dust was the old orrery's stand-in for a starry backdrop: inside the true Solar System it goes
-      if (deepFusion && deepFusion.group && camera.position.length() < 600) deepFusion.group.visible = false;
+      if (deepFusion && deepFusion.group && farCam.position.length() < 1500) deepFusion.group.visible = false;
+      // the zodiac figures hang at infinity: true for anyone in the Solar System, false once the real stars swing by
+      var dpcF = info.sunKm / KM_PER_PC;
+      if (natalSky && natalSky.setFigureFade) natalSky.setFigureFade(1 - Math.max(0, Math.min(1, (Math.log(Math.max(dpcF, 1e-9)) - Math.log(0.03)) / (Math.log(1.5) - Math.log(0.03)))));
+      if (natalSky && natalSky.setStarfieldGain) natalSky.setStarfieldGain(_trueStars ? 1 - Math.max(0, Math.min(1, (Math.log(Math.max(dpcF, 1e-9)) - Math.log(0.05)) / (Math.log(5) - Math.log(0.05)))) : 1);
       // the instrument line: how far you truly stand
       if (_tsReadout) {
         var on = !ground && info && camera.position.length() > 8.6;
@@ -2426,7 +2577,7 @@
     var _tsModsP = TRUE_SCALE
       ? Promise.all([import("./ephemeris.js?v=1"), import("./truescale.js?v=1")]).then(function (m) { return { eph: m[0], ladder: m[1] }; }).catch(function () { return null; })
       : Promise.resolve(null);
-    Promise.all([import("./nye-armature.js?v=52"), _tsModsP]).then(function (mods2) {
+    Promise.all([import("./nye-armature.js?v=53"), _tsModsP]).then(function (mods2) {
       var mod = mods2[0];
       _tsMods = mods2[1]; if (!_tsMods) _tsFailed = true;
       try {
@@ -2549,7 +2700,7 @@
     ]).then(function (arr) {
       var natalData = arr[0], lssData = arr[1];
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=153").then(function (mod) {
+      return import("./natal-sky.js?v=154").then(function (mod) {
         natalOpts = {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -3889,6 +4040,10 @@
             fs.occ += ((fs._occTarget == null ? 1 : fs._occTarget) - fs.occ) * 0.18;
             var edge = Math.max(Math.abs(ndc.x), Math.abs(ndc.y));
             var fade = fs.occ * (1 - Math.max(0, (edge - 0.92)) / 0.33);
+            if (_ts) {   // a lens flare belongs to a blinding disc: it fades as the Sun recedes into a star (30 → 300 AU)
+              var fAU = fc.position.distanceTo(_ts.sun.T) * _ts.kpu / 149597870.7;
+              fade *= 1 - Math.max(0, Math.min(1, (Math.log(Math.max(fAU, 1e-9)) - Math.log(30)) / (Math.log(300) - Math.log(30))));
+            }
             var fovH = Math.tan(fc.fov * Math.PI / 360);
             for (var fi = 0; fi < fs.sprites.length; fi++) {
               var sp2 = fs.sprites[fi], d2 = sp2.userData._def;

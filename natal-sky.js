@@ -2803,6 +2803,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
 
   /* ---------------- lifecycle ---------------- */
   var _galBuilt = false; var _impV = new T.Vector3();
+  var _figFade = 1, _sfGain = 1;   // _sfGain: true scale — the procedural field gives way once the real stars swing by   // true scale: the zodiac figures hang at infinity — they melt once you leave the Solar System
   var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null, _sfObj = null, _sfMat = null, _sfBase = 1, _bdT = 0, _keepGal = false, _galMats = null, _localHide = null, _nsObj = null, _nsMat = null, _nsBase = 1, _lhTries = 0, _tierSeen = {}, _lssObjs = null, _tierScaleOn = true;
   // drives tier presence only. Opacity is never used for inter-tier transitions;
   // the address transition must read as real geometric zoom/collapse.
@@ -2833,14 +2834,14 @@ export function buildNatalSky(THREE, scene, data, opts) {
     if (t0 === null) t0 = sec;
     var age = sec - t0;
     var pulse = age < 9 ? 1 + 0.8 * Math.max(0, 1 - age / 9) : 1;
-    var _figOn = zoomMul > 0;   // FIX F: opacity-0 figures were still 24 additive draws at every deep tier — hide them outright
+    var _figOn = zoomMul > 0 && _figFade > 0.01;   // FIX F: opacity-0 figures were still 24 additive draws at every deep tier — hide them outright
     for (var ci = 0; ci < lineEntries.length; ci++) {
       var e = lineEntries[ci]; if (!e) continue;
       if (e.o1) { e.o1.visible = _figOn; if (e.o2) e.o2.visible = _figOn; }
       if (!_figOn) continue;
       var hl = isLit(ci) ? 1.9 : 1;
-      e.mat.opacity = Math.min(1.0, e.base * (isDark ? 1 : 1.18) * pulse * hl) * backdropMul * zoomMul;
-      if (e.glowMat) e.glowMat.opacity = Math.min(0.68, e.base * 0.42 * pulse * hl) * backdropMul * zoomMul;
+      e.mat.opacity = Math.min(1.0, e.base * (isDark ? 1 : 1.18) * pulse * hl) * backdropMul * zoomMul * _figFade;
+      if (e.glowMat) e.glowMat.opacity = Math.min(0.68, e.base * 0.42 * pulse * hl) * backdropMul * zoomMul * _figFade;
     }
   }
   /* when the visitor flies IN to admire one deep-sky wonder, the whole backdrop steps aside
@@ -2992,7 +2993,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
         if (_sfMat) {
           var _sfOn = _cl < 5000 || _wMW > 0;
           _sfObj.visible = _sfOn;
-          _sfMat.opacity = _sfBase * (1 - 0.55 * _bdT) * (1 - 0.50 * _groundSky);   // on the ground: a faint procedural background under the real catalogue stars (SpaceEngine does the same past its catalogues)   // lying at the base the deep field steps back: the real sky leads with its bright stars and the Milky Way
+          _sfMat.opacity = _sfBase * (1 - 0.55 * _bdT) * (1 - 0.50 * _groundSky) * _sfGain;   // on the ground: a faint procedural background under the real catalogue stars (SpaceEngine does the same past its catalogues)   // lying at the base the deep field steps back: the real sky leads with its bright stars and the Milky Way
         }
         if (!_nsMat) { var _nso = group.getObjectByName("natalStars"); if (_nso && _nso.material) { _nsObj = _nso; _nsMat = _nso.material; _nsBase = _nso.material.opacity; } }
         if (_nsMat) {
@@ -3169,6 +3170,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // Constellations are an apparent-sky layer. At galactic scales they are not
     // physical objects, so this is a hard visibility gate, not a fade transition.
     setZodiacFade: function (t) { zoomMul = t >= 1 ? 0 : 1; },
+    setFigureFade: function (f) { _figFade = Math.max(0, Math.min(1, +f || 0)); },
+    setStarfieldGain: function (g) { _sfGain = Math.max(0, Math.min(1, +g || 0)); },
     setStarScale: function (v) { uniforms.uRefDepth.value = 840 * v; },
     stats: { stars: N, segments: totalSegs, dataNodes: nodeIndex.filter(Boolean).length, planets: planetSprites.length, constellations: cons.length },
     dispose: function () {
