@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en" class="locale-en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#0b0a09" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <title>和平请柬 · Jiaxuan Chen</title>
+  <meta name="description" content="A Chinese-language monograph written as an invitation: at the threshold of leaving university, an attempt to read the age being entered and judge where it is going — productive cap" />
+  <meta name="author" content="Jiaxuan Chen (陈嘉轩)" />
+  <link rel="canonical" href="https://jiaxuanchen.pages.dev/books/heping.html" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Jiaxuan Chen · 陈嘉轩" />
+  <meta property="og:title" content="和平请柬 · Jiaxuan Chen" />
+  <meta property="og:description" content="A Chinese-language monograph written as an invitation: at the threshold of leaving university, an attempt to read the age being entered and judge where it is going — productive cap" />
+  <meta property="og:url" content="https://jiaxuanchen.pages.dev/books/heping.html" />
+  <meta property="og:image" content="https://jiaxuanchen.pages.dev/og-cover.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "Book", "name": "和平请柬", "headline": "和平请柬", "description": "A Chinese-language monograph written as an invitation: at the threshold of leaving university, an attempt to read the age being entered and judge where it is going — productive capacity outrunning our institutional language, and the question of who pays for that gap.", "inLanguage": ["en", "zh"], "url": "https://jiaxuanchen.pages.dev/books/heping.html", "datePublished": "2026", "creativeWorkStatus": "Published 2026 · hardcover", "author": {"@type": "Person", "name": "Jiaxuan Chen", "alternateName": "陈嘉轩", "url": "https://jiaxuanchen.pages.dev/", "identifier": "https://orcid.org/0009-0008-5211-4313"}, "isPartOf": {"@type": "WebSite", "name": "Jiaxuan Chen · 陈嘉轩", "url": "https://jiaxuanchen.pages.dev/"}}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+/* ============================================================
+   READING PAGE — "Quiet Instrument" refinement (item pages).
+   Drop-in replacement for the inlined reading-page block AND the
+   CSS string in scripts/gen-works.py. Locked palette; adds ONE
+   prose-contrast tint (--read) + one 8px spacing scale. EN + 中文.
+   ============================================================ */
+:root{
+  /* locked palette — unchanged */
+  --page:#0b0a09; --ink:#f4f0e8; --body:#bdb6a8; --muted:#8a8276;
+  --accent:#e0876a; --gold:#e8c37a; --hairline:rgba(255,255,255,.10);
+  /* added: one reading-contrast step, a same-hue tint of the locked ramp */
+  --read:#cbc4b6;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --serif:"Newsreader",Georgia,"Songti SC",serif;
+  /* the single 8px spacing scale — kills 14/16/26/34/44/52 */
+  --s0:4px; --s1:8px; --s2:12px; --s3:16px; --s4:24px;
+  --s5:32px; --s6:48px; --s7:64px; --s8:96px; --s9:128px;
+}
+*{margin:0; padding:0; box-sizing:border-box;}
+body{background:var(--page); color:var(--body); font-family:var(--serif);
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  overflow-x:hidden; min-height:100vh; animation:pageIn .5s ease both;}
+@keyframes pageIn{from{opacity:0; transform:translateY(7px);} to{opacity:1; transform:none;}}
+@media(prefers-reduced-motion:reduce){ body{animation:none;} }
+.locale-en .i18n-zh{display:none!important;} .locale-zh .i18n-en{display:none!important;}
+a{color:inherit; text-decoration:none;}
+::selection{background:rgba(224,135,106,.22); color:var(--ink);}
+:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:4px;}
+
+/* ── fixed chrome — unified to one hairline, quieter ──────── */
+.chrome{position:fixed; top:18px; left:18px; right:18px; z-index:10; display:flex;
+  justify-content:space-between; gap:10px; flex-wrap:wrap; pointer-events:none;}
+.chrome > *{pointer-events:auto;}
+.backs{display:flex; gap:var(--s1); flex-wrap:wrap;}
+.map-back{display:inline-flex; align-items:center; gap:var(--s1); font-family:var(--mono);
+  font-size:12.5px; letter-spacing:.06em; color:var(--ink); background:rgba(11,10,9,.72);
+  border:1px solid var(--hairline); border-radius:999px; padding:11px 16px;
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+  transition:color .2s ease, border-color .2s ease;}
+.map-back:hover{color:var(--accent); border-color:var(--accent);}
+.lang{display:inline-flex; padding:3px; border-radius:999px; border:1px solid var(--hairline);
+  background:rgba(11,10,9,.72); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); height:fit-content;}
+.lang button{border:none; background:transparent; color:var(--body); font-family:var(--mono);
+  font-size:12px; padding:9px 13px; border-radius:999px; cursor:pointer; line-height:1;
+  transition:color .2s ease;}
+.lang button:hover{color:var(--ink);}
+.lang button[aria-pressed="true"]{background:var(--accent); color:#1a1109;}
+.stamp{position:fixed; right:20px; bottom:8px; z-index:10; font-family:var(--mono);
+  font-size:10px; color:var(--muted); opacity:.7; pointer-events:none; letter-spacing:.08em;}
+
+/* ── reading column (kept at 760px shell; prose capped at 64ch) ── */
+main{position:relative; z-index:1; max-width:760px; margin:0 auto;
+  padding:var(--s9) 24px var(--s7);}
+
+/* ── masthead ─────────────────────────────────────────────── */
+.eyebrow{font-family:var(--mono); font-size:10.5px; letter-spacing:.26em;
+  text-transform:uppercase; color:var(--gold); line-height:1;
+  display:flex; align-items:center; gap:1em;}
+.eyebrow::before{content:""; width:1.6em; height:1px; background:var(--gold); opacity:.55;}
+.locale-zh .eyebrow{letter-spacing:.14em;}
+
+h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"opsz" 44;
+  font-size:clamp(31px,2.2rem + 1.1vw,46px); font-weight:500; color:var(--ink);
+  line-height:1.14; letter-spacing:-0.014em; word-spacing:-0.01em; margin:var(--s3) 0 var(--s2);
+  text-wrap:balance;}
+.locale-zh h1{font-variation-settings:"opsz" 40; line-height:1.26; letter-spacing:.01em;
+  text-wrap:normal;}
+
+/* meta: markup-free masthead. Works on the existing
+   `<b>year</b> · field · authorship <br> status` structure. */
+.meta{font-family:var(--mono); font-size:11.5px; color:var(--muted);
+  letter-spacing:.06em; word-spacing:.04em; line-height:1.7; margin-top:var(--s3);
+  font-variant-numeric:tabular-nums lining-nums; font-feature-settings:"tnum" 1,"lnum" 1;}
+.meta::before{content:""; display:block; width:24px; height:1px; margin-bottom:var(--s2);
+  background:linear-gradient(to right, var(--gold), color-mix(in srgb,var(--gold) 10%,transparent));}
+.meta b{color:var(--accent); font-weight:500;}   /* the year = the one coral value */
+.locale-zh .meta{letter-spacing:.08em; line-height:1.85;}
+
+/* the measurement baseline — gold, calmer peak, fades right */
+.rule{height:1px; margin:var(--s5) 0 var(--s5);
+  background:linear-gradient(to right, rgba(232,195,122,.32) 0%, rgba(232,195,122,.10) 42%, transparent 78%);}
+
+/* ── body: standfirst lede + prose (no drop-cap) ──────────── */
+.desc{font-kerning:normal; text-rendering:optimizeLegibility;
+  -webkit-font-feature-settings:"kern" 1,"liga" 1,"calt" 1; font-feature-settings:"kern" 1,"liga" 1,"calt" 1;}
+.desc p{font-family:var(--serif); font-size:17px; line-height:1.74; color:var(--read);
+  max-width:64ch; margin-bottom:1.4em; font-variation-settings:"opsz" 16;
+  font-variant-numeric:proportional-nums oldstyle-nums; font-feature-settings:"pnum" 1,"onum" 1,"kern" 1,"liga" 1;
+  text-align:justify; text-wrap:pretty; hanging-punctuation:first last;
+  -webkit-hyphens:auto; hyphens:auto; -webkit-hyphenate-limit-chars:6 3 3; hyphenate-limit-chars:6 3 3;}
+.desc p:last-child{margin-bottom:0;}
+.desc p:first-child:not(:last-child){font-size:19px; line-height:1.6; color:var(--ink); margin-bottom:20px;
+  font-variation-settings:"opsz" 26; letter-spacing:.002em; text-align:left; hyphens:none;}
+.locale-zh .desc p{font-size:16.5px; line-height:1.95; letter-spacing:.02em;
+  text-align:justify; text-justify:inter-character;
+  font-variant-numeric:normal; font-feature-settings:normal;
+  hanging-punctuation:none; -webkit-hyphens:none; hyphens:none;}
+.locale-zh .desc p:first-child:not(:last-child){font-size:18px; line-height:1.85; letter-spacing:.02em; color:var(--ink);}
+
+/* ── link pills: whisper-quiet, one primary (first) ───────── */
+.links{margin-top:var(--s6); display:flex; flex-wrap:wrap; gap:var(--s1);}
+.links a{display:inline-flex; align-items:center; gap:var(--s1); white-space:nowrap;
+  font-family:var(--mono); font-size:12px; letter-spacing:.05em; color:var(--body);
+  border:1px solid var(--hairline); border-radius:999px; padding:10px 16px;
+  transition:color .2s ease, border-color .2s ease, background .2s ease;}
+.links a:first-child{color:var(--ink); border-color:rgba(255,255,255,.22); box-shadow:inset 0 0 0 .5px rgba(232,195,122,.10);}
+.links a:hover{color:var(--accent); border-color:var(--accent); background:rgba(224,135,106,.06);}
+.links .cite{cursor:pointer; background:transparent; font-family:var(--mono); font-size:12px; letter-spacing:.05em;
+  color:var(--body); border:1px solid var(--hairline); border-radius:999px; padding:10px 16px;
+  transition:color .2s ease, border-color .2s ease, background .2s ease;}
+.links .cite:hover{color:var(--accent); border-color:var(--accent); background:rgba(224,135,106,.06);}
+
+/* ── skyline note ─────────────────────────────────────────── */
+.skyline{margin-top:var(--s6); font-family:var(--mono); font-size:10.5px; color:var(--muted);
+  letter-spacing:.18em; text-shadow:0 0 18px rgba(0,0,0,.6);}
+
+/* ── pager: quiet dir, serif title carries it ─────────────── */
+.pager{margin-top:var(--s7); padding-top:var(--s4); border-top:1px solid var(--hairline);
+  display:flex; justify-content:space-between; gap:var(--s5);}
+.pager a{flex:1 1 0; max-width:48%; color:var(--muted); transition:color .2s ease;}
+.pager a.next{text-align:right;}
+.pager a.empty{visibility:hidden;}
+.pager a .dir{display:block; margin-bottom:var(--s1); font-family:var(--mono);
+  font-size:10px; letter-spacing:.14em; text-transform:uppercase; opacity:.75;
+  transition:color .2s ease;}
+.pager a .nm{font-family:var(--serif); font-size:16px; font-weight:500; color:var(--body);
+  line-height:1.3; font-variation-settings:"opsz" 16;}
+.pager a:hover .dir{color:var(--accent); opacity:1;}
+.pager a:hover .nm{color:var(--ink);}
+.locale-zh .pager a .nm{font-size:15.5px; line-height:1.5;}
+
+/* ── footer colophon: grouped fields, real air ────────────── */
+.foot{position:relative; z-index:1; max-width:760px; margin:0 auto; padding:0 24px 72px;}
+.foot__rule{height:1px; background:var(--hairline); margin-bottom:var(--s4);}
+.foot__nav{display:flex; flex-wrap:wrap; column-gap:var(--s5); row-gap:14px; align-items:baseline;}
+.foot__nav a, .foot__nav span.lbl{font-family:var(--mono); font-size:11.5px; letter-spacing:.06em; color:var(--muted);}
+.foot__nav a{transition:color .2s ease;}
+.foot__nav a:hover{color:var(--accent);}
+.foot__nav a.cur{color:var(--ink);}
+.foot__nav .lbl{font-size:10.5px; color:var(--gold); text-transform:uppercase; letter-spacing:.14em; margin-right:2px;}
+.locale-zh .foot__nav .lbl{letter-spacing:.1em;}
+
+/* index constellation SVG — whisper, don't decorate (item pages leave empty) */
+.config{position:fixed; top:50%; right:4%; transform:translateY(-50%);
+  width:min(46vw,540px); height:min(46vw,540px); z-index:0; pointer-events:none; opacity:.38;}
+.config .cf-l line{stroke:rgba(255,255,255,.10); stroke-width:.25;}
+.config .cf-d circle{fill:var(--gold); opacity:.42;}
+@media(max-width:1080px){ .config{display:none;} }
+
+/* ── mobile ───────────────────────────────────────────────── */
+@media(max-width:640px){
+  main{padding:88px 20px var(--s6);}   /* clear the fixed back/lang chrome even when it wraps to two rows */
+  h1{letter-spacing:-0.006em;}
+  .locale-zh h1{line-height:1.3;}
+  .desc p{max-width:100%; text-align:left; hyphens:none; hanging-punctuation:none;}
+  .desc p:first-child:not(:last-child){font-size:18px;}
+  .locale-zh .desc p:first-child:not(:last-child){font-size:17px;}
+  .rule{margin:var(--s4) 0 var(--s5);}
+  .skyline{margin-top:var(--s5);}
+  .pager{margin-top:var(--s6); flex-direction:column; gap:22px;}
+  .pager a{max-width:100%;} .pager a.next{text-align:left;}
+  .foot{padding:0 20px 56px;}
+  .foot__nav{column-gap:20px; row-gap:12px;}
+}
+
+/* ── index-list variant (.lede + .toc) — same tokens/scale ──
+   Append to the reading-page CSS. Only research/humanities/books
+   index-style pages use this; item pages ignore it. */
+.lede{font-family:var(--serif); font-optical-sizing:auto; font-size:19px; line-height:1.6;
+  color:var(--read); margin:var(--s3) 0 0; max-width:60ch;
+  font-variation-settings:"opsz" 24; text-wrap:pretty;}
+.locale-zh .lede{font-size:18px; line-height:1.85; letter-spacing:.02em; color:var(--ink);}
+
+.toc{margin-top:var(--s6); display:flex; flex-direction:column;}
+.toc a{display:block; padding:var(--s4) 2px; border-bottom:1px solid var(--hairline);
+  transition:border-color .2s ease;}
+.toc a:first-child{border-top:1px solid var(--hairline);}
+.toc a:hover{border-color:rgba(232,195,122,.28);}
+.toc a:hover .t{color:var(--accent);}
+.toc .t{font-family:var(--serif); font-size:19px; font-weight:500; color:var(--ink);
+  line-height:1.32; letter-spacing:-0.006em; font-variation-settings:"opsz" 22; text-wrap:balance;
+  transition:color .2s ease;}
+.toc .m{font-family:var(--mono); font-size:11.5px; color:var(--muted); letter-spacing:.06em; margin-top:var(--s1);}
+.locale-zh .toc .m{letter-spacing:.1em;}
+.toc .d{font-family:var(--serif); font-size:15px; color:var(--read); margin-top:var(--s1);
+  line-height:1.6; max-width:60ch; text-wrap:pretty;}
+.locale-zh .toc .d{font-size:14.5px; line-height:1.85;}
+</style>
+  <link rel="stylesheet" href="../craft.css?v=3" />
+</head>
+<body>
+  <div class="chrome">
+    <div class="backs"><a class="map-back" data-magnet href="../index.html">⟵ <span class="i18n-en">Orrery</span><span class="i18n-zh">星盘</span></a><a class="map-back" data-magnet href="../index.html#index-books">⟵ <span class="i18n-en">Books</span><span class="i18n-zh">书籍著作</span></a></div>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" id="btn-en" aria-pressed="true">EN</button>
+      <button type="button" id="btn-zh" aria-pressed="false">中文</button>
+    </div>
+  </div>
+  <main>
+    <div class="eyebrow"><span class="i18n-en">CREATION · BOOKS</span><span class="i18n-zh">创造 · 著作</span></div>
+    <h1><span class="i18n-en">和平请柬</span><span class="i18n-zh">和平请柬</span></h1>
+    <div class="meta"><b>2026</b> · <span class="i18n-en">Chinese-language political-economy monograph · 1,068 pages</span><span class="i18n-zh">中文政治经济学专著 · 1,068 页</span><br/><span class="i18n-en">Published 2026 · hardcover</span><span class="i18n-zh">已出版(2026)· 精装</span></div>
+    <div class="rule"></div>
+    <div class="desc"><p><span class="i18n-en">A Chinese-language monograph written as an invitation: at the threshold of leaving university, an attempt to read the age being entered and judge where it is going — productive capacity outrunning our institutional language, and the question of who pays for that gap.</span><span class="i18n-zh">一部以&quot;请柬&quot;为形式的中文专著:在即将离开大学、走入世界的门槛上,试图读懂将要进入的时代并判断它往哪里去——生产能力推进得太快、制度语言跟不上,这道差距由谁付账。</span></p><p><span class="i18n-en">A parallel original to An Invitation After Abundance — two independent works. Hardcover · ISBN 979-8-9960105-1-6.</span><span class="i18n-zh">与《An Invitation After Abundance》为两部平行的原创著作。精装 · ISBN 979-8-9960105-1-6。</span></p></div>
+    
+    <div class="links paper"><a href="mailto:jiaxuan_chen1@alumni.brown.edu?subject=Re%3A%20%E5%92%8C%E5%B9%B3%E8%AF%B7%E6%9F%AC" data-magnet><span class="i18n-en">Email the author ↗</span><span class="i18n-zh">邮件联系作者 ↗</span></a><button class="cite" type="button" data-magnet aria-live="polite" onclick="var b=this,p=b.parentNode.querySelector('.bibtex');var e=b.querySelector('.i18n-en'),z=b.querySelector('.i18n-zh');if(!b._oe){b._oe=e.textContent;b._oz=z.textContent;}function done(ok){e.textContent=ok?'Copied \u2713':'Copy failed';z.textContent=ok?'\u5df2\u590d\u5236 \u2713':'\u590d\u5236\u5931\u8d25';if(!ok)p.hidden=false;clearTimeout(b._t);b._t=setTimeout(function(){e.textContent=b._oe;z.textContent=b._oz;},1600);}function fb(){try{var t=document.createElement('textarea');t.value=p.textContent;document.body.appendChild(t);t.select();var k=document.execCommand('copy');document.body.removeChild(t);done(!!k);}catch(x){done(false);}}if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(p.textContent).then(function(){done(true);},fb);else fb();"><span class="i18n-en">Cite · BibTeX ⧉</span><span class="i18n-zh">引用 · BibTeX ⧉</span></button><pre class="bibtex" hidden>@unpublished{chen2026work,
+  title = {和平请柬},
+  author = {Chen, Jiaxuan},
+  year = {2026},
+  note = {Published 2026 · hardcover}
+}</pre></div>
+    <div class="skyline">✦ <span class="i18n-en">Cancer — where Jupiter stood</span><span class="i18n-zh">巨蟹座 · 木星所在</span></div>
+    <nav class="pager" aria-label="Within Books"><a class="prev" data-magnet href="invitation.html"><span class="dir"><span class="i18n-en">⟵ Previous</span><span class="i18n-zh">⟵ 上一篇</span></span><span class="nm"><span class="i18n-en">An Invitation After Abundance: Reading the Present, Wagering the Future</span><span class="i18n-zh">An Invitation After Abundance:读现在,赌未来</span></span></a><a class="next" data-magnet href="sovereign.html"><span class="dir"><span class="i18n-en">Next ⟶</span><span class="i18n-zh">下一篇 ⟶</span></span><span class="nm"><span class="i18n-en">Sovereign Scintillation Over Grand Fluctuation: An Observer-State Theory of Physics</span><span class="i18n-zh">Sovereign Scintillation Over Grand Fluctuation:观察者态物理理论</span></span></a></nav>
+  </main>
+  <footer class="foot"><div class="foot__rule"></div><nav class="foot__nav" aria-label="More"><span class="lbl"><span class="i18n-en">Research</span><span class="i18n-zh">研究</span></span><a class="" href="../index.html#index-research"><span class="i18n-en">Sciences · 20</span><span class="i18n-zh">科学研究 · 20</span></a><a class="" href="../index.html#index-humanities"><span class="i18n-en">Humanities · 3</span><span class="i18n-zh">人文社科 · 3</span></a><span class="lbl"><span class="i18n-en">Books</span><span class="i18n-zh">著作</span></span><a class="" href="../books/invitation.html"><span class="i18n-en">An Invitation After Abundance</span><span class="i18n-zh">An Invitation After Abundance</span></a><a class="" href="../books/heping.html"><span class="i18n-en">和平请柬</span><span class="i18n-zh">和平请柬</span></a><a class="" href="../books/sovereign.html"><span class="i18n-en">Sovereign Scintillation</span><span class="i18n-zh">Sovereign Scintillation</span></a><span class="lbl"><span class="i18n-en">Products</span><span class="i18n-zh">产品</span></span><a class="" href="../products/omytea.html"><span class="i18n-en">Omytea</span><span class="i18n-zh">Omytea</span></a><a class="" href="../products/swindo.html"><span class="i18n-en">Swindo</span><span class="i18n-zh">Swindo</span></a><a class="" href="../products/nyeclock.html"><span class="i18n-en">Nye Clock</span><span class="i18n-zh">弐时仪</span></a><a class="" href="../music.html"><span class="i18n-en">Music</span><span class="i18n-zh">音乐</span></a><a class="" href="../journey.html"><span class="i18n-en">Journey</span><span class="i18n-zh">履历</span></a><a class="" href="../footprint.html"><span class="i18n-en">Footprint</span><span class="i18n-zh">足迹</span></a><a class="" href="../index.html"><span class="i18n-en">Orrery ↗</span><span class="i18n-zh">星盘 ↗</span></a><a class="" href="../cv.html"><span class="i18n-en">CV ↗</span><span class="i18n-zh">完整履历 ↗</span></a></nav></footer>
+  <script src="../magnet.js?v=2"></script>
+  <script src="../search.js?v=4" defer></script>
+  <script src="../craft.js?v=1" defer></script>
+  <script>
+    (function () {
+      var root = document.documentElement;
+      function apply(loc) {
+        root.className = "locale-" + loc; root.lang = loc === "zh" ? "zh" : "en";
+        document.getElementById("btn-en").setAttribute("aria-pressed", loc === "en" ? "true" : "false");
+        document.getElementById("btn-zh").setAttribute("aria-pressed", loc === "zh" ? "true" : "false");
+        try { localStorage.setItem("cv-locale", loc); } catch (e) {}
+      }
+      var saved = null; try { saved = localStorage.getItem("cv-locale"); } catch (e) {}
+      apply(saved === "zh" ? "zh" : "en");   /* default EN, matching the home — no jarring flip */
+      document.getElementById("btn-en").addEventListener("click", function () { apply("en"); });
+      document.getElementById("btn-zh").addEventListener("click", function () { apply("zh"); });
+    })();
+
+    /* ← / → arrow keys walk the constellation (prev / next within the category) */
+    document.addEventListener("keydown", function (e) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;                       /* browser history shortcuts stay the browser's */
+      if (e.target && (/INPUT|TEXTAREA/.test(e.target.tagName) || e.target.isContentEditable)) return;
+      if (e.key === "ArrowLeft") { var p = document.querySelector(".pager a.prev"); if (p) location.href = p.href; }
+      else if (e.key === "ArrowRight") { var n = document.querySelector(".pager a.next"); if (n) location.href = n.href; }
+    });
+</script>
+</body>
+</html>

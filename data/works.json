@@ -76,8 +76,8 @@
         "zh": "物理基础 · 单作者"
       },
       "status": {
-        "en": "Under journal consideration",
-        "zh": "投稿轮转中"
+        "en": "Earlier version — superseded by the 2026 preprint",
+        "zh": "早期版本 · 已由 2026 预印本取代"
       },
       "desc": {
         "en": [
@@ -87,14 +87,19 @@
           "借一个常数复杂度的进位递增重编码作为可审计见证,证明通用(Solomonoff–Levin)算法先验不选出任何优先的张量分解——因而其自身无法提供局域性。"
         ]
       },
-      "links": []
+      "links": [
+        {
+          "label": "Zenodo preprint · 10.5281/zenodo.21325099 ↗",
+          "href": "https://doi.org/10.5281/zenodo.21325099"
+        }
+      ]
     },
     {
       "id": "paperB2",
       "cls": "research",
       "title": {
-        "en": "A Universal Prior Selects No Preferred Factorization: the Same Cross-Context Gap in Born-Rule Derivations",
-        "zh": "通用先验不选优先分解:同一跨语境缺口在玻恩规则推导中的复现"
+        "en": "A Universal Prior Cannot by Itself Select a Preferred Factorization: A Bounded-Alphabet Locality No-Go, with a Route-by-Route Map of the Same Gap in Born-Rule Derivations",
+        "zh": "通用先验自身无法选出优先分解:有界字母表下的局域性不可行定理,及同一缺口在玻恩规则推导中的逐路线映射"
       },
       "period": "2026",
       "where": {
@@ -102,8 +107,8 @@
         "zh": "物理基础 · 单作者"
       },
       "status": {
-        "en": "Manuscript prepared (SciPost Physics Core)",
-        "zh": "投稿包已备(SciPost Physics Core)"
+        "en": "Preprint · Zenodo (Jul 2026)",
+        "zh": "预印本 · Zenodo(2026-07)"
       },
       "desc": {
         "en": [
@@ -113,7 +118,12 @@
           "在局域性 no-go 之上,将同一\"跨语境缺口\"逐条映射到玻恩规则的各主要推导路线——对每条推导暗中假设了什么,给出统一诊断。"
         ]
       },
-      "links": []
+      "links": [
+        {
+          "label": "Zenodo preprint · 10.5281/zenodo.21325099 ↗",
+          "href": "https://doi.org/10.5281/zenodo.21325099"
+        }
+      ]
     },
     {
       "id": "paperC1",
@@ -171,24 +181,87 @@
       "id": "paperD",
       "cls": "research",
       "title": {
-        "en": "Half-Line Free Fermions: Local CAR and Modular Scaling with a Type-Forced Mass-Axis Obstruction",
-        "zh": "半直线自由费米子:局域 CAR 与模流标度,及类型强制的质量轴障碍"
+        "en": "Convergence of Local Modular Data for Half-Line Free Fermions, and a Locality-Passband Obstruction to Global Equivalence",
+        "zh": "半直线自由费米子局域模数据的收敛,及全局等价的局域性-通带障碍"
       },
       "period": "2026",
       "where": {
-        "en": "Mathematical physics · single author · 64 pp",
-        "zh": "数学物理 · 单作者 · 64 页"
+        "en": "Mathematical physics · single author",
+        "zh": "数学物理 · 单作者"
       },
       "status": {
-        "en": "Submission package ready (AHP)",
-        "zh": "投稿包就绪(AHP)"
+        "en": "Submitted · J. Math. Phys. (Jul 2026)",
+        "zh": "已投稿 · J. Math. Phys.(2026-07)"
       },
       "desc": {
         "en": [
-          "Along the scaling axis: wavelet-embedded quasi-free states converge in norm on every finite-mode CAR subalgebra, upgraded to local modular-automorphism convergence on the analytic core. Along the mass axis: a type I∞ / III₁ incompatibility forces the global folium comparison to fail — the obstruction is proved, not conjectured."
+          "For half-line free fermions, proves that finite-dimensional modular data converge to the continuum for compact-local wavelet schemes: local state restrictions converge in norm and, after a faithful block completion, the modular generators converge in the strong-resolvent sense, giving local modular-automorphism convergence — with explicit rates in the pinned Daubechies model.",
+          "And delimits it: within a natural class of schemes the locality of this convergence is sharp — a passband obstruction rules out raw fixed-cutoff global quasi-equivalence."
         ],
         "zh": [
-          "标度轴上:经小波嵌入的准自由态在每个有限模 CAR 子代数上范数收敛,并升级为解析核上的局域模自同构收敛;质量轴上:I∞ 与 III₁ 的类型不相容强制全局 folium 比较失败——障碍是被证明的,不是猜想。"
+          "对半直线自由费米子,证明紧支撑局域小波格式下有限维模数据向连续极限收敛:局域态限制按范数收敛,经忠实分块补全后模生成元按强预解式意义收敛,从而得到局域模自同构收敛——并在钉扎 Daubechies 模型中给出显式收敛速率。",
+          "同时给出界限:在一类自然格式中,这种收敛的局域性是最优的——一个通带障碍排除了原始固定截断下的全局拟等价。"
+        ]
+      },
+      "links": [
+        {
+          "label": "Zenodo preprint · 10.5281/zenodo.21717255 ↗",
+          "href": "https://doi.org/10.5281/zenodo.21717255"
+        }
+      ]
+    },
+    {
+      "id": "glueball",
+      "cls": "research",
+      "title": {
+        "en": "Coherent Strange-Current Contributions to X(2370) → ηηη",
+        "zh": "X(2370) → ηηη 中的相干奇异流贡献"
+      },
+      "period": "2026",
+      "where": {
+        "en": "Hadron physics · single author",
+        "zh": "强子物理 · 单作者"
+      },
+      "status": {
+        "en": "Submitted · Physica Scripta (Oct 2026)",
+        "zh": "已投稿 · Physica Scripta(2026-10)"
+      },
+      "desc": {
+        "en": [
+          "Proposed three-pseudoscalar decay patterns are being used to tell interpretations of the X(2370) apart. The same cubic current operator that supplies the strange contribution to ηηη′ also contributes to ηηη; reconstructing two recent current-based analyses with it included reduces the ηηη width substantially at their central inputs and changes the contrast with a fixed hybrid prediction.",
+          "The result is delimited by an explicit near-cancellation and its input sensitivity; it corrects a proposed prediction for an unmeasured channel, not the particle's composition."
+        ],
+        "zh": [
+          "三赝标量衰变模式正被用来区分 X(2370) 的不同解释。为 ηηη′ 提供奇异流贡献的同一三次流算符,也对 ηηη 有贡献;把它纳入两篇近期基于流的分析后,在其中心输入下 ηηη 宽度显著降低,与一个固定的混杂态预言之间的对比也随之改变。",
+          "结果由一个显式的近抵消及其输入敏感性加以界定;它修正的是对一个未测道的预言,而非该粒子的组分。"
+        ]
+      },
+      "links": []
+    },
+    {
+      "id": "digitRotation",
+      "cls": "research",
+      "title": {
+        "en": "Digit Dependence under Translation-Conjugated Cyclic Rotation",
+        "zh": "平移共轭循环旋转的数位依赖"
+      },
+      "period": "2026",
+      "where": {
+        "en": "Combinatorics · single author",
+        "zh": "组合数学 · 单作者"
+      },
+      "status": {
+        "en": "Submitted · Discrete Math. Algorithms Appl. (Sep 2026)",
+        "zh": "已投稿 · DMAA(2026-09)"
+      },
+      "desc": {
+        "en": [
+          "Determines exactly how strongly a cyclic digit rotation, conjugated by a modular translation, makes each output digit depend on the input: for a translation c ≠ 0 the largest number of pivotal input digits is k − ν_a(c), with the complete pivotality matrix, uniformly in the radix.",
+          "Consequences include exact degree distributions along the orbit, a circuit-depth separation between rotation and its increment conjugate, and exact coordinate-change counts — the technical core behind the universal-prior locality no-go."
+        ],
+        "zh": [
+          "精确刻画循环数位旋转经模平移共轭后,每个输出数位对输入的依赖程度:对平移 c ≠ 0,单个输出数位的关键输入数位最大个数为 k − ν_a(c),并给出完整的关键性矩阵,对任意进制一致成立。",
+          "推论包括:轨道上的精确度数分布、旋转与其增量共轭之间的电路深度分离,以及精确的坐标变化计数——它是通用先验局域性不可行定理的技术核心。"
         ]
       },
       "links": []
@@ -206,8 +279,8 @@
         "zh": "物理基础"
       },
       "status": {
-        "en": "Active — capstone track",
-        "zh": "代表作课题 · 进行中"
+        "en": "Paused (2026)",
+        "zh": "暂停(2026)"
       },
       "desc": {
         "en": [
@@ -223,8 +296,8 @@
       "id": "ringdown",
       "cls": "research",
       "title": {
-        "en": "Covariance-Estimator Dependence of Ringdown Overtone Significance: A Coverage-Validated Real-Noise Calibration Standard",
-        "zh": "铃宕泛音显著性对协方差估计器的依赖:一个经覆盖率验证的真实噪声标定标准"
+        "en": "Calibrating Ringdown Overtone Significance in Real Detector Noise",
+        "zh": "真实探测器噪声中铃宕泛音显著性的标定"
       },
       "period": "2026",
       "where": {
@@ -232,15 +305,17 @@
         "zh": "引力波方法学 · 单作者"
       },
       "status": {
-        "en": "Manuscript prepared (RASTI, OUP/RAS)",
-        "zh": "投稿包已备(RASTI · OUP/RAS)"
+        "en": "Redesign in progress (2026)",
+        "zh": "重新设计中(2026)"
       },
       "desc": {
         "en": [
-          "Shows a black-hole ringdown overtone's reported significance can swing by an order of magnitude with the analyst's noise-covariance estimator, and introduces a coverage-validated, covariance-choice-independent real-noise calibration standard — demonstrated on GW250114 and GW150914."
+          "How much evidence does a claimed black-hole ringdown overtone carry once real detector noise is taken seriously? This line builds calibration standards for that question on real, held-out noise.",
+          "A controlled single-factor test in August 2026 traced an apparent dependence on the noise-covariance estimator to a reference-distribution choice and an undeclared start-time anchor, so that earlier framing was withdrawn; the line is being rebuilt around start-time (look-elsewhere) calibration."
         ],
         "zh": [
-          "证明黑洞铃宕泛音的报告显著性会因分析者所选的噪声协方差估计器而波动一个量级;提出一个经覆盖率验证、与协方差选择无关的真实噪声标定标准,并在 GW250114 与 GW150914 上演示。"
+          "当真实探测器噪声被认真对待时,一个声称的黑洞铃宕泛音究竟携带多少证据?这条研究线在真实、留出的噪声上为这个问题建立标定标准。",
+          "2026 年 8 月的一次受控单因子检验发现,表观上对噪声协方差估计器的依赖其实来自参考分布的选择与一个未申明的起始时间锚点,因此撤回了先前的表述;研究线正围绕起始时间(look-elsewhere)标定重建。"
         ]
       },
       "links": [],
@@ -259,8 +334,8 @@
         "zh": "理论物理"
       },
       "status": {
-        "en": "Active line, with a formalized finite-window certificate",
-        "zh": "理论课题 · 进行中,附形式化有限窗口证书线"
+        "en": "Paused (2026)",
+        "zh": "暂停(2026)"
       },
       "desc": {
         "en": [
@@ -528,8 +603,8 @@
         "zh": "政治经济学 · 单作者"
       },
       "status": {
-        "en": "Under journal re-submission",
-        "zh": "期刊再投轮"
+        "en": "Under journal consideration (2026)",
+        "zh": "期刊审议中(2026)"
       },
       "desc": {
         "en": [
@@ -554,8 +629,8 @@
         "zh": "认识论 / 方法论"
       },
       "status": {
-        "en": "Method paper",
-        "zh": "方法论文"
+        "en": "Public · SSRN preprint",
+        "zh": "已公开 · SSRN 预印本"
       },
       "desc": {
         "en": [
@@ -565,7 +640,12 @@
           "一个认识论框架:区分知识的三种立场——描述性(相机)、战略性(棋手)、操作性(引擎)——以及如何判别一个断言实际处于哪一种。"
         ]
       },
-      "links": []
+      "links": [
+        {
+          "label": "SSRN abstract 6950818 ↗",
+          "href": "https://ssrn.com/abstract=6950818"
+        }
+      ]
     },
     {
       "id": "invitation",
@@ -580,15 +660,47 @@
         "zh": "政治经济学专著 · 约 1,164 页"
       },
       "status": {
-        "en": "Publish-ready",
-        "zh": "成书 · 待出版"
+        "en": "Published 2026 · Kindle and print",
+        "zh": "已出版(2026)· Kindle 与纸质版"
       },
       "desc": {
         "en": [
-          "A political-economy volume: reading the present and wagering the future — technology, power, and institutions after abundance."
+          "A political-economy volume: reading the present and wagering the future — technology, power, and institutions after abundance.",
+          "A parallel original to the Chinese-language 和平请柬 — two independent works.",
+          "ISBN 979-8-9960105-0-9 (ebook) · 979-8-9960105-2-3 (paperback) · 979-8-9960105-3-0 (hardcover)."
         ],
         "zh": [
-          "一部政治经济学专著:读现在,赌未来——富足之后的技术、权力与制度。"
+          "一部政治经济学专著:读现在,赌未来——富足之后的技术、权力与制度。",
+          "与中文专著《和平请柬》为两部平行的原创著作。",
+          "ISBN 979-8-9960105-0-9(电子书)· 979-8-9960105-2-3(平装)· 979-8-9960105-3-0(精装)。"
+        ]
+      },
+      "links": []
+    },
+    {
+      "id": "heping",
+      "cls": "books",
+      "title": {
+        "en": "和平请柬",
+        "zh": "和平请柬"
+      },
+      "period": "2026",
+      "where": {
+        "en": "Chinese-language political-economy monograph · 1,068 pages",
+        "zh": "中文政治经济学专著 · 1,068 页"
+      },
+      "status": {
+        "en": "Published 2026 · hardcover",
+        "zh": "已出版(2026)· 精装"
+      },
+      "desc": {
+        "en": [
+          "A Chinese-language monograph written as an invitation: at the threshold of leaving university, an attempt to read the age being entered and judge where it is going — productive capacity outrunning our institutional language, and the question of who pays for that gap.",
+          "A parallel original to An Invitation After Abundance — two independent works. Hardcover · ISBN 979-8-9960105-1-6."
+        ],
+        "zh": [
+          "一部以\"请柬\"为形式的中文专著:在即将离开大学、走入世界的门槛上,试图读懂将要进入的时代并判断它往哪里去——生产能力推进得太快、制度语言跟不上,这道差距由谁付账。",
+          "与《An Invitation After Abundance》为两部平行的原创著作。精装 · ISBN 979-8-9960105-1-6。"
         ]
       },
       "links": []

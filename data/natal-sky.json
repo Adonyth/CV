@@ -356,6 +356,22 @@
           "decDeg": -18.583,
           "mag": 5.15,
           "ly": 232.6
+        },
+        {
+          "i": 18,
+          "bayer": "24 Cap",
+          "raH": 21.119,
+          "decDeg": -25.006,
+          "mag": 4.49,
+          "ly": 456.2
+        },
+        {
+          "i": 19,
+          "bayer": "36 Cap",
+          "raH": 21.479,
+          "decDeg": -21.807,
+          "mag": 4.5,
+          "ly": 171.1
         }
       ],
       "figureLines": [
@@ -412,10 +428,10 @@
           "id": "ringdown",
           "starIndex": 0,
           "title": {
-            "en": "Covariance Dependence of Ringdown Overtone Significance",
-            "zh": "铃宕泛音显著性的协方差依赖"
+            "en": "Calibrating Ringdown Overtone Significance",
+            "zh": "铃宕泛音显著性的标定"
           },
-          "role": "GW methods · RASTI-ready",
+          "role": "GW methods · redesign",
           "importance": 1.0,
           "href": "research/ringdown.html"
         },
@@ -426,7 +442,7 @@
             "en": "Born Rule & Naturalness",
             "zh": "玻恩规则与自然性"
           },
-          "role": "capstone track · active",
+          "role": "foundations · paused",
           "importance": 1.0,
           "href": "research/bornNaturalness.html"
         },
@@ -437,7 +453,7 @@
             "en": "The Universal Prior Does Not Select a Factorization",
             "zh": "通用先验不选出分解"
           },
-          "role": "foundations · in review cycle",
+          "role": "foundations · earlier version",
           "importance": 0.9,
           "href": "research/paperB.html"
         },
@@ -445,10 +461,10 @@
           "id": "paperD",
           "starIndex": 4,
           "title": {
-            "en": "Half-Line Free Fermions: Local CAR & Modular Scaling",
-            "zh": "半直线自由费米子:局域 CAR 与模流标度"
+            "en": "Local Modular Data for Half-Line Free Fermions",
+            "zh": "半直线自由费米子的局域模数据"
           },
-          "role": "math-phys · AHP-ready",
+          "role": "math-phys · submitted (JMP)",
           "importance": 0.9,
           "href": "research/paperD.html"
         },
@@ -459,7 +475,7 @@
             "en": "Tachyonic Phase-Boundary Classification",
             "zh": "快子相边界分类"
           },
-          "role": "theory line · active",
+          "role": "theory line · paused",
           "importance": 0.85,
           "href": "research/tachyon.html"
         },
@@ -467,10 +483,10 @@
           "id": "paperB2",
           "starIndex": 8,
           "title": {
-            "en": "The Same Cross-Context Gap in Born-Rule Derivations",
-            "zh": "跨语境缺口在玻恩规则推导中的复现"
+            "en": "A Universal Prior Cannot Select a Factorization",
+            "zh": "通用先验自身无法选出分解"
           },
-          "role": "foundations · SciPost-ready",
+          "role": "foundations · Zenodo preprint",
           "importance": 0.85,
           "href": "research/paperB2.html"
         },
@@ -594,6 +610,28 @@
           "role": "SDU · 2022–23",
           "importance": 0.65,
           "href": "research/toiFlares.html"
+        },
+        {
+          "id": "glueball",
+          "starIndex": 18,
+          "title": {
+            "en": "Strange Currents in X(2370) → ηηη",
+            "zh": "X(2370) → ηηη 的奇异流"
+          },
+          "role": "hadron physics · submitted",
+          "importance": 0.9,
+          "href": "research/glueball.html"
+        },
+        {
+          "id": "digitRotation",
+          "starIndex": 19,
+          "title": {
+            "en": "Digit Dependence under Cyclic Rotation",
+            "zh": "循环旋转的数位依赖"
+          },
+          "role": "combinatorics · submitted",
+          "importance": 0.85,
+          "href": "research/digitRotation.html"
         }
       ]
     },
@@ -962,7 +1000,7 @@
             "en": "Stack Power: Frontier AI & Market Non-Correction",
             "zh": "栈权力:前沿 AI 与市场不矫正"
           },
-          "role": "journal re-submission",
+          "role": "under journal consideration",
           "importance": 0.9,
           "href": "humanities/stackPower.html"
         },
@@ -973,7 +1011,7 @@
             "en": "Camera, Player, Engine",
             "zh": "相机 · 棋手 · 引擎"
           },
-          "role": "epistemology",
+          "role": "epistemology · SSRN",
           "importance": 0.8,
           "href": "humanities/cpe.html"
         }
@@ -2217,6 +2255,22 @@
       "status": ""
     },
     "cpe": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "glueball": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "digitRotation": {
       "titleEn": "",
       "titleZh": "",
       "blurbEn": "",

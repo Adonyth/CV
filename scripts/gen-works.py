@@ -10,6 +10,9 @@ import json, pathlib, html, urllib.parse
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DATA = json.load(open(ROOT / "data" / "works.json", encoding="utf-8"))["works"]
 BUILD = "build 70 · 07-08"
+N_RESEARCH = sum(1 for w in DATA if w["cls"] == "research")
+BOOK_SHORT = {"invitation": ("An Invitation After Abundance", "An Invitation After Abundance"), "sovereign": ("Sovereign Scintillation", "Sovereign Scintillation")}
+N_HUMANITIES = sum(1 for w in DATA if w["cls"] == "humanities")
 EMAIL = "jiaxuan_chen1@alumni.brown.edu"
 
 CLS = {
@@ -275,13 +278,13 @@ def footer_nav(depth=0, current=None):
     return (
         '<footer class="foot"><div class="foot__rule"></div><nav class="foot__nav" aria-label="More">'
         + f'<span class="lbl">{bi("Research", "研究")}</span>'
-        + a("index.html#index-research", "Sciences · 18", "科学研究 · 18")
-        + a("index.html#index-humanities", "Humanities · 3", "人文社科 · 3")
+        + a("index.html#index-research", f"Sciences · {N_RESEARCH}", f"科学研究 · {N_RESEARCH}")
+        + a("index.html#index-humanities", f"Humanities · {N_HUMANITIES}", f"人文社科 · {N_HUMANITIES}")
         + f'<span class="lbl">{bi("Books", "著作")}</span>'
-        + a("books/invitation.html", "An Invitation After Abundance", "An Invitation After Abundance", "invitation")
-        + a("books/sovereign.html", "Sovereign Scintillation", "Sovereign Scintillation", "sovereign")
+        + "".join(a("books/" + w["id"] + ".html", *BOOK_SHORT.get(w["id"], (w["title"]["en"], w["title"]["zh"])), key=w["id"]) for w in DATA if w["cls"] == "books")
         + f'<span class="lbl">{bi("Products", "产品")}</span>'
         + a("products/omytea.html", "Omytea", "Omytea", "omytea")
+        + a("products/swindo.html", "Swindo", "Swindo", "swindo")
         + a("products/nyeclock.html", "Nye Clock", "弐时仪", "nyeclock")
         + a("music.html", "Music", "音乐", "music")
         + a("journey.html", "Journey", "履历", "journey")

@@ -2864,7 +2864,7 @@
       fetch("data/weblines_rgb" + _galSfx + ".u8?v=3").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; })
     ]);
     Promise.all([
-      fetch("data/natal-sky.json?v=17").then(function (r) { return r.json(); }),
+      fetch("data/natal-sky.json?v=18").then(function (r) { return r.json(); }),
       fetch("data/large-scale.json?v=1").then(function (r) { return r.json(); }).catch(function () { return null; })
     ]).then(function (arr) {
       var natalData = arr[0], lssData = arr[1];

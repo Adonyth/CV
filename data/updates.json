@@ -2,10 +2,46 @@
   "_note": "Dated activity feed. Newest first. date=YYYY-MM-DD (or YYYY-MM / YYYY). href optional (a page on this site or an external link). Add a line when a preprint goes out, a talk is accepted, a product ships, a chapter lands. Then run: python3 scripts/gen-rss.py",
   "updates": [
     {
+      "date": "2026-10-12",
+      "en": "The Well (PolymathicAI) — two fixes merged upstream: ε propagated through the VRMSE/VMSE metrics (#92) and long-horizon validation curves averaged across batches (#93); written with Claude Code assistance, disclosed in the pull request.",
+      "zh": "The Well(PolymathicAI)—— 两处修复被上游合并:VRMSE/VMSE 指标中的 ε 传递(#92),以及长时程验证曲线改为跨批次平均(#93);借助 Claude Code 完成,已在合并请求中披露。",
+      "href": "https://github.com/PolymathicAI/the_well/pull/93"
+    },
+    {
+      "date": "2026-10-09",
+      "en": "Coherent Strange-Current Contributions to X(2370) → ηηη — submitted to Physica Scripta.",
+      "zh": "《X(2370) → ηηη 中的相干奇异流贡献》—— 已投稿 Physica Scripta。",
+      "href": "/research/glueball.html"
+    },
+    {
       "date": "2026-10-08",
       "en": "Swindo — ongoing product-engineering work on golf-motion capture, body calibration and interfaces.",
       "zh": "Swindo —— 高尔夫动作采集、身体参数校准与界面的产品工程工作持续进行中。",
       "href": "/products/swindo.html"
+    },
+    {
+      "date": "2026-09-22",
+      "en": "Digit Dependence under Translation-Conjugated Cyclic Rotation — submitted to Discrete Mathematics, Algorithms and Applications.",
+      "zh": "《平移共轭循环旋转的数位依赖》—— 已投稿 Discrete Mathematics, Algorithms and Applications。",
+      "href": "/research/digitRotation.html"
+    },
+    {
+      "date": "2026-07-31",
+      "en": "Paper D — local modular data for half-line free fermions — submitted to the Journal of Mathematical Physics; preprint on Zenodo.",
+      "zh": "论文 D —— 半直线自由费米子的局域模数据 —— 已投稿 Journal of Mathematical Physics;预印本见 Zenodo。",
+      "href": "/research/paperD.html"
+    },
+    {
+      "date": "2026-07-12",
+      "en": "The universal-prior locality no-go — preprint posted on Zenodo.",
+      "zh": "通用先验局域性不可行定理 —— 预印本发布于 Zenodo。",
+      "href": "/research/paperB2.html"
+    },
+    {
+      "date": "2026-07",
+      "en": "Two books out: An Invitation After Abundance (Kindle and print) and the Chinese-language 和平请柬 (hardcover) — parallel originals.",
+      "zh": "两部专著出版:《An Invitation After Abundance》(Kindle 与纸质版)与中文专著《和平请柬》(精装)—— 两部平行的原创著作。",
+      "href": "/books/invitation.html"
     },
     {
       "date": "2026-07",
