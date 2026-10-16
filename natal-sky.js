@@ -1029,7 +1029,80 @@ export function buildNatalSky(THREE, scene, data, opts) {
         var pg = new T.Points(g, mat(glowPx, glowOp || 0.12)); pg.name = name + "Glow"; pg.frustumCulled = false; pg.renderOrder = base - 1; belt.add(pg);
       }
       var p = new T.Points(g, mat(sizePx, op)); p.name = name; p.frustumCulled = false; if (order != null) p.renderOrder = order; belt.add(p);
+      if (_tsGal && name === "LargeScaleStructure") buildGalaxyDiscs(pos, NG, rgb);
       return p;
+    }
+    /* TRUE SCALE (build 245): each survey galaxy as a GALAXY once you are close enough to see one. The positions are the
+       real 2MRS galaxies; the survey carries no morphology, so type (the same per-galaxy hash as the dot colour: ~60%
+       star-forming spirals, the rest ellipticals — giants where the field is dense), size (lognormal, 15–280 kly),
+       tilt and position angle are drawn statistically. A disc appears only once it is wider than a few pixels; until then
+       the dot layer carries it, so the far web is unchanged. Procedural: bulge + exponential disc + two-arm log spiral,
+       or a Sérsic-like elliptical; one draw for every galaxy. */
+    function buildGalaxyDiscs(pos, n, rgb) {
+      var U_KLY = 200 / 3261.56;                       // scene units per thousand light-years (K = 200 per Mpc)
+      var aT = new Float32Array(n), aS = new Float32Array(n), aI = new Float32Array(n), aP = new Float32Array(n), aB = new Float32Array(n), aR = new Float32Array(n);
+      var rr = gRng(0x9a1a5);
+      for (var i = 0; i < n; i++) {
+        var hh = Math.sin(i * 12.9898) * 43758.5453; hh -= Math.floor(hh);
+        var L = rgb ? (rgb[i * 3] + rgb[i * 3 + 1] + rgb[i * 3 + 2]) / 765 : 0.3;
+        var ell = hh >= 0.60, dense = L > 0.5, u = rr();
+        aT[i] = ell ? 1 : 0;
+        aS[i] = (ell ? (dense ? 60 + 220 * u * u : 15 + 60 * Math.pow(u, 1.5)) : 25 + 100 * Math.pow(u, 1.6)) * U_KLY;
+        aI[i] = ell ? 0.55 + 0.45 * rr() : Math.max(0.12, Math.abs(rr() * 2 - 1));   // cos(inclination): spirals at every tilt
+        aP[i] = rr() * Math.PI * 2;
+        aB[i] = 0.45 + 0.85 * Math.pow(rr(), 2.0);
+        aR[i] = rr();
+      }
+      var g = new T.BufferGeometry();
+      g.setAttribute("position", new T.BufferAttribute(pos, 3));
+      [["aType", aT], ["aSize", aS], ["aCosI", aI], ["aPA", aP], ["aBright", aB], ["aSeed", aR]].forEach(function (e) { g.setAttribute(e[0], new T.BufferAttribute(e[1], 1)); });
+      var U = { uPx: { value: 500 }, uOpacity: { value: 1 }, uMaxPx: { value: 480 } };
+      var m = new T.ShaderMaterial({
+        uniforms: U, transparent: true, depthWrite: false, depthTest: false, fog: false,
+        blending: T.CustomBlending, blendEquation: T.AddEquation, blendSrc: T.OneFactor, blendDst: T.OneFactor, blendSrcAlpha: T.OneFactor, blendDstAlpha: T.OneFactor,
+        vertexShader: [
+          "uniform float uPx; uniform float uMaxPx; attribute float aType; attribute float aSize; attribute float aCosI; attribute float aPA; attribute float aBright; attribute float aSeed;",
+          "varying float vType; varying float vCosI; varying float vPA; varying float vB; varying float vSeed; varying float vFade;",
+          "void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); float d = max(-mv.z, 1e-6);",
+          "  float px = aSize * uPx / d;",
+          "  vFade = smoothstep(2.5, 7.0, px);",
+          "  gl_PointSize = min(px, uMaxPx);",
+          "  vType = aType; vCosI = aCosI; vPA = aPA; vB = aBright; vSeed = aSeed;",
+          "  gl_Position = px < 2.5 ? vec4(2.0, 2.0, 2.0, 1.0) : projectionMatrix * mv; }"
+        ].join("\n"),
+        fragmentShader: [
+          "uniform float uOpacity; varying float vType; varying float vCosI; varying float vPA; varying float vB; varying float vSeed; varying float vFade;",
+          "void main(){",
+          "  vec2 p = (gl_PointCoord - 0.5) * 2.0; float c = cos(vPA), s = sin(vPA); p = vec2(c * p.x - s * p.y, s * p.x + c * p.y);",
+          "  vec2 q = vec2(p.x, p.y / max(vCosI, 0.12)); float r = length(q); if (r > 1.0) discard;",
+          "  float edge = 1.0 - smoothstep(0.78, 1.0, r); vec3 col; float I;",
+          "  if (vType > 0.5) {",                                   // elliptical: a Sérsic-like falloff, old gold light
+          "    I = exp(-6.5 * pow(r, 0.55)) * 1.9 + 0.12 * (1.0 - r);",
+          "    col = mix(vec3(1.0, 0.86, 0.66), vec3(1.0, 0.74, 0.52), r);",
+          "  } else {",                                             // spiral: a warm bulge, a blue disc carved by two log-spiral arms
+          "    float th = atan(q.y, q.x), ph = 2.0 * th - log(max(r, 0.02)) / 0.27 + vSeed * 6.2832;",
+          "    float arm = pow(0.5 + 0.5 * cos(ph), 3.0);",
+          "    float disc = exp(-r / 0.30), bulge = exp(-r / 0.075);",
+          "    float knots = step(0.93, fract(sin(dot(floor(q * 18.0), vec2(12.99, 78.23)) + vSeed * 91.0) * 43758.5)) * arm;",
+          "    I = bulge * 1.5 + disc * (0.30 + 1.10 * arm) * (0.75 + 0.25 * vCosI);",
+          "    col = mix(vec3(1.0, 0.84, 0.62), vec3(0.70, 0.82, 1.0), smoothstep(0.06, 0.3, r));",
+          "    col = mix(col, vec3(1.0, 0.55, 0.70), knots * 0.6);",       // H II regions along the arms
+          "    if (vCosI < 0.35) I *= 1.0 - 0.75 * exp(-pow(q.y * 14.0, 2.0)) * smoothstep(0.08, 0.25, abs(q.x));",   // the dust lane of an edge-on disc
+          "  }",
+          "  I *= edge * vB * vFade * uOpacity * 0.85;",
+          // the site's composite multiplies light by its alpha (that is what keeps faint dust quiet); a galaxy's light must
+          // pass at its own intensity, so its alpha saturates wherever it has any light at all
+          "  gl_FragColor = vec4(col * I, smoothstep(0.0, 0.035, I));",
+          "}"
+        ].join("\n")
+      });
+      var disc = new T.Points(g, m); disc.name = "LargeScaleStructureDiscs"; disc.frustumCulled = false; disc.renderOrder = -1;
+      disc.onBeforeRender = function (rend, sc2, cam) {
+        var dpr = rend.getPixelRatio(), h = rend.getSize(_gdV2).y * dpr;
+        U.uPx.value = h * 0.5 / Math.tan((cam.fov || 52) * Math.PI / 360);
+        U.uOpacity.value = m.opacity;
+      };
+      belt.add(disc);
     }
     // the named clusters and superclusters become landmarks you can click and fly to (invisible pick spheres at their
     // true supergalactic seats, same interaction as every nebula); a supercluster sharing its cluster's seat is skipped
@@ -1042,7 +1115,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
         _seen.push(pos);
         var sh = new T.Mesh(new T.SphereGeometry(r, 10, 8), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
         sh.position.copy(pos); sh.name = "DSOPick_lss_" + e.id;
-        sh.userData.nyePick = "dso_lss_" + e.id; sh.userData.dsoViewDist = r * 2.8; sh.userData.dsoFocusMin = r * 0.45;
+        sh.userData.nyePick = "dso_lss_" + e.id; sh.userData.dsoViewDist = r * 2.8; sh.userData.dsoFocusMin = r * 0.06;   // close enough to stand among its galaxies
         sh.userData.dsoMinCam = 600; sh.userData.dsoName = e.name; sh.userData.lssKind = kind;
         dsoPickGroup.add(sh);
       }
@@ -2860,7 +2933,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
 
   /* ---------------- lifecycle ---------------- */
   var _galBuilt = false; var _impV = new T.Vector3();
-  var _tsGal = false;   // true scale owns the galaxy's recession (no ladder "member-knot" dimming)
+  var _tsGal = false, _gdV2 = new T.Vector2();   // true scale owns the galaxy's recession (no ladder "member-knot" dimming)
   var _figFade = 1, _sfGain = 1, _tsDV = new T.Vector3(), _tsSoloDso = null;
   function backdropMulDso(rec) { return (_tsSoloDso && _tsSoloDso !== rec.id) ? 0.35 : 1; }   // admiring one wonder: the others step back   // _sfGain: true scale — the procedural field gives way once the real stars swing by   // true scale: the zodiac figures hang at infinity — they melt once you leave the Solar System
   var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null, _sfObj = null, _sfMat = null, _sfBase = 1, _bdT = 0, _keepGal = false, _galMats = null, _localHide = null, _nsObj = null, _nsMat = null, _nsBase = 1, _lhTries = 0, _tierSeen = {}, _lssObjs = null, _tierScaleOn = true;

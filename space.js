@@ -504,7 +504,7 @@
       if (lo >= 0) emit(lo, hi);
       return _slices;
     }
-    var _tsMW = null;
+    var _tsMW = null, _focusVd = 220;
     function tsTierOpacity(tier, f) {                 // scale every material in a tier for one render; returns what to restore
       var saved = [];
       for (var i = 0; i < tier.objs.length; i++) tier.objs[i].traverse(function (o) { if (o.material && o.material.opacity != null) { saved.push(o.material, o.material.opacity); o.material.opacity *= f; } });
@@ -554,6 +554,14 @@
       return { from: f ? f.name : "Earth", label: f && f.label, km: km, text: _ts.fmt(km), sunKm: kmSun, sunText: _ts.fmt(kmSun) };
     }
     window.__space.tsDist = tsDistanceInfo;
+    window.__space.tsTiers = function () { return TS_TIERS; };   // verification: the cosmic-model cameras
+    window.__space.tsNav = function () {   // verification: the navigation frame state
+      if (!_ts) return null;
+      function fi(f) { return f && { name: f.name, s: f.s, kappa: f.kappa, rate: f.rate, T: +f.T.length().toExponential(4), proxy: +f.proxy.length().toFixed(2) }; }
+      var b = _nav.b, rho = b ? camera.position.distanceTo(b.proxy) : camera.position.length();
+      return { a: fi(_nav.a), b: fi(b), p: _nav.p, flight: !!_nav.flight, rho: rho, nearToB: b ? nearCam.position.distanceTo(b.T) : null,
+               expect: b ? _ts.bodyDistance(_ts.L, b.s, b.kappa, rho) : null };
+    };
     var TS_NEAR_ROOTS = { NyeArmature: 1, SunFlareChain: 1, GroundTerrain: 1, LocalMapGround: 1, BaseCity: 1, GroundHorizonDome: 1 };
     function markFarLayers() {                         // layer 0 = the Solar System + the ground · 1 = the galaxy frame · 2–8 = the cosmic tiers · 9 = the ladder (ember dust)
       var bg = natalSky && natalSky.bodyGroup;
@@ -2447,7 +2455,8 @@
       var fF = _nav.p >= 0.5 ? _nav.b : _nav.a;
       for (var i = 0; i < _ts.frames.length; i++) {
         var f = _ts.frames[i]; if (!f.galactic || !f.label) continue;
-        var clT = camera.position.length(), band = f.extragalactic ? (clT > 2600 && clT < 60000 && f.obj && f.obj.parent) : clT < 3400;   // a landmark is named while its own tier is the one in view
+        var clT = camera.position.length(), inGal = nearCam.position.distanceTo(_ts.sun.T) * _ts.kpu < 2e5 * 9460730472580.8;
+        var band = f.extragalactic ? (clT > 2600 && clT < 60000 && f.obj && f.obj.parent) : (clT < 3400 && inGal);   // a landmark is named while its own tier is the one in view (and our nebulae only from inside our galaxy)
         var tg = _dsoTags[f.name], show = !ground && f !== fF && band && tsProject(f.T, _stV) && Math.abs(_stV.x) < 0.97 && Math.abs(_stV.y) < 0.95;
         var x = (_stV.x * 0.5 + 0.5) * W, y = (-_stV.y * 0.5 + 0.5) * H, rpx = 0;
         if (show) { rpx = f.Rt / Math.max(1e-9, f.T.distanceTo(nearCam.position)) / fh * H * 0.5; if (rpx > 70) show = false; }
@@ -2855,7 +2864,7 @@
     ]).then(function (arr) {
       var natalData = arr[0], lssData = arr[1];
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=158").then(function (mod) {
+      return import("./natal-sky.js?v=162").then(function (mod) {
         natalOpts = {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -3559,6 +3568,7 @@
         var vd = 220, fmin = 60;
         if (!shell && natalSky && natalSky.dsoPicks) shell = natalSky.dsoPicks.getObjectByName("DSOPick_" + id) || null;   // called by id (tour/search): the shell carries the framing
         if (shell && shell.userData) { vd = shell.userData.dsoViewDist || vd; fmin = shell.userData.dsoFocusMin || fmin; }
+        _focusVd = vd;
         var obj = (natalSky && natalSky.group.getObjectByName("DSO_" + id)) || shell;
         if (!obj) return;
         var w = obj.getWorldPosition(new THREE.Vector3());
@@ -3660,6 +3670,7 @@
       }
       easeAddressPivot = function () {
         if (!LOD || !LOD.weight || !natalSky || !userMoved || controls.isGround() || glideActive() || soloBody || ptrDown || panOn) return;
+        if (_ts && _nav.b && _nav.b.galactic) return;   // orbiting a true-scale landmark: its frame owns the pivot until you fly elsewhere
         var cl = camera.position.length();
         var wLG = LOD.weight(cl, "local-group"), wSheet = LOD.weight(cl, "local-sheet"), wVir = LOD.weight(cl, "virgo-supercluster"), wLani = LOD.weight(cl, "laniakea"), wWeb = LOD.weight(cl, "cosmic-web");
         var target = null, rate = 0;   // scratch-based: this runs per frame — no allocations (L3)
@@ -3760,7 +3771,7 @@
         // zoomed back out BY HAND → the chart reassembles (never mid-flight). A deep-sky wonder is
         // admired from far out (view-dist ~400), so its focus only releases when you truly pull away.
         if (soloBody && soloBody !== "dso" && soloBody !== "galcore" && !glideActive() && controls.getRadius() > 130) { soloBody = null; clearSel(); }
-        if ((soloBody === "dso" || soloBody === "galcore") && !glideActive() && controls.getRadius() > 900) { soloBody = null; clearSel(); }
+        if ((soloBody === "dso" || soloBody === "galcore") && !glideActive() && controls.getRadius() > Math.max(900, 3.2 * _focusVd)) { soloBody = null; clearSel(); }   // (a supercluster is admired from thousands of units: release relative to its own framing)
         // constellations are apparent Earth-sky annotations, not physical 3-D galaxy structures.
         if (natalSky && natalSky.setZodiacFade) natalSky.setZodiacFade(camera.position.length() >= 1300 ? 1 : 0);
         // the orrery (esp. the SUN) must NEVER hide — it's the anchor you click to fly back to the solar
