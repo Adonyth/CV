@@ -354,7 +354,7 @@
     };
     /* ===== TRUE SCALE: frames, cameras, slices (build 240) ===== */
     var _tsV = new THREE.Vector3(), _tsA = new THREE.Vector3(), _tsB = new THREE.Vector3(), _tsD = new THREE.Vector3();
-    var _nav = { a: null, b: null, p: 1, start: new THREE.Vector3(), dest: new THREE.Vector3() };
+    var _nav = { a: null, b: null, p: 1, start: new THREE.Vector3(), dest: new THREE.Vector3(), flight: null };
     function tsWarp(pL, out) {                       // the Earth's frame: same direction, true distance
       var r = pL.length();
       return r < 1e-12 ? out.copy(pL) : out.copy(pL).multiplyScalar(_ts.L.G(r) / r);
@@ -367,7 +367,7 @@
     function tsFrame(f, pL, out) { return f ? tsBodyFrame(f, pL, out) : tsWarp(pL, out); }
     function tsBodyAt(pL) {                          // the body whose ladder proxy sits at this point (null = Earth frame)
       if (!_ts || !pL) return null;
-      for (var i = 0; i < _ts.bodies.length; i++) { var b = _ts.bodies[i]; if (pL.distanceToSquared(b.proxy) < b.tol2) return b; }
+      for (var i = 0; i < _ts.frames.length; i++) { var b = _ts.frames[i]; if (pL.distanceToSquared(b.proxy) < b.tol2) return b; }
       return null;
     }
     function tsGlideDest() {                         // where the active glide is taking the pivot
@@ -376,6 +376,14 @@
       if (glide.frames > 0 && glide.targetTo) return glide.targetTo;
       return null;
     }
+    function tsGlideEndCam(out) {                    // where the active glide will leave the navigation camera
+      var G2 = glide.param;
+      if (G2 && G2.flight) return out.copy(G2.P3);
+      if (G2) return out.copy(G2.d1).multiplyScalar(Math.exp(G2.lnR1));
+      if (glide.frames > 0 && glide.camTo) return out.copy(glide.camTo);
+      return null;
+    }
+    var _tsEnd = new THREE.Vector3();
     function tsUpdateNav() {
       // the frame only changes when a glide CARRIES the pivot somewhere new; orbit / zoom / pan keep it
       var P = controls ? controls.target : HOME;
@@ -383,10 +391,21 @@
       if (dest) {
         var fb = tsBodyAt(dest);
         if (fb !== _nav.b) {
+          var wasGal = !!(_nav.b && _nav.b.galactic) || !!(_nav.a && _nav.a.galactic && _nav.p < 1);
           _nav.a = _nav.p >= 0.5 ? _nav.b : _nav.a;
           _nav.b = fb; _nav.p = 0; _nav.start.copy(P);
+          // into or out of the galaxy's frame: a true flight. The two ends differ by up to thousands of light-years, and
+          // blending the frames in place made the camera swing out sideways; instead fly a straight line in TRUE space
+          // from here to where the glide will land, on the glide's own clock (it lands exactly on the frame's mapping)
+          _nav.flight = null;
+          if ((wasGal || (fb && fb.galactic)) && glide.param && tsGlideEndCam(_tsEnd))
+            _nav.flight = { from: nearCam.position.clone(), to: tsFrame(fb, _tsEnd, new THREE.Vector3()), ref: glide.param };
         }
         _nav.dest.copy(dest);
+      }
+      if (_nav.flight) {
+        if (glide.param === _nav.flight.ref) { var GP = glide.param; _nav.p = Math.min(1, GP.ease(GP.t)); return; }
+        _nav.flight = null; _nav.p = 1; _nav.a = _nav.b; return;   // the glide finished (or was taken over by the hand)
       }
       if (_nav.p < 1) {
         var d0 = _nav.start.distanceTo(_nav.dest), d1 = P.distanceTo(_nav.dest);
@@ -400,31 +419,39 @@
     }
     function syncCams() {
       tsUpdateNav();
-      var e = _nav.p * _nav.p * (3 - 2 * _nav.p);
-      tsFrame(_nav.b, camera.position, _tsB);
-      if (e < 1) { tsFrame(_nav.a, camera.position, _tsA); _tsB.lerp(_tsA, 1 - e); }
+      if (_nav.flight) _tsB.copy(_nav.flight.from).lerp(_nav.flight.to, _nav.p);   // a true flight between frames
+      else {
+        var e = _nav.p * _nav.p * (3 - 2 * _nav.p);
+        tsFrame(_nav.b, camera.position, _tsB);
+        if (e < 1) { tsFrame(_nav.a, camera.position, _tsA); _tsB.lerp(_tsA, 1 - e); }
+      }
       nearCam.position.copy(_tsB);
       nearCam.quaternion.copy(camera.quaternion);
-      // the sky only TURNS inside the Solar System (stars at infinity); past ~150 ladder units it starts to
-      // travel with the navigation camera, fully by 400 — the old cosmic ladder takes over from there
-      // Phase 2: the GALAXY at true scale. The Milky-Way tier is built linear (radius 2600 units ↔ 50 kly, the Sun 26 kly
-      // out), so below its rail stop the sky camera stands at the visitor's TRUE distance × 0.052 units/ly — the galaxy
-      // grows around you at its real size, and it meets the ladder exactly at the 67-kly stop (above it, the ladder rules).
-      // A deep-sky wonder is still admired up close in ladder space (its own flight), so that focus pulls it along.
-      var cl = camera.position.length(), fd = cl;
-      if (cl < 3500) fd = Math.min(cl, _ts.L.G(cl) * _ts.kpu / 9460730472580.8 * (2600 / 5e4));
-      _tsKFar += ((soloBody === "dso" || soloBody === "galcore" ? 1 : 0) - _tsKFar) * 0.06;
+      // THE SKY CAMERA. The Milky-Way tier (and every galactic nebula in it) is built LINEAR: the Sun at the origin,
+      // 0.052 units per light-year. So inside the galaxy the sky camera stands at the visitor's TRUE position in that
+      // frame: ≈ the origin anywhere in the Solar System (the stars hang at infinity), the real place out among the
+      // stars, and — in a nebula's frame — exactly the navigation camera. It meets the ladder at the 67-kly rail stop;
+      // past it the ladder rules. Only a wonder WITHOUT a true frame (the extragalactic ones) is admired in ladder space.
+      var cl = camera.position.length();
+      if (cl < 3500) {
+        _tsD.copy(nearCam.position).sub(_ts.sun.T).multiplyScalar(_ts.kpu / 9460730472580.8 * TS_GAL_PER_LY);
+        if (_tsD.length() > cl) _tsD.setLength(cl);
+        farCam.position.copy(_tsD);
+      } else farCam.position.copy(camera.position);
+      var fFrame = _nav.p >= 0.5 ? _nav.b : _nav.a;
+      _tsKFar += (((soloBody === "dso" || soloBody === "galcore") && !(fFrame && fFrame.galactic) ? 1 : 0) - _tsKFar) * 0.06;
       var kf = _tsKFar * _tsKFar * (3 - 2 * _tsKFar);
-      fd = (fd + (cl - fd) * kf) * (1 - tsFocusWeight());
-      var k = cl > 1e-9 ? fd / cl : 0;
+      if (kf > 0.001) farCam.position.lerp(camera.position, kf);
+      var fd = farCam.position.length();
       // the baked Milky-Way band is the sky from INSIDE the disc; it hands over as the galaxy tier fades in (400 → 1500)
       var kb = Math.max(0, Math.min(1, (fd - 400) / 1100));
       _tsSpaceSky = 1 - kb * kb * (3 - 2 * kb);
-      farCam.position.copy(camera.position).multiplyScalar(k);
       farCam.quaternion.copy(camera.quaternion);
       if (nearCam.fov !== camera.fov || nearCam.aspect !== camera.aspect) { nearCam.fov = camera.fov; nearCam.aspect = camera.aspect; }
       farCam.fov = camera.fov; farCam.aspect = camera.aspect;
-      farCam.near = fd > 40 ? camera.near : Math.max(camera.near, 0.5); farCam.far = camera.far;
+      farCam.near = fd > 40 ? camera.near : Math.max(camera.near, 0.5);
+      if (fFrame && fFrame.galactic && controls) farCam.near = Math.min(farCam.near, Math.max(1e-4, 0.15 * controls.getRadius()));   // a small nebula is admired from a fraction of a unit
+      farCam.far = camera.far;
       farCam.updateProjectionMatrix();
       nearCam.updateMatrixWorld(); farCam.updateMatrixWorld();
     }
@@ -470,7 +497,7 @@
       if (!_ts) return null;
       var f = _nav.p >= 0.5 ? _nav.b : _nav.a, anchor = f ? f.T : HOME;
       var km = nearCam.position.distanceTo(anchor) * _ts.kpu, kmSun = nearCam.position.distanceTo(_ts.sun.T) * _ts.kpu;
-      return { from: f ? f.name : "Earth", km: km, text: _ts.fmt(km), sunKm: kmSun, sunText: _ts.fmt(kmSun) };
+      return { from: f ? f.name : "Earth", label: f && f.label, km: km, text: _ts.fmt(km), sunKm: kmSun, sunText: _ts.fmt(kmSun) };
     }
     window.__space.tsDist = tsDistanceInfo;
     var TS_NEAR_ROOTS = { NyeArmature: 1, SunFlareChain: 1, GroundTerrain: 1, LocalMapGround: 1, BaseCity: 1, GroundHorizonDome: 1 };
@@ -2213,6 +2240,19 @@
       mercury: [281.010, 61.416], venus: [272.76, 67.16], mars: [317.681, 52.887], jupiter: [268.057, 64.495],
       saturn: [40.589, 83.537], uranus: [257.311, -15.175], neptune: [299.36, 43.46], pluto: [132.993, -6.163]
     };
+    /* true physical widths of the nebulae as their pictures frame them (ly) — each matches the real angular size seen
+       from Earth (Orion 24 ly at 1,340 ly ≈ 1°, Lagoon 1.5°, Carina ≈ 2°, Crab 0.1°, Ring and Helix a fraction of a degree) */
+    var TS_DSO_WIDTH_LY = { orion: 24, rosette: 130, pillars: 9, crab: 11, horsehead: 8, lagoon: 110, ring: 3, pleiades: 22, carina: 240, helix: 4.5 };
+    var TS_GAL_PER_LY = 2600 / 5e4;                     // the Milky-Way tier's linear frame: units per light-year
+    function tsAddGalacticFrame(name, obj, worldL, widthLy, dsoId) {
+      // a galactic object as a navigation frame: its ladder proxy IS its place in the galaxy's linear frame, and one
+      // ladder unit there is 1/0.052 ly of true space — so every flight to it is a true flight through the real stars
+      var LYW = 9460730472580.8 / _ts.kpu / TS_GAL_PER_LY;   // scene units per ladder unit in this frame
+      var T = _ts.sun.T.clone().addScaledVector(worldL, LYW);
+      var f = { name: name, obj: obj, T: T, Rt: widthLy * 0.5 * 9460730472580.8 / _ts.kpu, Ro: widthLy * 0.5 * TS_GAL_PER_LY, s: LYW, kappa: 1e-9,
+                proxy: worldL.clone(), tol2: Math.pow(Math.max(1e-4, 1e-3 * worldL.length()), 2), dso: dsoId, galactic: true };
+      _ts.frames.push(f); return f;
+    }
     function tsEclToLocal(x, y, z) {                   // J2000 ecliptic km → equatorial → the armature's (x, z, −y) local units
       var ce = Math.cos(ECL_TILT), se = Math.sin(ECL_TILT), ye = y * ce - z * se, ze = y * se + z * ce;
       return [x / TS_KM_LOCAL, ze / TS_KM_LOCAL, -ye / TS_KM_LOCAL];
@@ -2265,7 +2305,13 @@
         clusters.push({ pos: bSun.T.clone(), R: 3.8 * AUw });                            // the month ring + the asteroid belt
         bodies.forEach(function (b) { clusters.push({ pos: b.T, R: b.Rt * (b.name === "NatalPluto" ? 24 : b.name === "NyeSun" ? 2.6 : 3.4), body: b.Rt }); });
         _ts = { L: L, bodyDistance: _tsMods.ladder.bodyDistance, bodySlope: _tsMods.ladder.bodySlope, fmt: _tsMods.ladder.formatDistance,
-                kpu: kpu, bodies: bodies, clusters: clusters, sun: bSun, moon: bMoon };
+                kpu: kpu, bodies: bodies, clusters: clusters, sun: bSun, moon: bMoon, frames: bodies.slice() };
+        // the nebulae at their true distances and sizes (Phase 2c) — each one a navigation frame
+        if (natalSky.applyTrueDSO) {
+          natalSky.applyTrueDSO(TS_GAL_PER_LY, TS_DSO_WIDTH_LY).forEach(function (dd) {
+            if (dd.world && dd.shell) { var fr = tsAddGalacticFrame("DSO_" + dd.id, dd.shell, dd.world, dd.widthLy, dd.id); fr.label = dd.name; fr.ly = dd.ly; }
+          });
+        }
         // the orbits: one period of each Keplerian path, in the same geocentric frame as the bodies
         if (natalSky.addTrueOrbits) {
           var ORB = [["mercury", 0x9a958e], ["venus", 0xd9c08a], ["earth", 0x6f9fdc], ["mars", 0xc4724e], ["jupiter", 0xc9a77a],
@@ -2310,6 +2356,24 @@
       var fh = Math.tan(cam.fov * Math.PI / 360);
       out.set(_tsPV.x / (-_tsPV.z * fh * cam.aspect), _tsPV.y / (-_tsPV.z * fh), 0);
       return true;
+    }
+    /* the nebulae carry their names while they are small — SpaceEngine-style — and lose them once they fill the view */
+    var _dsoTags = {};
+    function tsDsoTags(placed) {
+      if (!_tsTagHost) return;
+      var ground = !!(controls && controls.isGround()), fh = Math.tan(nearCam.fov * Math.PI / 360), H = innerHeight, W = innerWidth;
+      var fF = _nav.p >= 0.5 ? _nav.b : _nav.a;
+      for (var i = 0; i < _ts.frames.length; i++) {
+        var f = _ts.frames[i]; if (!f.galactic || !f.label) continue;
+        var tg = _dsoTags[f.name], show = !ground && f !== fF && camera.position.length() < 3400 && tsProject(f.T, _stV) && Math.abs(_stV.x) < 0.97 && Math.abs(_stV.y) < 0.95;
+        var x = (_stV.x * 0.5 + 0.5) * W, y = (-_stV.y * 0.5 + 0.5) * H, rpx = 0;
+        if (show) { rpx = f.Rt / Math.max(1e-9, f.T.distanceTo(nearCam.position)) / fh * H * 0.5; if (rpx > 70) show = false; }
+        for (var j = 0; show && j < placed.length; j++) if (Math.abs(placed[j][0] - x) < 70 && Math.abs(placed[j][1] - y) < 14) show = false;
+        if (show && !tg) { tg = document.createElement("div"); tg.className = "ts-tag ts-tag--dso"; tg.innerHTML = '<i></i><span class="i18n-en">' + f.label.en + '</span><span class="i18n-zh">' + f.label.zh + '</span>'; _tsTagHost.appendChild(tg); _dsoTags[f.name] = tg; }
+        if (!tg) continue;
+        if (show) { placed.push([x, y]); tg.style.transform = "translate3d(" + (x + Math.max(rpx, 3) + 2).toFixed(1) + "px," + y.toFixed(1) + "px,0)"; tg.style.opacity = soloBody === "dso" ? "0.35" : "0.9"; }
+        if (show !== !!tg._on) { tg._on = show; tg.classList.toggle("is-on", show); }
+      }
     }
     /* out among the stars: the brightest named stars in view (and the Sun, home) carry a quiet name */
     var _starTags = [], _starSun = { en: "Sun", zh: "太阳", p: new THREE.Vector3(), M: 4.83 }, _stV = new THREE.Vector3();
@@ -2400,6 +2464,15 @@
         if (show !== t.on) { t.on = show; t.el.classList.toggle("is-on", show); }
       }
       tsStarTags(placed);
+      tsDsoTags(placed);
+      if (natalSky && natalSky.setSoloDso) { var fF = _nav.p >= 0.5 ? _nav.b : _nav.a; natalSky.setSoloDso(soloBody === "dso" && fF && fF.dso ? fF.dso : null); }
+      // the black-hole marker at the galactic centre is a galaxy-scale sign; from inside the disc Sgr A* is hidden by dust
+      if (_ts.galcore && _ts.galcore.obj && farCam.position.length() < 400 && !(fF && fF === _ts.galcore)) { var gcG = natalSky.group.getObjectByName("DSO_galcore"); if (gcG) gcG.visible = false; }
+      if (!_ts.galcore && frameNo % 60 === 0 && natalSky) {   // the galactic centre is built lazily with the galaxy tier
+        var gcObj = natalSky.group.getObjectByName("DSO_galcore");
+        if (gcObj) { natalSky.group.updateMatrixWorld(true); var gcW = gcObj.getWorldPosition(new THREE.Vector3()); var gcPick = null; gcObj.traverse(function (c2) { if (!gcPick && c2.userData && c2.userData.nyePick) gcPick = c2; });
+          _ts.galcore = tsAddGalacticFrame("DSO_galcore", gcPick || gcObj, gcW, 40, "galcore"); _ts.galcore.label = { en: "Sagittarius A*", zh: "人马座 A*" }; }
+      }
       // orbits: global fade × each orbit melts as you near its own planet
       if (_ts.orbits) {
         for (var o = 0; o < _ts.orbits.children.length; o++) {
@@ -2440,7 +2513,7 @@
       if (_tsReadout) {
         var on = !ground && info && camera.position.length() > 8.6;
         if (on) {
-          var nmA = TS_NAMES[info.from] || TS_NAMES.Earth;
+          var nmA = info.label ? [info.label.en, info.label.zh] : (TS_NAMES[info.from] || TS_NAMES.Earth);
           var txt = '<b>' + '<span class="i18n-en">' + nmA[0] + '</span><span class="i18n-zh">' + nmA[1] + '</span></b>' +
             '<span class="i18n-en">' + info.text + '</span><span class="i18n-zh">' + tsFmtZh(info.km) + '</span>';
           if (txt !== _tsReadout._t) { _tsReadout.innerHTML = txt; _tsReadout._t = txt; }
@@ -2703,7 +2776,7 @@
     ]).then(function (arr) {
       var natalData = arr[0], lssData = arr[1];
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=154").then(function (mod) {
+      return import("./natal-sky.js?v=155").then(function (mod) {
         natalOpts = {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -3234,6 +3307,13 @@
         }
         near.sort(function (h1, h2) { return h1.distance - h2.distance; });
         if (withFar) {
+          // a true-scale nebula is often only a few pixels across: catch it within ~14 px of its true place
+          for (var gi = 0; gi < _ts.frames.length; gi++) {
+            var gf = _ts.frames[gi]; if (!gf.galactic || !gf.obj) continue;
+            if (!tsProject(gf.T, _tpV)) continue;
+            var gx = (_tpV.x * 0.5 + 0.5) * innerWidth, gy = (-_tpV.y * 0.5 + 0.5) * innerHeight;
+            if (Math.hypot(gx - sx, gy - sy) < 14) far.push({ object: gf.obj, distance: gf.T.distanceTo(nearCam.position), point: gf.T.clone() });
+          }
           ray.setFromCamera(ndc, farCam);
           if (natalSky && natalSky.dsoPicks) far = far.concat(ray.intersectObject(natalSky.dsoPicks, true));
           if (natalSky && natalSky.conPicks) far = far.concat(ray.intersectObject(natalSky.conPicks, true));
@@ -3391,6 +3471,7 @@
          No content door — these are pure spectacle. */
       function focusDeepSky(id, shell) {
         var vd = 220, fmin = 60;
+        if (!shell && natalSky && natalSky.dsoPicks) shell = natalSky.dsoPicks.getObjectByName("DSOPick_" + id) || null;   // called by id (tour/search): the shell carries the framing
         if (shell && shell.userData) { vd = shell.userData.dsoViewDist || vd; fmin = shell.userData.dsoFocusMin || fmin; }
         var obj = (natalSky && natalSky.group.getObjectByName("DSO_" + id)) || shell;
         if (!obj) return;

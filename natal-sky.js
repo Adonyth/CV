@@ -1122,6 +1122,44 @@ export function buildNatalSky(THREE, scene, data, opts) {
   }
   function gauss(rng) { return rng() + rng() + rng() + rng() - 2; }   // ~N(0, 0.58)
 
+  /* TRUE SCALE (build 243): galactic nebulae at their REAL distance and REAL size in the Milky-Way tier's linear frame
+     (the Sun at the origin, 1 ly = scalePerLy units — the same frame the galaxy is built in), shrunk with their
+     particle sizes so they read from any distance at constant surface brightness. Set up by applyTrueDSO(). */
+  var _tsDso = null, _tsDsoById = {};
+  function tsPlaceDso(rec) {
+    if (!rec.pts) return;
+    rec.pts.position.copy(rec.pos); rec.pts.scale.setScalar(rec.s);
+    if (!rec.sized) {
+      rec.sized = true; rec.pmats = [];
+      rec.pts.traverse(function (c) { if (c.isPoints && c.material && c.material.size) { c.material.size *= rec.s; rec.pmats.push({ m: c.material, base: c.material.size }); } });
+      rec.pmats.sort(function (a, b) { return b.base - a.base; });   // [0] = the wide glow underlay, the rest = the fine grain
+    }
+    rec.pts.updateWorldMatrix(true, false); rec.pts.lookAt(0, 0, 0); if (rec.d.roll) rec.pts.rotateZ(rec.d.roll * Math.PI / 180);
+    if (!rec.mats) { rec.mats = []; rec.pts.traverse(function (c) { if (c.material && c.material.opacity != null) rec.mats.push({ m: c.material, base: c.material.opacity }); }); }
+  }
+  function applyTrueDSO(scalePerLy, widthsLy) {
+    _tsDso = [];
+    (data.deepSky || []).forEach(function (d) {
+      if (!d.tex || d.tier === "external" || !(d.ly > 0)) return;
+      var ecl = raDecToEcl(d.raH, d.decDeg), dirU = eclVec(ecl.lon, ecl.lat, 1).normalize();
+      var Wu = (d.size || 160) * 1.8 * (d._sizeScale || 0.055), wl = (widthsLy && widthsLy[d.id]) || 20;
+      var rec = { d: d, id: d.id, pos: dirU.clone().multiplyScalar(d.ly * scalePerLy), s: (wl * scalePerLy) / Wu, widthL: wl * scalePerLy, ly: d.ly, widthLy: wl,
+                  shell: dsoPickGroup.getObjectByName("DSOPick_" + d.id), pts: belt.getObjectByName("DSO_" + d.id) };
+      if (rec.shell) {
+        rec.shell.position.copy(rec.pos); rec.shell.scale.setScalar(rec.s);
+        var u = rec.shell.userData;
+        u.dsoViewDist *= rec.s; u.dsoFocusMin *= rec.s; u.dsoMinCam = 0; u.dsoMaxCam = 4700; u.dsoTrueScale = true;
+        u.dsoWidthLy = wl;
+      }
+      if (rec.pts) { rec.pts.userData._lodSeen = true; tsPlaceDso(rec); }
+      _tsDso.push(rec); _tsDsoById[d.id] = rec;
+    });
+    belt.updateMatrixWorld(true);
+    return _tsDso.map(function (r) {
+      return { id: r.id, name: r.d.name, ly: r.ly, widthLy: r.widthLy, shell: r.shell, world: r.shell ? r.shell.getWorldPosition(new T.Vector3()) : null };
+    });
+  }
+
   (data.deepSky || []).forEach(function (d, idx) {
     if (!d.tex) return;
     // TRUE POSITION: real RA/Dec DIRECTION (no scatter) + a distance that is the real light-years,
@@ -1173,6 +1211,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
         pts.frustumCulled = false;
         pts.raycast = function () {};              // the invisible shell owns picking; the cloud points never intercept rays
         pts.renderOrder = -2;                      // the farthest backdrop, painted before the near sky
+        if (_tsDsoById[d.id]) { var rec2 = _tsDsoById[d.id]; rec2.pts = pts; pts.userData._lodSeen = true; tsPlaceDso(rec2); }   // arrived after true scale was set up
       } catch (e) { if (typeof window !== "undefined" && window.__space) window.__space.dsoError = String(e); }
     };
     lazyTex(function () { img.src = "data/" + d.tex; });
@@ -2803,7 +2842,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
 
   /* ---------------- lifecycle ---------------- */
   var _galBuilt = false; var _impV = new T.Vector3();
-  var _figFade = 1, _sfGain = 1;   // _sfGain: true scale — the procedural field gives way once the real stars swing by   // true scale: the zodiac figures hang at infinity — they melt once you leave the Solar System
+  var _figFade = 1, _sfGain = 1, _tsDV = new T.Vector3(), _tsSoloDso = null;
+  function backdropMulDso(rec) { return (_tsSoloDso && _tsSoloDso !== rec.id) ? 0.35 : 1; }   // admiring one wonder: the others step back   // _sfGain: true scale — the procedural field gives way once the real stars swing by   // true scale: the zodiac figures hang at infinity — they melt once you leave the Solar System
   var t0 = null, backdropMul = 1, zoomMul = 1, _bdCache = null, _sfObj = null, _sfMat = null, _sfBase = 1, _bdT = 0, _keepGal = false, _galMats = null, _localHide = null, _nsObj = null, _nsMat = null, _nsBase = 1, _lhTries = 0, _tierSeen = {}, _lssObjs = null, _tierScaleOn = true;
   // drives tier presence only. Opacity is never used for inter-tier transitions;
   // the address transition must read as real geometric zoom/collapse.
@@ -3052,7 +3092,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
         // LOCAL structures collapse tier by tier. The MW-internal nebulae + black hole
         // ride the galaxy contraction; Andromeda (M31) belongs to
         // BOTH the galaxy sky and the Local Group, so it lingers through that tier and contracts with it.
-        if (_cl > 800 && (!_localHide || (_localHide.dso.length < _dsoCount && ++_lhTries % 90 === 0))) {
+        if (_cl > 800 && (!_localHide || (_localHide.dso.length < _dsoCount && ++_lhTries % 90 === 0))) {   // (true-scale nebulae are pre-marked _lodSeen: they never join this legacy band logic)
           // INCREMENTAL collect — nebula images load async, so late arrivals must still join the
           // scale-fade. Only never-seen objects are added (their opacity is still pristine base;
           // re-reading an already-faded material would bake the fade into its base — the old trap).
@@ -3071,6 +3111,31 @@ export function buildNatalSky(THREE, scene, data, opts) {
             }
             if (ob.name === "DSO_galcore" && !_localHide.core) { ob.userData._lodSeen = true; _localHide.core = { o: ob, basePos: ob.position.clone() }; }
           });
+        }
+        if (_tsDso && o.camera) {
+          var _cMWt = LOD ? LOD.collapse(_cl, "milky-way", 0.16) : 1, _fhT = Math.tan((o.camera.fov || 52) * Math.PI / 360), _Ht = (typeof innerHeight !== "undefined" ? innerHeight : 800);
+          for (var _ti = 0; _ti < _tsDso.length; _ti++) {
+            var _tr = _tsDso[_ti]; if (!_tr.pts) continue;
+            _tr.pts.position.copy(_tr.pos).multiplyScalar(_cMWt); _tr.pts.scale.setScalar(_tr.s * _cMWt);
+            if (_tr.shell) { _tr.shell.position.copy(_tr.pts.position); _tr.shell.scale.setScalar(_tr.s * _cMWt); }
+            _tr.pts.getWorldPosition(_tsDV);
+            var _dd = Math.max(1e-6, _tsDV.distanceTo(o.camera.position)), _apx = (_tr.widthL * _cMWt / _dd) / _fhT * _Ht * 0.5;
+            // a real nebula keeps its surface brightness; below a few pixels it is only a smudge, so it thins out
+            var _vis = _cl < 4700 && _apx > 2.5;
+            _tr.pts.visible = _vis;
+            // world-sized grains were tuned to be seen from galaxy scale; up close each would swell to ~85 px and 15,000 of
+            // them saturate to white. Cap every grain's on-screen size (glow ≈ 9 px, grain ≈ 3 px at the cloud's centre)
+            // so a near nebula resolves into fine structure over its photographic relief instead of a blown-out blob.
+            if (_vis && _tr.pmats) {
+              var _wpp = _dd * _fhT * 2 / _Ht, _gc = Math.max(3, _apx / 110);   // world units per screen pixel at the cloud; grain cap grows with the cloud
+              for (var _pm = 0; _pm < _tr.pmats.length; _pm++) _tr.pmats[_pm].m.size = Math.min(_tr.pmats[_pm].base * _cMWt, (_pm === 0 ? 3.2 : 1) * _gc * _wpp);
+            }
+            if (_vis && _tr.mats) {
+              var _fo = Math.min(1, 0.25 + 0.75 * Math.pow(Math.min(1, (_apx - 2.5) / 90), 0.7)) * backdropMulDso(_tr);
+              var _near = Math.max(0, Math.min(1, (_apx - 150) / 350));   // standing in front of it, the photographic relief carries the structure
+              for (var _tm = 0; _tm < _tr.mats.length; _tm++) { var _mm = _tr.mats[_tm]; _mm.m.opacity = _mm.base * _fo * (_mm.m.isMeshBasicMaterial ? 1 + 1.6 * _near : 1 + 0.6 * _near); }
+            }
+          }
         }
         if (_localHide) {
           var _dsoOn = _wMW > 0;
@@ -3172,6 +3237,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
     setZodiacFade: function (t) { zoomMul = t >= 1 ? 0 : 1; },
     setFigureFade: function (f) { _figFade = Math.max(0, Math.min(1, +f || 0)); },
     setStarfieldGain: function (g) { _sfGain = Math.max(0, Math.min(1, +g || 0)); },
+    applyTrueDSO: applyTrueDSO,
+    setSoloDso: function (id) { _tsSoloDso = id || null; },
     setStarScale: function (v) { uniforms.uRefDepth.value = 840 * v; },
     stats: { stars: N, segments: totalSegs, dataNodes: nodeIndex.filter(Boolean).length, planets: planetSprites.length, constellations: cons.length },
     dispose: function () {
