@@ -947,7 +947,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
     gg.fillStyle = gr; gg.fillRect(0,0,128,128);
     var tex = new T.CanvasTexture(cv); if ("colorSpace" in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
 
-    // ===== REAL galaxy field — 2MRS (≈43k observed galaxies) in supergalactic Mpc, ONE rigid cloud. =====
+    // ===== REAL galaxy field — 2M++ + 2MRS + the UNGC Local Volume (≈75k observed galaxies, build 246) in supergalactic Mpc, ONE rigid cloud. =====
     // The nested hierarchy (galaxies→clusters→superclusters→Laniakea→web) and EVERY peer structure are
     // REAL positions, so pulling the camera back IS the rigid zoom: Laniakea shrinks into one basin among
     // its true neighbours (Coma, Perseus-Pisces, Shapley…) which together ARE the cosmic web. No fade, no
@@ -957,12 +957,15 @@ export function buildNatalSky(THREE, scene, data, opts) {
     // glowPx>0 adds a SECOND Points from the SAME geometry with a big, dim, additive sprite: overlapping
     // galaxies accumulate → a soft continuous density glow (the DTFE/Millennium "net" look) behind the
     // sharp points. Dense nodes+filaments bloom; empty voids stay black. Returns the geometry for reuse.
-    function buildLayer(xyz, rgb, sizePx, op, name, order, glowPx, glowOp, glowTiers, warm) {
+    // attr (optional, the galaxy field only): 8 bytes per galaxy from the catalogue build — density luminance, T-type,
+    // diameter, disc normal, absolute K magnitude, provenance flags (scripts/build-galaxies.py). xyzScale: Mpc per int16 step.
+    function buildLayer(xyz, rgb, sizePx, op, name, order, glowPx, glowOp, glowTiers, warm, attr, xyzScale) {
       if (!xyz || !rgb || xyz.length < 3) return null;
-      var NG = (xyz.length / 3) | 0;
+      var NG = (xyz.length / 3) | 0, XS = xyzScale || 0.125;
       var pos = new Float32Array(NG * 3), col = new Float32Array(NG * 3);
+      var TT = attr ? galTypes(attr, NG) : null;
       for (var i = 0; i < NG; i++) {
-        var sx = xyz[i*3]*0.125, sy = xyz[i*3+1]*0.125, sz = xyz[i*3+2]*0.125;   // int16/8 = Mpc
+        var sx = xyz[i*3]*XS, sy = xyz[i*3+1]*XS, sz = xyz[i*3+2]*XS;   // int16 × scale = Mpc
         pos[i*3]   = K*(sx*axx + sy*ayx + sz*azx);
         pos[i*3+1] = K*(sx*axy + sy*ayy + sz*azy);
         pos[i*3+2] = K*(sx*axz + sy*ayz + sz*azz);
@@ -986,7 +989,15 @@ export function buildNatalSky(THREE, scene, data, opts) {
             // deep web is unchanged. Gives the close galaxy field real colour variety instead of a grey wash.
             var hh = Math.sin(i * 12.9898) * 43758.5453; hh -= Math.floor(hh);
             var tr, tg, tb;
-            if (hh < 0.60) { var q = hh / 0.60; tr = 0.54 + 0.30 * q; tg = 0.70 + 0.18 * q; tb = 1.02; }   // blue → blue-white spirals
+            if (TT) {
+              // the galaxy's own Hubble type (catalogued, or drawn from the morphology–density relation where it has none):
+              // late spirals and irregulars blue, early spirals blue-white, lenticulars gold, ellipticals gold → red
+              var tt = TT[i];
+              if (tt >= 0) { var qs = Math.max(0, Math.min(1, 1 - tt / 8)); tr = 0.54 + 0.30 * qs; tg = 0.70 + 0.18 * qs; tb = 1.02; }
+              else if (tt > -3.5) { tr = 1.05; tg = 0.80; tb = 0.58; }
+              else { tr = 1.05; tg = 0.82 - 0.20 * hh; tb = 0.62 - 0.24 * hh; }
+            }
+            else if (hh < 0.60) { var q = hh / 0.60; tr = 0.54 + 0.30 * q; tg = 0.70 + 0.18 * q; tb = 1.02; }   // blue → blue-white spirals
             else { var q2 = (hh - 0.60) / 0.40; tr = 1.05; tg = 0.82 - 0.20 * q2; tb = 0.62 - 0.24 * q2; }  // gold → red ellipticals
             var hb = (1 - w) * 0.62;                                          // type colour only where it's an individual galaxy
             col[i*3]   = (br * (1 - hb) + tr * hb) * amp;
@@ -1029,66 +1040,127 @@ export function buildNatalSky(THREE, scene, data, opts) {
         var pg = new T.Points(g, mat(glowPx, glowOp || 0.12)); pg.name = name + "Glow"; pg.frustumCulled = false; pg.renderOrder = base - 1; belt.add(pg);
       }
       var p = new T.Points(g, mat(sizePx, op)); p.name = name; p.frustumCulled = false; if (order != null) p.renderOrder = order; belt.add(p);
-      if (_tsGal && name === "LargeScaleStructure") buildGalaxyDiscs(pos, NG, rgb);
+      if (_tsGal && name === "LargeScaleStructure") buildGalaxyDiscs(pos, NG, rgb, attr, TT);
       return p;
     }
-    /* TRUE SCALE (build 245): each survey galaxy as a GALAXY once you are close enough to see one. The positions are the
-       real 2MRS galaxies; the survey carries no morphology, so type (the same per-galaxy hash as the dot colour: ~60%
-       star-forming spirals, the rest ellipticals — giants where the field is dense), size (lognormal, 15–280 kly),
-       tilt and position angle are drawn statistically. A disc appears only once it is wider than a few pixels; until then
-       the dot layer carries it, so the far web is unchanged. Procedural: bulge + exponential disc + two-arm log spiral,
-       or a Sérsic-like elliptical; one draw for every galaxy. */
-    function buildGalaxyDiscs(pos, n, rgb) {
+    /* every galaxy's Hubble type, T (−5 elliptical … 0 S0/a … 5 Sc … 10 irregular). Catalogued where 2MRS / the UNGC
+       typed it (byte 1); otherwise drawn from what is known about it — its luminosity (dwarfs are irregulars, or dwarf
+       ellipticals in crowds) and the morphology–density relation (ellipticals and lenticulars crowd the clusters). */
+    function galTypes(attr, n) {
+      var TT = new Float32Array(n);
+      for (var i = 0; i < n; i++) {
+        var tc = attr[i * 8 + 1];
+        if (tc !== 255) { TT[i] = tc - 10; continue; }
+        var hh = Math.sin(i * 12.9898) * 43758.5453; hh -= Math.floor(hh);
+        var L = attr[i * 8] / 255, MK = attr[i * 8 + 6] / 255 * 18 - 27;
+        var dn = L <= 0.25 ? 0 : L >= 0.75 ? 1 : (L - 0.25) / 0.5;
+        if (MK > -19.5) { TT[i] = hh < 0.75 - 0.5 * dn ? 10 : -5; continue; }
+        var pE = 0.18 + 0.55 * dn;
+        if (hh < pE) { TT[i] = hh < pE * 0.55 ? -5 : -2; continue; }
+        TT[i] = Math.round(1 + (hh - pE) / (1 - pE) * 6.99);
+      }
+      return TT;
+    }
+    /* TRUE SCALE (build 246): each survey galaxy as a GALAXY once you are close enough to see one — drawn from what the
+       catalogues measured. Size: the 2MASS extended-source aperture (or the UNGC Holmberg diameter), at the galaxy's
+       distance. Tilt and orientation: the measured axis ratio and sky position angle fix the disc's real normal in 3-D
+       (up to which side faces us), so from the Earth each one shows the shape and angle astronomers photograph, and from
+       anywhere else the shape that normal implies. Type: as galTypes. Brightness: its absolute K magnitude. A disc
+       appears only once it is wider than a few pixels; until then the dot layer carries it, so the far web is unchanged.
+       Procedural: an elliptical's Sérsic glow; a lenticular's bulge in a smooth disc; a spiral whose bulge shrinks and
+       arms open and break into H II knots along the sequence Sa → Sd; an irregular's clumpy blue light. One draw for all. */
+    function buildGalaxyDiscs(pos, n, rgb, attr, TT) {
       var U_KLY = 200 / 3261.56;                       // scene units per thousand light-years (K = 200 per Mpc)
-      var aT = new Float32Array(n), aS = new Float32Array(n), aI = new Float32Array(n), aP = new Float32Array(n), aB = new Float32Array(n), aR = new Float32Array(n);
+      var aT = new Float32Array(n), aS = new Float32Array(n), aN = new Float32Array(n * 3), aB = new Float32Array(n), aR = new Float32Array(n);
       var rr = gRng(0x9a1a5);
       for (var i = 0; i < n; i++) {
         var hh = Math.sin(i * 12.9898) * 43758.5453; hh -= Math.floor(hh);
+        aR[i] = rr();
+        if (attr) {
+          var b = i * 8;
+          aT[i] = TT[i];
+          aS[i] = Math.pow(10, attr[b + 2] / 255 * 3.3 - 0.3) * U_KLY;
+          var nx = (attr[b + 3] - 128) / 127, ny = (attr[b + 4] - 128) / 127, nz = (attr[b + 5] - 128) / 127;   // supergalactic frame
+          aN[i * 3] = nx * axx + ny * ayx + nz * azx; aN[i * 3 + 1] = nx * axy + ny * ayy + nz * azy; aN[i * 3 + 2] = nx * axz + ny * ayz + nz * azz;
+          var MK = attr[b + 6] / 255 * 18 - 27;
+          aB[i] = Math.max(0.4, Math.min(1.35, 1.0 + 0.10 * (-22.5 - MK)));
+          continue;
+        }
+        // no catalogue attributes (an old cache): the statistical stand-in of build 245
         var L = rgb ? (rgb[i * 3] + rgb[i * 3 + 1] + rgb[i * 3 + 2]) / 765 : 0.3;
         var ell = hh >= 0.60, dense = L > 0.5, u = rr();
-        aT[i] = ell ? 1 : 0;
+        aT[i] = ell ? -5 : 4;
         aS[i] = (ell ? (dense ? 60 + 220 * u * u : 15 + 60 * Math.pow(u, 1.5)) : 25 + 100 * Math.pow(u, 1.6)) * U_KLY;
-        aI[i] = ell ? 0.55 + 0.45 * rr() : Math.max(0.12, Math.abs(rr() * 2 - 1));   // cos(inclination): spirals at every tilt
-        aP[i] = rr() * Math.PI * 2;
+        var z = rr() * 2 - 1, ph = rr() * Math.PI * 2, rz = Math.sqrt(1 - z * z);
+        aN[i * 3] = rz * Math.cos(ph); aN[i * 3 + 1] = rz * Math.sin(ph); aN[i * 3 + 2] = z;
         aB[i] = 0.45 + 0.85 * Math.pow(rr(), 2.0);
-        aR[i] = rr();
       }
       var g = new T.BufferGeometry();
       g.setAttribute("position", new T.BufferAttribute(pos, 3));
-      [["aType", aT], ["aSize", aS], ["aCosI", aI], ["aPA", aP], ["aBright", aB], ["aSeed", aR]].forEach(function (e) { g.setAttribute(e[0], new T.BufferAttribute(e[1], 1)); });
+      g.setAttribute("aNorm", new T.BufferAttribute(aN, 3));
+      [["aType", aT], ["aSize", aS], ["aBright", aB], ["aSeed", aR]].forEach(function (e) { g.setAttribute(e[0], new T.BufferAttribute(e[1], 1)); });
       var U = { uPx: { value: 500 }, uOpacity: { value: 1 }, uMaxPx: { value: 480 } };
       var m = new T.ShaderMaterial({
         uniforms: U, transparent: true, depthWrite: false, depthTest: false, fog: false,
-        blending: T.CustomBlending, blendEquation: T.AddEquation, blendSrc: T.OneFactor, blendDst: T.OneFactor, blendSrcAlpha: T.OneFactor, blendDstAlpha: T.OneFactor,
+        // The site's composite shows rgb × alpha. A galaxy's alpha saturates (so its own light passes whole), which would also
+        // un-mask the faint survey glow behind it — invisible everywhere else — as a gold speckle. So the light already
+        // there is scaled by its own alpha as the galaxy is added: under the galaxy it then shows exactly as it did before.
+        blending: T.CustomBlending, blendEquation: T.AddEquation, blendSrc: T.OneFactor, blendDst: T.DstAlphaFactor, blendSrcAlpha: T.OneFactor, blendDstAlpha: T.OneFactor,
         vertexShader: [
-          "uniform float uPx; uniform float uMaxPx; attribute float aType; attribute float aSize; attribute float aCosI; attribute float aPA; attribute float aBright; attribute float aSeed;",
-          "varying float vType; varying float vCosI; varying float vPA; varying float vB; varying float vSeed; varying float vFade;",
+          "uniform float uPx; uniform float uMaxPx; attribute float aType; attribute float aSize; attribute vec3 aNorm; attribute float aBright; attribute float aSeed;",
+          "varying float vType; varying float vQ; varying float vFace; varying float vPA; varying float vB; varying float vSeed; varying float vFade; varying float vPx;",
           "void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); float d = max(-mv.z, 1e-6);",
-          "  float px = aSize * uPx / d;",
-          "  vFade = smoothstep(2.5, 7.0, px);",
+          "  float px = aSize * uPx / d; vPx = px;",
+          "  vFade = smoothstep(2.5, 4.5, px);",
           "  gl_PointSize = min(px, uMaxPx);",
-          "  vType = aType; vCosI = aCosI; vPA = aPA; vB = aBright; vSeed = aSeed;",
+          // the disc as THIS camera sees it: its normal against the line of sight gives the tilt, and the normal's
+          // projection on the sky is the direction the disc looks squashed along (the sprite's rotated y)
+          "  vec3 nv = normalize(mat3(modelViewMatrix) * aNorm); vec3 vd = normalize(mv.xyz);",
+          "  float ci = abs(dot(nv, vd)); vec3 np = nv - dot(nv, vd) * vd;",
+          "  vec2 mn = dot(np.xy, np.xy) > 1e-10 ? normalize(np.xy) : vec2(0.0, 1.0);",
+          "  float q0 = aType < -3.5 ? 0.30 : aType < -0.5 ? 0.20 : aType > 9.5 ? 0.50 : 0.13;",   // intrinsic thickness
+          "  vQ = sqrt(ci * ci + q0 * q0 * (1.0 - ci * ci)); vFace = ci; vPA = atan(mn.x, -mn.y);",
+          "  vType = aType; vB = aBright; vSeed = aSeed;",
           "  gl_Position = px < 2.5 ? vec4(2.0, 2.0, 2.0, 1.0) : projectionMatrix * mv; }"
         ].join("\n"),
         fragmentShader: [
-          "uniform float uOpacity; varying float vType; varying float vCosI; varying float vPA; varying float vB; varying float vSeed; varying float vFade;",
+          "uniform float uOpacity; varying float vType; varying float vQ; varying float vFace; varying float vPA; varying float vB; varying float vSeed; varying float vFade; varying float vPx;",
+          "float hs(vec2 c){ return fract(sin(dot(c, vec2(12.99, 78.23)) + vSeed * 91.0) * 43758.5); }",
+          "float vn(vec2 x){ vec2 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);",
+          "  return mix(mix(hs(i), hs(i + vec2(1.0, 0.0)), f.x), mix(hs(i + vec2(0.0, 1.0)), hs(i + vec2(1.0, 1.0)), f.x), f.y); }",
           "void main(){",
           "  vec2 p = (gl_PointCoord - 0.5) * 2.0; float c = cos(vPA), s = sin(vPA); p = vec2(c * p.x - s * p.y, s * p.x + c * p.y);",
-          "  vec2 q = vec2(p.x, p.y / max(vCosI, 0.12)); float r = length(q); if (r > 1.0) discard;",
+          "  vec2 q = vec2(p.x, p.y / max(vQ, 0.12)); float r = length(q); if (r > 1.0) discard;",
           "  float edge = 1.0 - smoothstep(0.78, 1.0, r); vec3 col; float I;",
-          "  if (vType > 0.5) {",                                   // elliptical: a Sérsic-like falloff, old gold light
+          "  if (vType < -3.5) {",                                  // elliptical: a Sérsic-like falloff, old gold light
           "    I = exp(-6.5 * pow(r, 0.55)) * 1.9 + 0.12 * (1.0 - r);",
           "    col = mix(vec3(1.0, 0.86, 0.66), vec3(1.0, 0.74, 0.52), r);",
-          "  } else {",                                             // spiral: a warm bulge, a blue disc carved by two log-spiral arms
-          "    float th = atan(q.y, q.x), ph = 2.0 * th - log(max(r, 0.02)) / 0.27 + vSeed * 6.2832;",
-          "    float arm = pow(0.5 + 0.5 * cos(ph), 3.0);",
-          "    float disc = exp(-r / 0.30), bulge = exp(-r / 0.075);",
-          "    float knots = step(0.93, fract(sin(dot(floor(q * 18.0), vec2(12.99, 78.23)) + vSeed * 91.0) * 43758.5)) * arm;",
-          "    I = bulge * 1.5 + disc * (0.30 + 1.10 * arm) * (0.75 + 0.25 * vCosI);",
-          "    col = mix(vec3(1.0, 0.84, 0.62), vec3(0.70, 0.82, 1.0), smoothstep(0.06, 0.3, r));",
-          "    col = mix(col, vec3(1.0, 0.55, 0.70), knots * 0.6);",       // H II regions along the arms
-          "    if (vCosI < 0.35) I *= 1.0 - 0.75 * exp(-pow(q.y * 14.0, 2.0)) * smoothstep(0.08, 0.25, abs(q.x));",   // the dust lane of an edge-on disc
+          "  } else if (vType < -0.5) {",                           // lenticular: a big bulge in a smooth, armless disc
+          "    I = exp(-6.0 * pow(r, 0.6)) * 1.5 + exp(-r / 0.30) * 0.55;",
+          "    col = mix(vec3(1.0, 0.86, 0.66), vec3(0.98, 0.86, 0.74), smoothstep(0.05, 0.4, r));",
+          "    if (vFace < 0.3) I *= 1.0 - 0.45 * exp(-pow(q.y * 14.0, 2.0)) * smoothstep(0.1, 0.3, abs(q.x));",
+          "  } else if (vType < 9.5) {",                            // spiral, Sa → Sd: the bulge shrinks, the arms open and break up
+          "    float t = clamp(vType / 8.0, 0.0, 1.0);",
+          "    float th = atan(q.y, q.x), ph = 2.0 * th - log(max(r, 0.02)) / mix(0.16, 0.44, t) + vSeed * 6.2832;",
+          "    float arm = pow(0.5 + 0.5 * cos(ph), mix(4.0, 2.2, t)) * mix(1.0, 0.55 + 0.75 * vn(q * 7.0 + vSeed * 13.0), t);",
+          "    float disc = exp(-r / 0.30), bulge = exp(-r / mix(0.11, 0.045, t));",
+          "    float knots = step(mix(0.96, 0.90, t), fract(sin(dot(floor(q * 18.0), vec2(12.99, 78.23)) + vSeed * 91.0) * 43758.5)) * arm;",
+          "    I = bulge * mix(1.9, 0.6, t) + disc * (0.30 + mix(0.75, 1.25, t) * arm) * (0.75 + 0.25 * vFace);",
+          "    col = mix(vec3(1.0, 0.84, 0.62), mix(vec3(0.92, 0.88, 0.80), vec3(0.66, 0.80, 1.0), 0.35 + 0.65 * t), smoothstep(0.06, 0.3, r));",
+          "    col = mix(col, vec3(1.0, 0.55, 0.70), knots * 0.6 * smoothstep(0.15, 0.5, vFace));",       // H II regions along the arms (dust hides them edge-on)
+          "    if (vFace < 0.35) I *= 1.0 - 0.75 * exp(-pow(q.y * 14.0, 2.0)) * smoothstep(0.08, 0.25, abs(q.x));",   // the dust lane of an edge-on disc
+          "  } else {",                                             // irregular: clumpy blue light, no symmetry
+          "    vec2 w = vec2(q.x, p.y * 1.5) + vSeed * 17.0;",          // a thick body: the texture is not stretched by the tilt
+          "    float cl = 0.65 * vn(w * 1.8) + 0.35 * vn(w * 3.7), kn = 0.0;",
+          "    for (int k = 0; k < 7; k++) { float fk = float(k);",   // a handful of star-forming complexes, scattered off-centre
+          "      vec2 kc = vec2(fract(sin(fk * 12.3 + vSeed * 71.0) * 4375.5), fract(sin(fk * 7.1 + vSeed * 33.0) * 9137.3)) * 1.2 - 0.6;",
+          "      float kr = 0.05 + 0.07 * fract(sin(fk * 3.7 + vSeed * 13.0) * 5531.1); vec2 dk = q - kc; kn += exp(-dot(dk, dk) / (kr * kr)); }",
+          "    I = exp(-length(q - vec2(0.22, -0.12) * (vSeed - 0.5)) / 0.25) * (0.15 + 1.4 * cl * cl) + 0.8 * kn * (1.0 - r);",
+          "    col = mix(vec3(0.74, 0.85, 1.0), vec3(1.0, 0.72, 0.86), min(1.0, kn * 0.8));",
           "  }",
+          // a galaxy a few pixels wide has its light in a core no pixel samples; real ones that small are a soft blob carrying
+          // all of it (surface brightness does not fade with distance). Hand over to the detailed profile as it grows.
+          "  I = mix(exp(-r * r / 0.10) * (vType < -0.5 ? 1.25 : 0.95), I, smoothstep(6.0, 28.0, vPx));",
           "  I *= edge * vB * vFade * uOpacity * 0.85;",
           // the site's composite multiplies light by its alpha (that is what keeps faint dust quiet); a galaxy's light must
           // pass at its own intensity, so its alpha saturates wherever it has any light at all
@@ -1115,7 +1187,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
         _seen.push(pos);
         var sh = new T.Mesh(new T.SphereGeometry(r, 10, 8), new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }));
         sh.position.copy(pos); sh.name = "DSOPick_lss_" + e.id;
-        sh.userData.nyePick = "dso_lss_" + e.id; sh.userData.dsoViewDist = r * 2.8; sh.userData.dsoFocusMin = r * 0.06;   // close enough to stand among its galaxies
+        // a cluster is framed from just outside its galaxies (build 246: from 2.8 r it was a sparse scatter of specks — the
+        // real catalogue galaxies only read as a cluster once they are a few pixels wide); a supercluster is a structure,
+        // framed whole
+        sh.userData.nyePick = "dso_lss_" + e.id; sh.userData.dsoViewDist = r * (kind === "cluster" ? 1.1 : 2.8); sh.userData.dsoFocusMin = r * 0.06;   // close enough to stand among its galaxies
         sh.userData.dsoMinCam = 600; sh.userData.dsoName = e.name; sh.userData.lssKind = kind;
         dsoPickGroup.add(sh);
       }
@@ -1123,8 +1198,8 @@ export function buildNatalSky(THREE, scene, data, opts) {
       (LSS.superclusters || []).forEach(function (sc2) { lssPick(sc2, K * (3.5 + 6 * (sc2.rich || 0.5)), "supercluster"); });
     }
     if (o.galXYZ && o.galRGB && o.galXYZ.length >= 3) {
-      // the galaxy field (real 2MRS) — crisp cores + multi-tier bloom = refined glowing web
-      buildLayer(o.galXYZ, o.galRGB, mobile ? 1.85 : 2.35, 1.0, "LargeScaleStructure", -3, mobile ? 5.2 : 6.4, 0.155, 2, true);
+      // the galaxy field (real 2M++ / 2MRS / UNGC) — crisp cores + multi-tier bloom = refined glowing web
+      buildLayer(o.galXYZ, o.galRGB, mobile ? 1.85 : 2.35, 1.0, "LargeScaleStructure", -3, mobile ? 5.2 : 6.4, 0.155, 2, true, o.galAttr, o.galScale);
       // WEB LINES — MST filaments + basin flow streamlines; two glow tiers so strands read as luminous threads
       buildLayer(o.webXYZ, o.webRGB, mobile ? 2.25 : 3.05, 1.0, "CosmicWebLines", -2, mobile ? 4.6 : 5.9, 0.26, 2, 2);   // warm-amber gold river (warm=2)
       return;

@@ -532,10 +532,15 @@
       if (!_tsMW) { _tsMW = ["MilkyWayGalaxy", "MilkyWayGlow", "MilkyWayImpostor"].map(function (n) { return scene.getObjectByName(n); }).filter(Boolean); if (_tsMW.length < 2) _tsMW = null; }
       var mwF = 1;
       if (_tsMW) { var mwPx = 2600 / Math.max(1e-9, farCam.position.length()) / Math.tan(farCam.fov * Math.PI / 360) * innerHeight * 0.5; mwF = Math.max(0, Math.min(1, (mwPx - 1.5) / 7)); }
-      var mwSaved = null;
-      if (mwF < 0.999 && _tsMW) mwSaved = _tsMW.map(function (o) { var v = o.material.opacity; o.material.opacity = v * mwF; return v; });
-      renderer.clearDepth(); renderer.render(scene, farCam);
-      if (mwSaved) _tsMW.forEach(function (o, i) { o.material.opacity = mwSaved[i]; });
+      // once the galaxy itself is under ~1.5 px nothing in this pass (its stars, nebulae, satellites) is bigger, so the pass is
+      // skipped: drawing it at zero opacity still cost the full fill of 119k points piled on one pixel (build 246: from the
+      // Virgo Cluster that halved the frame rate)
+      if (!(_tsMW && mwF <= 0.003)) {
+        var mwSaved = null;
+        if (mwF < 0.999 && _tsMW) mwSaved = _tsMW.map(function (o) { var v = o.material.opacity; o.material.opacity = v * mwF; return v; });
+        renderer.clearDepth(); renderer.render(scene, farCam);
+        if (mwSaved) _tsMW.forEach(function (o, i) { o.material.opacity = mwSaved[i]; });
+      }
       if (_trueStars && syncTrueStars() > 0.01) renderer.render(_trueStars.scene, _trueStars.cam);   // 1b · the stars, at their true distances
       scene.fog = null;                                 // 2 · the Solar System, true scale, far slice → near slice
       // (from light-years out nothing in it is bigger than a pixel — and depth slices that far out lose precision)
@@ -2853,8 +2858,8 @@
        the cosmic web before they land, the procedural skeleton covers, as it always did on a failed load). */
     var natalOpts = null;
     var surveyP = Promise.all([
-      fetch("data/galaxies_xyz" + _galSfx + ".i16?v=3").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; }),
-      fetch("data/galaxies_rgb" + _galSfx + ".u8?v=3").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; }),
+      fetch("data/galaxies2_xyz" + _galSfx + ".i16?v=3").then(function (r) { return r.ok ? r.arrayBuffer() : null; }).catch(function () { return null; }),
+      fetch("data/galaxies2_attr" + _galSfx + ".u8?v=3").then(function (r) { return r.ok ? r.arrayBuffer() : null; }).catch(function () { return null; }),
       fetch("data/weblines_xyz" + _galSfx + ".i16?v=3").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; }),
       fetch("data/weblines_rgb" + _galSfx + ".u8?v=3").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; })
     ]);
@@ -2864,7 +2869,7 @@
     ]).then(function (arr) {
       var natalData = arr[0], lssData = arr[1];
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=162").then(function (mod) {
+      return import("./natal-sky.js?v=163").then(function (mod) {
         natalOpts = {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -2873,7 +2878,11 @@
           galXYZ: null, galRGB: null, webXYZ: null, webRGB: null
         };
         surveyP.then(function (sv) {
-          natalOpts.galXYZ = sv[0] ? new Int16Array(sv[0]) : null; natalOpts.galRGB = sv[1] ? new Uint8Array(sv[1]) : null;
+          // build 246: 2M++ / 2MRS / UNGC galaxies (Mpc × 64) + 8 catalogue bytes each; the dot layer's density
+          // luminance is byte 0, spread to the grey rgb the layer builder reads
+          var gA = sv[1] ? new Uint8Array(sv[1]) : null, gRGB = null;
+          if (gA) { gRGB = new Uint8Array((gA.length >> 3) * 3); for (var gi = 0, gn = gA.length >> 3; gi < gn; gi++) gRGB[gi * 3] = gRGB[gi * 3 + 1] = gRGB[gi * 3 + 2] = gA[gi * 8]; }
+          natalOpts.galXYZ = sv[0] && gA ? new Int16Array(sv[0]) : null; natalOpts.galRGB = gRGB; natalOpts.galAttr = gA; natalOpts.galScale = 1 / 64;
           natalOpts.webXYZ = sv[2] ? new Int16Array(sv[2]) : null; natalOpts.webRGB = sv[3] ? new Uint8Array(sv[3]) : null;
         });
         natalSky = mod.buildNatalSky(THREE, scene, natalData, natalOpts);
@@ -3813,7 +3822,7 @@
           quantumEl.style.pointerEvents = _qW > 0.5 ? "auto" : "none";
         }
         // data-provenance note: fade in across the large-scale-structure scales (Virgo-SC → Cosmic Web),
-        // so the 2MRS real-galaxy field is honestly labelled; hidden near the ground and past the horizon.
+        // so the real-galaxy field (2M++ / 2MRS / UNGC) is honestly labelled; hidden near the ground and past the horizon.
         if (dataNoteEl && LOD) {
           var _dcl = camera.position.length();
           var _dW = LOD.smooth(4200, 6000, _dcl) * (1 - LOD.smooth(80000, 95000, _dcl));

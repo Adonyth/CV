@@ -65,3 +65,27 @@ Astronomy* 130:22, 2018). Body radii: the same report and NASA planetary fact sh
 star within 25 pc (17,753 stars), stored as equatorial J2000 positions in parsecs, absolute magnitude and B−V colour,
 plus the proper names of the brightest and nearest. These two derived files are shared under the same CC BY-SA 4.0
 licence.
+
+## The galaxies (build 246)
+`data/galaxies2_*.i16` / `.u8` (built by `scripts/build-galaxies.py`) hold 76,241 real galaxies, combined from:
+- **2M++** — G. Lavaux & M. J. Hudson, *MNRAS* 416, 2840 (2011), VizieR J/MNRAS/416/2840: positions, redshifts and
+  group membership. Its zone-of-avoidance fill-in galaxies and cloned redshifts are left out.
+- **The 2MASS Redshift Survey** — J. P. Huchra et al., *ApJS* 199, 26 (2012), VizieR J/ApJS/199/26: morphological
+  types, and the galaxies 2M++ does not list.
+- **The 2MASS Extended Source Catalog** — T. H. Jarrett et al., *AJ* 119, 2498 (2000), VizieR VII/233: sizes, axis
+  ratios and position angles. This publication makes use of data products from the Two Micron All Sky Survey, which is
+  a joint project of the University of Massachusetts and the Infrared Processing and Analysis Center/California
+  Institute of Technology, funded by the National Aeronautics and Space Administration and the National Science
+  Foundation.
+- **The Updated Nearby Galaxy Catalog** — I. D. Karachentsev, D. I. Makarov & E. I. Kaisina, *AJ* 145, 101 (2013),
+  VizieR J/AJ/145/101: measured (redshift-independent) distances, diameters, inclinations and types within ~11 Mpc.
+- **The Extended Virgo Cluster Catalog** — S. Kim et al., *ApJS* 215, 22 (2014), VizieR J/ApJS/215/22: Virgo members
+  and their morphologies.
+- Cluster distances: Virgo 16.5 Mpc (S. Mei et al., *ApJ* 655, 144, 2007), Fornax 20.0 Mpc (J. P. Blakeslee et al.,
+  *ApJ* 694, 556, 2009).
+
+All retrieved through the VizieR catalogue service, CDS, Strasbourg (F. Ochsenbein, P. Bauer & J. Marcout, *A&AS* 143,
+23, 2000). Method: elsewhere distances are heliocentric redshift ÷ H₀ (70 km s⁻¹ Mpc⁻¹), with each group's
+fingers-of-God compressed to its own transverse extent; each galaxy's appearance is procedural, driven by its
+catalogued type, size, axis ratio and sky position angle (untyped galaxies follow the morphology–density relation).
+
