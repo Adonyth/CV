@@ -1972,7 +1972,7 @@
       "blurbEn": "Towering columns of gas and dust in the Eagle Nebula (M16), ~5,700–7,000 ly away, where new stars are being born.",
       "blurbZh": "鹰状星云(M16)中高耸的气体尘埃柱,约5700–7000光年,新恒星正在其中诞生。",
       "links": [],
-      "status": "published"
+      "status": ""
     },
     "dso_orion": {
       "titleEn": "Orion Nebula (M42)",
@@ -1980,7 +1980,7 @@
       "blurbEn": "The nearest large star-forming region, ~1,340 ly away — a stellar nursery visible to the naked eye below Orion's Belt.",
       "blurbZh": "距地球最近的大型恒星形成区,约1340光年——猎户腰带下方肉眼可见的恒星摇篮。",
       "links": [],
-      "status": "published"
+      "status": ""
     },
     "dso_rosette": {
       "titleEn": "",
@@ -1996,7 +1996,7 @@
       "blurbEn": "The nearest major galaxy, ~2.5 million ly away — a spiral on a collision course with the Milky Way in ~4.5 billion years.",
       "blurbZh": "距银河系最近的大型星系,约250万光年——一个螺旋星系,约45亿年后将与银河系相撞。",
       "links": [],
-      "status": "published"
+      "status": ""
     },
     "dso_crab": {
       "titleEn": "",
@@ -2084,7 +2084,7 @@
       "blurbEn": "The Milky Way's central supermassive black hole — ~4.3 million solar masses, ~26,000 ly away, imaged by the Event Horizon Telescope in 2022.",
       "blurbZh": "银河系中心的超大质量黑洞——约430万倍太阳质量,距地球约2.6万光年,2022年由事件视界望远镜成像。",
       "links": [],
-      "status": "published"
+      "status": ""
     },
     "dso_laniakea": {
       "titleEn": "Laniakea · our supercluster",
@@ -2092,7 +2092,7 @@
       "blurbEn": "Our home supercluster (Tully 2014) — ~520 million ly across, ~100,000 galaxies. It CONTAINS the Great Attractor (its gravitational centre), the Virgo cluster, and our Local Group. At cosmic-web scale, this whole thing is just ONE knot of the web.",
       "blurbZh": "我们的本超星系团(Tully 2014)——约5.2亿光年、约十万个星系。它内部包含巨引源(引力中心)、室女座星系团和我们的本星系团。在宇宙网尺度上,这一整片只是网中的一个结点。",
       "links": [],
-      "status": "published"
+      "status": ""
     },
     "worldmodel": {
       "titleEn": "",

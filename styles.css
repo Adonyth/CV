@@ -1112,3 +1112,67 @@ html body.cosmos.is-flat.flat-reading .cosmos-ui{transform:translateY(-140%); op
   background:radial-gradient(closest-side, color-mix(in srgb, var(--page) 86%, transparent) 0%,
     color-mix(in srgb, var(--page) 62%, transparent) 58%, transparent 100%);}
 @media(max-width:700px){ .hero__in::before{inset:-40px -30px -40px -30px;} }
+
+/* ===== build 248 · the orrery on a phone (≤700px, 3-D mode) =====
+   One line at the top — the name on the left; language, search and the page index on the right — and the
+   four content doors as ONE row docked above the ground stamp, with the focus card above that. Was: a
+   two-row tool pill drawn over the name (a later desktop rule out-ranked the phone padding) and the doors
+   wrapped into an oval in mid-screen. On a phone Atlas, star-dust and day/night step back: the Research
+   door already flies to the works, and the index lists every page. */
+@media (max-width: 700px) {
+  html body.cosmos.is-mobile-3d .cosmos-id { top: calc(12px + env(safe-area-inset-top, 0px)); left: 14px; right: 14px; max-width: none; padding: 2px 0 0; }
+  html body.cosmos.is-mobile-3d .cosmos-name { font-size: 21px; line-height: 1.15; white-space: nowrap; margin-right: 150px; }
+  html body.cosmos.is-mobile-3d .cosmos-name__zh { font-size: 15px; }
+  html body.cosmos.is-mobile-3d .cosmos-links { flex-wrap: wrap; row-gap: 4px; margin-top: 16px; }
+  html body.cosmos.is-mobile-3d .cosmos-ui { top: calc(8px + env(safe-area-inset-top, 0px)); left: auto; right: 8px; width: auto; max-width: none;
+    flex-wrap: nowrap; gap: 0; padding: 3px; }
+  html body.cosmos.is-mobile-3d .cosmos-ui #atlasbtn, html body.cosmos.is-mobile-3d .cosmos-ui #themebtn,
+  html body.cosmos.is-mobile-3d .cosmos-ui #fieldbtn, html body.cosmos.is-mobile-3d .cosmos-ui .uikbd,
+  html body.cosmos.is-mobile-3d .cosmos-ui .cosmos-ui__sep,
+  html body.cosmos.is-mobile-3d .cosmos-ui #searchbtn > span { display: none !important; }
+  html body.cosmos.is-mobile-3d .cosmos-ui .uipill { padding: 9px 10px; min-width: 38px; min-height: 38px; justify-content: center; }
+  html body.cosmos.is-mobile-3d .cosmos-ui #indexbtn { display: inline-flex; font-size: 0; }
+  html body.cosmos.is-mobile-3d .cosmos-ui #indexbtn > span { font-size: 0 !important; }
+  html body.cosmos.is-mobile-3d .cosmos-ui #indexbtn::after { content: "☰"; font-size: 16px; line-height: 1; }
+  html body.cosmos.is-mobile-3d .cosmos-ui .uipill svg { width: 16px; height: 16px; }
+  html body.cosmos.is-mobile-3d .cosmos-ui .lang button { padding: 7px 8px; min-height: 32px; }
+  html body.cosmos.is-mobile-3d .cosmos-nav { top: auto; bottom: calc(106px + env(safe-area-inset-bottom, 0px)); left: 50%; right: auto;
+    transform: translateX(-50%); flex-wrap: nowrap; width: max-content; max-width: calc(100vw - 16px); gap: 0; padding: 3px; }
+  html body.cosmos.is-mobile-3d .cosmos-nav > a, html body.cosmos.is-mobile-3d .cosmos-nav__head { padding: 9px 11px; font-size: 13px; letter-spacing: .02em; white-space: nowrap; }
+  html body.cosmos.is-mobile-3d .focus-card { bottom: calc(158px + env(safe-area-inset-bottom, 0px)); }
+  html body.cosmos.is-mobile-3d .ground-hint { bottom: calc(58px + env(safe-area-inset-bottom, 0px)); }
+  html body.cosmos.is-mobile-3d .ts-readout { bottom: calc(62px + env(safe-area-inset-bottom, 0px)); left: 16px; }
+  html body.cosmos.is-mobile-3d .cosmos-hint { display: none; }
+}
+
+/* build 248 · the CV bar on a phone: language and day/night stay; star-dust and "Save PDF" step back (the PDF is
+   one tap away in the menu) — together they pushed the page 73px past a 390px screen, so phones zoomed it out */
+@media (max-width: 520px) {
+  .nav .nav__right #fieldbtn, .nav .nav__right #btn-pdf { display: none; }
+}
+/* decorative glows (e.g. .hero__in::before, inset −30px) must never widen a phone's layout viewport */
+@media (max-width: 700px) { html { overflow-x: clip; } }
+
+/* build 248 · the printed CV. The dark theme's colour tokens are declared after the print remap above and
+   won the cascade, so headings printed near-white on white; the whole-section break guard left half-empty
+   pages; the hero's dark glow printed as a smudge. Last word here. */
+@media print {
+  html body h1, html body h2, html body h3, html body .where, html body .brand, html body .entry h3 span,
+  html body .featured h3, html body .proj h3 { color: #111 !important; -webkit-text-fill-color: #111 !important; }
+  html body p, html body .lede, html body .degree, html body li, html body .lead,
+  html body .u, html body p span:not(.tag):not(.venue) { color: #1d1d1d !important; -webkit-text-fill-color: #1d1d1d !important; }
+  html body .secnum, html body .when, html body .entry-meta, html body .eyebrow { color: #555 !important; }
+  html body a, html body .entry-meta .venue { color: #0d47a1 !important; -webkit-text-fill-color: #0d47a1 !important; }
+  html body .hero__in::before, html body .hero::before, html body .hero::after, html body .content::before { display: none !important; }
+  html body section:not(.hero) { break-inside: auto !important; }
+  html body .entry, html body .proj, html body .featured, html body .timeline li { break-inside: avoid; }
+  html body .secnum { break-after: avoid; }
+}
+/* build 248 · on the CV's day theme the star-dust is a whisper, not a speckle over the text */
+html[data-theme="light"] body:not(.cosmos) #field { opacity: .28; }
+/* build 248 · on a touch screen :hover sticks to whatever was tapped and the tapped leaf keeps focus, so a
+   door's leaves stayed open over the scene after the flight began. There, only the explicit .open state shows them. */
+@media (hover: none) {
+  .cosmos-nav__group:not(.open):hover .cosmos-nav__kids, .cosmos-nav__group:not(.open):focus-within .cosmos-nav__kids {
+    opacity: 0; visibility: hidden; transform: translateY(-6px); pointer-events: none; }
+}

@@ -86,7 +86,7 @@ main{position:relative; z-index:1; max-width:760px; margin:0 auto;
   padding:var(--s9) 24px var(--s7);}
 
 /* ── masthead ─────────────────────────────────────────────── */
-.eyebrow{font-family:var(--mono); font-size:10.5px; letter-spacing:.26em;
+.eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.26em;
   text-transform:uppercase; color:var(--gold); line-height:1;
   display:flex; align-items:center; gap:1em;}
 .eyebrow::before{content:""; width:1.6em; height:1px; background:var(--gold); opacity:.55;}
@@ -101,7 +101,7 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
 
 /* meta: markup-free masthead. Works on the existing
    `<b>year</b> · field · authorship <br> status` structure. */
-.meta{font-family:var(--mono); font-size:11.5px; color:var(--muted);
+.meta{font-family:var(--mono); font-size:12.5px; color:var(--muted);
   letter-spacing:.06em; word-spacing:.04em; line-height:1.7; margin-top:var(--s3);
   font-variant-numeric:tabular-nums lining-nums; font-feature-settings:"tnum" 1,"lnum" 1;}
 .meta::before{content:""; display:block; width:24px; height:1px; margin-bottom:var(--s2);
@@ -119,8 +119,8 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
 .desc p{font-family:var(--serif); font-size:17px; line-height:1.74; color:var(--read);
   max-width:64ch; margin-bottom:1.4em; font-variation-settings:"opsz" 16;
   font-variant-numeric:proportional-nums oldstyle-nums; font-feature-settings:"pnum" 1,"onum" 1,"kern" 1,"liga" 1;
-  text-align:justify; text-wrap:pretty; hanging-punctuation:first last;
-  -webkit-hyphens:auto; hyphens:auto; -webkit-hyphenate-limit-chars:6 3 3; hyphenate-limit-chars:6 3 3;}
+  text-align:left; text-wrap:pretty; hanging-punctuation:first last;
+  -webkit-hyphens:manual; hyphens:manual;}   /* ragged right: justified English opened rivers (build 248) */
 .desc p:last-child{margin-bottom:0;}
 .desc p:first-child:not(:last-child){font-size:19px; line-height:1.6; color:var(--ink); margin-bottom:20px;
   font-variation-settings:"opsz" 26; letter-spacing:.002em; text-align:left; hyphens:none;}
@@ -144,7 +144,7 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
 .links .cite:hover{color:var(--accent); border-color:var(--accent); background:rgba(224,135,106,.06);}
 
 /* ── skyline note ─────────────────────────────────────────── */
-.skyline{margin-top:var(--s6); font-family:var(--mono); font-size:10.5px; color:var(--muted);
+.skyline{margin-top:var(--s6); font-family:var(--mono); font-size:11.5px; color:var(--muted);
   letter-spacing:.18em; text-shadow:0 0 18px rgba(0,0,0,.6);}
 
 /* ── pager: quiet dir, serif title carries it ─────────────── */
@@ -154,7 +154,7 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
 .pager a.next{text-align:right;}
 .pager a.empty{visibility:hidden;}
 .pager a .dir{display:block; margin-bottom:var(--s1); font-family:var(--mono);
-  font-size:10px; letter-spacing:.14em; text-transform:uppercase; opacity:.75;
+  font-size:11px; letter-spacing:.14em; text-transform:uppercase; opacity:.8;
   transition:color .2s ease;}
 .pager a .nm{font-family:var(--serif); font-size:16px; font-weight:500; color:var(--body);
   line-height:1.3; font-variation-settings:"opsz" 16;}
@@ -166,11 +166,11 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
 .foot{position:relative; z-index:1; max-width:760px; margin:0 auto; padding:0 24px 72px;}
 .foot__rule{height:1px; background:var(--hairline); margin-bottom:var(--s4);}
 .foot__nav{display:flex; flex-wrap:wrap; column-gap:var(--s5); row-gap:14px; align-items:baseline;}
-.foot__nav a, .foot__nav span.lbl{font-family:var(--mono); font-size:11.5px; letter-spacing:.06em; color:var(--muted);}
+.foot__nav a, .foot__nav span.lbl{font-family:var(--mono); font-size:12px; letter-spacing:.06em; color:var(--muted);}
 .foot__nav a{transition:color .2s ease;}
 .foot__nav a:hover{color:var(--accent);}
 .foot__nav a.cur{color:var(--ink);}
-.foot__nav .lbl{font-size:10.5px; color:var(--gold); text-transform:uppercase; letter-spacing:.14em; margin-right:2px;}
+.foot__nav .lbl{font-size:11px; color:var(--gold); text-transform:uppercase; letter-spacing:.14em; margin-right:2px;}
 .locale-zh .foot__nav .lbl{letter-spacing:.1em;}
 
 /* index constellation SVG — whisper, don't decorate (item pages leave empty) */
@@ -213,7 +213,7 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
 .toc .t{font-family:var(--serif); font-size:19px; font-weight:500; color:var(--ink);
   line-height:1.32; letter-spacing:-0.006em; font-variation-settings:"opsz" 22; text-wrap:balance;
   transition:color .2s ease;}
-.toc .m{font-family:var(--mono); font-size:11.5px; color:var(--muted); letter-spacing:.06em; margin-top:var(--s1);}
+.toc .m{font-family:var(--mono); font-size:12.5px; color:var(--muted); letter-spacing:.06em; margin-top:var(--s1);}
 .locale-zh .toc .m{letter-spacing:.1em;}
 .toc .d{font-family:var(--serif); font-size:15px; color:var(--read); margin-top:var(--s1);
   line-height:1.6; max-width:60ch; text-wrap:pretty;}
@@ -344,7 +344,7 @@ def page(title, body, depth=0, pager=False, desc="", path=None, jsonld=None):
 <body>
 {body}
   <script src="{pre}magnet.js?v=2"></script>
-  <script src="{pre}search.js?v=4" defer></script>
+  <script src="{pre}search.js?v=6" defer></script>
   <script src="{pre}craft.js?v=1" defer></script>
   <script>{LANG_JS}{keynav}</script>
 </body>

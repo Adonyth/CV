@@ -122,7 +122,9 @@
     lastFocus = document.activeElement;
     mount(); ov.classList.add("on"); syncBtn(true); input.value = "";
     input.placeholder = isZh() ? "搜索研究 / 著作 / 创造…" : "Search research, writing, making…";
-    load().then(function () { render(input.value); }); setTimeout(function () { input.focus(); }, 20);
+    load().then(function () { render(input.value); });
+    try { input.focus({ preventScroll: true }); } catch (e) {}   // at once: a quick typist's first letters land in the box
+    setTimeout(function () { if (document.activeElement !== input) input.focus(); }, 20);
   }
   function close() {
     ov.classList.remove("on"); syncBtn(false);
@@ -173,6 +175,10 @@
   // global "/" opens (unless typing in a field); expose window.__openSearch for an icon button
   window.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && ov.classList.contains("on")) { close(); return; }   // Esc works even if focus left the overlay
+    // typed while the overlay opens but before focus arrived: carry the letter into the box instead of losing it
+    if (ov.classList.contains("on") && e.target !== input && e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault(); input.value += e.key; input.focus(); input.dispatchEvent(new Event("input", { bubbles: true })); return;
+    }
     var tag = (e.target && e.target.tagName) || "";
     if (e.target && e.target.isContentEditable) return;
     if (e.key === "/" && !/INPUT|TEXTAREA|SELECT/.test(tag) && !ov.classList.contains("on")) { e.preventDefault(); open(); }

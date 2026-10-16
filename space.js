@@ -2864,7 +2864,7 @@
       fetch("data/weblines_rgb" + _galSfx + ".u8?v=3").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; })
     ]);
     Promise.all([
-      fetch("data/natal-sky.json?v=18").then(function (r) { return r.json(); }),
+      fetch("data/natal-sky.json?v=19").then(function (r) { return r.json(); }),
       fetch("data/large-scale.json?v=1").then(function (r) { return r.json(); }).catch(function () { return null; })
     ]).then(function (arr) {
       var natalData = arr[0], lssData = arr[1];
@@ -3327,7 +3327,11 @@
       // accordion tour bar: click pins one group open (closing every other), click
       // again releases it, and clicking anywhere else — or firing any leaf — closes all
       var navGroups = document.querySelectorAll(".cosmos-nav__group");
-      function closeNavGroups() { navGroups.forEach(function (o) { o.classList.remove("open"); }); }
+      function closeNavGroups() {
+        navGroups.forEach(function (o) { o.classList.remove("open"); });
+        var ae = document.activeElement;   // a tapped leaf keeps focus — and :focus-within would keep its group open
+        if (ae && ae.closest && ae.closest(".cosmos-nav__kids") && ae.blur) ae.blur();
+      }
       document.querySelectorAll(".cosmos-nav__head").forEach(function (el) {
         el.addEventListener("click", function (ev) {
           ev.stopPropagation();
