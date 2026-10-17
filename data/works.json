@@ -228,11 +228,11 @@
       },
       "desc": {
         "en": [
-          "Proposed three-pseudoscalar decay patterns are being used to tell interpretations of the X(2370) apart. The same cubic current operator that supplies the strange contribution to ηηη′ also contributes to ηηη; reconstructing two recent current-based analyses with it included reduces the ηηη width substantially at their central inputs and changes the contrast with a fixed hybrid prediction.",
+          "Proposed three-pseudoscalar decay patterns are being used to tell interpretations of the X(2370) apart. The same cubic current operator that supplies the strange contribution to ηηη′ also contributes to ηηη; including it in two recent current-based analyses changes the predicted ηηη width at their central inputs, which bears on comparisons with a fixed hybrid prediction.",
           "The result is delimited by an explicit near-cancellation and its input sensitivity; it corrects a proposed prediction for an unmeasured channel, not the particle's composition."
         ],
         "zh": [
-          "三赝标量衰变模式正被用来区分 X(2370) 的不同解释。为 ηηη′ 提供奇异流贡献的同一三次流算符,也对 ηηη 有贡献;把它纳入两篇近期基于流的分析后,在其中心输入下 ηηη 宽度显著降低,与一个固定的混杂态预言之间的对比也随之改变。",
+          "三赝标量衰变模式正被用来区分 X(2370) 的不同解释。为 ηηη′ 提供奇异流贡献的同一三次流算符，也对 ηηη 有贡献；把它纳入两篇近期基于流的分析后，ηηη 宽度在其中心输入下的预言随之改变，这关系到与一个固定混杂态预言的比较。",
           "结果由一个显式的近抵消及其输入敏感性加以界定;它修正的是对一个未测道的预言,而非该粒子的组分。"
         ]
       },
@@ -257,11 +257,11 @@
       "desc": {
         "en": [
           "Determines exactly how strongly a cyclic digit rotation, conjugated by a modular translation, makes each output digit depend on the input: for a translation c ≠ 0 the largest number of pivotal input digits is k − ν_a(c), with the complete pivotality matrix, uniformly in the radix.",
-          "Consequences include exact degree distributions along the orbit, a circuit-depth separation between rotation and its increment conjugate, and exact coordinate-change counts — the technical core behind the universal-prior locality no-go."
+          "Consequences include exact degree distributions along the orbit, a circuit-depth separation between rotation and its increment conjugate, and exact coordinate-change counts. Related to the universal-prior locality no-go."
         ],
         "zh": [
           "精确刻画循环数位旋转经模平移共轭后,每个输出数位对输入的依赖程度:对平移 c ≠ 0,单个输出数位的关键输入数位最大个数为 k − ν_a(c),并给出完整的关键性矩阵,对任意进制一致成立。",
-          "推论包括:轨道上的精确度数分布、旋转与其增量共轭之间的电路深度分离,以及精确的坐标变化计数——它是通用先验局域性不可行定理的技术核心。"
+          "推论包括：轨道上的精确度数分布、旋转与其增量共轭之间的电路深度分离，以及精确的坐标变化计数。与通用先验局域性不可行定理相关。"
         ]
       },
       "links": []
@@ -310,12 +310,12 @@
       },
       "desc": {
         "en": [
-          "How much evidence does a claimed black-hole ringdown overtone carry once real detector noise is taken seriously? This line builds calibration standards for that question on real, held-out noise.",
-          "A controlled single-factor test in August 2026 traced an apparent dependence on the noise-covariance estimator to a reference-distribution choice and an undeclared start-time anchor, so that earlier framing was withdrawn; the line is being rebuilt around start-time (look-elsewhere) calibration."
+          "A calibration study of how much statistical evidence a claimed black-hole ringdown overtone carries in real detector noise.",
+          "The analysis is being redesigned; no result is claimed at this stage."
         ],
         "zh": [
-          "当真实探测器噪声被认真对待时,一个声称的黑洞铃宕泛音究竟携带多少证据?这条研究线在真实、留出的噪声上为这个问题建立标定标准。",
-          "2026 年 8 月的一次受控单因子检验发现,表观上对噪声协方差估计器的依赖其实来自参考分布的选择与一个未申明的起始时间锚点,因此撤回了先前的表述;研究线正围绕起始时间(look-elsewhere)标定重建。"
+          "研究在真实探测器噪声中，一个声称的黑洞铃宕泛音究竟携带多少统计证据。",
+          "分析正在重新设计；现阶段不主张任何结论。"
         ]
       },
       "links": [],

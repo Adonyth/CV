@@ -1,6 +1,6 @@
 /* ============================================================
    footprint.js — the raw-trace globe.
-   602,733 real GPS points (2024→, US · Norway · China) plotted RAW as
+   738,021 real GPS points (2024→, US · Norway · China) plotted RAW as
    warm ember-points on a dark globe. No cities, no arcs, no stats —
    the driving routes emerge from density alone. Same warm-stone light
    as the rest of the site; its own contained WebGL canvas in the

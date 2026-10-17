@@ -1007,7 +1007,7 @@ export function mountNyeArmature(THREE, scene, opts) {
     earthGroup.add(atmo2);
 
     /* the GPS footprint shell lives in dressEarth (space.js) — ONE owner: it bakes the
-       602,733 points at 6144px as a child of the earth mesh (inherits the sidereal
+       738,021 points at 6144px as a child of the earth mesh (inherits the sidereal
        rotation natively). The PNG shell that used to stack here doubled GPU memory. */
     return { group: earthGroup, mesh: earthMesh, uniforms, atmoUniforms, hazeUniforms: atmo2.material.uniforms, atmoRadiusGeo: radius, vertexShader: earthVert };
   }

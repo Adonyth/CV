@@ -992,7 +992,7 @@ html body.cosmos .cosmos-ui__sep{background:var(--hair);}
 html body.cosmos .cosmos-nav{align-items:center;}
 html body.cosmos .cosmos-nav > a, html body.cosmos .cosmos-nav__head{display:inline-flex; align-items:center; line-height:1.25; font-size:13px; letter-spacing:.07em; font-weight:500; padding:8px 14px;}
 html body.cosmos .cosmos-nav__head i{font-size:9px; margin-left:6px;}
-@media(min-width:1240px){
+@media(min-width:1400px){   /* build 249: centred on the top line only from 1400px — at 1240–1350 the doors ran into the tool pill */
   html body.cosmos .cosmos-nav{left:50%; right:auto; top:calc(var(--edge) + 3px); transform:translateX(-50%);
     background:none; border:0; box-shadow:none; -webkit-backdrop-filter:none; backdrop-filter:none; padding:0; gap:2px;}
   html body.cosmos .cosmos-nav > a, html body.cosmos .cosmos-nav__head{text-shadow:0 1px 14px rgba(0,0,0,.7);}

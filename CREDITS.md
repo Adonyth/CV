@@ -89,3 +89,8 @@ All retrieved through the VizieR catalogue service, CDS, Strasbourg (F. Ochsenbe
 fingers-of-God compressed to its own transverse extent; each galaxy's appearance is procedural, driven by its
 catalogued type, size, axis ratio and sky position angle (untyped galaxies follow the morphology–density relation).
 
+
+## Footprint map (build 249)
+The footprint page's base map is OpenStreetMap's standard tile layer (© OpenStreetMap contributors, Open Database
+License — https://www.openstreetmap.org/copyright), darkened in the page's CSS. The trace itself is the author's own GPS
+record (`data/footprint-points.*`, built by `scripts/build-footprint.py`).

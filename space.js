@@ -2708,8 +2708,9 @@
       // both — the "cities never burn" mystery. dressEarth now dresses ONLY the trace.
       function srgb(t) { if ("colorSpace" in t && THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace; return t; }
       function bakeTrace() {
-        fetch("data/footprint-points.f32").then(function (r) { return r.arrayBuffer(); }).then(function (buf) {
-          var raw = new Float32Array(buf);
+        (window.__loadFootprint ? window.__loadFootprint()   // footprint-data.js: the compact file, float32 as the fallback
+          : fetch("data/footprint-points.f32").then(function (r) { return r.arrayBuffer(); }).then(function (b) { return new Float32Array(b); })
+        ).then(function (raw) {
           var W = MOBILE ? 2048 : 6144, H = W / 2;   // finer: the smaller globe is viewed closer
           var cv = document.createElement("canvas"); cv.width = W; cv.height = H;
           var ctx = cv.getContext("2d");

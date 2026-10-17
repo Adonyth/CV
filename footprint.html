@@ -8,12 +8,12 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="robots" content="noindex" />
   <title>足迹 · Footprint — Jiaxuan Chen</title>
-  <meta name="description" content="602,733 raw GPS points, 2023–2026 — the real footprint of Jiaxuan Chen (陈嘉轩)." />
+  <meta name="description" content="738,021 raw GPS points, 2023–2026 — the real footprint of Jiaxuan Chen (陈嘉轩)." />
   <meta name="author" content="Jiaxuan Chen (陈嘉轩)" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Jiaxuan Chen · 陈嘉轩" />
   <meta property="og:title" content="足迹 · Footprint — Jiaxuan Chen" />
-  <meta property="og:description" content="602,733 raw GPS points, 2023–2026 — the real footprint of Jiaxuan Chen (陈嘉轩)." />
+  <meta property="og:description" content="738,021 raw GPS points, 2023–2026 — the real footprint of Jiaxuan Chen (陈嘉轩)." />
   <meta name="twitter:card" content="summary" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" />
   <style>
@@ -26,7 +26,7 @@
     :focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:6px;}
     /* the map is the page */
     #map{position:fixed; inset:0; z-index:0; background:var(--page);}
-    .leaflet-tile-pane{filter:sepia(.14) saturate(1.05);}
+    .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) grayscale(.6) brightness(.58) contrast(1.08) sepia(.16);}   /* OSM day tiles → the site's warm dark */
     .leaflet-control-attribution{background:rgba(11,10,9,.72)!important; color:var(--muted)!important; font-family:var(--mono); font-size:10px!important;}
     .leaflet-control-attribution a{color:var(--accent)!important;}
     .leaflet-control-zoom a{background:rgba(11,10,9,.8)!important; color:var(--ink)!important; border-color:rgba(255,255,255,.12)!important;}
@@ -66,7 +66,7 @@
   <link rel="stylesheet" href="craft.css?v=3" />
 </head>
 <body>
-  <div id="map" role="img" aria-label="Footprint map — 602,733 raw GPS points across 2023–2026"></div>
+  <div id="map" role="img" aria-label="Footprint map — 738,021 raw GPS points across 2023–2026"></div>
   <div id="unfold" aria-hidden="true"></div>
 
   <div class="chrome">
@@ -76,12 +76,12 @@
       <button type="button" id="btn-zh" aria-pressed="false">中文</button>
     </div>
   </div>
-  <div class="map-title"><b>足迹 · Footprint</b><span>602,733 RAW GPS POINTS · 2023–2026</span></div>
+  <div class="map-title"><b>足迹 · Footprint</b><span>738,021 RAW GPS POINTS · 2023–2026</span></div>
   <div class="map-hint" id="map-hint"><span class="i18n-en">drag · scroll to zoom to the streets</span><span class="i18n-zh">拖动 · 滚轮缩放到街道</span></div>
   <button id="skip" type="button" data-magnet><span class="i18n-en">skip</span><span class="i18n-zh">跳过</span></button>
 
   <div id="fallback">
-    <p><span class="i18n-en">The interactive map didn't load. It plots 602,733 raw GPS points from 2023–2026.</span><span class="i18n-zh">交互地图未能加载。它绘制了 2023–2026 年间 602,733 个原始 GPS 点。</span></p>
+    <p><span class="i18n-en">The interactive map didn't load. It plots 738,021 raw GPS points from 2023–2026.</span><span class="i18n-zh">交互地图未能加载。它绘制了 2023–2026 年间 738,021 个原始 GPS 点。</span></p>
     <a href="index.html"><span class="i18n-en">⟵ Back to the orrery</span><span class="i18n-zh">⟵ 返回星盘</span></a>
   </div>
 
@@ -104,14 +104,17 @@
       setTimeout(function () {
         if (!window.__fpReady) {
           var u = document.getElementById("unfold"); if (u) u.classList.add("done");
-          if (!window.__fp || !window.__fp.n) document.getElementById("fallback").classList.add("on");
+          // a slow link is not a failure: only a missing map library or a failed data load shows the fallback
+          // (the data arriving later withdraws it — footprint-map.js)
+          if (typeof L === "undefined" || window.__fpFailed) document.getElementById("fallback").classList.add("on");
         }
       }, 9000);
     })();
   </script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
   <script src="magnet.js?v=2"></script>
-  <script type="module" src="footprint-map.js?v=2"></script>
+  <script src="footprint-data.js?v=1"></script>
+  <script type="module" src="footprint-map.js?v=4"></script>
   <script src="craft.js?v=1" defer></script>
   <script src="search.js?v=6" defer></script>
 </body>

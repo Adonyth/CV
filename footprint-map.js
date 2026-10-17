@@ -3,8 +3,8 @@
    1) INTRO: a lone rotating Earth (blue-marble + the real trace
       burned on) topologically unfolds — the sphere's vertices lerp
       onto the equirectangular plane — then hands over to
-   2) THE MAP: a real slippy map (Leaflet + CARTO dark tiles, street-
-      level zoom) with all 602,733 raw GPS points drawn on a canvas
+   2) THE MAP: a real slippy map (Leaflet + OpenStreetMap tiles, street-
+      level zoom) with all 738,021 raw GPS points drawn on a canvas
       overlay, zoom-adaptive. Nothing here loads until this page opens.
    ============================================================ */
 const PTS_URL = "data/footprint-points.f32";
@@ -15,9 +15,11 @@ const START = { lat: 39.5, lng: -98 };           // the trace lives mostly here
 const map = L.map("map", { zoomControl: false, worldCopyJump: true, preferCanvas: true })
   .setView([START.lat, START.lng], 4);
 L.control.zoom({ position: "bottomright" }).addTo(map);
-L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-  subdomains: "abcd", maxZoom: 19
+// OpenStreetMap's own raster tiles, darkened in CSS (footprint.html) — the CARTO basemap this used began serving
+// an "API KEY REQUIRED" watermark tile to every site (seen 2026-10-17), leaving the trace on a blank field
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom: 19
 }).addTo(map);
 
 /* ---------------- the trace overlay: one canvas, typed-array fast ---------------- */
@@ -101,8 +103,17 @@ const hint = document.getElementById("map-hint");
 map.once("zoomstart", () => hint && hint.classList.add("gone"));
 
 /* ---------------- the data (shared by intro texture + overlay) ---------------- */
-const rawPromise = fetch(PTS_URL).then(r => r.arrayBuffer()).then(b => new Float32Array(b));
-rawPromise.then(raw => { mercatorize(raw); queueDraw(); });
+// one shared loader (footprint-data.js): the compact 1.6 MB file, falling back to the float32 one
+const rawPromise = (window.__loadFootprint ? window.__loadFootprint()
+  : fetch(PTS_URL).then(r => { if (!r.ok) throw new Error("data " + r.status); return r.arrayBuffer(); }).then(b => new Float32Array(b)));
+rawPromise.then(raw => {
+  mercatorize(raw); queueDraw();
+  window.__fpReady = true;                                   // the page's 9 s watchdog stands down; a fallback already shown is withdrawn
+  const fb = document.getElementById("fallback"); if (fb) fb.classList.remove("on");
+}).catch(() => {
+  window.__fpFailed = true;
+  const fb = document.getElementById("fallback"); if (fb) fb.classList.add("on");
+});
 
 /* ---------------- INTRO: the lone Earth unfolds into the plane ---------------- */
 const unfoldHost = document.getElementById("unfold");

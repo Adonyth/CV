@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bake the real 602,733-point GPS footprint into a glowing equirectangular texture for
+"""Bake the real 738,021-point GPS footprint into a glowing equirectangular texture for
 the 3D orrery Earth. PRECISE + VERY BRIGHT: the true trace, sharp (no fattening/bloom),
 pushed to a blazing gold-white so it reads clearly on the globe from the space view."""
 import numpy as np
