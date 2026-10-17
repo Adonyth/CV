@@ -109,9 +109,11 @@ const rawPromise = (window.__loadFootprint ? window.__loadFootprint()
 rawPromise.then(raw => {
   mercatorize(raw); queueDraw();
   window.__fpReady = true;                                   // the page's 9 s watchdog stands down; a fallback already shown is withdrawn
+  const mt = document.querySelector(".map-title"); if (mt) mt.classList.remove("is-loading");
   const fb = document.getElementById("fallback"); if (fb) fb.classList.remove("on");
 }).catch(() => {
   window.__fpFailed = true;
+  const mt = document.querySelector(".map-title"); if (mt) mt.classList.remove("is-loading");
   const fb = document.getElementById("fallback"); if (fb) fb.classList.add("on");
 });
 
