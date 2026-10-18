@@ -74,11 +74,20 @@
     .foot__nav .lbl{color:var(--gold); text-transform:uppercase; letter-spacing:.14em;}
     .foot__nav a.cur{color:var(--ink);}
     @media(max-width:640px){ .foot{padding:24px 20px 56px;} }
+  
+    /* products walk prev / next like the work pages (synced by scripts/gen-works.py) */
+    .pager{display:flex; justify-content:space-between; gap:24px; max-width:720px; margin:56px auto 0; padding:22px 24px 0; border-top:1px solid rgba(255,255,255,.08);}
+    .pager a{flex:1 1 0; max-width:48%; color:var(--muted,#9a8a6f); text-decoration:none;}
+    .pager a.next{text-align:right;} .pager a.empty{visibility:hidden;}
+    .pager a .dir{display:block; margin-bottom:6px; font-family:'JetBrains Mono',ui-monospace,monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; opacity:.8;}
+    .pager a .nm{font-family:'Newsreader',Georgia,serif; font-size:16px; font-weight:500; color:var(--body,#d8ccb8);}
+    .pager a:hover .dir{color:var(--accent,#e0876a); opacity:1;} .pager a:hover .nm{color:var(--ink,#f4ecdf);}
+    @media (max-width:640px){ .pager{flex-direction:column; gap:20px;} .pager a{max-width:100%;} .pager a.next{text-align:left;} }
   </style>
   <link rel="stylesheet" href="../craft.css?v=3" />
 </head>
 <body>
-  <a class="map-back" data-magnet href="../index.html">⟵ <span class="i18n-en">Orrery</span><span class="i18n-zh">星盘</span></a>
+  <a class="map-back" data-magnet href="../index.html">⟵ <span class="i18n-en">Home</span><span class="i18n-zh">首页</span></a>
   <div class="lang" role="group" aria-label="Language">
     <button type="button" id="btn-en" aria-pressed="true">EN</button>
     <button type="button" id="btn-zh" aria-pressed="false">中文</button>
@@ -101,23 +110,8 @@
     </div>
   </main>
 
-  <footer class="foot">
-    <div class="foot__rule"></div>
-    <nav class="foot__nav" aria-label="More"><span class="lbl"><span class="i18n-en">Research</span><span class="i18n-zh">研究</span></span><a href="../index.html#index-research"><span class="i18n-en">Sciences · 20</span><span class="i18n-zh">科学研究 · 20</span></a><a href="../index.html#index-humanities"><span class="i18n-en">Humanities · 3</span><span class="i18n-zh">人文社科 · 3</span></a>
-      <span class="lbl"><span class="i18n-en">Books</span><span class="i18n-zh">著作</span></span>
-      <a href="../books/invitation.html">An Invitation After Abundance</a>
-      <a href="../books/sovereign.html">Sovereign Scintillation</a>
-      <span class="lbl"><span class="i18n-en">Products</span><span class="i18n-zh">产品</span></span>
-      <a href="omytea.html">Omytea</a>
-      <a class="cur" href="swindo.html">Swindo</a>
-      <a href="nyeclock.html"><span class="i18n-en">Nye Clock</span><span class="i18n-zh">弐时仪</span></a>
-      <a href="../music.html"><span class="i18n-en">Music</span><span class="i18n-zh">音乐</span></a>
-      <a href="../journey.html"><span class="i18n-en">Journey</span><span class="i18n-zh">履历</span></a>
-      <a href="../footprint.html"><span class="i18n-en">Footprint</span><span class="i18n-zh">足迹</span></a>
-      <a href="../index.html"><span class="i18n-en">Orrery ↗</span><span class="i18n-zh">星盘 ↗</span></a>
-      <a href="../cv.html"><span class="i18n-en">CV ↗</span><span class="i18n-zh">完整履历 ↗</span></a>
-    </nav>
-  </footer>
+  <nav class="pager" aria-label="Within Products"><a class="prev" data-magnet href="omytea.html"><span class="dir"><span class="i18n-en">⟵ Previous</span><span class="i18n-zh">⟵ 上一个</span></span><span class="nm"><span class="i18n-en">Omytea</span><span class="i18n-zh">Omytea</span></span></a><a class="next" data-magnet href="nyeclock.html"><span class="dir"><span class="i18n-en">Next ⟶</span><span class="i18n-zh">下一个 ⟶</span></span><span class="nm"><span class="i18n-en">Nye Clock</span><span class="i18n-zh">弐时仪</span></span></a></nav>
+  <footer class="foot"><div class="foot__rule"></div><nav class="foot__nav" aria-label="More"><span class="lbl"><span class="i18n-en">Research</span><span class="i18n-zh">研究</span></span><a class="" href="../index.html#index-research"><span class="i18n-en">Sciences · 20</span><span class="i18n-zh">科学研究 · 20</span></a><a class="" href="../index.html#index-humanities"><span class="i18n-en">Humanities · 3</span><span class="i18n-zh">人文社科 · 3</span></a><span class="lbl"><span class="i18n-en">Books</span><span class="i18n-zh">著作</span></span><a class="" href="../books/invitation.html"><span class="i18n-en">An Invitation After Abundance</span><span class="i18n-zh">An Invitation After Abundance</span></a><a class="" href="../books/heping.html"><span class="i18n-en">和平请柬</span><span class="i18n-zh">和平请柬</span></a><a class="" href="../books/sovereign.html"><span class="i18n-en">Sovereign Scintillation</span><span class="i18n-zh">Sovereign Scintillation</span></a><span class="lbl"><span class="i18n-en">Products</span><span class="i18n-zh">产品</span></span><a class="" href="../products/omytea.html"><span class="i18n-en">Omytea</span><span class="i18n-zh">Omytea</span></a><a class="cur" href="../products/swindo.html"><span class="i18n-en">Swindo</span><span class="i18n-zh">Swindo</span></a><a class="" href="../products/nyeclock.html"><span class="i18n-en">Nye Clock</span><span class="i18n-zh">弐时仪</span></a><span class="lbl"><span class="i18n-en">More</span><span class="i18n-zh">更多</span></span><a class="" href="../music.html"><span class="i18n-en">Music</span><span class="i18n-zh">音乐</span></a><a class="" href="../footprint.html"><span class="i18n-en">Footprint</span><span class="i18n-zh">足迹</span></a><span class="lbl"><span class="i18n-en">About</span><span class="i18n-zh">关于</span></span><a class="" href="../cv.html"><span class="i18n-en">Full CV</span><span class="i18n-zh">完整履历</span></a><a class="" href="../journey.html"><span class="i18n-en">Journey</span><span class="i18n-zh">旅程</span></a><a class="" href="../updates.html"><span class="i18n-en">Latest</span><span class="i18n-zh">近况</span></a><a class="" href="../index.html"><span class="i18n-en">Home</span><span class="i18n-zh">首页</span></a></nav></footer>
 
   <script>
     (function () {
@@ -135,6 +129,6 @@
     })();
   </script>
   <script src="../craft.js?v=1" defer></script>
-  <script src="../search.js?v=6" defer></script>
+  <script src="../search.js?v=7" defer></script>
 </body>
 </html>

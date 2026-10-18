@@ -8,7 +8,7 @@
 
   // static (non-works) destinations, always searchable
   var STATIC = [
-    { t: "Journey · education & path", z: "履历 · 求学之路", h: "/journey.html", g: "page" },
+    { t: "Journey · education & path", z: "旅程 · 求学之路", h: "/journey.html", g: "page" },
     { t: "Footprint · places", z: "足迹 · 去过的地方", h: "/footprint.html", g: "page" },
     { t: "Music", z: "音乐", h: "/music.html", g: "page" },
     { t: "Latest · recent activity", z: "近况 · 近期动态", h: "/updates.html", g: "page" },

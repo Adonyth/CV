@@ -1178,3 +1178,8 @@ html[data-theme="light"] body:not(.cosmos) #field { opacity: .28; }
   .cosmos-nav__group:not(.open):hover .cosmos-nav__kids, .cosmos-nav__group:not(.open):focus-within .cosmos-nav__kids {
     opacity: 0; visibility: hidden; transform: translateY(-6px); pointer-events: none; }
 }
+/* CV → the site: each entry that has its own page links to it (the CV used to reach only 2 pages) */
+.artifacts li:has(> a.onsite){border-color:color-mix(in srgb, var(--accent) 40%, transparent);}
+.onsite-row{margin-top:14px; font-family:var(--mono); font-size:12.5px;}
+.onsite-row a{color:var(--accent-deep); text-decoration:underline; text-decoration-color:color-mix(in srgb, var(--accent) 45%, transparent); text-underline-offset:2px;}
+.onsite-row a:hover{color:var(--ink);}

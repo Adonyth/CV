@@ -122,6 +122,7 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
   text-align:left; text-wrap:pretty; hanging-punctuation:first last;
   -webkit-hyphens:manual; hyphens:manual;}   /* ragged right: justified English opened rivers (build 248) */
 .desc p:last-child{margin-bottom:0;}
+.nw{white-space:nowrap;}
 .desc p:first-child:not(:last-child){font-size:19px; line-height:1.6; color:var(--ink); margin-bottom:20px;
   font-variation-settings:"opsz" 26; letter-spacing:.002em; text-align:left; hyphens:none;}
 .locale-zh .desc p{font-size:16.5px; line-height:1.95; letter-spacing:.02em;
@@ -267,6 +268,10 @@ def constellation_svg(cls):
             f'preserveAspectRatio="xMidYMid meet"><g class="cf-l">{lines}</g><g class="cf-d">{dots}</g></svg>')
 
 # --- a slim cross-category footer so no page is a dead-end (products live here too) ---
+def nowrap_ids(t):
+    """ISBNs / DOIs must not split across lines (979-8-… broke mid-number on phones)."""
+    return _re.sub(r"(97[89]-[\d-]{10,}\d|10\.\d{4,9}/\S+\d)", r'<span class="nw">\1</span>', t)
+
 def footer_nav(depth=0, current=None):
     pre = "../" * depth
     def a(href, en, zh, key=None, ext=False):
@@ -286,11 +291,14 @@ def footer_nav(depth=0, current=None):
         + a("products/omytea.html", "Omytea", "Omytea", "omytea")
         + a("products/swindo.html", "Swindo", "Swindo", "swindo")
         + a("products/nyeclock.html", "Nye Clock", "弐时仪", "nyeclock")
+        + f'<span class="lbl">{bi("More", "更多")}</span>'
         + a("music.html", "Music", "音乐", "music")
-        + a("journey.html", "Journey", "履历", "journey")
         + a("footprint.html", "Footprint", "足迹", "footprint")
-        + a("index.html", "Orrery ↗", "星盘 ↗")
-        + a("cv.html", "CV ↗", "完整履历 ↗")
+        + f'<span class="lbl">{bi("About", "关于")}</span>'
+        + a("cv.html", "Full CV", "完整履历", "cv")
+        + a("journey.html", "Journey", "旅程", "journey")
+        + a("updates.html", "Latest", "近况", "updates")
+        + a("index.html", "Home", "首页")
         + '</nav></footer>'
     )
 
@@ -344,7 +352,7 @@ def page(title, body, depth=0, pager=False, desc="", path=None, jsonld=None):
 <body>
 {body}
   <script src="{pre}magnet.js?v=2"></script>
-  <script src="{pre}search.js?v=6" defer></script>
+  <script src="{pre}search.js?v=7" defer></script>
   <script src="{pre}craft.js?v=1" defer></script>
   <script>{LANG_JS}{keynav}</script>
 </body>
@@ -435,7 +443,7 @@ for cls, items in BY_CLS.items():
     c = CLS[cls]
     for i, w in enumerate(items):
         paras = "".join(
-            f'<p>{bi(html.escape(e), html.escape(z))}</p>'
+            f'<p>{bi(nowrap_ids(html.escape(e)), nowrap_ids(html.escape(z)))}</p>'
             for e, z in zip(w["desc"]["en"], w["desc"]["zh"]))
         links = paper_block(w)
         prev_w = items[i - 1] if i > 0 else None
@@ -449,8 +457,8 @@ for cls, items in BY_CLS.items():
         pager = (f'<nav class="pager" aria-label="Within {c["en"]}">'
                  f'{pager_link(prev_w, "prev", "⟵ Previous", "⟵ 上一篇")}'
                  f'{pager_link(next_w, "next", "Next ⟶", "下一篇 ⟶")}</nav>')
-        # breadcrumb: ⟵ Orrery (the whole sky) · ⟵ this category (opens the home index at its group)
-        body = chrome([("index.html", "Orrery", "星盘"),
+        # breadcrumb: ⟵ Home (the sky) · ⟵ this category (opens the home index at its group)
+        body = chrome([("index.html", "Home", "首页"),
                        (f"index.html#index-{cls}", c["en"], c["zh"])], depth=1) + f"""
   <main>
     <div class="eyebrow">{bi(c["eyebrow_en"], c["eyebrow_zh"])}</div>
@@ -481,3 +489,40 @@ for cls, items in BY_CLS.items():
                             path=relpath, jsonld=jsonld), encoding="utf-8")
 
 print("generated:", len(DATA), "item pages (no aggregate index pages — the sky is the index)")
+
+# ---------------- hand-written pages: same footer, same back label, products pager ----------------
+# products/*, journey, music and updates are written by hand; their footer and back link used to be
+# pasted copies that drifted (no Latest, "Orrery" after the home page became the sky). They are
+# rewritten here from footer_nav() so every reading page carries the same index.
+HAND = [("products/omytea.html", 1, "omytea"), ("products/swindo.html", 1, "swindo"),
+        ("products/nyeclock.html", 1, "nyeclock"), ("journey.html", 0, "journey"),
+        ("music.html", 0, "music"), ("updates.html", 0, "updates")]
+PRODUCTS = [("omytea", "Omytea", "Omytea"), ("swindo", "Swindo", "Swindo"), ("nyeclock", "Nye Clock", "弐时仪")]
+def products_pager(key):
+    ids = [k for k, _, _ in PRODUCTS]; i = ids.index(key)
+    def link(j, cls_name, en, zh):
+        if j < 0 or j >= len(PRODUCTS):
+            return '<a class="empty" aria-hidden="true"></a>'
+        k, ne, nz = PRODUCTS[j]
+        return (f'<a class="{cls_name}" data-magnet href="{k}.html"><span class="dir">{bi(en, zh)}</span>'
+                f'<span class="nm">{bi(ne, nz)}</span></a>')
+    return (f'<nav class="pager" aria-label="Within Products">{link(i - 1, "prev", "⟵ Previous", "⟵ 上一个")}'
+            f'{link(i + 1, "next", "Next ⟶", "下一个 ⟶")}</nav>')
+synced = 0
+for rel, depth, key in HAND:
+    f = ROOT / rel; t = f.read_text(encoding="utf-8")
+    t = _re.sub(r'<span class="i18n-en">Orrery</span><span class="i18n-zh">星盘</span>',
+                '<span class="i18n-en">Home</span><span class="i18n-zh">首页</span>', t)
+    foot = footer_nav(depth=depth, current=key)
+    if '<footer class="foot">' in t:
+        t = _re.sub(r'<footer class="foot">.*?</footer>', lambda m: foot, t, count=1, flags=_re.S)
+    else:   # updates.html had no footer at all
+        t = t.replace('  </div>\n  <script>', '    ' + foot + '\n  </div>\n  <script>', 1)
+    if rel.startswith("products/"):
+        pg = products_pager(key)
+        if '<nav class="pager"' in t:
+            t = _re.sub(r'<nav class="pager".*?</nav>', lambda m: pg, t, count=1, flags=_re.S)
+        else:
+            t = t.replace('<footer class="foot">', pg + '\n  <footer class="foot">', 1)
+    f.write_text(t, encoding="utf-8"); synced += 1
+print("synced chrome into", synced, "hand-written pages")

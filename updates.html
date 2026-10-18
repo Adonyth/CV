@@ -44,13 +44,25 @@
     html.locale-zh .i18n-en{display:none}
     html.locale-zh .i18n-zh{display:inline}
     .empty{color:#8f8067;padding:30px 0}
+  
+    /* the shared site index (synced by scripts/gen-works.py) */
+    .foot{margin-top:64px;}
+    .foot__rule{height:1px; background:rgba(255,255,255,.08); margin-bottom:22px;}
+    .foot__nav{display:flex; flex-wrap:wrap; gap:12px 20px; align-items:baseline;}
+    .foot__nav a, .foot__nav span.lbl{font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.06em; color:#8f8067; text-decoration:none;}
+    .foot__nav a:hover{color:#e0876a;} .foot__nav a.cur{color:#f4ecdf;}
+    .foot__nav .lbl{font-size:11px; color:#e8c37a; text-transform:uppercase; letter-spacing:.14em;}
+    /* language toggle as the same pill the other pages use */
+    .lang{display:inline-flex; border:1px solid rgba(255,255,255,.14); border-radius:999px; padding:3px;}
+    .lang button{border-radius:999px; padding:6px 11px; letter-spacing:.06em;}
+    .lang button[aria-pressed="true"]{background:#e0876a; color:#1a1109;}
   </style>
   <link rel="stylesheet" href="craft.css?v=3" />
 </head>
 <body>
   <div class="wrap">
     <div class="chrome">
-      <a class="back" href="/">⟵ <span class="i18n-en">Orrery</span><span class="i18n-zh">星盘</span></a>
+      <a class="back" href="/">⟵ <span class="i18n-en">Home</span><span class="i18n-zh">首页</span></a>
       <div class="lang" role="group" aria-label="Language">
         <button type="button" id="btn-en" aria-pressed="true">EN</button>
         <button type="button" id="btn-zh" aria-pressed="false">中文</button>
@@ -60,6 +72,7 @@
     <h1><span class="i18n-en">Latest</span><span class="i18n-zh">近况</span></h1>
     <p class="sub"><span class="i18n-en">Recent preprints, talks, products, and writing. <a class="rss" href="/updates.xml">RSS ↗</a></span><span class="i18n-zh">近期的预印本、报告、产品与写作。<a class="rss" href="/updates.xml">RSS ↗</a></span></p>
     <ol id="feed"><li class="empty">Loading…</li></ol>
+    <footer class="foot"><div class="foot__rule"></div><nav class="foot__nav" aria-label="More"><span class="lbl"><span class="i18n-en">Research</span><span class="i18n-zh">研究</span></span><a class="" href="index.html#index-research"><span class="i18n-en">Sciences · 20</span><span class="i18n-zh">科学研究 · 20</span></a><a class="" href="index.html#index-humanities"><span class="i18n-en">Humanities · 3</span><span class="i18n-zh">人文社科 · 3</span></a><span class="lbl"><span class="i18n-en">Books</span><span class="i18n-zh">著作</span></span><a class="" href="books/invitation.html"><span class="i18n-en">An Invitation After Abundance</span><span class="i18n-zh">An Invitation After Abundance</span></a><a class="" href="books/heping.html"><span class="i18n-en">和平请柬</span><span class="i18n-zh">和平请柬</span></a><a class="" href="books/sovereign.html"><span class="i18n-en">Sovereign Scintillation</span><span class="i18n-zh">Sovereign Scintillation</span></a><span class="lbl"><span class="i18n-en">Products</span><span class="i18n-zh">产品</span></span><a class="" href="products/omytea.html"><span class="i18n-en">Omytea</span><span class="i18n-zh">Omytea</span></a><a class="" href="products/swindo.html"><span class="i18n-en">Swindo</span><span class="i18n-zh">Swindo</span></a><a class="" href="products/nyeclock.html"><span class="i18n-en">Nye Clock</span><span class="i18n-zh">弐时仪</span></a><span class="lbl"><span class="i18n-en">More</span><span class="i18n-zh">更多</span></span><a class="" href="music.html"><span class="i18n-en">Music</span><span class="i18n-zh">音乐</span></a><a class="" href="footprint.html"><span class="i18n-en">Footprint</span><span class="i18n-zh">足迹</span></a><span class="lbl"><span class="i18n-en">About</span><span class="i18n-zh">关于</span></span><a class="" href="cv.html"><span class="i18n-en">Full CV</span><span class="i18n-zh">完整履历</span></a><a class="" href="journey.html"><span class="i18n-en">Journey</span><span class="i18n-zh">旅程</span></a><a class="cur" href="updates.html"><span class="i18n-en">Latest</span><span class="i18n-zh">近况</span></a><a class="" href="index.html"><span class="i18n-en">Home</span><span class="i18n-zh">首页</span></a></nav></footer>
   </div>
   <script>
     (function(){
@@ -84,6 +97,6 @@
   </script>
   <script src="/magnet.js?v=2"></script>
   <script src="/craft.js?v=1" defer></script>
-  <script src="/search.js?v=6" defer></script>
+  <script src="/search.js?v=7" defer></script>
 </body>
 </html>
