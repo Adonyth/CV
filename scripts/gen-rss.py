@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # data/updates.json -> updates.xml (RSS 2.0). Run after editing updates.json.
+import zlib
 import json, os, html, datetime
 
 SITE = "https://jiaxuanchen.pages.dev"
@@ -26,7 +27,7 @@ for it in U:
         "    <item>\n"
         f"      <title>{title}</title>\n"
         f"      <link>{html.escape(link)}</link>\n"
-        f"      <guid isPermaLink=\"false\">{html.escape(it.get('date',''))}-{abs(hash(it.get('en','')))%99999}</guid>\n"
+        f"      <guid isPermaLink=\"false\">{html.escape(it.get('date',''))}-{zlib.crc32(it.get('en','').encode())%99999}</guid>\n"
         f"      <pubDate>{rfc822(it.get('date',''))}</pubDate>\n"
         f"      <description>{desc}</description>\n"
         "    </item>")
