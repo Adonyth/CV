@@ -952,6 +952,8 @@ html body.cosmos.hint-quiet .ground-hint span{opacity:0;}
   color:rgba(205,194,178,.42); opacity:0; pointer-events:none; transition:opacity .8s ease;}
 body.cosmos.on-ground .map-credit{opacity:1;}
 body.is-flat .map-credit, body.index-open .map-credit{display:none;}
+/* phone: the exit and dock buttons own the bottom corners (bottom 16px+) — the credit sits under them, centred */
+@media(max-width:700px){ body.is-mobile-3d .map-credit{left:0; right:0; bottom:2px; text-align:center; font-size:8.5px;} }
 
 /* ============================================================
    INSTRUMENT CHROME (build 227) — the chrome steps back so the sky can lead.

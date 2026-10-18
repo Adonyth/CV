@@ -1489,17 +1489,45 @@
       var em = nyeArmature.group.getObjectByName("NyeEarthMesh"); if (!em) return;
       em.updateWorldMatrix(true, false);
       var M = em.matrixWorld, ctr = new THREE.Vector3().setFromMatrixPosition(M), lv = new THREE.Vector3();
-      var N = MOBILE ? 160 : 280, SPAN = 11.0, DEG = Math.PI / 180;   // denser grid → smoother ridgelines (same real data, finer sampling)
+      var N = MOBILE ? 160 : 280, SPAN = 11.0, DEG = Math.PI / 180;
       var cl = Math.max(0.30, Math.cos(geo.lat * DEG));
-      var dLa = (2 * SPAN) / (N - 1), dLo = (2 * SPAN / cl) / (N - 1);
       var pos = new Float32Array(N * N * 3), up = new Float32Array(N * N * 3), nrm = new Float32Array(N * N * 3);
       var uvs = new Float32Array(N * N * 2), loc = new Float32Array(N * N * 2), elev = new Float32Array(N * N);
       var k = 0, k2 = 0, ke = 0;
-      function elevUse(la2, lo2) { var ee = sampleElevM(la2, lo2); return ee > 0 ? ee : 0; }
+      // build 251: heights are measured from the ground under the visitor's own feet. The eye and the
+      // city sit a fixed height above sea level, so absolute ETOPO metres (×EXAG) buried anyone living
+      // above ~1 km — from Denver the terrain filled the whole sky. Land lower than the base stays at
+      // base level (the eye can't see below its own floor anyway).
+      var eBase = Math.max(0, sampleElevM(geo.lat, geo.lon));
+      // Sub-resolution relief: ETOPO1 is a ~10′ grid, so a ridge 40 km away was three straight facets.
+      // A ridged-noise detail layer, scaled by the local relief (zero on plains and water), breaks the
+      // facets into plausible ridgelines. Where the mountains are stays real; only their texture below
+      // the data's resolution is synthesized.
+      function hash2(x, y) { var s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return s - Math.floor(s); }
+      function vnoise(x, y) {
+        var xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+        var a = hash2(xi, yi), b = hash2(xi + 1, yi), c = hash2(xi, yi + 1), d = hash2(xi + 1, yi + 1);
+        var uu = xf * xf * (3 - 2 * xf), vv = yf * yf * (3 - 2 * yf);
+        return a + (b - a) * uu + (c - a) * vv + (a - b - c + d) * uu * vv;
+      }
+      function ridged(x, y) {
+        var f = 0, amp = 0.5, fr = 1;
+        for (var o = 0; o < 5; o++) { var nn = 1 - Math.abs(vnoise(x * fr, y * fr) * 2 - 1); f += nn * nn * amp; fr *= 2.07; amp *= 0.5; }
+        return f;
+      }
+      function elevUse(la2, lo2) {
+        var rel = Math.max(0, sampleElevM(la2, lo2) - eBase);
+        if (rel <= 0) return 0;
+        return Math.max(0, rel + (ridged(lo2 * cl / 0.07, la2 / 0.07) - 0.45) * Math.min(650, rel * 0.34));
+      }
+      // vertices crowd toward the viewer (the near ranges carry the silhouette), thin out at the rim
+      function warp(t) { var c = 2 * t - 1; return 0.5 + 0.5 * (c < 0 ? -1 : 1) * Math.pow(Math.abs(c), 1.75); }
       for (var iy = 0; iy < N; iy++) {
-        var v = iy / (N - 1), la = geo.lat + (v - 0.5) * 2 * SPAN;
+        var v = warp(iy / (N - 1)), la = geo.lat + (v - 0.5) * 2 * SPAN;
+        var dLa = Math.max(0.004, (warp(Math.min(1, (iy + 1) / (N - 1))) - warp(Math.max(0, (iy - 1) / (N - 1)))) * SPAN);
         for (var ix = 0; ix < N; ix++) {
-          var u = ix / (N - 1), lo = geo.lon + (u - 0.5) * 2 * SPAN / cl;
+          var u = warp(ix / (N - 1)), lo = geo.lon + (u - 0.5) * 2 * SPAN / cl;
+          var dLo = Math.max(0.004 / cl, (warp(Math.min(1, (ix + 1) / (N - 1))) - warp(Math.max(0, (ix - 1) / (N - 1)))) * SPAN / cl);
           var eUse = elevUse(la, lo);
           var r = Rv + 0.0008 + eUse * mToScene;                 // +epsilon lifts the patch off the globe (no z-fight at sea level)
           var th = (90 - la) * DEG, ph = (lo + 180) * DEG, st = Math.sin(th);
@@ -1527,7 +1555,7 @@
           uvs[k2] = ((lo + 180) / 360) % 1; if (uvs[k2] < 0) uvs[k2] += 1;
           uvs[k2 + 1] = (la + 90) / 180;
           loc[k2] = u; loc[k2 + 1] = v; k2 += 2;
-          elev[ke++] = Math.max(0, Math.min(1, eUse / 4500));   // 0 sea → 1 ~Himalaya, for biome shading
+          elev[ke++] = Math.max(0, Math.min(1, (eUse + eBase) / 4500));   // absolute height (0 sea → 1 ~Himalaya), for snow/biome shading
         }
       }
       var idx = [];
@@ -1574,18 +1602,28 @@
           "  float bumpAmt=mix(0.55,2.2,smoothstep(0.02,0.35,vElev));\n" +
           "  vec3 Nb=normalize(N - (east*(hx-h0)+north*(hy-h0))*bumpAmt);\n" +
           "  float sky=max(dot(Nb,up),0.0), slope=clamp(1.0-dot(Nb,up),0.0,1.0);\n" +
-          "  float ao=0.48+0.95*smoothstep(0.18,0.78,h0)*mix(0.85,1.0,vElev);\n" +
-          "  vec3 alb=vec3(0.04,0.035,0.028);\n" +
+          "  float ao=0.55+0.85*smoothstep(0.18,0.78,h0)*mix(0.85,1.0,vElev);\n" +
+          // build 251: a NIGHT landscape. The day map only tints it (scotopic vision is nearly colourless);
+          // light comes from the sky above (cool), the city below (warm, only near the base and only on
+          // faces that look toward it) and a thin rim of horizon glow along ridgelines.
+          "  vec3 alb=vec3(0.05,0.045,0.04);\n" +
           "  if(uUseMap>0.5){ alb=texture2D(uMap,vUv).rgb; }\n" +
+          "  float lum=dot(alb,vec3(0.30,0.59,0.11)); alb=mix(vec3(lum),alb,0.22);\n" +
           "  float ocean=smoothstep(0.035,0.0,vElev);\n" +
-          "  alb=mix(alb,vec3(0.015,0.03,0.07),ocean*0.62);\n" +
-          "  alb=mix(alb,vec3(0.58,0.60,0.64),smoothstep(0.52,0.92,vElev)*0.38);\n" +
-          "  vec3 col=alb*ao*(0.048+0.12*sky);\n" +
-          "  col+=vec3(0.035,0.045,0.075)*sky*0.32*(1.0-ocean);\n" +
-          "  col+=vec3(0.95,0.58,0.36)*slope*(0.045+0.05*fbm(P*0.12))*(0.25+0.75*(1.0-ocean));\n" +
-          "  float g=fbm(P*4.0)*0.26+0.20; col*=0.70+0.50*g;\n" +
-          "  float d=length(cameraPosition-vWp), haze=smoothstep(0.026,0.145,d);\n" +
-          "  col=mix(col,vec3(0.034,0.022,0.019),haze*0.85);\n" +   // build 227: fade into the dark limb of the real night sky (was a bright amber wall)
+          "  alb=mix(alb,vec3(0.02,0.03,0.05),ocean*0.7);\n" +
+          "  alb=mix(alb,vec3(0.70,0.72,0.76),smoothstep(0.60,0.95,vElev)*0.45);\n" +
+          "  vec3 col=alb*ao*(0.010+0.060*sky);\n" +
+          "  col+=vec3(0.010,0.014,0.024)*sky*(1.0-ocean);\n" +
+          "  float rc=length(vLoc-vec2(0.5));\n" +
+          "  vec3 cdir=normalize(east*(0.5-vLoc.x)+north*(0.5-vLoc.y)+up*0.0001);\n" +
+          "  float face=clamp(dot(Nb,cdir)*0.8+0.2,0.0,1.0);\n" +
+          "  col+=vec3(0.55,0.32,0.18)*0.030*face*exp(-rc/0.035)*(1.0-ocean);\n" +
+          "  vec3 V=normalize(cameraPosition-vWp);\n" +
+          "  float rim=pow(1.0-clamp(dot(Nb,V),0.0,1.0),5.0)*smoothstep(0.05,0.4,sky);\n" +
+          "  col+=vec3(0.020,0.017,0.022)*rim;\n" +
+          "  float g=fbm(P*4.0)*0.26+0.20; col*=0.80+0.40*g;\n" +
+          "  float d=length(cameraPosition-vWp), haze=1.0-exp(-d/0.055);\n" +
+          "  col=mix(col,vec3(0.026,0.020,0.021),haze*0.92);\n" +   // layered ranges: each farther ridge sits closer to the horizon glow
           "  gl_FragColor=vec4(col*uFade,1.0);\n" +
           "}"
       });
@@ -4226,7 +4264,7 @@
               fs.sun.getWorldPosition(fs.dir);
               fs.ray.set(fc.position, fs.dir.sub(fc.position).normalize());
               var occHit = false, sunDist = fc.position.distanceTo(fs.sun.getWorldPosition(_pivT));
-              var tests = [fs.earth, fs.moon];
+              var tests = [fs.earth, fs.moon, groundTerrain];   // build 251: a ridge hides the Sun too (Lhasa drew the flare on a mountainside)
               for (var ti = 0; ti < tests.length; ti++) {
                 if (!tests[ti] || !tests[ti].visible) continue;
                 var hs = fs.ray.intersectObject(tests[ti], false);
