@@ -6,86 +6,86 @@
   <language>en</language>
   <atom:link xmlns:atom="http://www.w3.org/2005/Atom" href="https://jiaxuanchen.pages.dev/updates.xml" rel="self" type="application/rss+xml"/>
     <item>
-      <title>omyteaai.com rebuilt around NYTH — digital representatives that people raise and authorize themselves — with all of Omytea&#x27;s prediction work on the P-line: forecasts sealed before the outcome and scored after.</title>
+      <title>omyteaai.com rebuilt around NYTH — digital representatives that people raise and authorize themselves — and Omytea&#x27;s forecasts sealed before the outcome and scored after.</title>
       <link>https://omyteaai.com</link>
-      <guid isPermaLink="false">2026-10-18-10521</guid>
+      <guid isPermaLink="false">2026-10-18-93515</guid>
       <pubDate>Sun, 18 Oct 2026 00:00:00 +0000</pubDate>
-      <description>omyteaai.com rebuilt around NYTH — digital representatives that people raise and authorize themselves — with all of Omytea&#x27;s prediction work on the P-line: forecasts sealed before the outcome and scored after. · omyteaai.com 改版：以 NYTH（由每个人自己培养、自己授权的数字代表）为主角；Omytea 所有预测工作归入 P 线——先封存、后评分。</description>
+      <description>omyteaai.com rebuilt around NYTH — digital representatives that people raise and authorize themselves — and Omytea&#x27;s forecasts sealed before the outcome and scored after. · omyteaai.com 改版：以 NYTH（由每个人自己培养、自己授权的数字代表）为主角；Omytea 的预测先封存、后评分。</description>
     </item>
     <item>
-      <title>Omytea becomes the umbrella for my products and research: an agent-native product, still early, is now its main effort, and all prediction work — the world-model research included — is gathered on its predict-line, open to whichever methods fit.</title>
+      <title>Omytea becomes the umbrella for my products and research: an agent-native product, still early, is now its main effort, and all prediction work — the world-model research included — is open to whichever methods fit.</title>
       <link>https://jiaxuanchen.pages.dev/products/omytea.html</link>
-      <guid isPermaLink="false">2026-10-16-93963</guid>
+      <guid isPermaLink="false">2026-10-16-22818</guid>
       <pubDate>Fri, 16 Oct 2026 00:00:00 +0000</pubDate>
-      <description>Omytea becomes the umbrella for my products and research: an agent-native product, still early, is now its main effort, and all prediction work — the world-model research included — is gathered on its predict-line, open to whichever methods fit. · Omytea 成为我的产品与研究的总体系：一个仍处早期的 agent-native 产品成为当前主要工作；所有与预测有关的工作（包括世界模型研究）归入 predict-line（P 线），方法按任务选择、不设限。</description>
+      <description>Omytea becomes the umbrella for my products and research: an agent-native product, still early, is now its main effort, and all prediction work — the world-model research included — is open to whichever methods fit. · Omytea 成为我的产品与研究的总体系：一个仍处早期的 agent-native 产品成为当前主要工作；所有与预测有关的工作（包括世界模型研究）方法按任务选择、不设限。</description>
     </item>
     <item>
       <title>The Well (PolymathicAI) — two fixes merged upstream: ε propagated through the VRMSE/VMSE metrics (#92) and long-horizon validation curves averaged across batches (#93); written with Claude Code assistance, disclosed in the pull request.</title>
       <link>https://github.com/PolymathicAI/the_well/pull/93</link>
-      <guid isPermaLink="false">2026-10-12-92195</guid>
+      <guid isPermaLink="false">2026-10-12-49770</guid>
       <pubDate>Mon, 12 Oct 2026 00:00:00 +0000</pubDate>
       <description>The Well (PolymathicAI) — two fixes merged upstream: ε propagated through the VRMSE/VMSE metrics (#92) and long-horizon validation curves averaged across batches (#93); written with Claude Code assistance, disclosed in the pull request. · The Well(PolymathicAI)—— 两处修复被上游合并:VRMSE/VMSE 指标中的 ε 传递(#92),以及长时程验证曲线改为跨批次平均(#93);借助 Claude Code 完成,已在合并请求中披露。</description>
     </item>
     <item>
       <title>Coherent Strange-Current Contributions to X(2370) → ηηη — submitted to Physica Scripta.</title>
       <link>https://jiaxuanchen.pages.dev/research/glueball.html</link>
-      <guid isPermaLink="false">2026-10-09-92949</guid>
+      <guid isPermaLink="false">2026-10-09-18374</guid>
       <pubDate>Fri, 09 Oct 2026 00:00:00 +0000</pubDate>
       <description>Coherent Strange-Current Contributions to X(2370) → ηηη — submitted to Physica Scripta. · 《X(2370) → ηηη 中的相干奇异流贡献》—— 已投稿 Physica Scripta。</description>
     </item>
     <item>
       <title>Swindo — ongoing product-engineering work on golf-motion capture, body calibration and interfaces.</title>
       <link>https://jiaxuanchen.pages.dev/products/swindo.html</link>
-      <guid isPermaLink="false">2026-10-08-27741</guid>
+      <guid isPermaLink="false">2026-10-08-18558</guid>
       <pubDate>Thu, 08 Oct 2026 00:00:00 +0000</pubDate>
       <description>Swindo — ongoing product-engineering work on golf-motion capture, body calibration and interfaces. · Swindo —— 高尔夫动作采集、身体参数校准与界面的产品工程工作持续进行中。</description>
     </item>
     <item>
       <title>Digit Dependence under Translation-Conjugated Cyclic Rotation — submitted to Discrete Mathematics, Algorithms and Applications.</title>
       <link>https://jiaxuanchen.pages.dev/research/digitRotation.html</link>
-      <guid isPermaLink="false">2026-09-22-5055</guid>
+      <guid isPermaLink="false">2026-09-22-21080</guid>
       <pubDate>Tue, 22 Sep 2026 00:00:00 +0000</pubDate>
       <description>Digit Dependence under Translation-Conjugated Cyclic Rotation — submitted to Discrete Mathematics, Algorithms and Applications. · 《平移共轭循环旋转的数位依赖》—— 已投稿 Discrete Mathematics, Algorithms and Applications。</description>
     </item>
     <item>
       <title>Paper D — local modular data for half-line free fermions — submitted to the Journal of Mathematical Physics; preprint on Zenodo.</title>
       <link>https://jiaxuanchen.pages.dev/research/paperD.html</link>
-      <guid isPermaLink="false">2026-07-31-79540</guid>
+      <guid isPermaLink="false">2026-07-31-67630</guid>
       <pubDate>Fri, 31 Jul 2026 00:00:00 +0000</pubDate>
       <description>Paper D — local modular data for half-line free fermions — submitted to the Journal of Mathematical Physics; preprint on Zenodo. · 论文 D —— 半直线自由费米子的局域模数据 —— 已投稿 Journal of Mathematical Physics;预印本见 Zenodo。</description>
     </item>
     <item>
       <title>The universal-prior locality no-go — preprint posted on Zenodo.</title>
       <link>https://jiaxuanchen.pages.dev/research/paperB2.html</link>
-      <guid isPermaLink="false">2026-07-12-91578</guid>
+      <guid isPermaLink="false">2026-07-12-32467</guid>
       <pubDate>Sun, 12 Jul 2026 00:00:00 +0000</pubDate>
       <description>The universal-prior locality no-go — preprint posted on Zenodo. · 通用先验局域性不可行定理 —— 预印本发布于 Zenodo。</description>
     </item>
     <item>
       <title>Two books out: An Invitation After Abundance (Kindle and print) and the Chinese-language 和平请柬 (hardcover) — parallel originals.</title>
       <link>https://jiaxuanchen.pages.dev/books/invitation.html</link>
-      <guid isPermaLink="false">2026-07-49137</guid>
+      <guid isPermaLink="false">2026-07-96665</guid>
       <pubDate>Wed, 01 Jul 2026 00:00:00 +0000</pubDate>
       <description>Two books out: An Invitation After Abundance (Kindle and print) and the Chinese-language 和平请柬 (hardcover) — parallel originals. · 两部专著出版:《An Invitation After Abundance》(Kindle 与纸质版)与中文专著《和平请柬》(精装)—— 两部平行的原创著作。</description>
     </item>
     <item>
       <title>Paper D — half-line free fermions: local CAR &amp; modular scaling with a type-forced obstruction — submission package ready (AHP).</title>
       <link>https://jiaxuanchen.pages.dev/research/paperD.html</link>
-      <guid isPermaLink="false">2026-07-95998</guid>
+      <guid isPermaLink="false">2026-07-83074</guid>
       <pubDate>Wed, 01 Jul 2026 00:00:00 +0000</pubDate>
       <description>Paper D — half-line free fermions: local CAR &amp; modular scaling with a type-forced obstruction — submission package ready (AHP). · 论文 D —— 半线自由费米子的局域模流标度与类型强制障碍 —— AHP 投稿包就绪。</description>
     </item>
     <item>
       <title>An Invitation After Abundance reaches ~1,164 pages — publish-ready.</title>
       <link>https://jiaxuanchen.pages.dev/books/invitation.html</link>
-      <guid isPermaLink="false">2026-99253</guid>
+      <guid isPermaLink="false">2026-7198</guid>
       <pubDate>Thu, 01 Jan 2026 00:00:00 +0000</pubDate>
       <description>An Invitation After Abundance reaches ~1,164 pages — publish-ready. · 《An Invitation After Abundance》达约 1,164 页，具备出版条件。</description>
     </item>
     <item>
       <title>Blazar jet-formation work (BP/BZ fitting, UCL) accepted at CONF-CIAP 2023.</title>
       <link>https://jiaxuanchen.pages.dev/research/blazar.html</link>
-      <guid isPermaLink="false">2023-48757</guid>
+      <guid isPermaLink="false">2023-59994</guid>
       <pubDate>Sun, 01 Jan 2023 00:00:00 +0000</pubDate>
       <description>Blazar jet-formation work (BP/BZ fitting, UCL) accepted at CONF-CIAP 2023. · 耀变体喷流形成机制工作（BP/BZ 拟合，UCL）被 CONF-CIAP 2023 录用。</description>
     </item>

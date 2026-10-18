@@ -3,14 +3,14 @@
   "updates": [
     {
       "date": "2026-10-18",
-      "en": "omyteaai.com rebuilt around NYTH — digital representatives that people raise and authorize themselves — with all of Omytea's prediction work on the P-line: forecasts sealed before the outcome and scored after.",
-      "zh": "omyteaai.com 改版：以 NYTH（由每个人自己培养、自己授权的数字代表）为主角；Omytea 所有预测工作归入 P 线——先封存、后评分。",
+      "en": "omyteaai.com rebuilt around NYTH — digital representatives that people raise and authorize themselves — and Omytea's forecasts sealed before the outcome and scored after.",
+      "zh": "omyteaai.com 改版：以 NYTH（由每个人自己培养、自己授权的数字代表）为主角；Omytea 的预测先封存、后评分。",
       "href": "https://omyteaai.com"
     },
     {
       "date": "2026-10-16",
-      "en": "Omytea becomes the umbrella for my products and research: an agent-native product, still early, is now its main effort, and all prediction work — the world-model research included — is gathered on its predict-line, open to whichever methods fit.",
-      "zh": "Omytea 成为我的产品与研究的总体系：一个仍处早期的 agent-native 产品成为当前主要工作；所有与预测有关的工作（包括世界模型研究）归入 predict-line（P 线），方法按任务选择、不设限。",
+      "en": "Omytea becomes the umbrella for my products and research: an agent-native product, still early, is now its main effort, and all prediction work — the world-model research included — is open to whichever methods fit.",
+      "zh": "Omytea 成为我的产品与研究的总体系：一个仍处早期的 agent-native 产品成为当前主要工作；所有与预测有关的工作（包括世界模型研究）方法按任务选择、不设限。",
       "href": "/products/omytea.html"
     },
     {
