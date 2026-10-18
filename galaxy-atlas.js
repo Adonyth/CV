@@ -167,7 +167,7 @@
     if (keep) { var again = list.querySelector('[data-star-id="' + keep + '"]'); if (again) again.focus(); }
   }).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 
-  fetch("data/natal-sky.json?v=17").then(function (r) { return r.json(); }).then(function (data) {
+  fetch("data/natal-sky.json?v=19").then(function (r) { return r.json(); }).then(function (data) {
     nodes = normalize(data);
     render();
   }).catch(function () {

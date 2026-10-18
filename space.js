@@ -2870,13 +2870,13 @@
     ]).then(function (arr) {
       var natalData = arr[0], lssData = arr[1];
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=163").then(function (mod) {
+      return import("./natal-sky.js?v=164").then(function (mod) {
         natalOpts = {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
           mobile: MOBILE, calm: (TIER !== "full"),
           camera: TRUE_SCALE ? lodCam : camera, interactive: true, lss: lssData,   // true scale: the sky module's crossfades + star picks run on the ladder camera
-          galXYZ: null, galRGB: null, webXYZ: null, webRGB: null
+          galXYZ: null, galRGB: null, webXYZ: null, webRGB: null, surveyPending: true
         };
         surveyP.then(function (sv) {
           // build 246: 2M++ / 2MRS / UNGC galaxies (Mpc × 64) + 8 catalogue bytes each; the dot layer's density
@@ -2885,6 +2885,8 @@
           if (gA) { gRGB = new Uint8Array((gA.length >> 3) * 3); for (var gi = 0, gn = gA.length >> 3; gi < gn; gi++) gRGB[gi * 3] = gRGB[gi * 3 + 1] = gRGB[gi * 3 + 2] = gA[gi * 8]; }
           natalOpts.galXYZ = sv[0] && gA ? new Int16Array(sv[0]) : null; natalOpts.galRGB = gRGB; natalOpts.galAttr = gA; natalOpts.galScale = 1 / 64;
           natalOpts.webXYZ = sv[2] ? new Int16Array(sv[2]) : null; natalOpts.webRGB = sv[3] ? new Uint8Array(sv[3]) : null;
+          natalOpts.surveyPending = false;
+          if (natalSky && natalSky.surveyReady) natalSky.surveyReady();   // a cosmic web that was waiting for these builds now
         });
         natalSky = mod.buildNatalSky(THREE, scene, natalData, natalOpts);
         natalSky.applyTheme(root.getAttribute("data-theme") === "dark");

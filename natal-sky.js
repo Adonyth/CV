@@ -925,9 +925,14 @@ export function buildNatalSky(THREE, scene, data, opts) {
      Attractor (Norma). Built ONCE; the camera dollies THROUGH it — structures grow/recede by
      pure perspective (rigid), always nested (continuous), and Laniakea literally IS its member
      clusters while the web IS Laniakea among its real neighbours. K = scene units / Mpc. */
-  var _lssBuilt = false;
+  var _lssBuilt = false, _lssWaiting = false;
   function buildLargeScaleStructure(LSS) {
-    if (_lssBuilt) return; _lssBuilt = true;
+    if (_lssBuilt) return;
+    // build 250: the survey arrays stream in behind the sky. Building before they land used to lock in the sparse
+    // procedural stand-in for good (the real 76k-galaxy field never replaced it) — on a slow link the cosmic web came
+    // up empty. While the survey is still pending, wait: surveyReady() queues the real build when it arrives.
+    if (o.surveyPending && !o.galXYZ) { _lssWaiting = true; return; }
+    _lssBuilt = true;
     var K = 200;
     var sglV = 102.88 * Math.PI / 180, cU = Math.cos(sglV), sU = Math.sin(sglV);
     var AX = SG_U.clone().multiplyScalar(cU).addScaledVector(SG_V, -sU);   // scene dir of +SGX
@@ -3083,6 +3088,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
     },
     ensureMidLayers: ensureMidLayers,
     ensureCosmicWeb: ensureCosmicWeb,
+    surveyReady: function () {   // the survey arrays have landed (or failed): build what was waiting for them
+      if (_lssWaiting && !_lssBuilt) { _lssWaiting = false; _buildQ.push(function () { buildLargeScaleStructure(o.lss); }); }
+    },
     ensureUniverse: ensureUniverse,
     getNodeById: getNodeById,
     getNodes: getAllNodes,
