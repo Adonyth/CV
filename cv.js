@@ -23,8 +23,8 @@
 
     document.title = isZh ? "陈嘉轩 — 学术简历" : "Jiaxuan Chen — Academic CV";
     var desc = isZh
-      ? "学术简历 — 陈嘉轩（Jiaxuan Chen），物理学"
-      : "Academic CV — Jiaxuan Chen (陈嘉轩), Physics";
+      ? "学术简历 — 陈嘉轩（Jiaxuan Chen），AI for Science 研究者与创业者"
+      : "Academic CV — Jiaxuan Chen (陈嘉轩), AI for Science Researcher and Founder";
     setMeta("meta-desc", desc);
     setMeta("meta-og-desc", desc);
     setMeta("meta-og-title", isZh ? "陈嘉轩 — 学术简历" : "Jiaxuan Chen — Academic CV");

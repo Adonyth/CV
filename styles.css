@@ -1183,3 +1183,45 @@ html[data-theme="light"] body:not(.cosmos) #field { opacity: .28; }
 .onsite-row{margin-top:14px; font-family:var(--mono); font-size:12.5px;}
 .onsite-row a{color:var(--accent-deep); text-decoration:underline; text-decoration-color:color-mix(in srgb, var(--accent) 45%, transparent); text-underline-offset:2px;}
 .onsite-row a:hover{color:var(--ink);}
+
+/* 2026-10-19 · research reading and simple-view fit. The spatial scene remains unchanged. */
+.cv-section-index{max-width:1080px;margin:0 auto 28px;padding:0 28px;display:flex;flex-wrap:wrap;gap:8px 18px;font-family:var(--mono);font-size:12px;}
+.cv-section-index a{padding:10px 0;color:var(--accent-deep);text-underline-offset:4px;}
+.cv-section-index a:hover{text-decoration:underline;}
+.cv-download{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;margin-top:24px;}
+.cv-download>a{display:inline-flex;align-items:center;min-height:44px;padding:10px 16px;border:1px solid var(--hairline);border-radius:4px;color:var(--accent-deep);font-family:var(--mono);font-size:13px;}
+.cv-download>span{font-size:13px;color:var(--muted);}
+.research-assist{font-family:var(--mono);font-size:11px!important;color:var(--accent-deep)!important;margin-top:8px;}
+.programme-details{margin-top:28px;border-top:1px solid var(--hairline);padding-top:20px;}
+.programme-details summary{cursor:pointer;font-family:var(--serif);font-size:21px;line-height:1.4;color:var(--ink);}
+.entry,.entry h3,.entry-meta,.lead,.lede,.hero__contact,.contact-row{min-width:0;overflow-wrap:anywhere;}
+.flat-work-title{display:block;min-width:0;overflow-wrap:anywhere;}
+.flat-work-meta{display:block;font-family:var(--mono);font-size:11px;line-height:1.7;color:var(--muted);margin-top:5px;overflow-wrap:anywhere;}
+html body.cosmos.is-flat #cosmos-flat,html body.cosmos.index-open #cosmos-flat{box-sizing:border-box;max-width:100%;}
+html body.cosmos.is-flat .flat-links,html body.cosmos.index-open .flat-links{min-width:0;max-width:100%;}
+html body.cosmos.is-flat .flat-links>a,html body.cosmos.index-open .flat-links>a{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;}
+@media(max-width:700px){
+ html body.cosmos.is-flat #cosmos-flat,html body.cosmos.index-open #cosmos-flat{width:100%;padding-left:22px;padding-right:22px;}
+ html body.cosmos.is-flat #cosmos-flat>*,html body.cosmos.index-open #cosmos-flat>*{max-width:100%;min-width:0;}
+ html body.cosmos.is-flat .cosmos-ui,html body.cosmos.index-open .cosmos-ui{left:auto;right:max(10px,env(safe-area-inset-right,0px));max-width:calc(100vw - 20px);width:max-content;flex-wrap:wrap;justify-content:flex-end;box-sizing:border-box;}
+ html body.cosmos.is-flat .cosmos-ui .uipill,html body.cosmos.index-open .cosmos-ui .uipill{min-width:38px;min-height:38px;padding:8px 9px;}
+ html body.cosmos.is-flat .cosmos-ui .lang button,html body.cosmos.index-open .cosmos-ui .lang button{min-height:38px;padding:8px;}
+ .cv-section-index{padding:0 22px;gap:4px 18px;}.cv-section-index a{min-height:44px;display:flex;align-items:center;}
+ .entry p,.locale-zh .entry p{max-width:100%;text-align:left;letter-spacing:normal;}.hero__contact{gap:10px 14px;}
+}
+@media print{.cv-download,.cv-section-index{display:none!important;}details.programme-details>ul{display:block!important;}}
+
+/* The actual flat index is a native nav; preserve every full title rather than cropping. */
+html body.cosmos.is-flat #cosmos-flat nav,html body.cosmos.index-open #cosmos-flat nav{width:100%;max-width:100%;min-width:0;}
+html body.cosmos.is-flat #cosmos-flat nav a,html body.cosmos.index-open #cosmos-flat nav a{display:block;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;box-sizing:border-box;}
+@media(max-width:700px){html body.cosmos.is-flat .cosmos-ui,html body.cosmos.index-open .cosmos-ui{transform:none;}html body.cosmos.is-flat .flat-name{font-size:clamp(38px,11vw,64px);}}
+
+/* Semantic section headings retain the existing quiet section-label styling. */
+h2.secnum{margin:0 0 18px;font-size:12px;font-weight:400;line-height:1.5;}
+
+/* The fallback index follows the page palette after its fixed night-sky cover. */
+html body.cosmos.is-flat #cosmos-flat .flat-menu a,
+html body.cosmos.is-flat #cosmos-flat .flat-work-title{color:var(--ink);}
+html body.cosmos.is-flat #cosmos-flat .flat-group{color:var(--accent-deep);}
+
+:root:not([data-theme="dark"]) body.cosmos.is-flat #cosmos-flat .flat-menu{--ink:#1a1916;--accent-deep:#a84b30;--muted:#706d64;--hairline:rgba(26,25,22,.13);}

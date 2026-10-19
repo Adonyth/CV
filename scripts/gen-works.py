@@ -9,7 +9,7 @@ import json, pathlib, html, urllib.parse
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DATA = json.load(open(ROOT / "data" / "works.json", encoding="utf-8"))["works"]
-BUILD = "build 70 · 07-08"
+BUILD = "updated 19 October 2026"
 N_RESEARCH = sum(1 for w in DATA if w["cls"] == "research")
 BOOK_SHORT = {"invitation": ("An Invitation After Abundance", "An Invitation After Abundance"), "sovereign": ("Sovereign Scintillation", "Sovereign Scintillation")}
 N_HUMANITIES = sum(1 for w in DATA if w["cls"] == "humanities")
@@ -219,6 +219,14 @@ h1{font-family:var(--serif); font-optical-sizing:auto; font-variation-settings:"
 .toc .d{font-family:var(--serif); font-size:15px; color:var(--read); margin-top:var(--s1);
   line-height:1.6; max-width:60ch; text-wrap:pretty;}
 .locale-zh .toc .d{font-size:14.5px; line-height:1.85;}
+"""
+
+CSS += """
+h1,.meta,.desc,.toc,.toc a,.toc .t,.toc .m,.pager,.pager a,.pager .nm{min-width:0;overflow-wrap:anywhere;}
+.links a{white-space:normal;overflow-wrap:anywhere;min-height:44px;}
+.nw{white-space:normal;overflow-wrap:anywhere;}
+.research-assist{display:inline-block;margin-top:8px;color:var(--gold);font-size:11px;letter-spacing:.02em;}
+@media(max-width:640px){.chrome{left:12px;right:12px;gap:8px}.chrome>*{min-width:0;max-width:100%}.map-back{font-size:11px;padding:10px 12px}.desc p,.locale-zh .desc p{letter-spacing:normal;text-align:left}.lang button{min-height:38px}}
 """
 
 LANG_JS = """
@@ -464,6 +472,7 @@ for cls, items in BY_CLS.items():
     <div class="eyebrow">{bi(c["eyebrow_en"], c["eyebrow_zh"])}</div>
     <h1>{bi(html.escape(w["title"]["en"]), html.escape(w["title"]["zh"]))}</h1>
     <div class="meta"><b>{html.escape(w["period"])}</b>{"" if w["period"].rstrip().endswith("—") else " ·"} {bi(html.escape(w["where"]["en"]), html.escape(w["where"]["zh"]))}<br/>{bi(html.escape(w["status"]["en"]), html.escape(w["status"]["zh"]))}</div>
+    {("<p class='research-assist'>" + bi("AI for Science · AI-assisted", "AI for Science · AI 辅助研究") + "</p>") if w.get("ai_assisted") else ""}
     <div class="rule"></div>
     <div class="desc">{paras}</div>
     {demo_block(w)}
@@ -480,7 +489,8 @@ for cls, items in BY_CLS.items():
             "name": w["title"]["en"], "headline": w["title"]["en"],
             "description": w["desc"]["en"][0][:300],
             "inLanguage": ["en", "zh"], "url": f"{SITE}/{relpath}",
-            "datePublished": w["period"], "creativeWorkStatus": w["status"]["en"],
+            "creativeWorkStatus": w["status"]["en"],
+            **({"datePublished": w["publication_date"]} if w.get("publication_date") else {}),
             "author": {"@type": "Person", "name": "Jiaxuan Chen", "alternateName": "陈嘉轩",
                        "url": SITE + "/", "identifier": "https://orcid.org/0009-0008-5211-4313"},
             "isPartOf": {"@type": "WebSite", "name": "Jiaxuan Chen · 陈嘉轩", "url": SITE + "/"},
