@@ -243,19 +243,19 @@
         "zh": "粒子现象学"
       },
       "status": {
-        "en": "Submitted manuscript · Physica Scripta, October 2026",
-        "zh": "已投稿手稿 · Physica Scripta，2026 年 10 月"
+        "en": "Working manuscript · October 2026",
+        "zh": "工作手稿 · 2026 年 10 月"
       },
       "desc": {
         "en": [
           "Analyses coherent strange-current contributions to X(2370) → ηηη, tracking amplitudes, interference and phase-space factors rather than replacing the coherent sum with separate rates.",
           "At the stated reference inputs, the light and strange amplitudes interfere destructively; the completed ηηη width is smaller by a factor of approximately 30.88. The charge-complete reference ratio Γ(ηηη)/Γ(KKπ) is approximately 3.315 × 10⁻⁴. The sensitivity box contains a cancellation region; this is a conditional channel prediction, not a measurement of glueball composition.",
-          "Related earlier work examined two-photon production and Belle constraints. Amplitude ambiguity prevented the proposed broad-family limit; that study is retained as an archived negative result, distinct from the submitted strange-current manuscript."
+          "Related earlier work examined two-photon production and Belle constraints. Amplitude ambiguity prevented the proposed broad-family limit; that study is retained as an archived negative result, distinct from the current strange-current manuscript."
         ],
         "zh": [
           "分析 X(2370) → ηηη 中的相干奇异流贡献，显式追踪振幅、干涉与相空间因子，而非将相干和替换为独立衰变率之和。",
           "在给定参考输入下，轻夸克与奇异夸克振幅发生破坏性干涉，补全后的 ηηη 衰变宽度减小约 30.88 倍。计入完整电荷道的参考比值 Γ(ηηη)/Γ(KKπ) 约为 3.315 × 10⁻⁴。敏感性参数区域包含抵消情形；这是有条件的道预测，不是对胶球成分的测量。",
-          "较早的相关工作考察双光子产生与 Belle 约束。振幅歧义使原拟议的广泛模型族限制无法成立；该研究作为归档负结果保留，与已投稿的奇异流手稿分开。"
+          "较早的相关工作考察双光子产生与 Belle 约束。振幅歧义使原拟议的广泛模型族限制无法成立；该研究作为归档负结果保留，与当前的奇异流手稿分开。"
         ]
       },
       "links": [],

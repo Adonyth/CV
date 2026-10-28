@@ -1225,3 +1225,10 @@ html body.cosmos.is-flat #cosmos-flat .flat-work-title{color:var(--ink);}
 html body.cosmos.is-flat #cosmos-flat .flat-group{color:var(--accent-deep);}
 
 :root:not([data-theme="dark"]) body.cosmos.is-flat #cosmos-flat .flat-menu{--ink:#1a1916;--accent-deep:#a84b30;--muted:#706d64;--hairline:rgba(26,25,22,.13);}
+
+/* Founder context and direct work links; preserve the existing spatial scene. */
+.founder-role{font:12px/1.7 var(--mono,ui-monospace,monospace);letter-spacing:.025em;color:var(--muted,#bdb6a8);margin:9px 0 10px;pointer-events:auto;}
+.founder-role a{color:var(--accent,#e0876a);text-decoration:none;}
+.founder-role a:hover{text-decoration:underline;text-underline-offset:4px;}
+.flat-id .founder-role{margin:12px 0;}
+@media(max-width:600px){.founder-role{font-size:11px;max-width:29ch;}.cosmos-links{max-width:340px;row-gap:10px;}.flat-id .founder-role{max-width:none;}}
