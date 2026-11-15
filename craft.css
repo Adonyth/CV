@@ -212,3 +212,142 @@ body.cosmos.is-flat .cosmos-dock{ opacity:0 !important; transition:none; } /* le
   section:not(.hero) > .rail::before, .featured::before{ display:none !important; }
   *{ view-transition-name:none !important; }
 }
+/* ============================================================
+   THE INSTRUMENT FRAME — homepage cosmos (driven by space.js).
+   One selection grammar drawn with three marks, all the same gold:
+     · four quiet ticks  = a work star: a destination in the sky
+     · a ring at 35 %    = what the hand is over (or what a menu door leads to)
+     · a ring at 70 %    = what is selected; in flight an arc sweeps round it
+   plus THE SCALE RAIL: a real vertical slider on the right edge.
+   No text lives here except tier names on the rail. Rings and ticks sit over
+   the canvas and UNDER every control (z-index 3); they never take a pointer.
+   ============================================================ */
+.sky-ui{ position:fixed; inset:0; z-index:3; pointer-events:none; overflow:hidden; contain:strict; }
+body.to-map .sky-ui, body.is-flat .sky-ui{ opacity:0 !important; transition:opacity .3s var(--ease-out); }
+
+.sky-ring{
+  position:absolute; left:0; top:0; width:28px; height:28px; box-sizing:border-box; border-radius:50%;
+  border:1.25px solid rgba(232,195,122,.7); opacity:0; visibility:hidden; will-change:transform;
+  transition:opacity .2s var(--ease-out), visibility 0s linear .2s, border-color .2s var(--ease-out);
+}
+.sky-ring.is-on{ opacity:1; visibility:visible; transition:opacity .16s var(--ease-out), border-color .2s var(--ease-out); }
+.sky-ring--hover{ border-color:rgba(232,195,122,.35); }
+/* a menu door under the hand: what it leads to lights up — in within 200 ms, out within 250 ms */
+.sky-ring--pre{ border-color:rgba(232,195,122,.55); transition:opacity .24s var(--ease-out), visibility 0s linear .24s; }
+.sky-ring--pre.is-on{ transition:opacity .18s var(--ease-out); }
+/* in flight the ring thins and an arc sweeps round it: how far along the way you are */
+.sky-ring.is-flying{ border-color:rgba(232,195,122,.2); }
+.sky-ring > i{
+  position:absolute; inset:-1.25px; border-radius:50%; opacity:0; transition:opacity .2s var(--ease-out);
+  background:conic-gradient(from 0turn, rgba(232,195,122,.92) calc(var(--p, 0) * 1turn), rgba(232,195,122,0) 0);
+  -webkit-mask:radial-gradient(farthest-side, rgba(0,0,0,0) calc(100% - 1.9px), #000 calc(100% - 1.4px));
+          mask:radial-gradient(farthest-side, rgba(0,0,0,0) calc(100% - 1.9px), #000 calc(100% - 1.4px));
+}
+.sky-ring.is-flying > i{ opacity:1; }
+
+/* the work-star marker: four ticks, breathing slowly (6 s, a small swing) */
+.sky-mark{ position:absolute; left:0; top:0; width:21px; height:21px; margin:-10px 0 0 -10px; opacity:0; transition:opacity .24s var(--ease-out); }
+.sky-mark::before, .sky-mark::after{
+  content:""; position:absolute; inset:0;
+  background:
+    linear-gradient(var(--gold), var(--gold)) 10px 0 / 1px 4px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) 10px 17px / 1px 4px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) 0 10px / 4px 1px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) 17px 10px / 4px 1px no-repeat;
+}
+.sky-mark::before{ opacity:.5; animation:sky-mark-breathe 6s ease-in-out infinite; animation-delay:var(--d, 0s); }
+.sky-mark::after{ opacity:0; transition:opacity .24s var(--ease-out); }
+.sky-mark.is-lit::after{ opacity:.95; transition:opacity .18s var(--ease-out); }
+@keyframes sky-mark-breathe{ 0%, 100%{ opacity:.5; } 50%{ opacity:.32; } }
+
+/* ---- THE SCALE RAIL ---------------------------------------------------------
+   #cosmos-rail.rail-v2 > .rail__track · .rail__tick × (tiers + ground) · .rail__thumb[role=slider]
+   ONE slider: the whole 44px column (track ± 22px) is the target — a click or tap goes to the nearest tick, a
+   press that travels moves the scale — so no tick needs a box of its own on a short screen; the thumb keeps a
+   44×44 grab area. It lives in the lane the frame leaves free on the right edge, between the tool row above and
+   the bottom row below (--rail-top / --rail-bot), and never runs under either.
+   The ID + !important outrank any older "hide the rail on the ground" rule: the rail is shown whenever the
+   scene is up — on the ground the thumb rests on the bottom stop. */
+html body.cosmos #cosmos-rail.rail-v2{
+  --rail-top:96px; --rail-bot:96px;
+  position:fixed; right:calc(var(--edge, 22px) - 12px); left:auto; transform:none;
+  top:calc(var(--rail-top) + 22px); bottom:calc(var(--rail-bot) + 22px); height:auto; max-height:min(600px, 62vh);
+  margin:auto 0; padding:0; z-index:6; display:block; width:44px;
+  opacity:1 !important; pointer-events:auto !important; filter:none; touch-action:none; cursor:pointer;
+  -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent;
+}
+/* the compact frame (phones, landscape phones): below its tool row, above its bottom bar, inside the safe area */
+html body.cosmos.is-compact #cosmos-rail.rail-v2{
+  --rail-top:calc(var(--top, 6px) + 54px); --rail-bot:calc(var(--bar, 52px) + 10px);
+  right:var(--sr, 0px); max-height:min(520px, 58vh);
+}
+html body.cosmos #cosmos-rail.rail-v2[hidden]{ display:none !important; }
+html body.cosmos #cosmos-rail.rail-v2::before{ content:""; position:absolute; inset:-22px 0; }   /* the target reaches half a thumb past both ends */
+/* it arrives with the sky (the parts fade, so the container's own opacity stays authoritative) */
+html body.cosmos #cosmos-rail.rail-v2 > *{ animation:rail-in 1.1s var(--ease-out) both; }
+@keyframes rail-in{ from{ opacity:0; } to{ opacity:1; } }
+body.to-map #cosmos-rail.rail-v2 > *{ opacity:0 !important; transition:opacity .38s ease; }
+
+.rail-v2 .rail__track{
+  position:absolute; top:0; bottom:0; right:21px; width:1px; pointer-events:none;
+  background:linear-gradient(to top, rgba(222,213,198,.4), rgba(222,213,198,.18));
+}
+.rail-v2 .rail__tick{ position:absolute; right:0; width:44px; height:0; bottom:calc(var(--t, 0) * 100%); pointer-events:none; }
+.rail-v2 .rail__tick > i{
+  position:absolute; right:17px; top:-.5px; width:9px; height:1px; background:rgba(222,213,198,.66);
+  transition:width var(--dur-1) var(--ease-out), right var(--dur-1) var(--ease-out), background var(--dur-1) var(--ease-out);
+}
+.rail-v2 .rail__tick.is-hot > i{ width:15px; right:14px; background:var(--gold); }
+.rail-v2 .rail__tick.is-cur > i{ background:rgba(232,195,122,.9); }
+/* tier names: the current one rides the thumb; any other shows only under the mouse. 11px mono on a dark chip, so
+   the name holds ≥ 4.5:1 over anything the sky puts behind it */
+.rail-v2 .rail__tn, .rail-v2 .rail__name{
+  position:absolute; right:38px; top:50%; transform:translateY(-50%); white-space:nowrap; pointer-events:none;
+  padding:4px 7px; border-radius:5px; background:rgba(11,10,9,.74);
+  font-family:var(--mono, "JetBrains Mono", ui-monospace, monospace); font-size:11px; font-weight:500; line-height:1; letter-spacing:.07em;
+}
+.rail-v2 .rail__tn{ top:0; color:#ded5c6; opacity:0; transition:opacity var(--dur-1) var(--ease-out); }
+.rail-v2 .rail__tick.is-hot .rail__tn{ opacity:1; }
+.rail-v2 .rail__tick.is-cur .rail__tn, .rail-v2.is-drag .rail__tn{ display:none; }
+.rail-v2 .rail__name{ color:var(--gold); }
+.rail-v2 .rail__name:empty{ display:none; }
+/* the thumb: a small gold-rimmed handle on the track, inside a 44×44 grab area */
+.rail-v2 .rail__thumb{
+  position:absolute; right:0; bottom:-22px; width:44px; height:44px; cursor:grab; outline:0;
+  will-change:transform; touch-action:none;
+}
+.rail-v2 .rail__thumb > i{
+  position:absolute; right:11.5px; top:50%; width:20px; height:8px; margin-top:-4px; box-sizing:border-box;
+  border:1px solid rgba(232,195,122,.95); border-radius:4px; background:#0b0a09;
+  transition:background var(--dur-1) var(--ease-out);
+}
+@media (hover:hover){ .rail-v2 .rail__thumb:hover > i{ background:#4a3d25; } }
+.rail-v2.is-drag .rail__thumb > i{ background:var(--gold); }
+.rail-v2.is-drag, .rail-v2.is-drag .rail__thumb{ cursor:grabbing; }
+.rail-v2 .rail__thumb:focus-visible > i{ outline:1.5px solid var(--accent, #e0876a); outline-offset:3px; }
+/* phones: the same slider, slim. The tier name shows only while the thumb is held or the scale is changing. */
+@media (max-width:700px){
+  .rail-v2 .rail__track{ right:15px; }
+  .rail-v2 .rail__tick > i{ right:11px; }
+  .rail-v2 .rail__tick.is-hot > i{ right:8px; }
+  .rail-v2 .rail__thumb > i{ right:5.5px; }
+  .rail-v2 .rail__tn, .rail-v2 .rail__name{ right:32px; }
+  .rail-v2 .rail__name{ opacity:0; transition:opacity .22s var(--ease-out); }
+  .rail-v2.is-live .rail__name, .rail-v2.is-drag .rail__name{ opacity:1; }
+  .rail-v2 .rail__tn{ display:none; }
+}
+/* the distance read-out never sits under the selection card: on the compact frame (and any narrow viewport) the
+   card is a sheet resting exactly where the read-out is, so the read-out steps out while the card is open */
+html body.cosmos.is-compact.sel-open .ts-readout{ opacity:0 !important; }
+@media (max-width:700px){ html body.cosmos.sel-open .ts-readout{ opacity:0 !important; } }
+/* …and so does the thumb's tier name on a phone: the card's sheet reaches the rail's lane, and half a word under
+   its edge reads as a defect. While the thumb is being dragged the name comes back (the card is behind the finger). */
+html body.cosmos.is-compact.sel-open .rail-v2:not(.is-drag) .rail__name{ opacity:0 !important; }
+@media (max-width:700px){ html body.cosmos.sel-open .rail-v2:not(.is-drag) .rail__name{ opacity:0 !important; } }
+@media (prefers-reduced-motion: reduce){
+  .sky-mark::before{ animation:none; }
+  .sky-ring, .sky-ring > i, .sky-mark, .sky-mark::after{ transition:none !important; }
+  html body.cosmos #cosmos-rail.rail-v2 > *{ animation:none; }
+  .rail-v2 .rail__tick > i, .rail-v2 .rail__tn, .rail-v2 .rail__name, .rail-v2 .rail__thumb > i{ transition:none; }
+}
+@media print{ .sky-ui{ display:none !important; } }

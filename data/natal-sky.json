@@ -372,6 +372,42 @@
           "decDeg": -21.807,
           "mag": 4.5,
           "ly": 171.1
+        },
+        {
+          "i": 20,
+          "bayer": "tau Cap",
+          "raH": 20.654,
+          "decDeg": -14.956,
+          "mag": 5.22,
+          "role": null,
+          "ly": 1136.4
+        },
+        {
+          "i": 21,
+          "bayer": "46 Cap",
+          "raH": 21.75,
+          "decDeg": -9.083,
+          "mag": 5.09,
+          "role": null,
+          "ly": 791.7
+        },
+        {
+          "i": 22,
+          "bayer": "41 Cap",
+          "raH": 21.7,
+          "decDeg": -23.264,
+          "mag": 5.24,
+          "role": null,
+          "ly": 230.7
+        },
+        {
+          "i": 23,
+          "bayer": "phi Cap",
+          "raH": 21.261,
+          "decDeg": -20.653,
+          "mag": 5.24,
+          "role": null,
+          "ly": 643.3
         }
       ],
       "figureLines": [
@@ -428,10 +464,10 @@
           "id": "ringdown",
           "starIndex": 0,
           "title": {
-            "en": "Calibrating Ringdown Overtone Significance",
-            "zh": "铃宕泛音显著性的标定"
+            "en": "Calibration diagnostics for ringdown overtone tests",
+            "zh": "铃宕泛音检验的校准诊断"
           },
-          "role": "GW methods · redesign",
+          "role": "GW methods · submitted",
           "importance": 1.0,
           "href": "research/ringdown.html"
         },
@@ -464,7 +500,7 @@
             "en": "Local Modular Data for Half-Line Free Fermions",
             "zh": "半直线自由费米子的局域模数据"
           },
-          "role": "math-phys · submitted (JMP)",
+          "role": "math-phys · Zenodo preprint",
           "importance": 0.9,
           "href": "research/paperD.html"
         },
@@ -472,8 +508,8 @@
           "id": "tachyon",
           "starIndex": 2,
           "title": {
-            "en": "Tachyonic Phase-Boundary Classification",
-            "zh": "快子相边界分类"
+            "en": "Strongly supercooled transition dynamics and tachyonic modes",
+            "zh": "强过冷相变动力学与快子模式"
           },
           "role": "theory line · paused",
           "importance": 0.85,
@@ -505,8 +541,8 @@
           "id": "gwPopulation",
           "starIndex": 3,
           "title": {
-            "en": "Feature-Local Certificates for GW Populations (GWTC-4)",
-            "zh": "引力波族群特征证书(GWTC-4)"
+            "en": "Population-feature significance and finite selection simulations",
+            "zh": "族群特征显著性与有限选择模拟"
           },
           "role": "GW methods · in prep",
           "importance": 0.8,
@@ -538,10 +574,10 @@
           "id": "cmsJets",
           "starIndex": 11,
           "title": {
-            "en": "CMS Jet Physics",
-            "zh": "CMS 喷流物理"
+            "en": "PYTHIA: parton showers and jet structure (guided study)",
+            "zh": "PYTHIA 指导学习：部分子簇射与喷注结构"
           },
-          "role": "Brown · 2024–26",
+          "role": "guided study · 2025",
           "importance": 0.7,
           "href": "research/cmsJets.html"
         },
@@ -549,10 +585,10 @@
           "id": "cnt3omega",
           "starIndex": 12,
           "title": {
-            "en": "Unified 3ω Thermal Characterization Theory",
-            "zh": "3ω 热学表征统一理论"
+            "en": "Thermal characterisation of carbon nanotubes (3ω method)",
+            "zh": "碳纳米管热学表征（3ω 方法）"
           },
-          "role": "Brown · co-authored",
+          "role": "Brown · 2025–26",
           "importance": 0.7,
           "href": "research/cnt3omega.html"
         },
@@ -563,7 +599,7 @@
             "en": "Formation Mechanism of Blazar Jets",
             "zh": "耀变体喷流的形成机制"
           },
-          "role": "CONF-CIAP 2023 · accepted",
+          "role": "proceedings paper · 2023",
           "importance": 0.7,
           "href": "research/blazar.html"
         },
@@ -582,8 +618,8 @@
           "id": "alpDM",
           "starIndex": 15,
           "title": {
-            "en": "Axion-Like Dark Matter",
-            "zh": "类轴子暗物质"
+            "en": "Axion-like particles in blazar γ-ray spectra",
+            "zh": "耀变体 γ 能谱中的类轴子粒子"
           },
           "role": "BNU · 2022",
           "importance": 0.65,
@@ -618,7 +654,7 @@
             "en": "Strange Currents in X(2370) → ηηη",
             "zh": "X(2370) → ηηη 的奇异流"
           },
-          "role": "hadron physics · submitted",
+          "role": "hadron physics · unpublished",
           "importance": 0.9,
           "href": "research/glueball.html"
         },
@@ -629,9 +665,53 @@
             "en": "Digit Dependence under Cyclic Rotation",
             "zh": "循环旋转的数位依赖"
           },
-          "role": "combinatorics · submitted",
+          "role": "combinatorics · unpublished",
           "importance": 0.85,
           "href": "research/digitRotation.html"
+        },
+        {
+          "id": "theWell",
+          "starIndex": 21,
+          "title": {
+            "en": "The Well: scientific-simulation evaluation",
+            "zh": "The Well：科学模拟评估"
+          },
+          "role": "scientific ML · in progress",
+          "importance": 0.85,
+          "href": "research/theWell.html"
+        },
+        {
+          "id": "calibration",
+          "starIndex": 20,
+          "title": {
+            "en": "Language-model calibration and statistical identification",
+            "zh": "语言模型校准与统计识别"
+          },
+          "role": "AI evaluation · unpublished",
+          "importance": 0.8,
+          "href": "research/calibration.html"
+        },
+        {
+          "id": "gw250114",
+          "starIndex": 22,
+          "title": {
+            "en": "GW250114: posterior conventions and exclusion diagnostics",
+            "zh": "GW250114：后验约定与排除诊断"
+          },
+          "role": "GW methods · unpublished",
+          "importance": 0.8,
+          "href": "research/gw250114.html"
+        },
+        {
+          "id": "finiteRegister",
+          "starIndex": 23,
+          "title": {
+            "en": "Finite-register locality and machine-dependent ranking",
+            "zh": "有限寄存器局域性与机器相关排序"
+          },
+          "role": "foundations · unpublished",
+          "importance": 0.75,
+          "href": "research/finiteRegister.html"
         }
       ]
     },
@@ -986,8 +1066,8 @@
           "id": "monopolyRent",
           "starIndex": 0,
           "title": {
-            "en": "Technological Monopoly Rent",
-            "zh": "技术垄断租金"
+            "en": "Inference Rent in Generative AI",
+            "zh": "生成式 AI 中的推理租金"
           },
           "role": "SSRN · public",
           "importance": 0.9,
@@ -997,10 +1077,10 @@
           "id": "stackPower",
           "starIndex": 1,
           "title": {
-            "en": "Stack Power: Frontier AI & Market Non-Correction",
-            "zh": "栈权力:前沿 AI 与市场不矫正"
+            "en": "Frontier AI and the Limits of Monopoly Self-Correction",
+            "zh": "前沿 AI 与垄断自我纠正的局限"
           },
-          "role": "under journal consideration",
+          "role": "SSRN preprint",
           "importance": 0.9,
           "href": "humanities/stackPower.html"
         },
@@ -1014,6 +1094,17 @@
           "role": "epistemology · SSRN",
           "importance": 0.8,
           "href": "humanities/cpe.html"
+        },
+        {
+          "id": "publicAICompute",
+          "starIndex": 3,
+          "title": {
+            "en": "Documentary study of public AI-compute programme records",
+            "zh": "公共 AI 算力计划公开记录的文献研究"
+          },
+          "role": "documentary study · working manuscript",
+          "importance": 0.75,
+          "href": "humanities/publicAICompute.html"
         }
       ]
     },
@@ -2271,6 +2362,46 @@
       "status": ""
     },
     "digitRotation": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "theWell": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "calibration": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "gw250114": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "finiteRegister": {
+      "titleEn": "",
+      "titleZh": "",
+      "blurbEn": "",
+      "blurbZh": "",
+      "links": [],
+      "status": ""
+    },
+    "publicAICompute": {
       "titleEn": "",
       "titleZh": "",
       "blurbEn": "",

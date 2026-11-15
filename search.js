@@ -2,9 +2,56 @@
    fast way to FIND. Press "/" (or click the ⌕ affordance) anywhere → type → jump. Client-side, zero deps,
    loads data/works.json once. Bilingual match (EN + 中文). Invisible until summoned, so the sky stays the
    stage. */
+/* LAYERS — one small stack shared by every overlay (search, All pages, Atlas, an open nav menu): Esc closes exactly
+   the top layer, Tab stays inside a modal one, focus returns to the opener, <html data-modal="1"> while a modal is up.
+   menu.js carries an identical copy (it boots first on the homepage); keep the two blocks the same. */
+window.__layers = window.__layers || (function () {
+  var stack = [];
+  var SEL = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  function shown(el) {
+    return !!el && el.isConnected && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden" &&
+      !(el.closest && el.closest("[inert]"));
+  }
+  function focusables(root) { return Array.prototype.filter.call(root.querySelectorAll(SEL), shown); }
+  function at(name) { for (var i = 0; i < stack.length; i++) if (stack[i].name === name) return i; return -1; }
+  function sync() {
+    var modal = false;
+    for (var i = 0; i < stack.length; i++) if (stack[i].modal) modal = true;
+    if (modal) document.documentElement.dataset.modal = "1"; else delete document.documentElement.dataset.modal;
+  }
+  function top() { return stack[stack.length - 1] || null; }
+  /* o: { close: fn (required), modal: bool = true, root: element that holds focus, fallback: element to focus if the opener is gone } */
+  function open(name, o) {
+    var i = at(name); if (i >= 0) stack.splice(i, 1);
+    stack.push({ name: name, close: o.close, modal: o.modal !== false, root: o.root || null,
+                 opener: o.opener || document.activeElement, fallback: o.fallback || null });
+    sync();
+  }
+  /* the layer reports that it has closed; restore === false leaves focus where it is */
+  function closed(name, restore) {
+    var i = at(name); if (i < 0) return;
+    var l = stack.splice(i, 1)[0]; sync();
+    if (restore === false) return;
+    var t = (l.opener && l.opener !== document.body && shown(l.opener)) ? l.opener : l.fallback;
+    if (t && t.focus) { try { t.focus({ preventScroll: true }); } catch (e) {} }
+  }
+  window.addEventListener("keydown", function (e) {
+    var l = top(); if (!l) return;
+    if (e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); l.close(); return; }
+    if (e.key !== "Tab" || !l.modal || !l.root) return;
+    var f = focusables(l.root), a = document.activeElement;
+    if (!f.length) { e.preventDefault(); return; }
+    if (!l.root.contains(a)) { e.preventDefault(); f[e.shiftKey ? f.length - 1 : 0].focus(); }
+    else if (e.shiftKey && a === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+    else if (!e.shiftKey && a === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+  }, true);
+  return { open: open, closed: closed, top: top, isOpen: function (n) { return at(n) >= 0; }, focusables: focusables };
+})();
+
 (function () {
   "use strict";
   if (window.__searchBooted) return; window.__searchBooted = true;
+  var L = window.__layers;
 
   // static (non-works) destinations, always searchable
   var STATIC = [
@@ -27,7 +74,8 @@
   function load() {
     if (items) return Promise.resolve(items);
     if (loading) return loading;
-    loading = fetch("/data/works.json").then(function (r) { return r.json(); }).then(function (j) {
+    var get = function () { return fetch("/data/works.json").then(function (r) { return r.json(); }); };
+    loading = (window.__worksData ? window.__worksData.catch(get) : get()).then(function (j) {
       var out = (j.works || []).map(function (w) {
         return { t: w.title.en, z: w.title.zh, h: "/" + DIR[w.cls] + "/" + w.id + ".html", g: w.cls,
                  sub: (w.status && w.status.en) || "", blob: (w.title.en + " " + w.title.zh + " " +
@@ -42,44 +90,60 @@
   }
 
   // ---- UI ----
+  var EASE = "cubic-bezier(0.22,0.61,0.30,1)";
   var st = document.createElement("style");
   st.textContent = "" +
     ".sf-ov{position:fixed;inset:0;z-index:9000;display:none;align-items:flex-start;justify-content:center;" +
-      "background:rgba(6,5,4,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}" +
-    ".sf-ov.on{display:flex;animation:sf-fade .2s ease-out both}" +
-    ".sf-ov.on .sf-box{animation:sf-rise .34s cubic-bezier(0.22,0.61,0.30,1) both}" +
+      "background:rgba(6,5,4,.66);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}" +
+    ".sf-ov.on{display:flex;animation:sf-fade .18s " + EASE + " both}" +
+    ".sf-ov.on .sf-box{animation:sf-rise .2s " + EASE + " both}" +
     "@keyframes sf-fade{from{opacity:0}}" +
-    "@keyframes sf-rise{from{opacity:0;transform:translateY(-8px) scale(.985)}}" +
+    "@keyframes sf-rise{from{opacity:0;transform:translateY(-8px)}}" +
     "@media(prefers-reduced-motion:reduce){.sf-ov.on,.sf-ov.on .sf-box{animation:none}}" +
-    ".sf-box{margin-top:11vh;width:min(680px,92vw);background:rgba(20,17,14,.94);border:1px solid rgba(224,150,90,.22);" +
-      "border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden;font-family:'Newsreader',Georgia,serif}" +
-    ".sf-in{width:100%;box-sizing:border-box;padding:20px 22px;font-size:22px;background:transparent;border:0;" +
-      "color:#f4ecdf;outline:none;font-family:inherit}" +
-    ".sf-in::placeholder{color:#8f8067}" +
-    ".sf-hd{display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(224,150,90,.14);padding-left:8px;transition:border-color .18s ease}"+
-    ".sf-hd:focus-within{border-bottom-color:rgba(224,150,90,.34)}" +
-    ".sf-hd .sf-mag{color:#c9975f;font-size:20px;padding-left:14px}" +
-    ".sf-list{max-height:52vh;overflow:auto;padding:6px}" +
+    ".sf-box{margin-top:11vh;width:min(680px,92vw);max-height:78vh;display:flex;flex-direction:column;background:#14110e;" +
+      "border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden;" +
+      "font-family:'Newsreader',Georgia,serif;color:#e9e0d2}" +
+    ".sf-hd{display:flex;align-items:center;gap:4px;padding:6px 6px 6px 18px;border-bottom:1px solid rgba(255,255,255,.10);" +
+      "transition:box-shadow .18s " + EASE + "}" +
+    ".sf-hd:focus-within{box-shadow:inset 0 -2px 0 #e0876a}" +
+    ".sf-mag{flex:none;width:20px;height:20px;color:#c9b59a}" +
+    ".sf-in{flex:1;min-width:0;box-sizing:border-box;height:52px;padding:0 10px;font-size:21px;line-height:1.2;background:transparent;border:0;" +
+      "color:#f4ecdf;font-family:inherit;outline:2px solid transparent}" +
+    ".sf-in::placeholder{color:#a39478;opacity:1}" +
+    ".sf-x{flex:none;position:relative;width:44px;height:44px;padding:0;border:0;border-radius:50%;background:transparent;color:#c9b59a;" +
+      "cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background-color .16s " + EASE + ",color .16s " + EASE + ",transform .12s " + EASE + "}" +
+    ".sf-x svg{width:16px;height:16px;display:block;margin:auto}" +
+    ".sf-x:active{transform:scale(.97)}" +
+    ".sf-x:focus-visible,.sf-row:focus-visible{outline:2px solid transparent;box-shadow:0 0 0 2px #14110e,0 0 0 4px #e0876a}" +
+    ".sf-list{flex:1;min-height:0;overflow:auto;padding:6px;overscroll-behavior:contain}" +
     ".sf-g{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;" +
-      "color:#9a8a6f;padding:12px 14px 5px}" +
-    ".sf-row{display:block;padding:10px 14px;border-radius:9px;text-decoration:none;color:#e9e0d2;cursor:pointer;transition:background .12s ease-out}" +
-    ".sf-row .z{color:#b9ab93;font-size:14px;margin-left:8px}" +
-    ".sf-row .sub{display:block;font-size:12px;color:#8f8067;font-family:'JetBrains Mono',monospace;margin-top:2px}" +
-    ".sf-row.sel,.sf-row:hover{background:rgba(224,150,90,.13)}" +
-    ".sf-empty{padding:26px 16px;color:#8f8067;text-align:center}" +
-    ".sf-hint{padding:9px 16px;border-top:1px solid rgba(224,150,90,.12);color:#8f8067;" +
-      "font-family:'JetBrains Mono',monospace;font-size:11px;display:flex;gap:16px;justify-content:center}";
+      "color:#a39478;padding:14px 14px 6px}" +
+    ".sf-row{display:flex;flex-direction:column;justify-content:center;min-height:44px;box-sizing:border-box;padding:9px 14px;border-radius:10px;" +
+      "font-size:17px;line-height:1.3;text-decoration:none;color:#e9e0d2;cursor:pointer;-webkit-tap-highlight-color:transparent;" +
+      "transition:background-color .14s " + EASE + ",color .14s " + EASE + "}" +
+    ".sf-row .sub{display:block;font-size:12px;line-height:1.4;color:#a39478;font-family:'JetBrains Mono',monospace;margin-top:3px}" +
+    ".sf-row.sel{background:rgba(224,135,106,.16);color:#fff7ec}" +
+    "@media(hover:hover){.sf-row:hover{background:rgba(255,255,255,.06)}.sf-row.sel:hover{background:rgba(224,135,106,.20)}" +
+      ".sf-x:hover{background:rgba(255,255,255,.08);color:#f4ecdf}}" +
+    ".sf-row:active{background:rgba(224,135,106,.24)}" +
+    ".sf-empty{padding:28px 16px;color:#a39478;text-align:center;font-size:16px}" +
+    ".sf-keys{flex:none;display:flex;gap:14px;justify-content:flex-end;padding:9px 14px;border-top:1px solid rgba(255,255,255,.08)}" +
+    ".sf-keys span{display:inline-flex;gap:4px}" +
+    ".sf-keys kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;box-sizing:border-box;padding:0 6px;" +
+      "border:1px solid rgba(255,255,255,.18);border-bottom-width:2px;border-radius:6px;background:rgba(255,255,255,.04);" +
+      "font:500 11px/1 'JetBrains Mono',monospace;color:#c9b59a}" +
+    "@media(hover:none),(pointer:coarse){.sf-keys{display:none}}" +
+    "@media(max-width:560px){.sf-box{margin-top:max(12px,env(safe-area-inset-top));width:calc(100vw - 24px);max-height:calc(100dvh - 24px)}.sf-in{font-size:18px}}";
   document.head.appendChild(st);
 
-  var ov = document.createElement("div"); ov.className = "sf-ov"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true"); ov.setAttribute("aria-label", "Search");
-  ov.innerHTML = '<div class="sf-box"><div class="sf-hd"><span class="sf-mag">⌕</span>' +
-    '<input class="sf-in" type="text" autocomplete="off" spellcheck="false"></div>' +   // placeholder set per-locale in open()
+  var ov = document.createElement("div"); ov.className = "sf-ov"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true"); ov.setAttribute("aria-label", "Search · 搜索");
+  ov.innerHTML = '<div class="sf-box"><div class="sf-hd">' +
+    '<svg class="sf-mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>' +
+    '<input class="sf-in" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" aria-label="Search · 搜索" aria-controls="sf-list">' +   // placeholder set per-locale in open()
+    '<button class="sf-x" type="button" aria-label="Close · 关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
     '<div class="sf-list" id="sf-list"></div>' +
-    '<div class="sf-hint">' +
-      '<span><span class="i18n-en">↑↓ move</span><span class="i18n-zh">↑↓ 移动</span></span>' +
-      '<span><span class="i18n-en">↵ open</span><span class="i18n-zh">↵ 打开</span></span>' +
-      '<span><span class="i18n-en">esc close</span><span class="i18n-zh">esc 关闭</span></span>' +
-    '</div></div>';
+    // the keys that work here, as key-caps — no captions
+    '<div class="sf-keys" aria-hidden="true"><span><kbd>↑</kbd><kbd>↓</kbd></span><span><kbd>↵</kbd></span><span><kbd>esc</kbd></span></div></div>';
   var mounted = false;
   function mount() { if (!mounted) { document.body.appendChild(ov); mounted = true; } }
 
@@ -114,26 +178,28 @@
   function highlight() {
     var rows = listEl.querySelectorAll(".sf-row");
     rows.forEach(function (r) { r.classList.toggle("sel", +r.dataset.i === sel); });
-    var cur = listEl.querySelector(".sf-row.sel"); if (cur) cur.scrollIntoView({ block: "nearest" });
+    var cur = listEl.querySelector(".sf-row.sel"); if (!cur) return;
+    cur.scrollIntoView({ block: "nearest" });
+    if (listEl.contains(document.activeElement)) cur.focus({ preventScroll: true });   // arrows carry focus along once it is in the list
   }
-  var lastFocus = null;
   function syncBtn(on) { var b = document.getElementById("searchbtn"); if (b) b.setAttribute("aria-expanded", on ? "true" : "false"); }
+  function isOpen() { return ov.classList.contains("on"); }
   function open() {
-    lastFocus = document.activeElement;
+    if (isOpen()) { input.focus(); return; }
+    L.open("search", { close: close, root: ov, fallback: document.getElementById("searchbtn") });   // remembers what had focus
     mount(); ov.classList.add("on"); syncBtn(true); input.value = "";
-    input.placeholder = isZh() ? "搜索研究 / 著作 / 创造…" : "Search research, writing, making…";
+    input.placeholder = isZh() ? "搜索" : "Search";
     load().then(function () { render(input.value); });
     try { input.focus({ preventScroll: true }); } catch (e) {}   // at once: a quick typist's first letters land in the box
     setTimeout(function () { if (document.activeElement !== input) input.focus(); }, 20);
   }
   function close() {
+    if (!isOpen()) return;
     ov.classList.remove("on"); syncBtn(false);
-    // return focus where it came from (the modal contract its sibling Index overlay already keeps)
-    var back = (lastFocus && document.contains(lastFocus)) ? lastFocus : document.getElementById("searchbtn");
-    if (back && back.focus) back.focus();
+    L.closed("search");   // focus returns to whatever opened the finder
   }
   // "Search is navigation" (the Galaxy-View idea): when the 3-D sky is live and the hit is a work-STAR
-  // (a research/humanities page that has a real star in the scene), FLY to it in-scene instead of leaving
+  // (a research/humanities page that has a real star in the scene), travel to it in-scene instead of leaving
   // the page. Everything else — pages, books, products — navigates by URL as before. This is what makes
   // Search and the Atlas complementary rather than redundant: same destinations, two legible doors.
   function flyOrNav(href) {
@@ -144,7 +210,8 @@
     location.href = href;
   }
   function go() {
-    var cur = listEl.querySelector(".sf-row.sel") || listEl.querySelector(".sf-row");
+    var a = document.activeElement;
+    var cur = (a && a.classList && a.classList.contains("sf-row")) ? a : (listEl.querySelector(".sf-row.sel") || listEl.querySelector(".sf-row"));
     if (cur) flyOrNav(cur.getAttribute("href"));
   }
   listEl.addEventListener("click", function (e) {
@@ -157,31 +224,33 @@
   });
 
   input.addEventListener("input", function () { render(input.value); });
+  // Esc and the Tab loop belong to the layer stack; the list keys live here
   ov.addEventListener("keydown", function (e) {
-    if (e.key === "Tab") {
-      var f = [input].concat(Array.prototype.slice.call(listEl.querySelectorAll("a.sf-row")));
-      var first = f[0], last = f[f.length - 1];
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-      return;
-    }
-    if (e.key === "Escape") { close(); }
-    else if (e.key === "ArrowDown") { e.preventDefault(); sel = Math.min(results.length - 1, sel + 1); highlight(); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); sel = Math.max(0, sel - 1); highlight(); }
-    else if (e.key === "Enter") { e.preventDefault(); go(); }
+    if (e.key === "ArrowDown") { sel = Math.min(results.length - 1, sel + 1); highlight(); }
+    else if (e.key === "ArrowUp") { sel = Math.max(0, sel - 1); highlight(); }
+    else if (e.key === "Enter") { if (e.target && e.target.classList && e.target.classList.contains("sf-x")) return; go(); }
+    else return;
+    e.preventDefault(); e.stopPropagation();
   });
+  // a row reached with Tab becomes the selected row, so Enter and the highlight never disagree
+  listEl.addEventListener("focusin", function (e) {
+    var r = e.target && e.target.closest ? e.target.closest("a.sf-row") : null;
+    if (r) { sel = +r.dataset.i; listEl.querySelectorAll(".sf-row").forEach(function (o) { o.classList.toggle("sel", o === r); }); }
+  });
+  ov.querySelector(".sf-x").addEventListener("click", close);
   ov.addEventListener("click", function (e) { if (e.target === ov) close(); });
 
   // global "/" opens (unless typing in a field); expose window.__openSearch for an icon button
   window.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && ov.classList.contains("on")) { close(); return; }   // Esc works even if focus left the overlay
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
     // typed while the overlay opens but before focus arrived: carry the letter into the box instead of losing it
-    if (ov.classList.contains("on") && e.target !== input && e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    var onBtn = !!(e.target && e.target.tagName === "BUTTON");   // Space must still press the close button
+    if (isOpen() && e.target !== input && e.key.length === 1 && !(onBtn && e.key === " ")) {
       e.preventDefault(); input.value += e.key; input.focus(); input.dispatchEvent(new Event("input", { bubbles: true })); return;
     }
     var tag = (e.target && e.target.tagName) || "";
     if (e.target && e.target.isContentEditable) return;
-    if (e.key === "/" && !/INPUT|TEXTAREA|SELECT/.test(tag) && !ov.classList.contains("on")) { e.preventDefault(); open(); }
+    if (e.key === "/" && !/INPUT|TEXTAREA|SELECT/.test(tag) && !isOpen()) { e.preventDefault(); open(); }
   });
   (function () { var b = document.getElementById("searchbtn"); if (b) { b.setAttribute("aria-haspopup", "dialog"); b.setAttribute("aria-expanded", "false"); } })();
   window.__openSearch = open;

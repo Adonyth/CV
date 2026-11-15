@@ -16,6 +16,18 @@
    `../craft.js` for the depth-1 item/product pages).  Invariant: any canvas page
    MUST carry body.cosmos or body.home so it is never given the flat grain layer. */
 (function () {
+  /* Arriving in the cosmos through a cross-document view transition (craft.css `@view-transition`) leaves its
+     frame loop dead: the transition holds the new page's first frames while the scene is still compiling, and
+     requestAnimationFrame never resumes — a still sky. So a navigation whose destination is the homepage skips
+     the transition; the crossfade between reading pages is untouched. (The homepage also opts out on its side.) */
+  window.addEventListener("pageswap", function (e) {
+    if (!e || !e.viewTransition) return;
+    try {
+      var entry = e.activation && e.activation.entry, to = entry && entry.url ? new URL(entry.url) : null;
+      if (!to || /\/(index\.html)?$/.test(to.pathname) && to.pathname.split("/").length === 2) e.viewTransition.skipTransition();
+    } catch (x) { try { e.viewTransition.skipTransition(); } catch (y) {} }
+  });
+
   var body = document.body;
   var isCanvas = body.classList.contains("cosmos") || body.classList.contains("home");
 

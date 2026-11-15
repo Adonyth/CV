@@ -32,10 +32,14 @@
     if (tb) tb.setAttribute("aria-pressed", dark ? "true" : "false");   // its neighbors (field/lang) already sync
     if (reduce) { try { size(); } catch (e) {} }
   }
+  /* the button is named for the thing it shows ("Star dust"), so pressed = the field is ON */
+  function syncFieldBtn() {
+    var b = document.getElementById("fieldbtn");
+    if (b) b.setAttribute("aria-pressed", document.body.classList.contains("field-off") ? "false" : "true");
+  }
   function applyFieldOff(off) {
     document.body.classList.toggle("field-off", !!off);
-    var b = document.getElementById("fieldbtn");
-    if (b) b.setAttribute("aria-pressed", off ? "true" : "false");
+    syncFieldBtn();
     store(FIELD_KEY, off ? "1" : "0");
     if (off) { running = false; } else { if (reduce) staticDraw(); else if (!running) { running = true; t0 = -1; requestAnimationFrame(frame); } }
   }
@@ -49,9 +53,9 @@
       // Do it directly WITHOUT persisting, so a visitor who explicitly turned it on ("0") keeps it, and
       // other pages are unaffected. The eye-toggle still works normally.
       document.body.classList.add("field-off");
-      var _fb0 = document.getElementById("fieldbtn"); if (_fb0) _fb0.setAttribute("aria-pressed", "true");
       running = false;
     }
+    syncFieldBtn();   // also covers a stored "0" (explicitly on), which the markup's default would misreport
     var ls = document.getElementById("lang-switch");
     if (ls) ls.addEventListener("click", function (e) { var b = e.target.closest("[data-locale]"); if (b) applyLocale(b.getAttribute("data-locale")); });
     var tb = document.getElementById("themebtn");
@@ -61,6 +65,16 @@
     }
     var fb = document.getElementById("fieldbtn");
     if (fb) fb.addEventListener("click", function () { applyFieldOff(!document.body.classList.contains("field-off")); });
+    // over the live sky the dust is drawn only from the base view (in flight it lies behind the scene),
+    // so the switch is disabled while it has nothing to act on
+    if (fb && document.body.classList.contains("cosmos") && window.MutationObserver) {
+      var gate = function () {
+        var c = document.body.classList;
+        fb.disabled = c.contains("sky-live") && !c.contains("is-flat") && !c.contains("on-ground");
+      };
+      gate();
+      new MutationObserver(gate).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    }
   });
 
   /* ---------- GSAP intro + reveals ---------- */

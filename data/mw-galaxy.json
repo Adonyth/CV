@@ -1,0 +1,60 @@
+{
+ "name": "mw",
+ "rgal": 50.0,
+ "pitch": 0.20943951023931956,
+ "span": 6.6,
+ "arms": 4,
+ "arm_amp": [
+  1.0,
+  0.62,
+  1.0,
+  0.62
+ ],
+ "phase0": -0.381925198463934,
+ "bar_ang": 2.759667455125859,
+ "lmap": 61.0,
+ "zmax": 4.0,
+ "hr_old": 8.5,
+ "hr_young": 12.0,
+ "h_old0": 1.0,
+ "h_young": 0.42,
+ "h_dust": 0.3,
+ "bar": [
+  7.5,
+  2.4,
+  1.6
+ ],
+ "bulge": [
+  2.3,
+  1.8
+ ],
+ "bulge_amp": 2.6,
+ "bar_amp": 0.95,
+ "sig": [
+  0.55,
+  0.045
+ ],
+ "hole_r": 6.5,
+ "hr_dust": 16.0,
+ "young_gain": 2.4,
+ "lane_gain": 2.3,
+ "bar_lanes": true,
+ "hii_n": 520,
+ "hii_p": [
+  0.31,
+  0.19,
+  0.31,
+  0.19
+ ],
+ "hii_len": 26.0,
+ "diffuse_dust": 0.17,
+ "dust_inner": 0.0,
+ "feather": 0.95,
+ "a0": 12.29447160591634,
+ "texels": 2048,
+ "oldMax": 2.0,
+ "youngMax": 6.0,
+ "hiiMax": 14.0,
+ "tauMax": 6.0,
+ "panoB": 0.7
+}

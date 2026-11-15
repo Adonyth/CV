@@ -462,20 +462,32 @@ export function buildNatalSky(THREE, scene, data, opts) {
   var _tmpC = new T.Vector3(), _tmpS = new T.Vector3(), _tmpQ = new T.Quaternion();
   function ringMaterial(tex) {
     return new T.ShaderMaterial({
-      uniforms: { uMap: { value: tex }, uSunPos: _sunPosU, uCenter: { value: new T.Vector3() }, uPR: { value: 1 }, uN: { value: new T.Vector3(0, 0, 1) } },
+      uniforms: { uMap: { value: tex }, uSunPos: _sunPosU, uCenter: { value: new T.Vector3() }, uPR: { value: 1 }, uN: { value: new T.Vector3(0, 0, 1) }, uGain: { value: new T.Vector3(1, 1, 1) } },
       transparent: true, side: T.DoubleSide, depthWrite: false,
       vertexShader: "varying vec3 vWp; varying vec2 vUv; void main(){ vUv=uv; vec4 wp=modelMatrix*vec4(position,1.0); vWp=wp.xyz; gl_Position=projectionMatrix*viewMatrix*wp; }",
       fragmentShader: [
-        "uniform sampler2D uMap; uniform vec3 uSunPos; uniform vec3 uCenter; uniform float uPR; uniform vec3 uN;",
+        "uniform sampler2D uMap; uniform vec3 uSunPos; uniform vec3 uCenter; uniform float uPR; uniform vec3 uN; uniform vec3 uGain;",
         "varying vec3 vWp; varying vec2 vUv;",
         "void main(){",
         "  vec4 t=texture2D(uMap,vUv); if(t.a<0.004) discard;",
         "  vec3 L=normalize(uSunPos-vWp), V=normalize(cameraPosition-vWp);",
         "  float sunSide=sign(dot(L,uN)), viewSide=sign(dot(V,uN));",
         "  float lit=sunSide==viewSide ? 0.35+0.65*abs(dot(L,uN))*2.2 : 0.18+0.55*(1.0-t.a);",   // lit face, or light diffusing THROUGH the thin parts
-        "  vec3 oc=vWp-uCenter; float b=dot(oc,L), c=dot(oc,oc)-uPR*uPR, h=b*b-c;",
-        "  float shadow=(h>0.0 && -b-sqrt(h)>0.0) ? 0.06 : 1.0;",                     // the planet's own shadow across the rings
-        "  gl_FragColor=vec4(t.rgb*min(lit,1.25)*shadow, t.a);",
+        "  vec3 oc=vWp-uCenter; float b=dot(oc,L);",
+        // the planet's own shadow across the rings — with a penumbra (the Sun is a disc and the limb has an atmosphere),
+        // and never pitch black: the lit globe shines back on them
+        "  float dS=sqrt(max(dot(oc,oc)-b*b,0.0));",
+        "  float shadow=b<0.0 ? mix(0.085, 1.0, smoothstep(uPR*0.965, uPR*1.04, dS)) : 1.0;",
+        // the real map's ice is mid-grey; Saturn's rings are as bright as its globe and cream-coloured (water ice, lightly
+        // tanned) — uGain lifts it once that map is in (the procedural stand-in is already at the right level)
+        "  vec3 col=t.rgb*uGain*min(lit,1.25)*shadow;",
+        // THE ALPHA GATE (build 263). The page composite shows rgb·a + bg·(1−a) of what this target holds, and normal
+        // blending already stores rgb·a — so a translucent ring over empty space was shown at a² (a 40%-opaque ring
+        // read 16% bright: dull grey). Where nothing opaque lies behind the fragment, store the un-multiplied colour so
+        // the gate shows col·a; where the globe is behind it, ordinary 'over' blending is already right.
+        "  vec3 Dv=normalize(vWp-cameraPosition); float bv=dot(oc,Dv), hv=bv*bv-(dot(oc,oc)-uPR*uPR);",
+        "  bool overGlobe=hv>0.0 && (-bv-sqrt(hv))>0.0;",
+        "  gl_FragColor=overGlobe ? vec4(col, t.a) : vec4(min(col/max(t.a,0.10), vec3(1.0)), t.a);",
         "}"
       ].join("\n")
     });
@@ -558,6 +570,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
           if ("colorSpace" in rtex && T.SRGBColorSpace) rtex.colorSpace = T.SRGBColorSpace;
           rtex.anisotropy = 4;
           ringMat.uniforms.uMap.value = rtex; mesh.material.uniforms.uRingTex.value = rtex;   // Cassini's real shadows and gaps
+          ringMat.uniforms.uGain.value.set(2.05, 1.90, 1.64);
         });
       });
       var ring = new T.Mesh(rg, ringMat);
@@ -1207,6 +1220,22 @@ export function buildNatalSky(THREE, scene, data, opts) {
       buildLayer(o.galXYZ, o.galRGB, mobile ? 1.85 : 2.35, 1.0, "LargeScaleStructure", -3, mobile ? 5.2 : 6.4, 0.155, 2, true, o.galAttr, o.galScale);
       // WEB LINES — MST filaments + basin flow streamlines; two glow tiers so strands read as luminous threads
       buildLayer(o.webXYZ, o.webRGB, mobile ? 2.25 : 3.05, 1.0, "CosmicWebLines", -2, mobile ? 4.6 : 5.9, 0.26, 2, 2);   // warm-amber gold river (warm=2)
+      // the web between the galaxies (build 264): desktop WebGL2 only — it needs a 3-D texture
+      if (!mobile && typeof WebGL2RenderingContext !== "undefined") { try { belt.add(makeWebHaze(AX, AY, AZ, K)); } catch (eH) {} }
+      // the two line sets (build 265), fetched only now — when the large-scale tiers are actually being built
+      (function () {
+        function grab(url, cb) { fetch(url).then(function (r) { return r.ok ? r.arrayBuffer() : null; }).then(function (b) { if (b) { try { cb(b); } catch (eL) {} } }).catch(function () {}); }
+        grab("data/flow-lines.bin?v=1", function (b) {
+          var L1 = makeLineLayer("CosmicWebLinesFlow", b, AX, AY, AZ, K, { flow: true, kind: 1, keep: 0.5, width: 1.1, gain: 0.42, near: [25, 110], fadeIn: [25, 85], farDim: [120, 240, 0.0],
+            color: function () { return [255, 210, 132]; } });   // Laniakea's own flow only (basin 1), a few hundred paths, warm; gone by the web tier
+          if (L1) { belt.add(L1); _newLines = true; }
+        });
+        grab("data/web-spines.bin?v=1", function (b) {
+          var L2 = makeLineLayer("CosmicWebLinesSpine", b, AX, AY, AZ, K, { flow: false, keep: 0.4, width: 0.8, gain: 0.042, near: [60, 200], fadeIn: [110, 240],
+            color: function () { return [150, 205, 255]; } });   // the strongest 40% of the ridges
+          if (L2) belt.add(L2);
+        });
+      })();
       return;
     }
 
@@ -1437,6 +1466,329 @@ export function buildNatalSky(THREE, scene, data, opts) {
   var galacticCentre = null, galacticNormal = null, _bhSpin = [], _bhBB = [];    // exposed for the clickable black-hole nucleus; _bhBB = camera-facing Gargantua quads (billboarded + time-driven each tick)
   var _bbPQ = new T.Quaternion(), _bbCQ = new T.Quaternion(), _cosmicWeb = null, _laniakeaFlow = null;
   var _farBuilt = false, _webBuilt = false;   // LAZY-BY-SCALE flags: the galaxy/black-hole and the cosmic web are heavy (~118k + ~100k pts + a 2.3M-iteration web sampler); they build ONLY when the camera actually voyages out to their scale, never at the ground/whole-sky view
+  /* LINES OF THE LARGE-SCALE TIERS (build 265) — baked offline by scripts/blender/bake_lines.py, drawn here as ribbons:
+     every segment is a camera-facing quad a few pixels wide with a soft cross-profile (a 1-px GL line is a hair on a
+     high-density screen, and cannot glow). Two sets, same format ("LNS1"):
+       data/flow-lines.bin  streamlines of the Cosmicflows-4 velocity field, coloured by watershed basin — warm for
+                            Laniakea (basin 1), cool for its neighbours. A slow pulse travels downstream: the flow.
+       data/web-spines.bin  ridge lines of the site's own galaxy density field: the skeleton of the cosmic web.
+     The browser only draws segments — the velocity field never leaves the bake. Alpha-gate output as the volumes. */
+  function makeLineLayer(name, buf, AX, AY, AZ, K, opt) {
+    var dv = new DataView(buf);
+    if (buf.byteLength < 12 || dv.getUint32(0, true) !== 0x31534e4c) return null;                // "LNS1"
+    var nv = dv.getUint32(4, true), nl = dv.getUint32(8, true), o = 12;
+    var xyz = new Int16Array(buf.slice(o, o + nv * 6)); o += nv * 6;
+    var att = new Uint8Array(buf, o, nv * 4); o += nv * 4;
+    var st = new Uint32Array(buf.slice(o, o + nl * 4));
+    // which polylines to draw: optionally one kind only, and only the first `keep` fraction of those (the bake orders
+    // spines strongest-first and flow lines at random, so this thins the set without bias)
+    var keepL = [], ns = 0, kk = K / 64, seen = 0, total = 0;
+    for (var l0 = 0; l0 < nl; l0++) if (opt.kind == null || att[st[l0] * 4] === opt.kind) total++;
+    for (var l1 = 0; l1 < nl; l1++) {
+      if (opt.kind != null && att[st[l1] * 4] !== opt.kind) continue;
+      if (seen++ >= total * (opt.keep == null ? 1 : opt.keep)) break;
+      keepL.push(l1); ns += (l1 + 1 < nl ? st[l1 + 1] : nv) - st[l1] - 1;
+    }
+    var pos = new Float32Array(ns * 12), oth = new Float32Array(ns * 12), sde = new Float32Array(ns * 4), edg = new Float32Array(ns * 4);
+    var col = new Uint8Array(ns * 12), tt = new Float32Array(ns * 4), bb = new Float32Array(ns * 4), ix = new Uint32Array(ns * 6);
+    var P = new Float32Array(nv * 3);
+    for (var v = 0; v < nv; v++) {                                              // supergalactic Mpc×64 → belt space
+      var x = xyz[v * 3], y = xyz[v * 3 + 1], z = xyz[v * 3 + 2];
+      P[v * 3] = (AX.x * x + AY.x * y + AZ.x * z) * kk; P[v * 3 + 1] = (AX.y * x + AY.y * y + AZ.y * z) * kk; P[v * 3 + 2] = (AX.z * x + AY.z * y + AZ.z * z) * kk;
+    }
+    var SIDE = [-1, 1, 1, -1], EDGE = [-1, 1, -1, 1], s = 0;
+    for (var lk = 0; lk < keepL.length; lk++) {
+      var li = keepL[lk], a0 = st[li], a1 = li + 1 < nl ? st[li + 1] : nv;
+      for (var j = a0; j + 1 < a1; j++, s++) {
+        for (var q = 0; q < 4; q++) {
+          var self = q < 2 ? j : j + 1, other = q < 2 ? j + 1 : j, w = s * 4 + q;
+          pos[w * 3] = P[self * 3]; pos[w * 3 + 1] = P[self * 3 + 1]; pos[w * 3 + 2] = P[self * 3 + 2];
+          oth[w * 3] = P[other * 3]; oth[w * 3 + 1] = P[other * 3 + 1]; oth[w * 3 + 2] = P[other * 3 + 2];
+          sde[w] = SIDE[q]; edg[w] = EDGE[q];
+          var c = opt.color(att[self * 4]);
+          col[w * 3] = c[0]; col[w * 3 + 1] = c[1]; col[w * 3 + 2] = c[2];
+          tt[w] = (att[self * 4 + 2] + att[self * 4 + 3] * 256) * 0.25; bb[w] = att[self * 4 + 1] / 255;
+        }
+        var b4 = s * 4; ix.set([b4, b4 + 1, b4 + 2, b4 + 2, b4 + 1, b4 + 3], s * 6);
+      }
+    }
+    var g = new T.BufferGeometry();
+    g.setAttribute("position", new T.BufferAttribute(pos, 3)); g.setAttribute("aOther", new T.BufferAttribute(oth, 3));
+    g.setAttribute("aSide", new T.BufferAttribute(sde, 1)); g.setAttribute("aEdge", new T.BufferAttribute(edg, 1));
+    g.setAttribute("aCol", new T.BufferAttribute(col, 3, true)); g.setAttribute("aT", new T.BufferAttribute(tt, 1)); g.setAttribute("aB", new T.BufferAttribute(bb, 1));
+    g.setIndex(new T.BufferAttribute(ix, 1));
+    var uni = { uView: { value: new T.Vector2(1600, 1000) }, uWidth: { value: opt.width || 1.6 }, uFade: { value: 0 }, uTime: { value: 0 }, uFlow: { value: opt.flow ? 1 : 0 }, uGain: { value: opt.gain || 0.5 },
+                uNear: { value: new T.Vector2(opt.near[0] * K, opt.near[1] * K) } };
+    var m = new T.ShaderMaterial({
+      uniforms: uni, transparent: true, depthWrite: false, depthTest: false, side: T.DoubleSide, fog: false,
+      blending: T.CustomBlending, blendEquation: T.AddEquation, blendSrc: T.OneFactor, blendDst: T.OneFactor, blendSrcAlpha: T.OneFactor, blendDstAlpha: T.OneFactor,
+      vertexShader: [
+        "attribute vec3 aOther; attribute float aSide; attribute float aEdge; attribute vec3 aCol; attribute float aT; attribute float aB;",
+        "uniform vec2 uView; uniform float uWidth; uniform float uFade; uniform vec2 uNear;",
+        "varying float vE; varying vec3 vC; varying float vT; varying float vB;",
+        "void main(){",
+        "  vec4 c0 = projectionMatrix * modelViewMatrix * vec4(position, 1.0);",
+        "  vec4 c1 = projectionMatrix * modelViewMatrix * vec4(aOther, 1.0);",
+        // a strand right in front of the camera would cross the whole screen as a bright streak: threads are something
+        // you see ahead of you, so they thin out as they come close (uNear, in the layer's own units)
+        "  vE = aEdge; vC = aCol; vT = aT; vB = aB * smoothstep(uNear.x, uNear.y, c0.w);",
+        "  if (uFade <= 0.001 || c0.w <= 0.0 || c1.w <= 0.0) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }",   // faded out, or a segment through the camera plane: drop it
+        "  vec2 d = (c1.xy / c1.w - c0.xy / c0.w) * uView; float l = length(d); d = l > 1e-6 ? d / l : vec2(1.0, 0.0);",
+        "  c0.xy += vec2(-d.y, d.x) * (aSide * uWidth * 2.0) / uView * c0.w;",       // the ribbon's half-width, in pixels
+        "  gl_Position = c0;",
+        "}"
+      ].join("\n"),
+      fragmentShader: [
+        "precision highp float;",
+        "uniform float uFade; uniform float uTime; uniform float uFlow; uniform float uGain;",
+        "varying float vE; varying vec3 vC; varying float vT; varying float vB;",
+        "float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }",
+        "void main(){",
+        "  float prof = exp(-3.2 * vE * vE);",
+        "  float pulse = 1.0;",
+        // a flow is drawn as what moves, not as a wire: short lit stretches drifting downstream, comet-shaped (a soft
+        // tail, a brighter head), with the path between them only a breath of light. Whole streamlines, drawn solid,
+        // bury the structure under a tangle of hair.
+        "  if (uFlow > 0.5) { float ph = fract(vT * 0.0125 - uTime * 0.040); pulse = smoothstep(0.80, 0.975, ph) * (1.0 - smoothstep(0.975, 1.0, ph)); }",
+        "  vec3 D = vC * (vB * prof * pulse * uFade * uGain);",
+        "  float L = max(D.r, max(D.g, D.b)); if (L < 0.0004) discard;",
+        "  float a = sqrt(min(L, 1.0)); vec2 fc = gl_FragCoord.xy;",
+        "  vec3 dn = (vec3(hash(fc + 17.0), hash(fc + 41.0), hash(fc + 73.0)) - 0.5) / 255.0;",
+        "  gl_FragColor = vec4(D / a + dn, a + (hash(fc + 101.0) - 0.5) / 255.0);",
+        "}"
+      ].join("\n")
+    });
+    var mesh = new T.Mesh(g, m);
+    mesh.name = name; mesh.renderOrder = -1; mesh.frustumCulled = false;
+    var _inv = new T.Matrix4(), _cam = new T.Vector3(), _sz = new T.Vector2();
+    mesh.onBeforeRender = function (renderer, sc, cam) {
+      _inv.copy(mesh.matrixWorld).invert(); _cam.setFromMatrixPosition(cam.matrixWorld).applyMatrix4(_inv);
+      var dM = _cam.length() / K;                                                // our distance from home, Mpc
+      var k = Math.max(0, Math.min(1, (dM - opt.fadeIn[0]) / (opt.fadeIn[1] - opt.fadeIn[0]))); k = k * k * (3 - 2 * k);
+      if (opt.farDim) k *= 1 - (1 - opt.farDim[2]) * Math.max(0, Math.min(1, (dM - opt.farDim[0]) / (opt.farDim[1] - opt.farDim[0])));
+      uni.uFade.value = m.opacity * k;
+      renderer.getDrawingBufferSize(_sz); uni.uView.value.copy(_sz);
+      uni.uWidth.value = (opt.width || 1.6) * Math.min(2, renderer.getPixelRatio());
+      uni.uTime.value = performance.now() / 1000;
+    };
+    return mesh;
+  }
+
+  /* THE COSMIC WEB AS A VOLUME (build 264) — the survey's galaxies are points; what the eye misses between them is
+     the web itself. data/web-density.webp is a 192³ density field baked from those very galaxies
+     (scripts/blender/bake_web.py: inverse-selection weighted, adaptively smoothed, only what is denser than the cosmic
+     mean glows, fading out where the catalogue thins). This box marches it: cool blue filaments and walls, warm knots
+     where the clusters sit, dark voids — under the gold points, in the same supergalactic frame, so every strand of
+     haze runs through real galaxies. Unobserved regions (the Zone of Avoidance) stay dark: not seen, not empty.
+     Same alpha-gate output contract as makeGalaxyVolume. Desktop WebGL2 only (a 3-D texture). */
+  function makeWebHaze(AX, AY, AZ, K) {
+    var RM = 249.6, NV = 192, COLS = 14, S = RM * K;
+    var geo = new T.BoxGeometry(2 * S, 2 * S, 2 * S);
+    var M = new T.Matrix4().makeBasis(AX.clone(), AY.clone(), AZ.clone());
+    geo.applyMatrix4(M);
+    var toSG = M.clone().invert().premultiply(new T.Matrix4().makeScale(1 / K, 1 / K, 1 / K));   // belt units → supergalactic Mpc
+    var uni = { tVol: { value: null }, uCamObj: { value: new T.Vector3() }, uToSG: { value: toSG }, uOpacity: { value: 0 },
+                uGain: { value: 1.9 }, uR: { value: RM }, uSteps: { value: 72 } };
+    var mat = new T.ShaderMaterial({
+      uniforms: uni, transparent: true, depthWrite: false, depthTest: false, side: T.BackSide, fog: false,
+      blending: T.CustomBlending, blendEquation: T.AddEquation, blendSrc: T.OneFactor, blendDst: T.OneFactor,
+      blendSrcAlpha: T.OneFactor, blendDstAlpha: T.OneFactor,
+      vertexShader: "varying vec3 vObj; void main(){ vObj = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+      fragmentShader: [
+        "precision highp float; precision highp sampler3D;",
+        "uniform sampler3D tVol; uniform vec3 uCamObj; uniform mat4 uToSG; uniform float uOpacity; uniform float uGain; uniform float uR; uniform float uSteps;",
+        "varying vec3 vObj;",
+        "float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }",
+        "void main(){",
+        "  if (uOpacity <= 0.001) discard;",
+        "  vec3 ro = (uToSG * vec4(uCamObj, 1.0)).xyz;",                          // supergalactic, Mpc
+        "  vec3 rd = normalize((uToSG * vec4(vObj, 1.0)).xyz - ro);",
+        "  vec3 inv = 1.0 / rd; vec3 a0 = (vec3(-uR) - ro) * inv, a1 = (vec3(uR) - ro) * inv; vec3 tn = min(a0, a1), tf = max(a0, a1);",
+        "  float ta = max(max(tn.x, tn.y), max(tn.z, 0.0)), tb = min(tf.x, min(tf.y, tf.z));",
+        "  if (tb <= ta) discard;",
+        "  float dt = (tb - ta) / uSteps;",
+        "  float j = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));",
+        "  vec3 col = vec3(0.0);",
+        "  for (int i = 0; i < 96; i++) {",
+        "    if (float(i) >= uSteps) break;",
+        "    float t = ta + (float(i) + j) * dt; vec3 p = ro + rd * t;",
+        "    float s = texture(tVol, p / (2.0 * uR) + 0.5).r;",
+        "    float e = s * s * s * (0.35 + 0.65 * s);",                           // steep: the spines of filaments and the knots glow, the diffuse veil between them barely
+        "    vec3 c = mix(vec3(0.10, 0.20, 0.95), vec3(0.36, 0.60, 1.00), smoothstep(0.0, 0.42, s));",
+        "    c = mix(c, vec3(1.00, 0.84, 0.60), smoothstep(0.42, 0.92, s));",       // cool gas in the strands → the warm light of clusters
+        "    col += c * e * smoothstep(5.0, 45.0, t);",                            // the web is something you see ahead of you, not a fog you fly through
+        "  }",
+        "  col *= dt * uGain / uR;",
+        "  float Lc = max(col.r, max(col.g, col.b)); float Lt = 1.0 - exp(-Lc);",
+        "  vec3 D = col * (Lt / max(Lc, 1e-5)) * uOpacity;",
+        "  float L = max(D.r, max(D.g, D.b));",
+        "  if (L < 0.00004) discard;",
+        "  float a = sqrt(min(L, 1.0)); vec2 fc = gl_FragCoord.xy;",
+        "  vec3 dn = (vec3(hash(fc + 17.0), hash(fc + 41.0), hash(fc + 73.0)) - 0.5) / 255.0;",
+        "  gl_FragColor = vec4(D / a + dn, a + (hash(fc + 101.0) - 0.5) / 255.0);",
+        "}"
+      ].join("\n")
+    });
+    var mesh = new T.Mesh(geo, mat);
+    mesh.name = "LargeScaleStructureHaze"; mesh.renderOrder = -7; mesh.frustumCulled = false; mesh.userData.ready = false;
+    var _inv = new T.Matrix4(), _cam = new T.Vector3();
+    mesh.onBeforeRender = function (renderer, sc, cam) {
+      _inv.copy(mesh.matrixWorld).invert();
+      _cam.setFromMatrixPosition(cam.matrixWorld).applyMatrix4(_inv);
+      uni.uCamObj.value.copy(_cam);
+      // from home there is no web to see — it gathers as you rise out of the Local Group (4 → 25 Mpc)
+      var k = Math.max(0, Math.min(1, (_cam.length() / K - 4) / 21)); k = k * k * (3 - 2 * k);
+      uni.uOpacity.value = mesh.userData.ready ? mat.opacity * k : 0;
+      uni.uSteps.value = (window.__cvQuality || 0) >= 1 ? 40 : 72;
+    };
+    var img = new Image();
+    img.onload = function () {
+      try {
+        var cv = document.createElement("canvas"); cv.width = img.width; cv.height = img.height;
+        var cx = cv.getContext("2d", { willReadFrequently: true }); cx.drawImage(img, 0, 0);
+        var vol = new Uint8Array(NV * NV * NV);
+        for (var z = 0; z < NV; z++) {                                        // one z-slice per atlas tile (row = SGY, column = SGX)
+          var px = cx.getImageData((z % COLS) * NV, ((z / COLS) | 0) * NV, NV, NV).data, o3 = z * NV * NV;
+          for (var q = 0, n3 = NV * NV; q < n3; q++) vol[o3 + q] = px[q * 4];
+        }
+        var tx = new T.Data3DTexture(vol, NV, NV, NV);
+        tx.format = T.RedFormat; tx.type = T.UnsignedByteType; tx.minFilter = T.LinearFilter; tx.magFilter = T.LinearFilter;
+        tx.wrapS = tx.wrapT = tx.wrapR = T.ClampToEdgeWrapping; tx.unpackAlignment = 1; tx.needsUpdate = true;
+        uni.tVol.value = tx; mesh.userData.ready = true;
+      } catch (e) { mesh.userData.error = String(e); }
+    };
+    img.src = "data/web-density.webp?v=1";
+    return mesh;
+  }
+
+  /* A GALAXY AS A VOLUME (builds 261–262) — the disc as LIGHT AND DUST, not points: one box around the galaxy whose
+     fragment shader marches each view ray through a model baked by scripts/blender (galaxy_model.py). <maps>-a.webp
+     carries the face-on old / young / HII light, <maps>-b.webp the dust's optical depth and mid-plane warp; the
+     vertical structure (sech² layers, the bar and bulge) is analytic, and every step integrates the layers EXACTLY
+     along its own segment — so the thin dust lane survives the long steps of an edge-on ray, and the galaxy reads as
+     a volume from any angle: face-on spiral, edge-on lane, or from inside. Output follows the alpha-gate contract of
+     the composite (rgb·a + bg·(1−a)): rgb = D/√L, a = √L, blended ONE/ONE, so the gate shows exactly D.
+     o = { name, basis:[x,y,z] (model axes in belt space; the model spins toward decreasing azimuth), centre,
+           unitsPerKly, maps, texels, and the model's numbers in kly (mirrored from galaxy_model.py's config) }. */
+  function makeGalaxyVolume(o) {
+    var U = o.unitsPerKly, S = o.lmap * U, ZH = o.zh * U;
+    var geo = new T.BoxGeometry(2 * S, 2 * S, 2 * ZH);
+    var M = new T.Matrix4().makeBasis(o.basis[0].clone(), o.basis[1].clone(), o.basis[2].clone()).setPosition(o.centre.x, o.centre.y, o.centre.z);
+    geo.applyMatrix4(M);                                                      // belt space: a scale about the Sun-origin contracts it like the point layers
+    var uni = {
+      tA: { value: null }, tB: { value: null }, uCamObj: { value: new T.Vector3() }, uToGal: { value: M.clone().invert() },
+      uOpacity: { value: 0 }, uGain: { value: o.gain || 0.55 }, uU: { value: U }, uSteps: { value: mobile ? 28 : 48 }, uPix: { value: 0.001 },
+      uG: { value: new T.Vector4(o.rgal, o.lmap, o.zh, 2 * o.lmap / o.texels) }, uHr: { value: new T.Vector2(o.hrOld, o.hrYoung) },
+      uH: { value: new T.Vector3(o.hOld, o.hYoung, o.hDust) }, uBar: { value: new T.Vector4(o.bar[0], o.bar[1], o.bar[2], o.bar[3]) },
+      uBarCS: { value: new T.Vector2(Math.cos(o.barAngle), Math.sin(o.barAngle)) }, uBulge: { value: new T.Vector3(o.bulge[0], o.bulge[1], o.bulge[2]) },
+      uTint: { value: new T.Vector2(o.youngGain == null ? 1 : o.youngGain, o.hiiGain == null ? 1 : o.hiiGain) }
+    };
+    var mat = new T.ShaderMaterial({
+      uniforms: uni, transparent: true, depthWrite: false, depthTest: false, side: T.BackSide, fog: false,
+      blending: T.CustomBlending, blendEquation: T.AddEquation, blendSrc: T.OneFactor, blendDst: T.OneFactor,
+      blendSrcAlpha: T.OneFactor, blendDstAlpha: T.OneFactor,
+      vertexShader: "varying vec3 vObj; void main(){ vObj = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+    fragmentShader: [
+      "precision highp float;",
+      "uniform sampler2D tA; uniform sampler2D tB; uniform vec3 uCamObj; uniform mat4 uToGal;",
+      "uniform float uOpacity; uniform float uGain; uniform float uU; uniform float uSteps; uniform float uPix;",
+      "uniform vec4 uG; uniform vec2 uHr; uniform vec3 uH; uniform vec4 uBar; uniform vec2 uBarCS; uniform vec3 uBulge; uniform vec2 uTint;",   // the galaxy's own numbers (kly): rgal, map half-extent, half-thickness, kly per texel · scale lengths · scale heights · bar · bulge
+      "varying vec3 vObj;",
+      // the model's constants (kly) — mirrored from scripts/blender/galaxy_model.py
+      "const vec3 C_BULGE = vec3(1.00, 0.72, 0.44); const vec3 C_YOUNG = vec3(1.32, 1.67, 2.20); const vec3 C_HII = vec3(0.80, 0.24, 0.34);",
+      "const vec3 EXT = vec3(0.58, 0.80, 0.98);",
+      "float th(float x){ float e = exp(-2.0 * abs(x)); return sign(x) * (1.0 - e) / (1.0 + e); }",
+      "float sech2(float x){ float e = exp(-abs(x)); float c = 2.0 * e / (1.0 + e * e); return c * c; }",
+      // the mean of sech²(z/h) along a step's own z-span — exact, so a layer thinner than the step is never missed
+      "float lay(float z0, float z1, float h){ float d = z1 - z0; return abs(d) < 0.02 * h ? sech2(0.5 * (z0 + z1) / h) : h * (th(z1 / h) - th(z0 / h)) / d; }",
+      "float bulge(vec3 p){",
+      "  float xb = p.x * uBarCS.x + p.y * uBarCS.y, yb = -p.x * uBarCS.y + p.y * uBarCS.x;",
+      "  float mbar = length(vec3(xb, yb, p.z) / uBar.xyz);",
+      "  float mb = length(vec3(p.xy / uBulge.x, p.z / uBulge.y)); float q = mb / 3.6; q *= q;",
+      "  return (uBar.w * exp(-pow(mbar, 1.7)) + uBulge.z * exp(-1.35 * mb - q * q)) * (1.0 - smoothstep(2.7, 3.5, mb));",   // the spheroid ENDS inside the marched box — no clipped halo
+      "}",
+      "float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }",
+      "float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);",
+      "  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }",
+      "void main(){",
+      "  vec3 ro = (uToGal * vec4(uCamObj, 1.0)).xyz / uU;",                  // galactocentric, kly
+      "  vec3 rd = normalize((uToGal * vec4(vObj, 1.0)).xyz / uU - ro);",
+      "  vec3 inv = 1.0 / rd; vec3 a0 = (vec3(-uG.y, -uG.y, -uG.z) - ro) * inv, a1 = (vec3(uG.y, uG.y, uG.z) - ro) * inv;",
+      "  vec3 tn = min(a0, a1), tf = max(a0, a1);",
+      "  float ta = max(max(tn.x, tn.y), max(tn.z, 0.0)), tb = min(tf.x, min(tf.y, tf.z));",
+      "  if (tb <= ta || uOpacity <= 0.001) discard;",
+      "  float len = tb - ta; float n = clamp(ceil(len / 1.5), 20.0, uSteps); float dt = len / n;",
+      "  float j = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));",   // interleaved-gradient jitter: an even grain, no white-noise sand
+      "  vec3 col = vec3(0.0), Tr = vec3(1.0);",
+      "  for (int i = 0; i < 64; i++) {",
+      "    if (float(i) >= n) break;",
+      "    float ts = ta + float(i) * dt, tm = ts + dt * j;",
+      // the thin layers' light comes from where the step crosses the mid-plane: read the maps THERE (a jittered point
+      // slides the lookup along the ray and combs the arms into streaks); steps that never cross stay jittered
+      "    float tx = -ro.z / rd.z; if (tx > ts && tx < ts + dt) tm = tx;",
+      "    vec3 p = ro + rd * tm; float z0 = ro.z + rd.z * ts, z1 = z0 + rd.z * dt;",
+      "    vec2 uv = p.xy / (2.0 * uG.y) + 0.5;",
+      "    float lod = clamp(log2(max(tm * uPix / uG.w, 1.0)), 0.0, 6.0);",   // the texel footprint of a pixel at this depth
+      "    vec3 A = texture2DLodEXT(tA, uv, lod).rgb; A *= A; vec3 B = texture2DLodEXT(tB, uv, lod).rgb;",
+      "    float R = length(p.xy), rr = R / uG.x;",
+      "    float ho = uH.x * (1.0 + 0.45 * rr * rr);",
+      "    float eo = A.r * 2.0 * exp(-R / uHr.x) / (2.0 * ho) * lay(z0, z1, ho);",
+      "    float ey = exp(-R / uHr.y);",
+      "    float eY = A.g * 6.0 * ey / (2.0 * uH.y) * lay(z0, z1, uH.y) * uTint.x;",
+      "    float eH = A.b * 14.0 * ey / (1.6 * uH.y) * lay(z0, z1, 0.8 * uH.y) * uTint.y;",
+      "    float eb = 0.5 * (bulge(ro + rd * (ts + 0.5 * dt * j)) + bulge(ro + rd * (ts + dt * (0.5 + 0.5 * j))));",
+      "    float zw = 0.44 * (B.g - 0.5);",
+      "    float gr = 0.55 + 0.9 * (0.6 * vn(p.xy * 3.1) + 0.4 * vn(p.xy * 9.7 + 7.0));",   // fine mottling of the dust, cheaper made here than shipped
+      "    float kap = B.r * B.r * 6.0 / (2.0 * uH.z) * lay(z0 - zw, z1 - zw, uH.z) * gr;",
+      "    vec3 cOld = mix(vec3(1.00, 0.80, 0.60), vec3(0.86, 0.88, 1.00), 0.55 * smoothstep(0.45, 1.0, rr));",   // old disc: tan, cooling toward the rim
+      "    vec3 E = eo * cOld + eb * C_BULGE + eY * C_YOUNG + eH * C_HII;",
+      "    vec3 dtau = kap * dt * EXT;",
+      "    col += Tr * exp(-0.5 * dtau) * E * dt; Tr *= exp(-dtau);",
+      "  }",
+      // a film shoulder on LUMINANCE (hue kept): the gold core stays gold instead of bleaching; only its heart leans white
+      "  float Lc = max(col.r, max(col.g, col.b)) * uGain; float Lt = 1.0 - exp(-Lc);",
+      "  vec3 D = col * uGain * (Lt / max(Lc, 1e-5));",
+      "  D = mix(D, vec3(Lt), 0.30 * smoothstep(0.80, 1.0, Lt)) * uOpacity;",
+      "  float L = max(D.r, max(D.g, D.b));",
+      "  if (L < 0.00004) discard;",
+      "  float a = sqrt(min(L, 1.0));",
+      // dither rgb and alpha INDEPENDENTLY: the gate shows their product, and correlated rounding bands the faint outskirts
+      "  vec2 fc = gl_FragCoord.xy;",
+      "  vec3 dn = (vec3(hash(fc + 17.0), hash(fc + 41.0), hash(fc + 73.0)) - 0.5) / 255.0;",
+      "  gl_FragColor = vec4(D / a + dn, a + (hash(fc + 101.0) - 0.5) / 255.0);",
+      "}"
+      ].join("\n")
+    });
+    var volMesh = new T.Mesh(geo, mat);
+    volMesh.name = o.name; volMesh.renderOrder = -6; volMesh.frustumCulled = false; volMesh.visible = false;
+    volMesh.userData.ready = false;
+    var _vInv = new T.Matrix4(), _vCam = new T.Vector3(), _vSz = new T.Vector2();
+    volMesh.onBeforeRender = function (renderer, sc, cam) {
+      _vInv.copy(volMesh.matrixWorld).invert();
+      _vCam.setFromMatrixPosition(cam.matrixWorld).applyMatrix4(_vInv);
+      uni.uCamObj.value.copy(_vCam);
+      var k = 1;
+      if (o.insideFade) {
+        // from INSIDE our own disc the baked band of the sky is the Milky Way (space.js composite); the volume takes
+        // over as the camera rises out of it — the same 400 → 1500 hand-over the band fades by
+        k = Math.max(0, Math.min(1, (_vCam.length() - 400) / 1100)); k = k * k * (3 - 2 * k);
+      }
+      uni.uOpacity.value = mat.opacity * k;
+      uni.uPix.value = 2 * Math.tan((cam.fov || 52) * Math.PI / 360) / Math.max(1, renderer.getDrawingBufferSize(_vSz).y);
+    };
+    var _vN = 0, _vL = new T.TextureLoader();
+    function vTex(url, key) {
+      _vL.load(url, function (tx) {
+        tx.colorSpace = T.NoColorSpace; tx.wrapS = tx.wrapT = T.ClampToEdgeWrapping;
+        tx.minFilter = T.LinearMipmapLinearFilter; tx.magFilter = T.LinearFilter; tx.generateMipmaps = true; tx.anisotropy = 4;
+        uni[key].value = tx;
+        if (++_vN === 2) volMesh.userData.ready = true;
+      });
+    }
+    vTex(o.maps + "-a.webp?v=4", "tA"); vTex(o.maps + "-b.webp?v=4", "tB");
+    return volMesh;
+  }
+
   function buildMilkyWayGalaxy() {
     var Rgal = GAL_RGAL, N = mobile ? 78000 : 118000;                          // reuse the MODULE-scope galactic frame so nebulae (placed eagerly) and this disc share ONE basis
     var Rsun = GAL_RSUN, Rin = 42, Rout = 150, hSun = GAL_HSUN;                 // Sun's galactocentric radius; the Orion ARM flows right THROUGH the solar system
@@ -1664,6 +2016,11 @@ export function buildNatalSky(THREE, scene, data, opts) {
       imp.name = "MilkyWayImpostor"; imp.renderOrder = -6; imp.frustumCulled = false;
       belt.add(imp);
     })();
+    /* the Milky Way as a volume (makeGalaxyVolume): the same 4-arm / 12°-pitch equation as the points above, so the
+       haze and the resolved stars share their arms. Replaces the glow sprites and the flat impostor once its maps load. */
+    belt.add(makeGalaxyVolume({ name: "MilkyWayVolume", basis: [uu, vv, w], centre: C, unitsPerKly: Rgal / 50.0, maps: "data/mw-disc", texels: 2048,
+      rgal: 50, lmap: 61, zh: 6.5, hrOld: 8.5, hrYoung: 12, hOld: 1.0, hYoung: 0.42, hDust: 0.30,
+      bar: [7.5, 2.4, 1.6, 0.95], barAngle: 2.759667455125859, bulge: [2.3, 1.8, 2.6], insideFade: true }));
   }
 
   /* ---------------- the GALACTIC CENTRE — Sgr A* as a small nucleus marker.
@@ -1717,7 +2074,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
 
   /* ---------------- ANDROMEDA (M31): a SECOND spiral galaxy — its own inclined disc + bulge, in its TRUE
      sky direction, far beyond the Milky Way rim. Lazy (built with the far layers). ---------------- */
-  var andromeda = null;
+  var andromeda = null, andromedaVol = null;
   function buildAndromeda() {
     if (andromeda) return;
     var m31 = (data.deepSky || []).filter(function (x) { return x.id === "andromeda"; })[0];
@@ -1755,6 +2112,31 @@ export function buildNatalSky(THREE, scene, data, opts) {
     if ("toneMapped" in m) m.toneMapped = false;
     andromeda = new T.Points(g, m); andromeda.name = "Andromeda"; andromeda.renderOrder = -4; andromeda.frustumCulled = false;
     belt.add(andromeda);
+    /* build 262 — M31 AS A VOLUME, at its true size and attitude. The disc is 80 kly in radius (D25 ≈ 152 kly across:
+       ~1.6× the Milky Way — the point model above is nearly three times that), inclined 77.5° with its major axis at
+       position angle 38°; the NW side is the near one (where its dust lanes stand out) and the NE half recedes — which
+       fixes the model frame: x along the major axis, the far side along −y, spin about −z. Seen from Earth it lands on
+       the sky exactly as the photographs show it. Its own maps (galaxy_model.py's M31: two tight arms, the 10-kpc
+       star-forming ring, a big classical bulge) are marched by the same shader as the Milky Way's. */
+    (function () {
+      var raH = m31 ? m31.raH : 0.712, dec = m31 ? m31.decDeg : 41.27;
+      function dirAt(r, d) { var e = raDecToEcl(r, d); return eclVec(e.lon, e.lat, 1).normalize(); }
+      var los = dirAt(raH, dec);
+      var nN = dirAt(raH, dec + 0.05).sub(los).normalize();                                                    // celestial north at M31
+      var eE = dirAt(raH + 0.05 / 15 / Math.cos(dec * Math.PI / 180), dec).sub(los).normalize();                // celestial east
+      var PA = 38 * Math.PI / 180, inc = 77.5 * Math.PI / 180;
+      var aMaj = nN.clone().multiplyScalar(Math.cos(PA)).addScaledVector(eE, Math.sin(PA)).normalize();
+      var mMin = nN.clone().multiplyScalar(-Math.sin(PA)).addScaledVector(eE, Math.cos(PA)).normalize();        // the minor axis on the sky, toward the SE
+      var bIn = mMin.clone().multiplyScalar(Math.cos(inc)).addScaledVector(los, Math.sin(inc)).normalize();     // in the disc: the SE side tilts AWAY from us
+      var nrm = new T.Vector3().crossVectors(aMaj, bIn).normalize();
+      var Uk = R_ANDROMEDA / 2500;                                                                              // scene units per kly on this tier (2.5 Mly out)
+      andromedaVol = makeGalaxyVolume({ name: "AndromedaVolume", basis: [aMaj, bIn.clone().negate(), nrm.clone().negate()], centre: center,
+        unitsPerKly: Uk, maps: "data/m31-disc", texels: 1536,
+        rgal: 80, lmap: 97.6, zh: 10, hrOld: 17, hrYoung: 26, hOld: 1.3, hYoung: 0.5, hDust: 0.34,
+        bar: [6.0, 3.6, 2.4, 0.35], barAngle: 0.9, bulge: [3.6, 2.7, 3.0], youngGain: 0.9, hiiGain: 0.8, gain: 0.75 });   // (a longer exposure than ours: M31's disc is faint beside its bulge)
+      andromedaVol.userData.radius = 80 * Uk;
+      belt.add(andromedaVol);
+    })();
     var sh = dsoPickGroup.getObjectByName("DSOPick_andromeda");
     if (sh) { sh.userData.dsoViewDist = Rg * 2.4; sh.userData.dsoFocusMin = Rg * 0.5; }
   }
@@ -2753,10 +3135,19 @@ export function buildNatalSky(THREE, scene, data, opts) {
         "  col+=vec3(0.18,0.09,0.03)*smoothstep(0.82,0.98,t);",
         "  vec3 view=normalize(cameraPosition-vP);",
         "  float limb=pow(1.0-abs(dot(normalize(vP),view)),2.6);",
-        "  gl_FragColor=vec4(col*(0.42+1.24*limb), uOp*(0.050+0.120*t+0.86*limb));",
+        // build 264 — THE ALPHA GATE. This wall used to add col·a with a tiny a, and the page composite (rgb·a + bg·(1−a))
+        // then showed it at ~a³: from inside, the surface of last scattering was simply black. Write what should be
+        // SEEN (D) in the gate's own form — rgb = D/√L, a = √L, blended ONE/ONE — so the gate shows exactly D: a dim
+        // mottled wall of first light around the whole sky, brightening toward the limb.
+        "  vec3 D=col*(0.55+1.10*limb)*uOp*(0.09+0.13*t+0.80*limb);",
+        "  float L=max(D.r,max(D.g,D.b)); if(L<0.00004) discard;",
+        "  float a=sqrt(min(L,1.0)); vec2 fc=gl_FragCoord.xy;",
+        "  vec3 dn=(vec3(h(vec3(fc,17.0)),h(vec3(fc,41.0)),h(vec3(fc,73.0)))-0.5)/255.0;",
+        "  gl_FragColor=vec4(D/a+dn, a+(h(vec3(fc,101.0))-0.5)/255.0);",
         "}"
       ].join("\n"),
-      transparent: true, depthWrite: false, side: T.BackSide, blending: T.AdditiveBlending, fog: false
+      transparent: true, depthWrite: false, side: T.BackSide, fog: false,
+      blending: T.CustomBlending, blendEquation: T.AddEquation, blendSrc: T.OneFactor, blendDst: T.OneFactor, blendSrcAlpha: T.OneFactor, blendDstAlpha: T.OneFactor
     });
     var cmb = new T.Mesh(new T.SphereGeometry(CMBR, 80, 48), cmbMat);
     cmb.name = "CMBHorizon"; cmb.renderOrder = -8; cmb.frustumCulled = false;
@@ -2888,6 +3279,10 @@ export function buildNatalSky(THREE, scene, data, opts) {
 
   /* ---------------- interaction: window raycaster (never touches #deep) ---------------- */
   var tip = null, raycaster = null, ndc = null, hovered = -1, onMove = null, onClick = null, pickFn = null;
+  var selNodeId = null;   // the work the host has selected: its card already carries the title, so its tooltip stays down
+  var hostClicks = false, hovPick = { node: -1, con: -1 };   // the host (space.js) may own click routing; hovPick = the last hover pick, for the host's hover ring
+  function overScene(e) { var t = e && e.target; return !t || !t.tagName || t.tagName === "CANVAS"; }   // the sky is only under the hand when the pointer is on the canvas, not on the chrome above it
+  function chartPickable() { return !!(group.visible && starPoints.visible && zoomMul > 0); }
   if (interactive) {
     raycaster = new T.Raycaster(); raycaster.params.Points.threshold = mobile ? 14 : 11;
     raycaster.layers.enableAll();   // true scale: the star field renders on the far layer
@@ -2904,27 +3299,38 @@ export function buildNatalSky(THREE, scene, data, opts) {
       var nodeIdx = -1, con = -1;
       if (hits.length) {
         con = (starConIdx[hits[0].index] != null) ? starConIdx[hits[0].index] : -1;
-        for (var i = 0; i < hits.length; i++) { if (nodeIndex[hits[i].index]) { nodeIdx = hits[i].index; break; } }
+        // several work stars can sit inside one pick radius (a fingertip covers a dozen pixels): take the one the ray passes closest to
+        var bestD = Infinity;
+        for (var i = 0; i < hits.length; i++) {
+          if (!nodeIndex[hits[i].index]) continue;
+          var dR = hits[i].distanceToRay != null ? hits[i].distanceToRay : i;
+          if (dR < bestD) { bestD = dR; nodeIdx = hits[i].index; }
+        }
       }
       return { node: nodeIdx, con: con };
     }
     var _hovT = 0;
     onMove = function (e) {
-      if (!group.visible) { hoverCon = -1; return; }
+      if (!group.visible) { hoverCon = -1; hovPick.node = -1; hovPick.con = -1; return; }
+      if (!overScene(e)) {   // over a button / the nav / the card: nothing in the sky is hovered
+        if (hovered >= 0) { hovered = -1; tip.style.opacity = "0"; } hoverCon = -1; hovPick.node = -1; hovPick.con = -1; return;
+      }
       // L2 perf guards: don't raycast while orbiting (no hover tooltip is wanted mid-drag), skip at deep
       // cosmic scales where the work-stars are non-interactive (camLen >= 1300, same gate as zoomMul), and
       // throttle to ~40ms — the raycast is an O(N) intersectObject over the star cloud + a hits[] alloc.
       if (e.buttons !== 0 || (o.camera && o.camera.position.length() >= 1300)) {
-        if (hovered >= 0) { hovered = -1; tip.style.opacity = "0"; } hoverCon = -1; return;
+        if (hovered >= 0) { hovered = -1; tip.style.opacity = "0"; } hoverCon = -1; hovPick.node = -1; hovPick.con = -1; return;
       }
       var _now = (typeof performance !== "undefined" ? performance.now() : Date.now());
       if (_now - _hovT < 40) return; _hovT = _now;
-      var pk = pick(e.clientX, e.clientY);
+      var pk = chartPickable() ? pick(e.clientX, e.clientY) : { node: -1, con: -1 };
+      hovPick.node = pk.node; hovPick.con = pk.con;
       hoverCon = pk.con;                                  // hovering a constellation reveals ONLY its name
       var idx = pk.node;
       if (idx !== hovered) {
         hovered = idx;
-        if (idx >= 0) {
+        if (idx >= 0 && nodeIndex[idx].node.id === selNodeId) { tip.style.opacity = "0"; }
+        else if (idx >= 0) {
           var nd = nodeIndex[idx].node;
           tip.innerHTML = '<div class="natal-tip__t"><span class="i18n-en">' + nd.title.en + '</span><span class="i18n-zh">' + nd.title.zh + '</span></div>' +
             (nd.role ? '<div class="natal-tip__r">' + nd.role + '</div>' : "");
@@ -2935,6 +3341,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
       if (idx >= 0) { tip.style.left = e.clientX + "px"; tip.style.top = e.clientY + "px"; }
     };
     onClick = function (e) {
+      if (hostClicks || !overScene(e)) return;            // the host routes every pick through ONE grammar; a click on the chrome is never a click on the sky
       var pk2 = pick(e.clientX, e.clientY);
       var idx = pk2.node;
       if (idx < 0) {
@@ -3013,6 +3420,7 @@ export function buildNatalSky(THREE, scene, data, opts) {
 
   /* ---------------- lifecycle ---------------- */
   var _galBuilt = false; var _impV = new T.Vector3();
+  var _lssHaze, _newLines = false;
   var _tsGal = false, _gdV2 = new T.Vector2();   // true scale owns the galaxy's recession (no ladder "member-knot" dimming)
   var _figFade = 1, _sfGain = 1, _tsDV = new T.Vector3(), _tsSoloDso = null;
   function backdropMulDso(rec) { return (_tsSoloDso && _tsSoloDso !== rec.id) ? 0.35 : 1; }   // admiring one wonder: the others step back   // _sfGain: true scale — the procedural field gives way once the real stars swing by   // true scale: the zodiac figures hang at infinity — they melt once you leave the Solar System
@@ -3173,13 +3581,15 @@ export function buildNatalSky(THREE, scene, data, opts) {
           var _webBand = _cl > 18000, _scBand = _cl > 12000;
           for (var _lj = 0; _lj < _lssObjs.length; _lj++) {
             var _le = _lssObjs[_lj];
+            if (_lssHaze === undefined) _lssHaze = belt.getObjectByName("LargeScaleStructureHaze") || null;
             _le.o.visible = _lssOn
-              && !(_le.tier === 3 && (!_webBand || _qv >= 1))
+              && !(_newLines && /^CosmicWebLines(Glow\d?)?$/.test(_le.o.name))   // the hand-curated cluster-to-cluster rivers retire once the measured lines are in
+              && !(_le.tier === 3 && (!_webBand || _qv >= 1 || (_lssHaze && _lssHaze.userData.ready)))   // (the volumetric web IS the wide glow: with it up, the widest sprite halo only whites out the knots)
               && !(_le.tier === 2 && (!_scBand || _qv >= 2));
           }
         }
         if (_cmbUnifs) {
-          _cmbUnifs[0].uOp.value = _wObs > 0 ? 0.54 : 0;                          // inside: the faint wall of first light
+          _cmbUnifs[0].uOp.value = _wObs > 0 ? 0.54 * (LOD ? LOD.smooth(56000, 72000, _cl) : 1) : 0;   // inside: the faint wall of first light (it now SHOWS, so it eases in across the tier's own window instead of popping)
           _cmbUnifs[1].uOp.value = _wQnt > 0 ? 0.44 : (_wObs > 0 ? 0.56 : 0);     // outside: the whole universe as a temperature shell
           _cmbUnifs[0].uTime.value = sec; _cmbUnifs[1].uTime.value = sec;
         }
@@ -3223,6 +3633,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
           if (_g1 && _g2) {
             _galMats = [{ o: _g1, m: _g1.material, base: _g1.material.opacity }, { o: _g2, m: _g2.material, base: _g2.material.opacity }];
             if (_g3) _galMats.push({ o: _g3, m: _g3.material, base: _g3.material.opacity });   // rides the same collapse scale + two-stage tail
+            var _g4 = group.getObjectByName("MilkyWayVolume");
+            if (_g4) _galMats.push({ o: _g4, m: _g4.material, base: 1, vol: true });           // the ray-marched disc (build 261)
+            _galMats.volume = _g4 || null;
           }
         }
         if (_galMats) {
@@ -3257,9 +3670,11 @@ export function buildNatalSky(THREE, scene, data, opts) {
           }
           for (var _gi = 0; _gi < _galMats.length; _gi++) {
             var _ge = _galMats[_gi];
-            _ge.o.visible = _gOn && !(_gi === 1 && _gqv >= 1);                    // shed the glow halo under load; the 118k sharp disc carries the read
+            var _vr = !!(_galMats.volume && _galMats.volume.userData.ready);        // the volumetric disc is up → it IS the glow: retire the sprites + the flat impostor
+            _ge.o.visible = _gOn && !(_gi === 1 && _gqv >= 1) && !(_vr && (_gi === 1 || _gi === 2)) && !(_ge.vol && !_vr);   // shed the glow halo under load; the 118k sharp disc carries the read
             if (_ge.o.visible) {
-              _ge.m.opacity = _ge.base * _gSolo * _gTail * (_gi === 2 ? _impFade : 1);
+              if (_ge.vol) _ge.m.uniforms.uSteps.value = _gqv >= 1 ? 24 : (mobile ? 28 : 48);
+              _ge.m.opacity = _ge.base * _gSolo * _gTail * (_gi === 2 ? _impFade : 1) * (_vr && _gi === 0 ? 0.45 : 1);   // over the volume the points are resolved stars, not the body of the light
               _ge.o.scale.setScalar(_gScale);
             }
           }
@@ -3335,11 +3750,34 @@ export function buildNatalSky(THREE, scene, data, opts) {
           }
           if (_localHide.andro) {
             var _aOn = _wMW > 0 || _tsGal;
-            _localHide.andro.visible = _aOn;
+            var _avr = !!(andromedaVol && andromedaVol.userData.ready);          // M31's volume is up → it replaces the (oversized) point model
+            _localHide.andro.visible = _aOn && !_avr;
+            if (andromedaVol) andromedaVol.visible = _aOn && _avr;
             if (_aOn) {
               _localHide.andro.material.opacity = _localHide.androBase;
-              if (LOD) _localHide.andro.scale.setScalar(LOD.collapse(_cl, "milky-way", 0.16));   // high-detail M31 belongs to the Milky-Way sky view only
+              var _aSc = LOD ? LOD.collapse(_cl, "milky-way", 0.16) : 1;
+              if (LOD) _localHide.andro.scale.setScalar(_aSc);   // high-detail M31 belongs to the Milky-Way sky view only
+              if (andromedaVol) { andromedaVol.scale.setScalar(_aSc); andromedaVol.material.opacity = 1; }
+              if (_avr && !andromedaVol.userData.framed) {       // frame the true-size galaxy when it is flown to
+                andromedaVol.userData.framed = true;
+                var _ash = dsoPickGroup.getObjectByName("DSOPick_andromeda");
+                if (_ash) { _ash.userData.dsoViewDist = andromedaVol.userData.radius * 2.3; _ash.userData.dsoFocusMin = andromedaVol.userData.radius * 0.6; }
+              }
             }
+          }
+        }
+      }
+      // M31's volume owns its own swap: the _localHide cache above only adopts Andromeda if she already existed when
+      // it was first filled (she is built lazily, often later), so nothing that must happen may depend on it
+      if (andromeda && andromedaVol && andromedaVol.userData.ready) {
+        var _avOn = (typeof _wMW === "number" && _wMW > 0) || _tsGal;
+        andromeda.visible = false;                               // the volume replaces the (oversized) point model
+        andromedaVol.visible = _avOn;
+        if (_avOn) {
+          andromedaVol.scale.copy(andromeda.scale); andromedaVol.material.opacity = 1;
+          if (!andromedaVol.userData.framed) {                   // frame the true-size galaxy when it is flown to
+            var _ash2 = dsoPickGroup.getObjectByName("DSOPick_andromeda");
+            if (_ash2) { andromedaVol.userData.framed = true; _ash2.userData.dsoViewDist = andromedaVol.userData.radius * 2.3; _ash2.userData.dsoFocusMin = andromedaVol.userData.radius * 0.6; }
           }
         }
       }
@@ -3385,6 +3823,38 @@ export function buildNatalSky(THREE, scene, data, opts) {
     },
     // does the pointer sit over a clickable star or constellation? (for the host's cursor)
     isOverInteractive: function (x, y) { if (!group.visible || !pickFn) return false; var p = pickFn(x, y); return p.node >= 0 || p.con >= 0; },
+    /* ---- the host's ONE selection grammar (space.js): it asks what is under a point, and owns what a click does ---- */
+    setHostClicks: function (on) { hostClicks = !!on; },
+    setSelectedNode: function (id) {   // (null clears) — the selected work's tooltip gives way to the card
+      selNodeId = id || null;
+      if (tip && hovered >= 0 && nodeIndex[hovered] && nodeIndex[hovered].node.id === selNodeId) tip.style.opacity = "0";
+    },
+    // what is under a screen point: { node: work-star info | null, con: constellation id | null } — nothing while the chart is off
+    pickAt: function (x, y) {
+      if (!pickFn || !chartPickable()) return { node: null, con: null };
+      var p = pickFn(x, y);
+      return { node: p.node >= 0 ? nodeInfoAt(p.node) : null, con: p.con >= 0 ? cons[p.con].id : null };
+    },
+    // the last HOVER pick (already throttled by the tooltip path — no second raycast for the host's hover ring)
+    hoverPick: function () {
+      return { node: hovPick.node >= 0 ? nodeInfoAt(hovPick.node) : null, con: hovPick.con >= 0 ? cons[hovPick.con].id : null };
+    },
+    // a constellation's figure stars in world space (the host sizes its ring to the figure as it is seen)
+    getConStars: function (id) {
+      var out = [];
+      for (var ci = 0; ci < cons.length; ci++) if (cons[ci].id === id) {
+        var sp = cons[ci]._starPos || [];
+        for (var si = 0; si < sp.length; si++) if (sp[si]) out.push(belt.localToWorld(sp[si].clone()));
+      }
+      return out;
+    },
+    getConInfo: function (id) {
+      for (var ci = 0; ci < cons.length; ci++) if (cons[ci].id === id) return { id: id, name: cons[ci].name || null, works: (cons[ci].dataNodes || []).length };
+      return null;
+    },
+    getConIds: function () { return cons.map(function (c) { return c.id; }); },
+    // how present the work-star markers may be: 1 while the chart is the sky in view, 0 once it has melted away
+    markerGain: function () { return chartPickable() ? Math.max(0, Math.min(1, _figFade)) * Math.max(0, Math.min(1, backdropMul)) : 0; },
     // language of the in-scene nameplates follows the page locale (EN mode shows no Chinese)
     setLocale: function (loc) {
       for (var i = 0; i < nameSprites.length; i++) {

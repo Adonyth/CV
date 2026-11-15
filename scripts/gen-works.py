@@ -9,7 +9,6 @@ import json, pathlib, html, urllib.parse
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DATA = json.load(open(ROOT / "data" / "works.json", encoding="utf-8"))["works"]
-BUILD = "updated 19 October 2026"
 N_RESEARCH = sum(1 for w in DATA if w["cls"] == "research")
 BOOK_SHORT = {"invitation": ("An Invitation After Abundance", "An Invitation After Abundance"), "sovereign": ("Sovereign Scintillation", "Sovereign Scintillation")}
 N_HUMANITIES = sum(1 for w in DATA if w["cls"] == "humanities")
@@ -355,13 +354,13 @@ def page(title, body, depth=0, pager=False, desc="", path=None, jsonld=None):
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>{CSS}</style>
-  <link rel="stylesheet" href="{pre}craft.css?v=3" />
+  <link rel="stylesheet" href="{pre}craft.css?v=4" />
 </head>
 <body>
 {body}
   <script src="{pre}magnet.js?v=2"></script>
-  <script src="{pre}search.js?v=7" defer></script>
-  <script src="{pre}craft.js?v=1" defer></script>
+  <script src="{pre}search.js?v=8" defer></script>
+  <script src="{pre}craft.js?v=2" defer></script>
   <script>{LANG_JS}{keynav}</script>
 </body>
 </html>
@@ -382,18 +381,34 @@ def chrome(backs, depth=0):
 
 # ---------------- publication / citation infrastructure ----------------
 import re as _re
+_YEAR = _re.compile(r"(?:19|20)\d\d")
+_ISBN = _re.compile(r"97[89]-[\d-]{10,}\d")
 def _year_of(w):
-    m = _re.search(r"(19|20)\d\d", (w.get("year") or w.get("period") or ""))
-    return m.group(0) if m else ""
+    """Citation year. An explicit "year" wins; otherwise the year named in the status line (the stage
+    being cited); otherwise the first year of the period, as before. Reading the period alone dated a
+    manuscript submitted in 2026 to 2024, the year its programme began."""
+    for src in (w.get("year"), w["status"]["en"], w.get("period")):
+        m = _YEAR.search(str(src or ""))
+        if m:
+            return m.group(0)
+    return ""
+def _isbns_of(w):
+    """ISBNs printed in a book's own description (works.json has no separate field for them)."""
+    if w.get("cls") != "books":
+        return []
+    return _ISBN.findall(" ".join(w["desc"]["en"]))
 def _venue_of(w):
     v = w.get("venue")
     if isinstance(v, dict): return v.get("en", "")
     return v or w.get("journal", "") or ""
 def bibtex(w):
     """Honest BibTeX from whatever fields exist — @article if a DOI is provided, @misc for an arXiv
-    preprint, else @unpublished with the real status note. Never invents an identifier."""
-    year = _year_of(w); title = w["title"]["en"]; status = w["status"]["en"]
+    preprint, @book for a book that carries an ISBN, else @unpublished with the real status note
+    (a book manuscript without an ISBN is unpublished). Never invents an identifier."""
+    # "cite_title": the manuscript's own title when the page carries a descriptive one
+    year = _year_of(w); title = w.get("cite_title") or w["title"]["en"]; status = w["status"]["en"]
     arxiv, doi, journal = w.get("arxiv"), w.get("doi"), _venue_of(w)
+    isbns = _isbns_of(w)
     b = lambda s: str(s).replace("{", "(").replace("}", ")")
     key = "chen" + (year or "nd") + (_re.sub(r"[^a-z]", "", title.lower())[:8] or "work")
     lines = [f"  title = {{{b(title)}}}", "  author = {Chen, Jiaxuan}"]
@@ -404,6 +419,11 @@ def bibtex(w):
         lines.append(f"  doi = {{{b(doi)}}}")
     elif arxiv:
         head = "@misc"; lines += [f"  eprint = {{{b(arxiv)}}}", "  archivePrefix = {arXiv}"]
+        if status: lines.append(f"  note = {{{b(status)}}}")
+    elif isbns:
+        head = "@book"
+        if "self-published" in status.lower(): lines.append("  publisher = {Self-published}")
+        lines.append(f"  isbn = {{{', '.join(isbns)}}}")
         if status: lines.append(f"  note = {{{b(status)}}}")
     else:
         head = "@unpublished"
@@ -429,6 +449,10 @@ def paper_block(w):
             "var k=document.execCommand('copy');document.body.removeChild(t);done(!!k);}catch(x){done(false);}}"
             "if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(p.textContent).then(function(){done(true);},fb);else fb();\">"
             '<span class="i18n-en">Cite · BibTeX ⧉</span><span class="i18n-zh">引用 · BibTeX ⧉</span></button>')
+    # works.json "citable": false → no BibTeX. A guided study, a training exercise, participation in someone
+    # else's research, or a manuscript shown here under a descriptive title is not something to cite him for.
+    if w.get("citable") is False:
+        return '<div class="links paper">' + "".join(btns) + '</div>'
     return ('<div class="links paper">' + "".join(btns) + cite +
             f'<pre class="bibtex" hidden>{html.escape(bibtex(w))}</pre></div>')
 
@@ -442,11 +466,20 @@ def demo_block(w):
     return (f'<div class="demo-embed" data-demo="{d}"></div>'
             f'<script src="/demos/{d}.js" defer></script>')
 
+def write_if_changed(path, text):
+    """Strip trailing whitespace; write only when the content differs. Returns True if written."""
+    text = "\n".join(line.rstrip() for line in text.split("\n"))
+    if path.exists() and path.read_text(encoding="utf-8") == text:
+        return False
+    path.write_text(text, encoding="utf-8")
+    return True
+
 # ---------------- item pages (with prev/next within the constellation) ----------------
 BY_CLS = {}
 for w in DATA:
     BY_CLS.setdefault(w["cls"], []).append(w)
 
+written = 0
 for cls, items in BY_CLS.items():
     c = CLS[cls]
     for i, w in enumerate(items):
@@ -495,10 +528,10 @@ for cls, items in BY_CLS.items():
                        "url": SITE + "/", "identifier": "https://orcid.org/0009-0008-5211-4313"},
             "isPartOf": {"@type": "WebSite", "name": "Jiaxuan Chen · 陈嘉轩", "url": SITE + "/"},
         }
-        out.write_text(page(w["title"]["en"], body, depth=1, pager=True, desc=w["desc"]["en"][0],
-                            path=relpath, jsonld=jsonld), encoding="utf-8")
+        written += write_if_changed(out, page(w["title"]["en"], body, depth=1, pager=True, desc=w["desc"]["en"][0],
+                                              path=relpath, jsonld=jsonld))
 
-print("generated:", len(DATA), "item pages (no aggregate index pages — the sky is the index)")
+print("generated:", len(DATA), "item pages,", written, "changed (no aggregate index pages — the sky is the index)")
 
 # ---------------- hand-written pages: same footer, same back label, products pager ----------------
 # products/*, journey, music and updates are written by hand; their footer and back link used to be
@@ -520,7 +553,7 @@ def products_pager(key):
             f'{link(i + 1, "next", "Next ⟶", "下一个 ⟶")}</nav>')
 synced = 0
 for rel, depth, key in HAND:
-    f = ROOT / rel; t = f.read_text(encoding="utf-8")
+    f = ROOT / rel; t = orig = f.read_text(encoding="utf-8")
     t = _re.sub(r'<span class="i18n-en">Orrery</span><span class="i18n-zh">星盘</span>',
                 '<span class="i18n-en">Home</span><span class="i18n-zh">首页</span>', t)
     foot = footer_nav(depth=depth, current=key)
@@ -534,5 +567,6 @@ for rel, depth, key in HAND:
             t = _re.sub(r'<nav class="pager".*?</nav>', lambda m: pg, t, count=1, flags=_re.S)
         else:
             t = t.replace('<footer class="foot">', pg + '\n  <footer class="foot">', 1)
-    f.write_text(t, encoding="utf-8"); synced += 1
-print("synced chrome into", synced, "hand-written pages")
+    if t != orig:
+        f.write_text(t, encoding="utf-8"); synced += 1
+print("synced chrome into", synced, "of", len(HAND), "hand-written pages (the rest were already current)")

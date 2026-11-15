@@ -1,0 +1,56 @@
+{
+ "name": "m31",
+ "rgal": 80.0,
+ "pitch": 0.15707963267948966,
+ "span": 10.56907124299347,
+ "arms": 2,
+ "arm_amp": [
+  1.0,
+  0.85
+ ],
+ "phase0": 0.6,
+ "bar_ang": 0.9,
+ "lmap": 97.6,
+ "zmax": 10.0,
+ "hr_old": 17.0,
+ "hr_young": 26.0,
+ "h_old0": 1.3,
+ "h_young": 0.5,
+ "h_dust": 0.34,
+ "bar": [
+  6.0,
+  3.6,
+  2.4
+ ],
+ "bulge": [
+  3.6,
+  2.7
+ ],
+ "bulge_amp": 3.0,
+ "bar_amp": 0.35,
+ "sig": [
+  0.8,
+  0.032
+ ],
+ "hole_r": 9.0,
+ "hr_dust": 30.0,
+ "young_gain": 1.35,
+ "lane_gain": 1.1,
+ "bar_lanes": false,
+ "hii_n": 440,
+ "hii_p": [
+  0.5,
+  0.5
+ ],
+ "hii_len": 48.0,
+ "diffuse_dust": 0.06,
+ "dust_inner": 11.0,
+ "feather": 0.45,
+ "a0": 14.999999999999998,
+ "texels": 1536,
+ "oldMax": 2.0,
+ "youngMax": 6.0,
+ "hiiMax": 14.0,
+ "tauMax": 6.0,
+ "panoB": 0.7
+}

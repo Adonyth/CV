@@ -92,6 +92,9 @@ export function mountNyeArmature(THREE, scene, opts) {
     ephem.earth.set(TS.earth[0], TS.earth[1], TS.earth[2]);
     ephem.moon.set(TS.moon[0], TS.moon[1], TS.moon[2]);
     if (TS.eclipticNormal) ephem.eclipticNormal.set(TS.eclipticNormal[0], TS.eclipticNormal[1], TS.eclipticNormal[2]).normalize();
+    // the planes of the 日 and 年 pillars, in this group's local frame (see createPillarGear's callers)
+    if (TS.moonOrbitNormal) ephem.moonOrbitNormal = new T.Vector3(TS.moonOrbitNormal[0], TS.moonOrbitNormal[1], TS.moonOrbitNormal[2]).normalize();
+    if (TS.galacticNormal) ephem.galacticNormal = new T.Vector3(TS.galacticNormal[0], TS.galacticNormal[1], TS.galacticNormal[2]).normalize();
   }
   const earthRadiusVis = 0.95;   // shrunk: the Sun (SUN_BASE_R 2.05) now clearly dwarfs the Earth; day/hour rings + footprint scale with it
   const earthToMoon = ephem.moon.clone().sub(ephem.earth);
@@ -136,43 +139,53 @@ export function mountNyeArmature(THREE, scene, opts) {
     const monthGear = createPillarGear({
       name: "MonthPillarGear", pillar: PILLARS.month,
       stemRadius: AU_SCALE - 1.55, branchRadius: AU_SCALE + 1.45,
-      toothScale: 1.0, glyphStemScale: 0.92, glyphBranchScale: 1.0, couplingOpacity: 0.18
+      toothScale: 1.0, glyphStemScale: 0.95, glyphBranchScale: 1.0, couplingOpacity: 0.18
     });
     eclipticGroup.add(monthGear.group);
     if (TS) monthGear.group.scale.setScalar(TS.auLocal / AU_SCALE);   // true scale: the month ring circles the Sun at 1 AU
 
-    solarSystem.updateMatrixWorld(true);
-    const earthInEcliptic = ephem.earth.clone();
-    eclipticGroup.worldToLocal(earthInEcliptic);
+    // the Earth's place round the 月 ring. (This used to feed ephem.earth — a LOCAL position — to worldToLocal; once
+    // the rings were built lazily, after the system had been shifted to put the Earth at the world origin, that
+    // put 庚子 5.5° away from the Earth it is supposed to stand at.)
+    group.updateMatrixWorld(true);
+    const earthInEcliptic = eclipticGroup.worldToLocal(earth.group.getWorldPosition(new T.Vector3()));
     const earthOrbitAngle = Math.atan2(earthInEcliptic.y, earthInEcliptic.x);
     monthGear.stemSwivel.rotation.z = earthOrbitAngle - PILLARS.month.stemIndex * (TAU / 10);
     monthGear.branchSwivel.rotation.z = earthOrbitAngle - PILLARS.month.branchIndex * (TAU / 12);
     placeLabel(monthGear.label, AU_SCALE + 4.7, earthOrbitAngle, 0.2);
 
-  /* YEAR pillar 辛巳 — same factory, but the ring is EARTH-centred with radius =
-     the Earth–Sun distance: the month ring circles the Sun and passes through the
-     Earth; the year ring circles the Earth and passes through the Sun. Mirrors.
-     The active 辛巳 stands AT the Sun. Char sizes grow 时<日<月<年. */
+  /* THE FOUR PLANES (owner, 2026-11-14) — the pillars do not share a plane; each stands in the plane of its own
+     clock, and the body that keeps that clock is its pointer:
+       年 辛巳 · the GALACTIC plane, round the Earth — the Sun points at 辛巳
+       月 庚子 · the ECLIPTIC, round the Sun        — the Earth points at 庚子
+       日 庚午 · the MOON'S ORBITAL plane, round the Earth — the Moon points at 庚午
+       时 甲申 · the Earth's EQUATOR                 — no pointer: 甲 and 申 stand aligned
+     (The 年 ring's group keeps its old name, YearEclipticPlane: other code finds it by that name.) Char sizes grow 时<日<月<年. */
   var yearPillar = { slot: "year", label: "年", pair: "辛巳", stem: "辛", branch: "巳", stemIndex: 7, branchIndex: 5 };
   yearPillar.index60 = sexagenaryIndex(7, 5);
   var yearEclipticGroup = new T.Group();
   yearEclipticGroup.name = "YearEclipticPlane";
   yearEclipticGroup.userData.nyePart = "year-gear-plane";
-  yearEclipticGroup.quaternion.copy(eclipticGroup.quaternion);
+  if (ephem.galacticNormal) yearEclipticGroup.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), ephem.galacticNormal);
+  else yearEclipticGroup.quaternion.copy(eclipticGroup.quaternion);   // (no true-scale ephemeris: the old ecliptic placement)
   earth.group.add(yearEclipticGroup);
   var yearGear = createPillarGear({
     name: "YearPillarGear",
     pillar: yearPillar,
+    spread: "out",
     stemRadius: AU_SCALE + 4.2,
     branchRadius: AU_SCALE + 8.2,
     toothScale: 1.9,
-    glyphStemScale: 2.3,
-    glyphBranchScale: 2.6,
+    glyphStemScale: 1.15,     // (build 267: the spheres are small — a bead, never larger than the Sun's own glow)
+    glyphBranchScale: 1.25,
     couplingOpacity: 0.12
   });
   yearEclipticGroup.add(yearGear.group);
   if (TS) yearGear.group.scale.setScalar(TS.auLocal / AU_SCALE);
-  var sunAngle = earthOrbitAngle + Math.PI;
+  // the Sun's place round the 年 ring: its direction from the Earth, laid into the ring's own plane
+  group.updateMatrixWorld(true);
+  var sunInYear = yearEclipticGroup.worldToLocal(sun.group.getWorldPosition(new T.Vector3()));
+  var sunAngle = Math.atan2(sunInYear.y, sunInYear.x);
   yearGear.stemSwivel.rotation.z = sunAngle - yearPillar.stemIndex * (TAU / 10);
   yearGear.branchSwivel.rotation.z = sunAngle - yearPillar.branchIndex * (TAU / 12);
   placeLabel(yearGear.label, AU_SCALE + 12.4, sunAngle + 0.1, 0.3);
@@ -181,7 +194,8 @@ export function mountNyeArmature(THREE, scene, opts) {
   dayClockOrbitPlaneGroup.name = "DayClockOrbitPlane";
   dayClockOrbitPlaneGroup.userData.nyePart = "day-gear-plane";
   earth.group.add(dayClockOrbitPlaneGroup);
-  orientDayClockPlane(dayClockOrbitPlaneGroup, earth.group, moon.mesh);
+  if (ephem.moonOrbitNormal) dayClockOrbitPlaneGroup.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), ephem.moonOrbitNormal);   // the Moon's true orbital plane (r × v)
+  else orientDayClockPlane(dayClockOrbitPlaneGroup, earth.group, moon.mesh);   // (no true-scale ephemeris: a plane through the Moon)
 
   const dayGear = createPillarGear({
     name: "DayPillarGear",
@@ -189,8 +203,8 @@ export function mountNyeArmature(THREE, scene, opts) {
     stemRadius: earthRadiusVis * 7.16,    // the day ring rides WITH the moon's orbit (11 earthR): 2.05 × 3.49
     branchRadius: earthRadiusVis * 9.01,  // 2.58 × 3.49 — the moon travels just outside its own 日环
     toothScale: 0.18,
-    glyphStemScale: 0.21,
-    glyphBranchScale: 0.26,
+    glyphStemScale: 0.34,
+    glyphBranchScale: 0.38,
     couplingOpacity: 0.2
   });
   dayClockOrbitPlaneGroup.add(dayGear.group);
@@ -213,18 +227,19 @@ export function mountNyeArmature(THREE, scene, opts) {
   const hourGear = createPillarGear({
     name: "HourPillarGear",
     pillar: PILLARS.hour,
-    stemRadius: earthRadiusVis * 1.18,
-    branchRadius: earthRadiusVis * 1.38,
+    spread: "out",
+    stemRadius: earthRadiusVis * 1.30,     // clear of the air, and the two rims far enough apart that
+    branchRadius: earthRadiusVis * 1.64,   // the coins of one never ride over the coins of the other
     toothScale: 0.12,
-    glyphStemScale: 0.14,
-    glyphBranchScale: 0.18,
+    glyphStemScale: 0.085,
+    glyphBranchScale: 0.095,
     couplingOpacity: 0.22
   });
   hourGear.group.rotation.x = Math.PI / 2;
   hourLocalRingGroup.add(hourGear.group);
   const hourAnchor = Math.PI / 2;
   hourGear.branchSwivel.rotation.z = hourAnchor - PILLARS.hour.branchIndex * (TAU / 12);
-  hourGear.stemSwivel.rotation.z = hourAnchor - (PILLARS.hour.stemIndex + 0.5) * (TAU / 10);
+  hourGear.stemSwivel.rotation.z = hourAnchor - PILLARS.hour.stemIndex * (TAU / 10);   // 甲 stands exactly in line with 申: the 时 pillar has no pointer, the alignment is its mark
   hourGear.label.visible = false;
   const hourFloatingLabel = makeTextSprite("时 · 甲申", "#f4ead2", 0.55, {
     sub: "10×12 / 60"
@@ -237,22 +252,18 @@ export function mountNyeArmature(THREE, scene, opts) {
   gearMotions.push({ target: hourGear.stemSwivel, base: hourGear.stemSwivel.rotation.z, speed: 0.0015 });
   gearMotions.push({ target: hourGear.branchSwivel, base: hourGear.branchSwivel.rotation.z, speed: -0.00125 });
 
-    const orbitTrace = buildOrbitTrace(AU_SCALE, 0xe0876a, 0.12, "EarthOrbitTrace");
-    orbitTrace.quaternion.copy(eclipticGroup.quaternion);
-    if (TS) orbitTrace.scale.setScalar(TS.auLocal / AU_SCALE);
-    solarSystem.add(orbitTrace);
-    // lift the month-plane + orbit-trace off the Earth along the ecliptic normal (this used to run in space.js
+    // (the Earth-orbit trace is gone with every other line — owner, 2026-11-14)
+    // lift the month-plane off the Earth along the ecliptic normal (this used to run in space.js
     // post-mount; baked here now that the rings build lazily, so space.js's null eclPlane lookup can't skip it)
     var eclN = new T.Vector3(0, 0, 1).applyQuaternion(eclipticGroup.quaternion).normalize();
     var lift = 3.1 * (TS ? TS.auLocal / AU_SCALE : 1);
     eclipticGroup.position.addScaledVector(eclN, lift);
-    orbitTrace.position.addScaledVector(eclN, lift);
 
     /* prominence of the EIGHT CHARACTERS: 日柱庚 brightest, then 日午 + 月子,
        then the rest of the natal pairs; every unrelated glyph recedes */
     (function prominencePass() {
       var pil = { year: yearPillar, month: PILLARS.month, day: PILLARS.day, hour: PILLARS.hour };
-      var tier2 = { "day-stem": 3, "day-branch": 2, "month-branch": 2 };
+      var tier2 = PROM_TIER();
       group.traverse(function (o) {
         if (!o.isSprite || !o.userData || !o.userData.nyePart) return;
         var m2 = String(o.userData.nyePart).match(/^(year|month|day|hour)-(stem|branch)-glyph$/);
@@ -260,10 +271,10 @@ export function mountNyeArmature(THREE, scene, opts) {
         var slot = m2[1], kind = m2[2], p2 = pil[slot];
         var idx = (kind === "stem") ? o.userData.stemIndex : o.userData.branchIndex;
         var active = idx === ((kind === "stem") ? p2.stemIndex : p2.branchIndex);
-        if (!active) { o.material.opacity = 0.48; return; }
+        if (!active) return;                                  // the rest stay antique bronze (uActive 0)
         var t2 = tier2[slot + "-" + kind] || 1;
         o.scale.multiplyScalar(t2 === 3 ? 1.8 : t2 === 2 ? 1.5 : 1.25);
-        o.material.opacity = t2 === 3 ? 1.0 : t2 === 2 ? 0.98 : 0.93;
+        if (o.material.uniforms && o.material.uniforms.uProm) o.material.uniforms.uProm.value = t2 === 3 ? 1.10 : t2 === 2 ? 1.05 : 1.0;
       });
     })();
     group.updateMatrixWorld(true);
@@ -340,6 +351,15 @@ export function mountNyeArmature(THREE, scene, opts) {
     dispose,
     buildRings: buildGanzhiRings,        // idempotent; called by the scale director at orrery scale
     hasRings: function () { return ringsBuilt; },
+    eclipticNormalWorld: function (out) {   // the plane of the 月 pillar
+      solarSystem.updateWorldMatrix(true, false);
+      return out.copy(ephem.eclipticNormal).transformDirection(solarSystem.matrixWorld);
+    },
+    galacticNormalWorld: function (out) {   // the plane of the 年 pillar (zero vector when unknown) — the 星盘全景 frame looks from between the two
+      if (!ephem.galacticNormal) return out.set(0, 0, 0);
+      solarSystem.updateWorldMatrix(true, false);
+      return out.copy(ephem.galacticNormal).transformDirection(solarSystem.matrixWorld);
+    },
     atmoFar: (function () {                 // CPU-side camera-distance extinction for the atmosphere shells (varyings go garbage inside the shell)
       var _c = new T.Vector3();
       return function (camPos) {
@@ -539,6 +559,7 @@ export function mountNyeArmature(THREE, scene, opts) {
       "varying vec2 vUv; varying vec3 vWn; varying vec3 vWp; varying vec3 vObjN;",
       "uniform sampler2D uMap;",
       "uniform float uExposure;",
+      "uniform float uClose;",
       "uniform vec3 uWarmTint;",
       "float h13(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }",
       "vec3 h33(vec3 p){ return fract(sin(vec3(dot(p, vec3(127.1, 311.7, 74.7)), dot(p, vec3(269.5, 183.3, 246.1)), dot(p, vec3(113.5, 271.9, 124.6)))) * 43758.5453); }",
@@ -567,15 +588,22 @@ export function mountNyeArmature(THREE, scene, opts) {
       // ringed by bright faculae that only show near the limb — as in any white-light photograph
       "  float lat = abs(n.y), belt = smoothstep(0.12, 0.2, lat) * (1.0 - smoothstep(0.48, 0.58, lat));",
       "  float sn = vn(n * 7.0 + 3.1) * 0.62 + vn(n * 17.0 + 7.7) * 0.28 + vn(n * 44.0) * 0.10;",
-      "  float pen = belt * smoothstep(0.735, 0.765, sn), umb = belt * smoothstep(0.785, 0.80, sn);",
+      "  float pen = belt * smoothstep(0.728, 0.768, sn), umb = belt * smoothstep(0.780, 0.802, sn);",
+      "  float pfil = vn(n * 260.0) * 0.6 + vn(n * 610.0) * 0.4;",                       // the penumbra is fibrous, not a flat grey skirt
       "  float fac = belt * smoothstep(0.62, 0.73, sn) * (1.0 - pen) * pow(1.0 - mu, 1.6);",
       // LIMB DARKENING per channel: the limb is cooler, so it darkens most in blue and turns orange-red
       "  vec3 ld = vec3(0.42 + 0.58 * pow(mu, 0.40), 0.26 + 0.74 * pow(mu, 0.58), 0.12 + 0.88 * pow(mu, 0.80));",
-      "  vec3 col = vec3(1.0, 0.86, 0.64) * ld * gran * (0.93 + 0.14 * sg) * (0.90 + 0.18 * hp);",
-      "  col *= 1.0 - 0.45 * pen - 0.42 * umb;",
+      "  float sgc = 0.14 * (1.0 + 1.5 * uClose);",                                      // up close the magnetic network is what the eye reads
+      "  vec3 col = vec3(1.0, 0.86, 0.64) * ld * gran * (1.0 - 0.5 * sgc + sgc * sg) * (0.90 + 0.18 * hp);",
+      "  col = mix(col, col * vec3(1.0, 0.92, 0.78), uClose);",
+      "  col *= 1.0 - (0.36 + 0.16 * pfil) * pen - 0.44 * umb;",
       "  col += fac * vec3(0.34, 0.26, 0.15);",
       "  col=mix(col,col*uWarmTint,0.18);",
-      "  col*=uExposure*1.38;",                                 // HDR: the centre must clear the bloom threshold (0.86) — that is what makes it BLAZE, not a matte plate
+      // HDR from afar: the centre must clear the bloom threshold (0.86) — that is what makes it BLAZE, not a matte plate.
+      // UP CLOSE the eye adapts (build 263): at that exposure red and green clip across the whole disc in the 8-bit
+      // target, and granulation, spots and limb darkening all flatten into one cream plate under a sheet of bloom.
+      // uClose (the disc's on-screen size, set per render) stops the exposure down so the photosphere reads.
+      "  col*=uExposure*mix(1.38, 0.74, uClose);",
       "  gl_FragColor=vec4(col,1.0);",
       "}"
     ].join("\n");
@@ -583,6 +611,7 @@ export function mountNyeArmature(THREE, scene, opts) {
     const sunCoreUni = {
       uMap: { value: bakeSunSurface() },
       uExposure: { value: warm ? 0.86 : 1.05 },
+      uClose: { value: 0 },
       uWarmTint: { value: warm ? new T.Vector3(1.0, 0.86, 0.72) : new T.Vector3(1.0, 1.0, 1.0) }
     };
     const sunCoreMat = new T.ShaderMaterial({
@@ -595,23 +624,42 @@ export function mountNyeArmature(THREE, scene, opts) {
     const sunCoreMesh = new T.Mesh(new T.SphereGeometry(SUN_BASE_R, 120, 120), sunCoreMat);
     sunCoreMesh.name = "NyeSunCore";
     sunGroup.add(sunCoreMesh);
+    // exposure adaptation by apparent size: 0 while the disc is small, 1 once its radius passes ~45% of the view's half-height
+    (function () {
+      var _sp = new T.Vector3(), _cp = new T.Vector3(), _fl = null;
+      sunCoreMesh.onBeforeRender = function (renderer, sc, cam) {
+        _sp.setFromMatrixPosition(sunCoreMesh.matrixWorld); _cp.setFromMatrixPosition(cam.matrixWorld);
+        var R = SUN_BASE_R * sunCoreMesh.matrixWorld.getMaxScaleOnAxis();
+        var frac = (R / Math.max(1e-9, _sp.distanceTo(_cp))) / Math.tan((cam.fov || 52) * Math.PI / 360);
+        var k = Math.max(0, Math.min(1, (frac - 0.10) / 0.35));
+        k = k * k * (3 - 2 * k);
+        sunCoreUni.uClose.value = k;
+        // the glare language of a distant star (spark, streak, rim, corona shells) steps back as the disc fills the view
+        if (typeof solarRimUni !== "undefined") solarRimUni.uClose.value = k;
+        for (var ci = 0; ci < coronaLayers.length; ci++) if (coronaLayers[ci].uni.uClose) coronaLayers[ci].uni.uClose.value = k;
+        if (!_fl) _fl = [sunGroup.getObjectByName("NyeSunSpark"), sunGroup.getObjectByName("NyeSunStreak")];
+        if (_fl[0]) _fl[0].material.opacity = 1 - k;
+        if (_fl[1]) _fl[1].material.opacity = 0.38 * (1 - k);
+      };
+    })();
 
     const solarRimFrag = [
       "varying vec2 vUv; varying vec3 vWn; varying vec3 vWp;",
+      "uniform float uClose;",
       "uniform sampler2D uWisp;",
       "vec3 acesApprox(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14),0.0,1.0); }",
       "void main(){",
       "  vec3 N=normalize(vWn);",
       "  vec3 V=normalize(cameraPosition-vWp);",
       "  float mu=max(dot(N,V),0.0);",
-      "  float f=pow(1.0-mu,3.4)*smoothstep(0.0,0.16,mu);",   // build 228: fades out AT the limb (was a crisp bright ring)
+      "  float f=pow(1.0-mu,3.4)*smoothstep(0.0,0.16,mu)*(1.0-0.70*uClose);",   // build 228: fades out AT the limb (was a crisp bright ring)
       "  float g=texture2D(uWisp,vUv*vec2(3.0,2.0)).r;",
       "  vec3 c=vec3(2.05,0.70,0.30)*f*(0.80+0.20*g);",
       "  c=acesApprox(c*0.86);",
       "  gl_FragColor=vec4(c,clamp(f*0.92,0.0,1.0));",
       "}"
     ].join("\n");
-    const solarRimUni = { uWisp: { value: bakeWisps(31, 1.6, 2.0) } };
+    const solarRimUni = { uWisp: { value: bakeWisps(31, 1.6, 2.0) }, uClose: { value: 0 } };
     const solarRimMat = new T.ShaderMaterial({
       uniforms: solarRimUni,
       vertexShader: sunVert,
@@ -629,7 +677,7 @@ export function mountNyeArmature(THREE, scene, opts) {
     const coronaFrag = [
       "varying vec2 vUv; varying vec3 vWn; varying vec3 vWp;",
       "uniform sampler2D uWisp;",
-      "uniform float uOpacity;",
+      "uniform float uOpacity; uniform float uClose;",
       "uniform vec3 uColor;",
       "uniform float uStreamAmt;",
       "uniform float uLimbPow;",
@@ -643,7 +691,7 @@ export function mountNyeArmature(THREE, scene, opts) {
       "  float phi=atan(vWn.y,vWn.x);",
       "  float stream=0.80+0.20*sin(phi*14.0)*sin(phi*8.0+vWn.z*5.5);",
       "  stream=mix(1.0,stream,uStreamAmt);",
-      "  float alpha=limbW*wisps*uOpacity*stream*smoothstep(0.0,0.32,mu);",   // build 228: zero at the silhouette — no hard ring where the shell ends
+      "  float alpha=limbW*wisps*uOpacity*stream*smoothstep(0.0,0.32,mu)*(1.0-0.62*uClose);",   // build 228: zero at the silhouette — no hard ring where the shell ends · build 263: from close in, the shells are rings, not glow
       "  gl_FragColor=vec4(uColor,clamp(alpha,0.0,1.0));",
       "}"
     ].join("\n");
@@ -662,6 +710,7 @@ export function mountNyeArmature(THREE, scene, opts) {
       const uni = {
         uWisp: { value: bakeWisps(101 + i * 13, 1.0 + i * 0.35, 1.05) },
         uOpacity: { value: cd[1] },
+        uClose: { value: 0 },
         uColor: { value: new T.Vector3(cd[2], cd[3], cd[4]) },
         uStreamAmt: { value: cd[5] },
         uLimbPow: { value: cd[6] }
@@ -1145,10 +1194,83 @@ export function mountNyeArmature(THREE, scene, opts) {
     return { mesh, uniforms };
   }
 
+  /* ===================== the 干支 rings (build 267): light, in the original language =====================
+     What the owner asked for: the twenty-two characters of each pillar, each in its 五行 colour (阳 pale, 阴 deep)
+     inside a transparent sphere — and nothing else: no gears, no metal, and NO LINES (no ring circles, no
+     graduations, no orbit traces). The "ring" is the circle the spheres themselves stand in.
+     What changed is only what true scale broke and what the old sprites lacked:
+       · the characters are drawn from a distance-field atlas (data/ring-glyphs.webp — the same 宋体 voice, baked,
+         so the stroke is razor-sharp at any size and identical on every machine);
+       · the sphere is a fine rim in the character's own colour around a clear, colourless inside — no fill, no
+         highlight, no caustic, no halo; matte, always dimmer than the Sun. The eight natal characters are clear,
+         the others of each circle are quieter and more transparent;
+       · a sphere never shrinks below ~3 px, so at a distance the pillar is a circle of beads instead of nothing,
+         and never grows past ~7% of the view's height: a bead, not a bubble;
+       · a ring you are standing inside (or right beside) is not drawn, so the Earth's neighbourhood stays clean.
+     Everything here is LIGHT under the scene's alpha gate: colour D with brightness L is written as rgb = D/a,
+     a = max(√L, glass) with ONE/ONE blending, so it composites as D + backdrop·(1 − a) and a fade is a true fade.
+     The object names, userData and the {group, stemSwivel, branchSwivel, label} contract are unchanged. */
+  var _ringTex = null;
+  function ringTextures() {
+    if (_ringTex) return _ringTex;
+    const glyphs = new T.TextureLoader().load("data/ring-glyphs.webp?v=2");   // 6×4 tiles, one distance field per character (data, not colour)
+    glyphs.generateMipmaps = false; glyphs.minFilter = T.LinearFilter; glyphs.magFilter = T.LinearFilter;
+    glyphs.wrapS = glyphs.wrapT = T.ClampToEdgeWrapping;
+    _ringTex = { glyphs: glyphs };
+    return _ringTex;
+  }
+  function gateLight(mat) {      // additive light that writes its own alpha (the scene's alpha gate)
+    mat.transparent = true; mat.depthWrite = false;
+    mat.blending = T.CustomBlending; mat.blendEquation = T.AddEquation;
+    mat.blendSrc = T.OneFactor; mat.blendDst = T.OneFactor; mat.blendSrcAlpha = T.OneFactor; mat.blendDstAlpha = T.OneFactor;
+    return mat;
+  }
+  /* a ring is a thing to look AT. From well inside it (closer to its centre than ~0.6 of its radius) it would be a
+     belt of giant spheres round the whole sky, and from right beside its line (the 月 ring passes the Earth) a
+     crowd of them across the view: in both places it fades out, and it returns as the lens pulls back past it —
+     so the Earth's own neighbourhood stays clean. Cached per pillar per render call. */
+  function ringVisibility(obj, renderer, camera) {
+    let root = obj.parent, hops = 0;
+    while (root && root.userData.ringOuterR == null && hops++ < 4) root = root.parent;
+    if (!root || root.userData.ringOuterR == null || !camera) return 1;
+    const f = renderer.info.render.frame, cch = root.userData._vis || (root.userData._vis = { f: -1, cam: null, v: 1 });
+    if (cch.f === f && cch.cam === camera) return cch.v;
+    const e = root.matrixWorld.elements, ce = camera.matrixWorld.elements;
+    const dx = ce[12] - e[12], dy = ce[13] - e[13], dz = ce[14] - e[14];
+    const sc = Math.hypot(e[0], e[1], e[2]) || 1, Rw = root.userData.ringOuterR * sc, Rm = (root.userData.ringMidR || root.userData.ringOuterR) * sc;
+    const d = Math.hypot(dx, dy, dz);
+    const h = (dx * e[8] + dy * e[9] + dz * e[10]) / sc;              // height above the ring's plane (its local Z)
+    const rho = Math.sqrt(Math.max(0, d * d - h * h));                // distance from its axis
+    const dBand = Math.hypot(rho - Rm, h);                            // distance from the line itself
+    const sm = function (a, b, x) { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    cch.f = f; cch.cam = camera; cch.v = sm(0.55, 0.85, d / Math.max(Rw, 1e-9)) * sm(0.30, 0.52, dBand / Math.max(Rm, 1e-9));
+    return cch.v;
+  }
+  function ringSyncBefore(renderer, scene, camera) {     // per draw: the fade the scene asked for, the target's height, whether to be seen
+    const m = this.material, u = m && m.uniforms; if (!u) return;
+    u.uOpacity.value = m.opacity;
+    if (u.uVis) u.uVis.value = ringVisibility(this, renderer, camera);
+    if (u.uViewH) { const rt = renderer.getRenderTarget(); u.uViewH.value = rt ? rt.height : renderer.domElement.height; }
+    if (u.uSelf) u.uSelf.value = this.scale.y;           // a sphere tells its shader its own scale (the prominence pass changes it)
+  }
+  /* prominence of the eight: 日柱庚 first, then 日午 and 月子, then the other natal characters */
+  function PROM_TIER() { return { "day-stem": 3, "day-branch": 2, "month-branch": 2 }; }
+  function promScale(slot, kind) { const t = PROM_TIER()[slot + "-" + kind] || 1; return t === 3 ? 1.8 : t === 2 ? 1.5 : 1.25; }
+
   function createPillarGear(config) {
-    const pillar = config.pillar;
+    const pillar = config.pillar, ts = config.toothScale;
+    /* the pillar's own stem and branch stand at the same angle, one on each circle, and both are enlarged: the two
+       circles are set far enough apart that the two spheres do not ride over each other (with room for a tilted
+       view). config.spread "out" keeps the inner circle where it is (the 年 stem must stay clear of the Sun, the
+       时 stem clear of the air) and moves the outer one; otherwise the pair opens about its middle. */
+    const dS = 2.15 * config.glyphStemScale * 1.12 * promScale(pillar.slot, "stem"), dB = 2.15 * config.glyphBranchScale * 1.12 * promScale(pillar.slot, "branch");
+    const need = (dS + dB) * 0.5 * 1.22;
+    let rS = config.stemRadius, rB = config.branchRadius;
+    if (rB - rS < need) { if (config.spread === "out") rB = rS + need; else { const mid = (rS + rB) * 0.5; rS = mid - need * 0.5; rB = mid + need * 0.5; } }
     const gear = new T.Group();
     gear.name = config.name;
+    gear.userData.ringOuterR = rB;   // ringVisibility reads these
+    gear.userData.ringMidR = (rS + rB) * 0.5;
     gear.userData.nyePart = pillar.slot + "-pillar";
     gear.userData.pillar = pillar.pair;
     gear.userData.index60 = pillar.index60;
@@ -1160,43 +1282,13 @@ export function mountNyeArmature(THREE, scene, opts) {
     branchSwivel.name = config.name + "Branch12ToothSwivel";
     branchSwivel.userData.nyePart = pillar.slot + "-branch-ring";
 
-    const stemTrack = makeTorus(config.stemRadius, 0.024 * config.toothScale, 0xe0876a, 0.22, "StemTrack10");
-    const branchTrack = makeTorus(config.branchRadius, 0.026 * config.toothScale, 0xf0c08c, 0.20, "BranchTrack12");
-    stemSwivel.add(stemTrack);
-    branchSwivel.add(branchTrack);
-
-    const toothStemMat = makeBasic(0xe0876a, 0.28, T.AdditiveBlending);
-    const toothStemActiveMat = makeBasic(0xf4ead2, 0.68, T.AdditiveBlending);
-    const toothBranchMat = makeBasic(0xc8a961, 0.24, T.AdditiveBlending);
-    const toothBranchActiveMat = makeBasic(0xffc69a, 0.66, T.AdditiveBlending);
-    addToothSet(stemSwivel, 10, config.stemRadius, 0.18 * config.toothScale, 0.58 * config.toothScale, 0.038 * config.toothScale, pillar.stemIndex, toothStemMat, toothStemActiveMat, "stem");
-    addToothSet(branchSwivel, 12, config.branchRadius, 0.17 * config.toothScale, 0.68 * config.toothScale, -0.038 * config.toothScale, pillar.branchIndex, toothBranchMat, toothBranchActiveMat, "branch");
-
-    const coupling = makeRadialTicks(config.stemRadius + 0.26 * config.toothScale, config.branchRadius - 0.26 * config.toothScale, 60, 0.012, 0xe0876a, config.couplingOpacity);
-    coupling.name = config.name + "Base60CouplingTicks";
-    coupling.userData.nyePart = pillar.slot + "-base60-coupling";
-    gear.add(coupling);
-
-    const activeAngle60 = (pillar.index60 / 60) * TAU;
-    const activeBead = new T.Mesh(
-      new T.SphereGeometry(0.10 * config.toothScale + 0.035, 18, 18),
-      makeBasic(0xf4ead2, 0.86, T.AdditiveBlending)
-    );
-    activeBead.name = config.name + "ActiveBase60Bead";
-    activeBead.position.set(
-      ((config.stemRadius + config.branchRadius) * 0.5) * Math.cos(activeAngle60),
-      ((config.stemRadius + config.branchRadius) * 0.5) * Math.sin(activeAngle60),
-      0.13 * config.toothScale
-    );
-    activeBead.userData.nyePart = pillar.slot + "-base60-active";
-    activeBead.userData.nyePick = pillar.slot;
-    gear.add(activeBead);
-
+    // No lines of any kind (owner, 2026-11-14): no track circles, no sixty graduations, no pearl. A pillar is its
+    // twenty-two characters in their spheres, standing where the two rings were.
     for (let i = 0; i < 10; i++) {
       const a = (i / 10) * TAU;
-      const sprite = makeGlyphSprite(STEMS[i], STEM_COLORS[i], config.glyphStemScale, i === pillar.stemIndex);
+      const sprite = makeGlyphSprite(STEMS[i], STEM_COLORS[i], config.glyphStemScale, i === pillar.stemIndex, i, rS);
       sprite.name = config.name + "StemGlyph_" + STEMS[i];
-      sprite.position.set(config.stemRadius * Math.cos(a), config.stemRadius * Math.sin(a), 0.19 * config.toothScale);
+      sprite.position.set(rS * Math.cos(a), rS * Math.sin(a), 0.19 * ts);
       sprite.userData.nyePart = pillar.slot + "-stem-glyph";
       sprite.userData.nyePick = pillar.slot;
       sprite.userData.stemIndex = i;
@@ -1204,9 +1296,9 @@ export function mountNyeArmature(THREE, scene, opts) {
     }
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * TAU;
-      const sprite = makeGlyphSprite(BRANCHES[i], BRANCH_COLORS[i], config.glyphBranchScale, i === pillar.branchIndex);
+      const sprite = makeGlyphSprite(BRANCHES[i], BRANCH_COLORS[i], config.glyphBranchScale, i === pillar.branchIndex, 10 + i, rB);
       sprite.name = config.name + "BranchGlyph_" + BRANCHES[i];
-      sprite.position.set(config.branchRadius * Math.cos(a), config.branchRadius * Math.sin(a), 0.23 * config.toothScale);
+      sprite.position.set(rB * Math.cos(a), rB * Math.sin(a), 0.23 * ts);
       sprite.userData.nyePart = pillar.slot + "-branch-glyph";
       sprite.userData.nyePick = pillar.slot;
       sprite.userData.branchIndex = i;
@@ -1229,65 +1321,86 @@ export function mountNyeArmature(THREE, scene, opts) {
     return { group: gear, stemSwivel, branchSwivel, label };
   }
 
-  function addToothSet(parent, count, radius, tangentWidth, radialLength, z, activeIndex, mat, activeMat, kind) {
-    for (let i = 0; i < count; i++) {
-      const a = (i / count) * TAU;
-      const mesh = new T.Mesh(new T.BoxGeometry(tangentWidth, radialLength, Math.max(0.012, radialLength * 0.08)), i === activeIndex ? activeMat : mat);
-      mesh.name = kind + "Tooth_" + i;
-      mesh.position.set(radius * Math.cos(a), radius * Math.sin(a), z);
-      mesh.rotation.z = a - Math.PI / 2;
-      mesh.userData.nyeGearTooth = kind;
-      mesh.onBeforeRender = glyphNearFadeBefore;   // build 227: near-field fade, same as the glyphs
-      mesh.onAfterRender = glyphNearFadeAfter;
-      parent.add(mesh);
-    }
-  }
-
   // glyph near-fade scratch — `var` + lazy init: this sits after the factory's return statement, so a
   // const here would never initialise (TDZ) even though the hoisted functions below are reachable
-  var _gnfPos = null, _gnfScale = null, _gnfQuat = null, _gnfNdc = null;
-  function makeGlyphSprite(char, color, sizeScale, active) {
-    const cv = document.createElement("canvas");
-    cv.width = 128;
-    cv.height = 128;
-    const ctx = cv.getContext("2d");
-    ctx.clearRect(0, 0, 128, 128);
-    ctx.beginPath();
-    ctx.arc(64, 64, 43, 0, TAU);
-    ctx.fillStyle = "rgba(11,10,9,0.62)";
-    ctx.fill();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = active ? 3.2 : 2.1;
-    ctx.globalAlpha = active ? 0.78 : 0.46;
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = color;
-    ctx.font = (active ? "700 " : "600 ") + '48px "Songti SC","STSong","Noto Serif SC",serif';
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(char, 64, 66);
-
-    const tex = new T.CanvasTexture(cv);
-    setTextureColorSpace(tex);
-    const mat = new T.SpriteMaterial({
-      map: tex,
-      transparent: true,
-      opacity: active ? 0.96 : 0.62,
-      depthWrite: false,
-      blending: T.NormalBlending
-    });
-    disableToneMapping(mat);
+  var _gnfPos = null, _gnfScale = null, _gnfQuat = null, _gnfNdc = null, _orbGeo = null;
+  /* a character in its transparent sphere. A disc that always faces the lens: a fine rim in the character's
+     五行 colour (阳 pale · 阴 deep, as STEM_COLORS / BRANCH_COLORS give it), a clear colourless inside with the
+     stars showing through, and the character in the same colour, sharp from the distance field. */
+  function makeGlyphSprite(char, color, sizeScale, active, tile, ringR) {
+    const tex = ringTextures();
+    const has = tile >= 0, col = has ? tile % 6 : 0, row = has ? Math.floor(tile / 6) : 0;
+    const mat = gateLight(new T.ShaderMaterial({
+      uniforms: {
+        uAtlas: { value: tex.glyphs }, uTile: { value: new T.Vector4(col / 6, 1 - (row + 1) / 4, 1 / 6, 1 / 4) }, uHas: { value: has ? 1 : 0 },
+        uTint: { value: new T.Color(color) }, uActive: { value: active ? 1 : 0 }, uProm: { value: 1 },
+        uOpacity: { value: 1 }, uVis: { value: 1 }, uViewH: { value: 900 }, uMinPx: { value: 3.0 }, uRingR: { value: ringR || 1 }, uSelf: { value: 1 }
+      },
+      vertexShader: [
+        "uniform float uViewH, uMinPx, uRingR, uSelf; varying vec2 vUv; varying float vK; varying float vPx;",
+        "void main(){",
+        "  vUv = uv;",
+        "  vec4 mv = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);",
+        "  vec2 sc = vec2(length(modelMatrix[0].xyz), length(modelMatrix[1].xyz));",
+        "  float pxPerUnit = uViewH * 0.5 * projectionMatrix[1][1] / max(1e-6, -mv.z);",
+        "  float px = sc.y * pxPerUnit, ringPx = uRingR * (sc.y / max(uSelf, 1e-6)) * pxPerUnit;",
+        "  float k = max(1.0, uMinPx / max(px, 1e-5));",          // far away it stays a bead on the ring…
+        "  k = mix(1.0, k, smoothstep(10.0, 28.0, ringPx));",      // …unless the whole ring is a speck
+        "  float cap = uViewH * 0.075;",
+        "  if (px > cap) k = cap / px;",                           // it stays a bead: never more than ~7% of the view's height…
+        "  vK = smoothstep(3.0, 9.0, ringPx) * (1.0 - smoothstep(cap * 1.9, cap * 2.5, px));",   // …and past twice that you are upon it: it lets go
+        "  vPx = px * k;",
+        "  mv.xy += position.xy * sc * k;",
+        "  gl_Position = projectionMatrix * mv;",
+        "}"
+      ].join("\n"),
+      fragmentShader: [
+        "uniform sampler2D uAtlas; uniform vec4 uTile; uniform vec3 uTint; uniform float uHas, uActive, uProm, uOpacity, uVis;",
+        "varying vec2 vUv; varying float vK; varying float vPx;",
+        "void main(){",
+        "  vec2 d = (vUv * 2.0 - 1.0) / 0.97;",
+        "  float r = length(d), inside = 1.0 - smoothstep(0.97, 1.0, r);",
+        "  float z = sqrt(max(0.0, 1.0 - r * r));",
+        "  float e = 1.0 - z;",                                     // 0 at the centre … 1 at the limb
+        "  vec3 tint = uTint;",
+        // The sphere (owner, 2026-11-14: "球的边框和字同色,但是只要边框有颜色,里面是无色透明的"): a fine rim in the
+        // character's own colour and NOTHING inside it — no fill, no tint, no highlight, no caustic, no halo.
+        // Matte, and dimmer than the Sun at any distance.
+        "  float lw = max(0.070, 2.6 / max(vPx, 1.0));",                 // the rim's width: 7% of the radius, never under ~1.3 px
+        "  float rimLine = smoothstep(0.97 - lw, 0.97 - lw * 0.45, r) * (1.0 - smoothstep(0.955, 0.995, r));",
+        "  vec3 D = tint * rimLine * mix(0.55, 0.85, uActive);",
+        // the character: sharp from the distance field, in its colour — no glow
+        "  float glyph = 0.0;",
+        "  if (uHas > 0.5) {",
+        "    vec2 g = d / 0.80 * 0.5 + 0.5;",                       // the character's tile spans 80% of the sphere
+        "    if (g.x > 0.0 && g.x < 1.0 && g.y > 0.0 && g.y < 1.0) {",
+        "      float sd = texture2D(uAtlas, uTile.xy + g * uTile.zw).r;",
+        "      float w = clamp(0.5 * 160.0 * 0.80 * 0.97 / max(vPx, 1.0) * 0.07 / 0.14, 0.012, 0.22);",   // one pixel's worth of the field
+        "      glyph = smoothstep(0.5 - w, 0.5 + w, sd);",
+        "    }",
+        "  }",
+        "  D += tint * glyph * mix(0.55, 1.0, uActive);",          // the character is exactly the rim's colour
+        // the eight of the four pillars are clear; every other character is a quieter, more transparent graduation
+        "  D *= mix(0.40, 1.0, uActive) * uProm;",
+        "  float glass = 0.0;",                                           // the inside is clear: nothing is dimmed behind it
+        "  float fade = uOpacity * uVis * vK;",
+        "  D *= fade; glass *= fade;",
+        "  float a = clamp(max(sqrt(max(D.r, max(D.g, D.b))), glass), 0.0, 1.0);",
+        "  if (a < 0.003) discard;",
+        "  gl_FragColor = vec4(min(D / max(a, 1e-4), vec3(1.0)), a);",
+        "}"
+      ].join("\n")
+    }));
+    mat.rotation = 0; mat.sizeAttenuation = true;   // THREE.Sprite.raycast reads these off its material
     const sprite = new T.Sprite(mat);
+    if (!_orbGeo) _orbGeo = new T.CircleGeometry(0.5, 40);
+    sprite.geometry = _orbGeo;
     const scale = 2.15 * sizeScale * (active ? 1.12 : 1);
     sprite.scale.set(scale, scale, 1);
     sprite.center.set(0.5, 0.5);
     sprite.userData.char = char;
-    sprite.userData.baseOpacity = mat.opacity;
-    // build 227 — a lens's near field: a ring passing close to the camera blew its glyphs up into
-    // huge half-cut discs across the overview. Fade a glyph by its on-screen size (≈90 px → gone by
-    // ≈200 px) — scaled only for this draw, so the ring-fade system that owns .opacity is untouched.
-    sprite.onBeforeRender = glyphNearFadeBefore;
-    sprite.onAfterRender = glyphNearFadeAfter;
+    sprite.userData.baseOpacity = 1;
+    sprite.onBeforeRender = ringSyncBefore;
     return sprite;
   }
   function glyphNearFadeBefore(renderer, scene, camera) {
@@ -1354,45 +1467,6 @@ export function mountNyeArmature(THREE, scene, opts) {
 
   function placeLabel(sprite, radius, angle, z) {
     sprite.position.set(radius * Math.cos(angle), radius * Math.sin(angle), z || 0);
-  }
-
-  function makeRadialTicks(r0, r1, count, z, color, opacity) {
-    const pos = new Float32Array(count * 6);
-    for (let i = 0; i < count; i++) {
-      const a = (i / count) * TAU;
-      const c = Math.cos(a);
-      const s = Math.sin(a);
-      pos[i * 6] = r0 * c;
-      pos[i * 6 + 1] = r0 * s;
-      pos[i * 6 + 2] = z;
-      pos[i * 6 + 3] = r1 * c;
-      pos[i * 6 + 4] = r1 * s;
-      pos[i * 6 + 5] = z;
-    }
-    const geo = new T.BufferGeometry();
-    geo.setAttribute("position", new T.BufferAttribute(pos, 3));
-    const mat = new T.LineBasicMaterial({
-      color,
-      transparent: true,
-      opacity,
-      blending: T.AdditiveBlending,
-      depthWrite: false
-    });
-    disableToneMapping(mat);
-    return new T.LineSegments(geo, mat);
-  }
-
-  function buildOrbitTrace(radius, color, opacity, name) {
-    const line = makeRadialTicks(radius, radius + 0.001, 240, -0.11, color, opacity);
-    line.name = name;
-    return line;
-  }
-
-  function makeTorus(radius, tube, color, opacity, name) {
-    const mesh = new T.Mesh(new T.TorusGeometry(radius, tube, 8, 192), makeBasic(color, opacity, T.AdditiveBlending));
-    mesh.name = name;
-    mesh.userData.nyePart = name;
-    return mesh;
   }
 
   function makeBasic(color, opacity, blending) {

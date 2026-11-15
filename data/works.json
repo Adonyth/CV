@@ -19,11 +19,13 @@
       "desc": {
         "en": [
           "A programme within Omytea studying density-matrix belief states as representations of uncertainty over multiple futures. The work uses classically executed open-system mathematics, operator/channel updates and records of how observations revise a forecast.",
-          "Current prototypes study calibration and auditable updates. They do not establish forecasting superiority or quantum-computing advantage. Related work includes the Personal Future Console and a Python package for density-matrix and Lindblad-style calculations."
+          "Current prototypes study calibration and auditable updates. They do not establish forecasting superiority or quantum-computing advantage. Related work includes the Personal Future Console and a Python package for density-matrix and Lindblad-style calculations.",
+          "Technical report (Zenodo, 2026, not peer reviewed): Open-system versus unitary density-matrix predictors on long-horizon predictive error. Omytea's research page states: “So far, none of our comparisons has shown a density-matrix model forecasting better than a suitable classical model on real data.”"
         ],
         "zh": [
           "Omytea 预测研究中的一个方向，以密度矩阵信念态表达多种未来的不确定性，使用经典计算实现的开系统数学、算子／信道更新，并记录观测如何修正预测。",
-          "目前的原型研究校准与可追溯更新，尚未建立预测优势或量子计算优势。相关工作包括个人未来控制台，以及用于密度矩阵和 Lindblad 形式计算的 Python 软件包。"
+          "目前的原型研究校准与可追溯更新，尚未建立预测优势或量子计算优势。相关工作包括个人未来控制台，以及用于密度矩阵和 Lindblad 形式计算的 Python 软件包。",
+          "技术报告（Zenodo，2026 年，未经同行评议）：Open-system versus unitary density-matrix predictors on long-horizon predictive error。Omytea 研究页写明：迄今没有任何比较显示密度矩阵模型在真实数据上优于合适的经典模型。"
         ]
       },
       "links": [
@@ -34,6 +36,14 @@
         {
           "label": "omyteaai.com ↗",
           "href": "https://omyteaai.com"
+        },
+        {
+          "label": "Technical report · Zenodo · 10.5281/zenodo.24050453 ↗",
+          "href": "https://doi.org/10.5281/zenodo.24050453"
+        },
+        {
+          "label": "Code · omytea-research ↗",
+          "href": "https://github.com/Omytea-Almighty/omytea-research"
         }
       ],
       "ai_assisted": true
@@ -213,11 +223,11 @@
       "desc": {
         "en": [
           "Studies the continuum limit of finite-dimensional modular data for half-line free fermions using compact-local wavelet schemes. Under the stated hypotheses, local restrictions converge in norm and the modular generators converge in the strong-resolvent sense after faithful block completion.",
-          "A locality/passband obstruction distinguishes local convergence from raw fixed-cutoff global quasi-equivalence. Version 2 corrects the earlier endpoint-rate discussion; current external journal-review status is not asserted."
+          "A locality/passband obstruction distinguishes local convergence from raw fixed-cutoff global quasi-equivalence. Version 2 corrects the earlier endpoint-rate discussion. Not peer reviewed."
         ],
         "zh": [
           "利用紧支撑局域小波格式研究半直线自由费米子有限维模数据的连续极限。在给定假设下，局域限制按范数收敛，忠实分块补全后的模生成元按强预解式意义收敛。",
-          "局域性／通带障碍区分了局域收敛与原始固定截断下的全局拟等价。第二版修正了早期端点速率讨论；此处不主张当前已进入期刊外审。"
+          "局域性／通带障碍区分了局域收敛与原始固定截断下的全局拟等价。第二版修正了早期端点速率讨论。未经同行评议。"
         ]
       },
       "links": [
@@ -243,8 +253,8 @@
         "zh": "粒子现象学"
       },
       "status": {
-        "en": "Working manuscript · October 2026",
-        "zh": "工作手稿 · 2026 年 10 月"
+        "en": "Unpublished manuscript",
+        "zh": "未发表手稿"
       },
       "desc": {
         "en": [
@@ -332,23 +342,33 @@
         "zh": "引力波推断"
       },
       "status": {
-        "en": "Working manuscript · analysis in progress",
-        "zh": "工作手稿 · 分析进行中"
+        "en": "Submitted manuscript · Astronomy and Computing, October 2026",
+        "zh": "已投稿手稿 · Astronomy and Computing，2026 年 10 月"
       },
       "desc": {
         "en": [
-          "Studies how start time, conditioning, processing choices and null calibration affect the significance assigned to a black-hole ringdown overtone. The programme began in June 2024; the computations described here were carried out in 2026.",
+          "Studies how start time, conditioning, processing choices and null calibration affect the significance assigned to a black-hole ringdown overtone. The programme began in June 2024; the computations described here were carried out in 2026. Submitted 25 October 2026 as “Forward-conditioned means and null calibration in onset-selected ringdown tests”; no review outcome is asserted.",
           "A controlled synthetic Gaussian-mixture null study used 199 calibration and 200 test samples. The conditioned test rejected 10/200 null samples (5%; 95% binomial interval 2.42–9.00%). This bounded synthetic diagnostic does not establish coverage in real detector noise.",
           "Related work compares waveform and posterior conventions, including a separate GW250114 posterior audit. The illustration below is an explanatory visualization, not a new detector observation or event-discovery result."
         ],
         "zh": [
-          "研究起始时刻、条件化、处理选择与零假设校准如何影响黑洞铃宕泛音的显著性。研究计划始于 2024 年 6 月，此处所述计算在 2026 年完成。",
+          "研究起始时刻、条件化、处理选择与零假设校准如何影响黑洞铃宕泛音的显著性。研究计划始于 2024 年 6 月，此处所述计算在 2026 年完成。2026 年 10 月 25 日以“Forward-conditioned means and null calibration in onset-selected ringdown tests”为题投稿；不主张任何审稿结果。",
           "受控的合成高斯混合零假设研究使用 199 个校准样本与 200 个测试样本。条件化检验拒绝了其中 10/200 个样本（5%；95% 二项区间 2.42–9.00%）。这一有限合成诊断尚不能建立真实探测器噪声中的覆盖率。",
           "相关工作比较波形与后验约定，并包含独立的 GW250114 后验审计。下方图示用于解释方法，不是新的探测器观测或事件发现。"
         ]
       },
-      "links": [],
+      "links": [
+        {
+          "label": "Data · Zenodo · 10.5281/zenodo.23598396 ↗",
+          "href": "https://doi.org/10.5281/zenodo.23598396"
+        },
+        {
+          "label": "Software · Zenodo · 10.5281/zenodo.23598653 ↗",
+          "href": "https://doi.org/10.5281/zenodo.23598653"
+        }
+      ],
       "demo": "ringdown",
+      "cite_title": "Forward-conditioned means and null calibration in onset-selected ringdown tests",
       "ai_assisted": true
     },
     {
@@ -415,37 +435,36 @@
       "id": "cmsJets",
       "cls": "research",
       "title": {
-        "en": "CMS Jet Physics",
-        "zh": "CMS 喷流物理"
+        "en": "PYTHIA: parton showers and jet structure (guided study)",
+        "zh": "PYTHIA 指导学习：部分子簇射与喷注结构"
       },
       "period": "2025.05–2025.09",
       "where": {
-        "en": "Roloff group · Brown University",
-        "zh": "布朗大学 Roloff 组"
+        "en": "Brown University",
+        "zh": "布朗大学"
       },
       "status": {
-        "en": "Graduate research",
-        "zh": "研究生研究"
+        "en": "Guided study and exercises",
+        "zh": "指导学习与练习"
       },
       "desc": {
         "en": [
-          "Graduate research on CMS jet physics using PYTHIA simulations to study parton-shower cascades and jet structure.",
-          "Examined how jet topology and simulation choices inform the interpretation of beyond-the-Standard-Model signatures. This experience concerns simulation and analysis, without a claim of a current CMS appointment or detector-operation role."
+          "Completed guided PYTHIA study and exercises on parton showers and jet structure at Brown University."
         ],
         "zh": [
-          "在布朗大学 Roloff 组从事 CMS 喷流物理研究，使用 PYTHIA 模拟分析部分子淋浴级联与喷流结构。",
-          "考察喷流拓扑与模拟选择如何影响对超出标准模型信号的解释。该经历属于模拟与分析，不表示当前 CMS 任职或探测器运行职责。"
+          "在布朗大学完成 PYTHIA 指导学习，进行部分子簇射与喷注结构相关练习。"
         ]
       },
       "links": [],
-      "ai_assisted": false
+      "ai_assisted": false,
+      "citable": false
     },
     {
       "id": "cnt3omega",
       "cls": "research",
       "title": {
-        "en": "Unified Theory for 3ω Thermal Characterization: Finite Heater Length and Environmental Coupling",
-        "zh": "3ω 热学表征的统一理论:有限加热丝长度与环境耦合"
+        "en": "Thermal characterisation of carbon nanotubes (3ω method)",
+        "zh": "碳纳米管热学表征（3ω 方法）"
       },
       "period": "2025.10–2026.02",
       "where": {
@@ -453,21 +472,20 @@
         "zh": "布朗大学 Kuehne 组"
       },
       "status": {
-        "en": "Graduate research",
-        "zh": "研究生研究"
+        "en": "Research participation",
+        "zh": "参与研究"
       },
       "desc": {
         "en": [
-          "Participated in thermal-transport research on carbon-nanotube 3ω characterization and finite-heater impedance modelling.",
-          "The work considers heater length, environmental coupling, heater heat capacity and boundary resistance across vacuum, fluid and supported configurations. Participation in the research and manuscript work is distinct from confirmed public-paper authorship."
+          "Participated in research on the thermal response of single-walled carbon nanotubes using the 3ω method."
         ],
         "zh": [
-          "参与碳纳米管 3ω 热学表征与有限加热丝阻抗建模的热输运研究。",
-          "研究考虑真空、流体及衬底环境下的加热丝长度、环境耦合、加热丝热容与界面热阻。研究及手稿参与经历与已确认的公开论文作者身份分别表述。"
+          "参与利用 3ω 方法研究单壁碳纳米管热响应。"
         ]
       },
       "links": [],
-      "ai_assisted": false
+      "ai_assisted": false,
+      "citable": false
     },
     {
       "id": "blazar",
@@ -482,8 +500,8 @@
         "zh": "天体物理 · UCL 研究项目"
       },
       "status": {
-        "en": "Published paper · 2023",
-        "zh": "已发表论文 · 2023"
+        "en": "Published conference-proceedings paper · 2023",
+        "zh": "已发表会议论文 · 2023"
       },
       "desc": {
         "en": [
@@ -515,28 +533,29 @@
         "zh": "核能谱 · 山东大学"
       },
       "status": {
-        "en": "Completed undergraduate research",
-        "zh": "已完成本科研究"
+        "en": "Undergraduate training",
+        "zh": "本科训练"
       },
       "desc": {
         "en": [
-          "Analysed in-beam γ-ray spectra from α-induced nuclear reactions, using energy-matrix gates to distinguish coincidence structures and identify residual nuclides.",
-          "The experience focused on spectral interpretation and nuclide identification; a separate accelerator visit is not presented as conducting an irradiation experiment."
+          "Undergraduate training in α-induced nuclear reactions, γ-ray spectroscopy and energy-matrix gating, including spectral features and residual-nuclide identification.",
+          "A separate accelerator visit is not presented as conducting an irradiation experiment."
         ],
         "zh": [
-          "分析 α 粒子诱发核反应的在束 γ 能谱，通过能量矩阵开窗区分符合结构并鉴别剩余核素。",
-          "经历重点为能谱解释与核素鉴别；另行参加的加速器参观不表述为开展辐照实验。"
+          "本科阶段训练，内容涉及 α 粒子诱发核反应、γ 射线能谱学与能量矩阵开窗，包括能谱特征与剩余核素鉴别。",
+          "另行参加的加速器参观不表述为开展辐照实验。"
         ]
       },
       "links": [],
-      "ai_assisted": false
+      "ai_assisted": false,
+      "citable": false
     },
     {
       "id": "alpDM",
       "cls": "research",
       "title": {
-        "en": "Axion-Like Dark Matter",
-        "zh": "类轴子暗物质"
+        "en": "Axion-like particles in blazar γ-ray spectra",
+        "zh": "耀变体 γ 能谱中的类轴子粒子"
       },
       "period": "2022.03–2022.05",
       "where": {
@@ -544,21 +563,22 @@
         "zh": "暗物质现象学 · 北京师范大学"
       },
       "status": {
-        "en": "Completed research project",
-        "zh": "已完成研究项目"
+        "en": "Undergraduate project",
+        "zh": "本科阶段项目"
       },
       "desc": {
         "en": [
-          "Studied axion-like dark-matter phenomenology through photon survival probabilities and their dependence on candidate-particle parameters.",
-          "The project developed parameter-space interpretation rather than a new experimental exclusion limit."
+          "Studied photon–axion-like-particle conversion through photon-survival probabilities in a blazar propagation model.",
+          "This was a study of the method; no new exclusion limit or other result is claimed."
         ],
         "zh": [
-          "通过光子生存概率及其对候选粒子参数的依赖，研究类轴子暗物质现象学。",
-          "项目涉及参数空间解释，不主张提出新的实验排除限。"
+          "通过耀变体传播模型中的光子生存概率，研习光子与类轴子粒子的相互转换。",
+          "这是一项方法层面的学习研究，不主张新的排除限或其他研究结果。"
         ]
       },
       "links": [],
-      "ai_assisted": false
+      "ai_assisted": false,
+      "citable": false
     },
     {
       "id": "maxi",
@@ -573,17 +593,15 @@
         "zh": "X 射线天体物理 · 山东大学"
       },
       "status": {
-        "en": "Completed undergraduate thesis",
-        "zh": "已完成本科毕业论文"
+        "en": "Undergraduate thesis (analysis training)",
+        "zh": "本科毕业论文（分析训练）"
       },
       "desc": {
         "en": [
-          "Undergraduate thesis on MAXI J1348-630 using public NICER and NuSTAR observations. The analysis used HEASoft/NuSTARDAS, source/background extraction and NuSTAR FPMA/FPMB products.",
-          "Timing work used Powspec, while spectral analysis used XSPEC and model-residual comparisons. The examined NuSTAR data did not yield a useful QPO identification; fitting residuals and model limitations remained part of the interpretation."
+          "Undergraduate thesis work on MAXI J1348-630 involved timing and spectral-analysis training with NICER/NuSTAR data and HEASoft, Powspec and XSPEC."
         ],
         "zh": [
-          "利用公开 NICER 与 NuSTAR 观测研究 MAXI J1348-630 的本科毕业论文。分析使用 HEASoft／NuSTARDAS、源区与背景提取，以及 NuSTAR FPMA／FPMB 数据产品。",
-          "计时分析使用 Powspec，能谱分析使用 XSPEC 并比较模型残差。所检视的 NuSTAR 数据未给出可用的 QPO 识别；拟合残差与模型局限保留在结果解释中。"
+          "本科毕业论文围绕 MAXI J1348-630，开展 NICER／NuSTAR 数据及时变、能谱分析训练，涉及 HEASoft、Powspec 与 XSPEC。"
         ]
       },
       "links": [],
@@ -882,8 +900,8 @@
       "id": "publicAICompute",
       "cls": "humanities",
       "title": {
-        "en": "What Public AI Compute Records Can Establish: Evidence, Access and Comparison",
-        "zh": "公共 AI 算力记录能够确立什么：证据、访问与比较"
+        "en": "Documentary study of public AI-compute programme records",
+        "zh": "公共 AI 算力计划公开记录的文献研究"
       },
       "period": "2026.01–2026.07",
       "where": {
@@ -891,21 +909,22 @@
         "zh": "技术政策与文献记录研究"
       },
       "status": {
-        "en": "Submitted manuscript · IJTPM, October 2026",
-        "zh": "已投稿手稿 · IJTPM，2026 年 10 月"
+        "en": "Working manuscript",
+        "zh": "工作手稿"
       },
       "desc": {
         "en": [
-          "A bounded documentary study of six public AI-compute programmes, asking what published records can establish about access, allocation and comparison.",
-          "The analysis separates programme-level announcements, accounting units, tariffs and evidence for named-project consumption. It does not infer confidential usage, causal policy failure or the absence of activity beyond the documentary frame. Last verified journal stage: screening."
+          "A bounded documentary study of six public AI-compute programmes and of how far their published material documents who may use them and on what terms.",
+          "The analysis separates programme-level announcements, accounting units, tariffs and evidence for named-project consumption. It does not infer confidential usage, causal policy failure or the absence of activity beyond the documentary frame."
         ],
         "zh": [
-          "对六个公共 AI 算力计划开展范围明确的文献记录研究，考察公开材料能为访问、分配与比较建立哪些证据。",
-          "区分计划公告、核算单位、费率与具名项目消耗的证据；不推断保密使用情况、因果性的政策失败或文献框架之外不存在活动。最近核实的期刊阶段为初筛。"
+          "对六个公共 AI 算力计划开展范围明确的文献记录研究，考察其公开材料在多大程度上记载了使用资格与使用条件。",
+          "区分计划公告、核算单位、费率与具名项目消耗的证据；不推断保密使用情况、因果性的政策失败或文献框架之外不存在活动。"
         ]
       },
       "links": [],
-      "ai_assisted": false
+      "ai_assisted": false,
+      "citable": false
     },
     {
       "id": "gw250114",

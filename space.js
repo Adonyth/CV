@@ -37,23 +37,38 @@
   }
   function readMotion() { try { return localStorage.getItem(MOTION_KEY); } catch (e) { return null; } }
 
+  /* THE COSMOS IS THE INTERFACE ON EVERY DEVICE. Any device with working WebGL opens straight in the 3-D scene,
+     standing on the Earth under the sky. Phones, low-power machines and reduced-motion visitors get the lighter
+     "calm" tier automatically — no opt-in tap. "flat" (the simple list) is ONLY a fallback: no WebGL / a software
+     renderer, a render failure (menu.js's #scene-recovery path), or the visitor's own stored choice of the simple
+     view (cv-motion = "flat" — see __space.setSimpleView). menu.js mirrors this rule in willFlat(). */
   function decideTier() {
     var stored = readMotion();
     if (stored === "flat") return "flat";
-    if (reduced() || !webglOK()) return "flat";
-    // mobile: the 3D world is OPT-IN (tap-to-enter from the flat menu); once chosen it
-    // sticks, and the explicit choice overrides the low-power heuristic
-    if (isMobile()) return (stored === "calm" || stored === "full") ? "calm" : "flat";
-    if (lowPower()) return "flat";
+    if (!webglOK()) return "flat";
+    if (isMobile() || lowPower() || reduced()) return "calm";
     return stored === "full" ? "full" : "calm"; // desktop default = Calm
   }
+  /* reduced motion keeps the cosmos but takes the travel out of it: a flight is a short cut behind a cross-fade,
+     the clock that drives every ambient shimmer stands still, nothing moves unless the visitor moves it */
+  var REDUCED = reduced();
 
   var TIER = decideTier();
-  window.__space = { tier: TIER, ready: false };
+  window.__space = { tier: TIER, ready: false, reducedMotion: REDUCED };
+  /* the visitor's own choice between the sky and the simple list (the tool capsule's control calls this).
+     true → remember "flat" and reload into the list; false → forget it and reload into the sky. */
+  window.__space.setSimpleView = function (on) {
+    try {
+      if (on) localStorage.setItem(MOTION_KEY, "flat");
+      else if (localStorage.getItem(MOTION_KEY) === "flat") localStorage.removeItem(MOTION_KEY);
+    } catch (e) {}
+    location.reload();
+  };
   var COSMOS = document.body.classList.contains("cosmos");
   if (COSMOS && TIER !== "flat") {   // belt & braces: the 3D page must never show the flat wall
-    var flatBB = document.getElementById("cosmos-flat"); if (flatBB) flatBB.hidden = true;
-    if (isMobile()) document.body.classList.add("is-mobile-3d");   // CSS hook: compact nav + exit affordance
+    var flatBB = document.getElementById("cosmos-flat"); if (flatBB && !document.body.classList.contains("index-open")) flatBB.hidden = true;
+    document.body.classList.remove("is-flat");   // (an out-of-date tier mirror must not leave the sky's own chrome hidden)
+    if (isMobile()) document.body.classList.add("is-mobile-3d");   // CSS hook: compact nav
   }
   if (TIER === "flat") {
     // no 3D — the flat fallback on the home page IS a full, usable mobile menu
@@ -64,11 +79,8 @@
       // tap-to-enter: the doorway into the full 3D world (hidden when the device truly can't)
       var enter3d = document.getElementById("flat-enter3d");
       if (enter3d) {
-        if (!webglOK() || reduced()) { enter3d.style.display = "none"; }
-        else enter3d.addEventListener("click", function () {
-          try { localStorage.setItem(MOTION_KEY, "calm"); } catch (e) {}
-          location.reload();
-        });
+        if (!webglOK()) { enter3d.style.display = "none"; }
+        else enter3d.addEventListener("click", function () { window.__space.setSimpleView(false); });
       }
     }
     return;
@@ -114,7 +126,7 @@
     var TS_TIERS = [   // drawn far → near, each by its own camera; `extent` = model radius for the apparent-size fade
       { layer: 8, rate: TS_RATE.obs, roots: ["TierObservable", "UnobservedHorizonField"], fadePx: 0 },
       { layer: 6, rate: TS_RATE.lss, prefix: ["LargeScaleStructure", "CosmicWebLines", "DSOPick_lss_"], extent: 40000, fadePx: [40, 200] },
-      { layer: 2, rate: TS_RATE.lg,  roots: ["Andromeda", "DSO_andromeda", "DSOPick_andromeda"], extent: 900, fadePx: [3, 30] }
+      { layer: 2, rate: TS_RATE.lg,  roots: ["Andromeda", "AndromedaVolume", "DSO_andromeda", "DSOPick_andromeda"], extent: 900, fadePx: [3, 30] }
     ];
     var TS_ROOT_LAYER = {}; TS_TIERS.forEach(function (t) { (t.roots || []).forEach(function (nm) { TS_ROOT_LAYER[nm] = t; }); t.cam = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.2, 1e7); t.cam.layers.set(t.layer); t.objs = []; });
     var TS_LAYER_TIER = {}; TS_TIERS.forEach(function (t) { TS_LAYER_TIER[t.layer] = t; });
@@ -172,14 +184,14 @@
           uSkyAmt: { value: 0 }, uInvProj: { value: new THREE.Matrix4() }, uCamRot: { value: new THREE.Matrix3() },
           uUp: { value: new THREE.Vector3(0, 1, 0) }, uCityDir: { value: new THREE.Vector3(0, 0, 1) },
           uGalX: { value: _galX }, uGalY: { value: _galY }, uGalZ: { value: _galZ },
-          tMilky: { value: null }, uMilkyGain: { value: 0 }, uHorizon: { value: -0.0925 }, uSpaceSky: { value: 0 }
+          tMilky: { value: null }, uMilkyGain: { value: 0 }, uSpaceGain: { value: 1.15 }, uHorizon: { value: -0.0925 }, uSpaceSky: { value: 0 }
         },
         vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
         fragmentShader: [
           "uniform sampler2D tScene; uniform vec3 uBg; uniform float uSkyAmt;",
           "uniform mat4 uInvProj; uniform mat3 uCamRot; uniform vec3 uUp; uniform vec3 uCityDir;",
           "uniform vec3 uGalX; uniform vec3 uGalY; uniform vec3 uGalZ;",
-          "uniform sampler2D tMilky; uniform float uMilkyGain; uniform float uHorizon; uniform float uSpaceSky;",
+          "uniform sampler2D tMilky; uniform float uMilkyGain; uniform float uSpaceGain; uniform float uHorizon; uniform float uSpaceSky;",
           "varying vec2 vUv;",
           SKY_GLSL_COMMON,
           // the Milky Way from the baked galactic map (sqrt-encoded for 8-bit dark precision)
@@ -217,7 +229,7 @@
           "    vec4 v = uInvProj * vec4(vUv * 2.0 - 1.0, 1.0, 1.0);",
           "    vec3 d = normalize(uCamRot * (v.xyz / v.w));",
           // true scale: in space the band hangs at infinity behind the Solar System — no air, no horizon, no dome
-          "    vec3 sp = uBg + (uMilkyGain > 0.0 ? milkyAt(d) * uMilkyGain * 1.15 * uSpaceSky : vec3(0.0));",
+          "    vec3 sp = uBg + (uMilkyGain > 0.0 ? milkyAt(d) * uMilkyGain * uSpaceGain * uSpaceSky : vec3(0.0));",
           "    bg = uSkyAmt > 0.001 ? mix(sp, skyAt(d), uSkyAmt) : sp;",
           "  }",
           "  vec3 o = c.rgb * c.a + bg * (1.0 - c.a);",
@@ -231,6 +243,18 @@
        a short exposure from a dark site: a bright, thick central bulge (Sgr–Sco–Oph), the Cygnus star cloud,
        a long thinning arc between; mottled star clouds; the Great Rift's dark lanes running along the plane
        from Cygnus to Sagittarius; a warm old-star core fading to cooler arms; a few H-alpha knots. */
+    /* build 261 — the band is no longer invented here: data/mw-pano.webp is the SAME galaxy model the volumetric
+       disc is marched through (scripts/blender), integrated along every line of sight from the Sun's position —
+       bulge, dust lanes, arm tangents and all — in this map's own (l, b) layout. This bake only lays the resolved
+       star grain over it. The procedural band below remains the fallback (image missing / slow network). */
+    var _milkyPano = null, _milkyPanoState = 0;   // 0 loading · 1 ready · -1 failed
+    new THREE.TextureLoader().load("data/mw-pano.webp?v=2", function (tx) {
+      tx.colorSpace = THREE.NoColorSpace; tx.wrapS = THREE.RepeatWrapping; tx.wrapT = THREE.ClampToEdgeWrapping;
+      tx.minFilter = THREE.LinearFilter; tx.magFilter = THREE.LinearFilter; tx.generateMipmaps = false;
+      _milkyPano = tx; _milkyPanoState = 1;
+      if (_milkyRT) { _milkyRT.dispose(); _milkyRT = null; _milkyTried = false; }   // a procedural band was already up → re-bake from the model
+    }, undefined, function () { _milkyPanoState = -1; });
+    setTimeout(function () { if (_milkyPanoState === 0) _milkyPanoState = -1; }, 9000);   // never hold the sky hostage to one image
     function bakeMilkyWay() {
       _milkyTried = true;
       var W = MOBILE ? 2048 : 4096, H = W / 4;
@@ -239,9 +263,10 @@
       rt.texture.minFilter = THREE.LinearFilter; rt.texture.magFilter = THREE.LinearFilter;
       var mat = new THREE.ShaderMaterial({
         depthTest: false, depthWrite: false,
+        uniforms: { tPano: { value: _milkyPano }, uPano: { value: _milkyPano ? 1 : 0 } },
         vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }",
         fragmentShader: [
-          "varying vec2 vUv;",
+          "varying vec2 vUv; uniform sampler2D tPano; uniform float uPano;",
           // Ashima / Stefan Gustavson 3-D simplex noise (MIT)
           "vec3 mod289(vec3 x){ return x - floor(x * (1.0/289.0)) * 289.0; }",
           "vec4 mod289(vec4 x){ return x - floor(x * (1.0/289.0)) * 289.0; }",
@@ -302,6 +327,8 @@
           "  col = mix(col, gold, clamp(bulge * 1.2 + 0.35 * nearC * core, 0.0, 1.0));",
           "  col *= I;",
           "  col += vec3(0.95, 0.28, 0.36) * pow(clamp(fbm(gd * 15.0 + 23.0), 0.0, 1.0), 8.0) * core * 3.0 * I;",
+          // build 261 — the model's own light replaces the invented band (sqrt-encoded; 1.0 = the brightest bulge cloud)
+          "  if (uPano > 0.5) { vec3 pm = texture2D(tPano, vUv).rgb; col = pm * pm * 2.05; I = max(col.r, max(col.g, col.b)); }",
           // build 228 — RESOLVED STARS: a long exposure shows the band as countless individual stars, not a smooth
           // fog. One hash per texel; density follows the band's own brightness, magnitudes are power-law.
           "  vec2 tx = floor(vUv * vec2(" + (MOBILE ? "2048.0, 512.0" : "4096.0, 1024.0") + "));",
@@ -336,7 +363,7 @@
       u.uSkyAmt.value = (_skyUp && skyAmt > 0.001 && !window.__skyOff) ? skyAmt : 0;
       u.uSpaceSky.value = (_ts && !window.__skyOff) ? _tsSpaceSky * (1 - skyAmt) : 0;
       if (!u.uSkyAmt.value && !u.uSpaceSky.value) return;
-      if (!_milkyRT && !_milkyTried && natalSky && natalSky.skyDir) bakeMilkyWay();
+      if (!_milkyRT && !_milkyTried && _milkyPanoState !== 0 && natalSky && natalSky.skyDir) bakeMilkyWay();   // (waits for the panorama to load or fail: one bake, no pop)
       u.uInvProj.value.copy(camera.projectionMatrixInverse);
       u.uCamRot.value.setFromMatrix4(camera.matrixWorld);
       if (_skyUp) {
@@ -351,7 +378,8 @@
         _galY.crossVectors(_galZ, _galX).normalize();       // l = 90° (toward Cygnus)
         u.uGalX.value.copy(_galX); u.uGalY.value.copy(_galY); u.uGalZ.value.copy(_galZ);   // (the pass holds its own cloned vectors)
         u.tMilky.value = _milkyRT.texture;
-        u.uMilkyGain.value = 0.085;
+        u.uSpaceGain.value = _milkyPano ? 0.85 : 1.15;   // no air to dim it: in space the model band needs less than on the ground
+        u.uMilkyGain.value = _milkyPano ? 0.16 : 0.085;   // the model band carries real dynamic range (bulge ≫ arms): a higher gain keeps its body as present as the old one
       }
     }
     // the sky's own ease (time-based, ~1 s): the ground-dim ease is per-FRAME and crawls at the idle
@@ -529,15 +557,18 @@
       renderer.clearDepth(); renderer.render(scene, lodCam);   // 1b · the ember dust, on the ladder as it was tuned
       // 1c · the galaxy and everything in it (true scale, Sun at the origin). Seen from another galaxy it is just a small
       // spiral; once it shrinks to a few pixels its 118k fixed-size points would pile into a white blob — it fades instead
-      if (!_tsMW) { _tsMW = ["MilkyWayGalaxy", "MilkyWayGlow", "MilkyWayImpostor"].map(function (n) { return scene.getObjectByName(n); }).filter(Boolean); if (_tsMW.length < 2) _tsMW = null; }
-      var mwF = 1;
-      if (_tsMW) { var mwPx = 2600 / Math.max(1e-9, farCam.position.length()) / Math.tan(farCam.fov * Math.PI / 360) * innerHeight * 0.5; mwF = Math.max(0, Math.min(1, (mwPx - 1.5) / 7)); }
+      if (!_tsMW) { _tsMW = ["MilkyWayGalaxy", "MilkyWayGlow", "MilkyWayImpostor", "MilkyWayVolume"].map(function (n) { return scene.getObjectByName(n); }).filter(Boolean); if (_tsMW.length < 2) _tsMW = null; }
+      var mwF = 1, mwPx = 1e9;
+      if (_tsMW) { mwPx = 2600 / Math.max(1e-9, farCam.position.length()) / Math.tan(farCam.fov * Math.PI / 360) * innerHeight * 0.5; mwF = Math.max(0, Math.min(1, (mwPx - 1.5) / 7)); }
       // once the galaxy itself is under ~1.5 px nothing in this pass (its stars, nebulae, satellites) is bigger, so the pass is
       // skipped: drawing it at zero opacity still cost the full fill of 119k points piled on one pixel (build 246: from the
       // Virgo Cluster that halved the frame rate)
       if (!(_tsMW && mwF <= 0.003)) {
         var mwSaved = null;
-        if (mwF < 0.999 && _tsMW) mwSaved = _tsMW.map(function (o) { var v = o.material.opacity; o.material.opacity = v * mwF; return v; });
+        // with the volumetric disc up, the resolved-star points step back as the galaxy shrinks (under ~150 px across they
+        // only pile into a blob over it): from another galaxy the Milky Way is a small spiral of light, not a white knot
+        var mwVol = _tsMW && _tsMW[_tsMW.length - 1], mwPts = (mwVol && mwVol.name === "MilkyWayVolume" && mwVol.userData.ready) ? Math.max(0, Math.min(1, (mwPx - 60) / 240)) : 1;
+        if ((mwF < 0.999 || mwPts < 0.999) && _tsMW) mwSaved = _tsMW.map(function (o) { var v = o.material.opacity; o.material.opacity = v * mwF * (o.name === "MilkyWayGalaxy" ? mwPts : 1); return v; });
         renderer.clearDepth(); renderer.render(scene, farCam);
         if (mwSaved) _tsMW.forEach(function (o, i) { o.material.opacity = mwSaved[i]; });
       }
@@ -683,6 +714,7 @@
       var groundMode = false, gEast = null, gNorth = null, gNormal = null;
       var gYaw = 0, gPitch = 1.15, gLiftoff = null, gLiftFired = false;
       var gVelYaw = 0, gVelPitch = 0;   // flick inertia: release a drag and the gaze glides to rest
+      var gWheelAcc = 0, gWheelT = 0;   // wheel travel gathered on the ground (the launch gesture, either direction)
       var _glDir = new T3.Vector3();
       function applyGroundLook() {
         var ch = Math.cos(gPitch), sh = Math.sin(gPitch), cy2 = Math.cos(gYaw), sy2 = Math.sin(gYaw);
@@ -786,6 +818,10 @@
           safeLookAtTarget();
         },
         getRadius: function () { return cam.position.distanceTo(target); },
+        // a flight has just set the camera down: adopt the radius it left as the zoom's resting point. (The accumulator
+        // was last glued one frame BEFORE arrival; after a short flight that frame is far from the end, and the zoom
+        // ease would drag the camera back toward it.)
+        syncZoom: function () { var r = cam.position.distanceTo(target); if (isFinite(r) && r > 1e-8) zoomTarget = Math.max(minDistance, Math.min(maxDistance, r)); },
         update: function (dtF) {
           var dn = (dtF > 0 && isFinite(dtF)) ? dtF : 1;   // frames-equivalent step (offline pump() passes nothing → 1)
           if (groundMode) {   // the orbit model is suspended — only the flick inertia glides out
@@ -899,8 +935,12 @@
         var norm = e.deltaMode === 1 ? e.deltaY * 18 : e.deltaMode === 2 ? e.deltaY * 300 : e.deltaY;
         if (!isFinite(norm) || norm === 0) { e.stopPropagation(); return; }
         if (groundMode) {
-          // on the ground, pulling BACK is the launch gesture — you rise off the Earth
-          if (norm > 0 && !gLiftFired && gLiftoff) { gLiftFired = true; gLiftoff(); }
+          // on the ground the wheel is the launch gesture — EITHER way: a visitor cannot know which direction
+          // "up" is, and there is nowhere to zoom in to. A small accumulated travel, so a resting finger never launches.
+          var gNow = performance.now();
+          if (gNow - gWheelT > 420) gWheelAcc = 0;
+          gWheelT = gNow; gWheelAcc += Math.abs(norm);
+          if (gWheelAcc >= 24 && !gLiftFired && gLiftoff) { gLiftFired = true; gWheelAcc = 0; gLiftoff(); }
           e.stopPropagation(); return;
         }
         // magnitude-aware unit, UPPER-clamped only (anti-fling); NO lower floor so tiny trackpad
@@ -937,6 +977,18 @@
     var lastTouch = 0, userMoved = false, entranceUntil = 0;
     var glide = { frames: 0, axis: null, step: 0, distTarget: 0, param: null };
     function glideActive() { return glide.frames > 0 || !!glide.param; }
+    /* stop where you are: drop the flight and everything it was going to do on arrival (Esc, a grab, the wheel).
+       The lens kick a flight was breathing with is eased back by the instrument frame's tick. */
+    function cancelFlight() {
+      glide.frames = 0; glide.param = null; glide.camTo = null; glide.targetTo = null;
+      glide.axis = null; glide.step = 0; glide.distTarget = 0; glide.onDone = null;
+    }
+    /* THE INSTRUMENT FRAME's per-frame hooks (installed by the interaction closure): `drive` may own the camera for
+       one frame (the scale rail's thumb under the hand), `tick` places the reticle / markers / rail thumb with the
+       cameras that actually drew this frame. Both run inside try/catch — one throw must never stop the loop. */
+    var uiScene = { drive: null, tick: null, driving: false, err: null };
+    var BASE_FOV = 52;
+    var RM_FRAMES = 7;   // reduced motion: a flight is a ~120 ms cut (a few frames, never one — the true-scale frame hand-over rides the glide), hidden behind a cross-fade
     var easeAddressPivot = function () {};
     /* ===== choreographed flight (the game-camera): direction nlerp + LOG-radius =====
        Launches and landings follow an authored curve instead of a raw lerp: radius is
@@ -950,15 +1002,15 @@
       var camFrom = camera.position.clone(), camTo = o.camTo;
       glide.frames = 0; glide.camTo = null; glide.targetTo = null; glide.axis = null; glide.distTarget = 0;
       glide.param = {
-        t: 0, n: o.frames || 90, ease: o.ease || easeInOutCubic,
+        t: 0, n: REDUCED ? Math.min(RM_FRAMES, o.frames || 90) : (o.frames || 90), ease: o.ease || easeInOutCubic,
         tease: o.targetEase || null,                       // the gaze may sweep on its own clock
         d0: camFrom.clone().normalize(), d1: camTo.clone().normalize(),
         lnR0: Math.log(Math.max(0.001, camFrom.length())), lnR1: Math.log(Math.max(0.001, camTo.length())),
         t0: controls.target.clone(), t1: o.targetTo.clone(),
         up1: o.up ? o.up.clone() : UP_Y,
-        fovK: o.fovKick || 0, fov0: camera.fov
+        fovK: REDUCED ? 0 : (o.fovKick || 0), fov0: BASE_FOV
       };
-      glide.onDone = o.onDone || null;
+      glide.onDone = o.onDone || null; glide.t0 = performance.now();
       lastTouch = performance.now(); userMoved = true;
     }
 
@@ -993,14 +1045,14 @@
       glide.frames = 0; glide.camTo = null; glide.targetTo = null; glide.axis = null; glide.distTarget = 0;
       glide.param = {
         flight: true, t: 0,
-        n: o.frames || Math.round(Math.max(120, Math.min(300, 80 + dist * 1.4))),
+        n: REDUCED ? RM_FRAMES : (o.frames || Math.round(Math.max(120, Math.min(300, 80 + dist * 1.4)))),
         ease: easeInOutCubic,
         P0: P0, P1: P1, P2: P2, P3: P3,
         body: body, t0: controls.target.clone(),
         bank: 0, prevV: null,
-        fovK: (o.fovKick != null ? o.fovKick : 6), fov0: camera.fov
+        fovK: REDUCED ? 0 : (o.fovKick != null ? o.fovKick : 6), fov0: BASE_FOV
       };
-      glide.onDone = o.onDone || null;
+      glide.onDone = o.onDone || null; glide.t0 = performance.now();
       lastTouch = performance.now(); userMoved = true;
     }
     function bez(P, e, out) {   // cubic Bézier point
@@ -1985,7 +2037,8 @@
       setTimeout(function () {   // fallback: never leave the visitor in the dark
         if (!groundEntered) {
           canvas.style.transition = "opacity 1s ease"; canvas.style.opacity = "1";
-          entranceUntil = performance.now() + 4600;
+          entranceUntil = REDUCED ? 0 : performance.now() + 4600;   // (reduced motion: no deep-space dive — the view simply appears)
+          if (REDUCED && controls) controls.setRadius(7.6);
           skyLive();
         }
       }, 6500);
@@ -2390,7 +2443,12 @@
     function tsArmatureSpec(E) {
       var d = new Date(TS_UTC), AU = E.AU_KM, eh = E.planetHelio("earth", d), mg = E.moonGeo(d);
       var earth = tsEclToLocal(eh.x * AU, eh.y * AU, eh.z * AU), m = tsEclToLocal(mg.x, mg.y, mg.z);
-      return { earth: earth, moon: [earth[0] + m[0], earth[1] + m[1], earth[2] + m[2]],
+      // the planes the four pillars stand in (owner, 2026-11-14): the 日 pillar in the Moon's own orbital plane
+      // (r × v of the geocentric Moon), the 年 pillar in the galactic plane (the north galactic pole, J2000 ecliptic)
+      var mg2 = E.moonGeo(new Date(TS_UTC + 86400000));
+      var mn = tsEclToLocal(mg.y * mg2.z - mg.z * mg2.y, mg.z * mg2.x - mg.x * mg2.z, mg.x * mg2.y - mg.y * mg2.x);
+      var gn = tsEclToLocal(-0.86767, -0.00029, 0.49711);
+      return { earth: earth, moon: [earth[0] + m[0], earth[1] + m[1], earth[2] + m[2]], moonOrbitNormal: mn, galacticNormal: gn,
                sunR: E.BODY.sun.r / TS_KM_LOCAL, moonR: E.BODY.moon.r / TS_KM_LOCAL, auLocal: AU / TS_KM_LOCAL };
     }
     /* once the orrery is aligned to the chart: place the planets at true scale and register every body for
@@ -2444,25 +2502,7 @@
             if (dd.world && dd.shell) { var fr = tsAddGalacticFrame("DSO_" + dd.id, dd.shell, dd.world, dd.widthLy, dd.id, TS_GAL_PER_LY); fr.label = dd.name; fr.ly = dd.ly; }
           });
         }
-        // the orbits: one period of each Keplerian path, in the same geocentric frame as the bodies
-        if (natalSky.addTrueOrbits) {
-          var ORB = [["mercury", 0x9a958e], ["venus", 0xd9c08a], ["earth", 0x6f9fdc], ["mars", 0xc4724e], ["jupiter", 0xc9a77a],
-                     ["saturn", 0xd8c48f], ["uranus", 0x8fd0d6], ["neptune", 0x6f8fe0], ["pluto", 0x9b8f86]], orbs = [];
-          ORB.forEach(function (o) {
-            var SMA = { mercury: 0.387, venus: 0.723, earth: 1, mars: 1.524, jupiter: 5.203, saturn: 9.537, uranus: 19.19, neptune: 30.07, pluto: 39.48 };
-            var n0 = o[0] === "pluto" ? 720 : 360, P = 365.25 * Math.pow(SMA[o[0]], 1.5);   // one sidereal period (Kepler III)
-            var km = new Float64Array(n0 * 3);
-            for (var i = 0; i < n0; i++) {
-              var q = E.planetHelio(o[0], new Date(TS_UTC + (i / n0) * P * 86400000));
-              km[i * 3] = (q.x - eh.x) * AU; km[i * 3 + 1] = (q.y - eh.y) * AU; km[i * 3 + 2] = (q.z - eh.z) * AU;
-            }
-            orbs.push({ id: o[0], km: km, color: o[1] });
-          });
-          var mk = new Float64Array(240 * 3);
-          for (var mi = 0; mi < 240; mi++) { var mq = E.moonGeo(new Date(TS_UTC + (mi / 240) * 27.3217 * 86400000)); mk[mi * 3] = mq.x; mk[mi * 3 + 1] = mq.y; mk[mi * 3 + 2] = mq.z; }
-          orbs.push({ id: "moon", km: mk, color: 0xa9a49c });
-          _ts.orbits = natalSky.addTrueOrbits(orbs, 1 / kpu);
-        }
+        // (no orbit lines — owner, 2026-11-14: "不需要任何线，包括行星轨道". _ts.orbits stays unset; the fade loop below is guarded.)
         tsBuildOverlay();
         loadTrueStars();
         if (natalSky.setTrueGalaxy) natalSky.setTrueGalaxy(true);
@@ -2746,34 +2786,15 @@
       // both — the "cities never burn" mystery. dressEarth now dresses ONLY the trace.
       function srgb(t) { if ("colorSpace" in t && THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace; return t; }
       function bakeTrace() {
-        (window.__loadFootprint ? window.__loadFootprint()   // footprint-data.js: the compact file, float32 as the fallback
-          : fetch("data/footprint-points.f32").then(function (r) { return r.arrayBuffer(); }).then(function (b) { return new Float32Array(b); })
-        ).then(function (raw) {
-          var W = MOBILE ? 2048 : 6144, H = W / 2;   // finer: the smaller globe is viewed closer
-          var cv = document.createElement("canvas"); cv.width = W; cv.height = H;
-          var ctx = cv.getContext("2d");
-          // two passes: a soft warm bed, then a bright core — the roads must READ
-          ctx.fillStyle = "rgba(255,150,90,0.32)";
-          for (var i = 0; i < raw.length; i += 2) {
-            var lat = raw[i], lon = raw[i + 1];
-            if (!isFinite(lat) || !isFinite(lon)) continue;
-            ctx.fillRect(((lon + 180) / 360) * W - 1, ((90 - lat) / 180) * H - 1, 3.4, 3.4);
-          }
-          ctx.fillStyle = "rgba(255,210,155,0.95)";
-          for (var i2 = 0; i2 < raw.length; i2 += 2) {
-            var lat2 = raw[i2], lon2 = raw[i2 + 1];
-            if (!isFinite(lat2) || !isFinite(lon2)) continue;
-            ctx.fillRect(((lon2 + 180) / 360) * W, ((90 - lat2) / 180) * H, 1.7, 1.7);
-          }
-          var tex2 = new THREE.CanvasTexture(cv); srgb(tex2);
-          var rr = earthMesh.geometry.parameters.radius * 1.006;
-          var traceMat = new THREE.MeshBasicMaterial({ map: tex2, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.95 });
-          if ("toneMapped" in traceMat) traceMat.toneMapped = false;
-          _traceMat = traceMat;   // the ground-dim ease attenuates this so the footprint fades to an intimate underfoot glow (A)
-          var trace = new THREE.Mesh(new THREE.SphereGeometry(rr, 96, 96), traceMat);
-          trace.name = "FootprintTrace";
-          earthMesh.add(trace);          // child of the rotating Earth → trace stays glued to the continents
-          window.__space.tracePoints = raw.length / 2;
+        // the footprint is BAKED (scripts/blender/bake_footprint.py): a distance-field map of everything the phone
+        // recorded (only the gaps it did not record are left out — no chord is drawn across them). footprint-globe.js
+        // draws it as one fine line; nothing here loads or rasterises the 738k raw points any more.
+        import("./footprint-globe.js?v=1").then(function (mod) {
+          var fp = mod.mountFootprintGlobe(THREE, earthMesh, { mobile: MOBILE, renderer: renderer });   // adds "FootprintTrace" under the rotating Earth → glued to the continents
+          _traceMat = fp.material;   // the ground-dim ease attenuates this (the shader reads material.opacity) so the footprint fades to an intimate underfoot glow (A)
+          return fp.ready;
+        }).then(function (meta) {
+          window.__space.tracePoints = meta.points;
         }).catch(function (e) { window.__space.traceError = String(e); });
       }
       // Do-Not-Repeat: never rely on requestIdleCallback alone — load-event + timeout fallback
@@ -2785,7 +2806,7 @@
     var _tsModsP = TRUE_SCALE
       ? Promise.all([import("./ephemeris.js?v=1"), import("./truescale.js?v=2")]).then(function (m) { return { eph: m[0], ladder: m[1] }; }).catch(function () { return null; })
       : Promise.resolve(null);
-    Promise.all([import("./nye-armature.js?v=53"), _tsModsP]).then(function (mods2) {
+    Promise.all([import("./nye-armature.js?v=55"), _tsModsP]).then(function (mods2) {
       var mod = mods2[0];
       _tsMods = mods2[1]; if (!_tsMods) _tsFailed = true;
       try {
@@ -2903,12 +2924,12 @@
       fetch("data/weblines_rgb" + _galSfx + ".u8?v=3").then(function (r) { return r.arrayBuffer(); }).catch(function () { return null; })
     ]);
     Promise.all([
-      fetch("data/natal-sky.json?v=19").then(function (r) { return r.json(); }),
+      fetch("data/natal-sky.json?v=20").then(function (r) { return r.json(); }),
       fetch("data/large-scale.json?v=1").then(function (r) { return r.json(); }).catch(function () { return null; })
     ]).then(function (arr) {
       var natalData = arr[0], lssData = arr[1];
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=164").then(function (mod) {
+      return import("./natal-sky.js?v=170").then(function (mod) {
         natalOpts = {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,
@@ -2931,6 +2952,7 @@
         window.__space.natal = natalSky;
         if (natalSky.onConstellationClick) natalSky.onConstellationClick(function (cid) { window.__space.focusCon(cid); });
         if (natalSky.onNodeClick) natalSky.onNodeClick(function (info) { window.__space.focusStar(info); });
+        if (COSMOS && natalSky.setHostClicks) natalSky.setHostClicks(true);   // every pick goes through the host's ONE selection grammar (pickDesc → selectDesc)
         window.__space.natalStats = natalSky.stats;
         window.__space.getStarAtlas = function () { return natalSky && natalSky.getNodes ? natalSky.getNodes() : []; };
         try { window.dispatchEvent(new CustomEvent("space:atlas-ready", { detail: { count: window.__space.getStarAtlas().length } })); } catch (e) {}
@@ -2947,31 +2969,24 @@
       var _pr = new THREE.Vector3(), _pu = new THREE.Vector3(), _pm = new THREE.Vector3();
       canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
       addEventListener("pointerup", function () { ptrDown = false; canvas.style.cursor = "grab"; }, { passive: true });
+      addEventListener("pointercancel", function () { ptrDown = false; panOn = false; canvas.style.cursor = "grab"; }, { passive: true });   // a cancelled touch must not leave the hand "down" forever
       canvas.style.cursor = "grab";
       canvas.addEventListener("pointerdown", function (e) {
         ptrDown = true; canvas.style.cursor = "grabbing";
         lastTouch = performance.now(); userMoved = true;
         downX = e.clientX; downY = e.clientY; movedAcc = 0;
-        glide.frames = 0; glide.param = null;               // a touch cancels any glide (param too)
+        if (!lowFlight()) cancelFlight();                   // a touch cancels any flight — and whatever it was going to do on arrival (a launch / landing still under the lowest orbit runs on: stopped there, the hand would be orbiting a point in the sky from inside the ground)
         panOn = (e.button === 2 || e.button === 1 || e.shiftKey);
         plx = e.clientX; ply = e.clientY;
       }, true);
-      /* hovering the Earth summons the footprint doorway; hovering the Sun, the journey doorway */
-      var earthCta = document.getElementById("earth-cta"), sunCta = document.getElementById("sun-cta"), ctaOn = false, sunCtaOn = false, ctaTick = 0;
-      var _ctaRay = new THREE.Raycaster(), _ctaNdc = new THREE.Vector2(), _ctaV = new THREE.Vector3();
-      _ctaRay.layers.enableAll();
-      var TS_PLANET_PICKS = { jupiter: 1, saturn: 1, mercury: 1, venus: 1, mars: 1, uranus: 1, neptune: 1, pluto: 1, charon: 1 };
-      var ctaOffT = null, sunCtaOffT = null;   // hysteresis: doors linger briefly, no flicker
-      function setCta(on) {
-        if (!earthCta) return;
-        if (on) { if (ctaOffT) { clearTimeout(ctaOffT); ctaOffT = null; } if (!ctaOn) { ctaOn = true; earthCta.classList.add("is-on"); } }
-        else if (ctaOn && !ctaOffT) ctaOffT = setTimeout(function () { ctaOffT = null; ctaOn = false; earthCta.classList.remove("is-on"); }, 240);
-      }
-      function setSunCta(on) {
-        if (!sunCta) return;
-        if (on) { if (sunCtaOffT) { clearTimeout(sunCtaOffT); sunCtaOffT = null; } if (!sunCtaOn) { sunCtaOn = true; sunCta.classList.add("is-on"); } }
-        else if (sunCtaOn && !sunCtaOffT) sunCtaOffT = setTimeout(function () { sunCtaOffT = null; sunCtaOn = false; sunCta.classList.remove("is-on"); }, 240);
-      }
+      /* THE HOVER PATH (mouse only). The canvas owns the cursor — pointer over anything pickable, grab otherwise —
+         and the same pick that a click would make draws the hover ring (the instrument frame, below). The old
+         per-object doors (#earth-cta / #sun-cta / #star-cta) are retired: the card carries the one action. */
+      ["earth-cta", "sun-cta", "star-cta"].forEach(function (id) {
+        var dEl = document.getElementById(id);
+        if (dEl) { dEl.classList.remove("is-on"); dEl.hidden = true; dEl.setAttribute("aria-hidden", "true"); try { dEl.inert = true; } catch (eI) {} }
+      });
+      var ctaOn = false;   // the hand is over the Earth (the 干支 rings step aside for it — applyRingFade)
       function dsoPickInScale(owner) {
         var ud = owner && owner.userData; if (!ud) return true;
         var cl = camera.position.length();
@@ -2979,102 +2994,22 @@
         if (isFinite(ud.dsoMaxCam) && cl > ud.dsoMaxCam) return false;
         return true;
       }
-      var _ctaLastT = 0, _ctaEarthRef = null, _ctaSunRef = null;
+      var _ctaLastT = 0;
       function updateCta(e) {
-        if (!earthCta || !nyeArmature) return;
-        // R3: never raycast mid-gesture (the battery cost 0.7-2.5ms per hit during drags), never at
-        // deep cosmic scales (nothing here is interactive past camLen 1300), and throttle by TIME
-        // (~50ms) instead of every-3rd-event — event rate varies 60-240Hz across devices.
-        if (ptrDown || panOn) {
-          if (ctaOn) { ctaOn = false; earthCta.classList.remove("is-on"); }
-          if (sunCtaOn && sunCta) { sunCtaOn = false; sunCta.classList.remove("is-on"); }
-          return;
-        }
-        if (!controls.isGround() && camera.position.length() >= 1300) return;
+        if (!nyeArmature) return;
+        if (e.pointerType && e.pointerType !== "mouse") return;   // a finger has no hover
+        // R3: never raycast mid-gesture (0.7-2.5ms per hit during drags); throttle by TIME (~50ms) — event
+        // rate varies 60-240Hz across devices.
+        if (ptrDown || panOn) { ctaOn = false; setHover(null, true); return; }
         var _ctaNow = performance.now();
         if (_ctaNow - _ctaLastT < 50) return; _ctaLastT = _ctaNow;
-        if (controls.isGround()) {   // on the ground the SKY is the interface: everything up there is a door
-          if (ctaOn) { ctaOn = false; earthCta.classList.remove("is-on"); }
-          if (sunCtaOn && sunCta) { sunCtaOn = false; sunCta.classList.remove("is-on"); }
-          if (!ptrDown) {
-            _ctaNdc.x = (e.clientX / innerWidth) * 2 - 1; _ctaNdc.y = -(e.clientY / innerHeight) * 2 + 1;
-            var gHits = tsPickHits(_ctaRay, _ctaNdc, e.clientX, e.clientY, false);
-            var overSky = false;
-            for (var gI = 0; gI < gHits.length; gI++) {
-              var gO = gHits[gI].object, gPk = null;
-              while (gO && !gPk) { gPk = gO.userData && gO.userData.nyePick; gO = gO.parent; }
-              if (gPk === "sun" || gPk === "moon" || gPk === "jupiter" || gPk === "saturn" || gPk === "mercury" || gPk === "venus" || gPk === "mars" || gPk === "uranus" || gPk === "neptune" || gPk === "pluto" || gPk === "charon") { overSky = true; break; }
-            }
-            if (!overSky && natalSky && natalSky.isOverInteractive) overSky = !!natalSky.isOverInteractive(e.clientX, e.clientY);
-            canvas.style.cursor = overSky ? "pointer" : "grab";
-          }
-          return;
-        }
-        _ctaNdc.x = (e.clientX / innerWidth) * 2 - 1; _ctaNdc.y = -(e.clientY / innerHeight) * 2 + 1;
-        var hits = tsPickHits(_ctaRay, _ctaNdc, e.clientX, e.clientY, false);
-        var onEarth = false, onSun = false;
-        for (var hI = 0; hI < hits.length; hI++) {
-          if (hits[hI].object.name === "NyeEarthPickShell") continue;   // the oversized shell is not the globe
-          var oo = hits[hI].object, pk = null;
-          while (oo && !pk) { pk = oo.userData && oo.userData.nyePick; oo = oo.parent; }
-          if (pk === "beacon") { canvas.style.cursor = "pointer"; return; }   // the way home glows under the hand
-          if (pk === "earth") { onEarth = true; break; }   // ring glyphs may sit in front — scan on
-          if (pk === "sun") { onSun = true; break; }
-        }
-        if (onEarth) {
-          if (!_ctaEarthRef) _ctaEarthRef = nyeArmature.group.getObjectByName("NyeEarthMesh");
-          var ew = _ctaEarthRef.getWorldPosition(_ctaV).project(_ts ? nearCam : camera);
-          earthCta.style.left = ((ew.x * 0.5 + 0.5) * innerWidth) + "px";
-          earthCta.style.top = ((-ew.y * 0.5 + 0.5) * innerHeight - 46) + "px";
-        }
-        if (onSun && sunCta) {
-          if (!_ctaSunRef) _ctaSunRef = nyeArmature.group.getObjectByName("NyeSunCore");
-          var sw = _ctaSunRef.getWorldPosition(_ctaV).project(_ts ? nearCam : camera);
-          sunCta.style.left = ((sw.x * 0.5 + 0.5) * innerWidth) + "px";
-          sunCta.style.top = ((-sw.y * 0.5 + 0.5) * innerHeight - 58) + "px";
-        }
-        setCta(onEarth); setSunCta(onSun);
-        /* the canvas owns the cursor: pointer over ANY clickable body/star, grab otherwise */
-        var overClickable = onSun || onEarth;
-        if (!overClickable) {
-          for (var mI = 0; mI < hits.length; mI++) {
-            var mo = hits[mI].object, mp = null;
-            while (mo && !mp) { mp = mo.userData && mo.userData.nyePick; mo = mo.parent; }
-            if (mp === "moon") { overClickable = true; break; }
-          }
-        }
-        if (!overClickable && natalSky) {
-          for (var gI = 0; gI < hits.length; gI++) {         // the planets (hits already holds the Solar System)
-            var go = hits[gI].object, gp = null;
-            while (go && !gp) { gp = go.userData && go.userData.nyePick; go = go.parent; }
-            if (gp && TS_PLANET_PICKS[gp]) { overClickable = true; break; }
-          }
-          if (_ts && !overClickable) _ctaRay.setFromCamera(_ctaNdc, farCam);   // the sky is cast from the sky camera
-          if (!overClickable && natalSky.dsoPicks) {
-            var dh = _ctaRay.intersectObject(natalSky.dsoPicks, true);
-            for (var dhi = 0; dhi < dh.length; dhi++) { if (dsoPickInScale(dh[dhi].object)) { overClickable = true; break; } }
-          }   // a deep-sky wonder under the hand, but only at its real scale
-          if (!overClickable && natalSky.conPicks && _ctaRay.intersectObject(natalSky.conPicks, true).length) overClickable = true;   // a constellation under the hand
-          if (!overClickable && natalSky.isOverInteractive && natalSky.isOverInteractive(e.clientX, e.clientY)) overClickable = true;
-        }
-        if (!ptrDown) canvas.style.cursor = overClickable ? "pointer" : "grab";   // never fight the grabbing cursor mid-drag
+        var d = null;
+        try { d = pickDesc(e.clientX, e.clientY, true); } catch (eH) { d = null; }
+        ctaOn = !!(d && d.kind === "body" && d.key === "earth");
+        setHover(d && d.kind !== "beacon" && !glideActive() ? d : null, false);
+        if (!ptrDown) canvas.style.cursor = d ? "pointer" : "grab";   // never fight the grabbing cursor mid-drag
       }
-      function openFootprintMap() {
-        document.body.classList.add("to-map");
-        setTimeout(function () { location.href = "footprint.html"; }, 380);
-      }
-      if (earthCta) {
-        earthCta.addEventListener("mouseenter", function () { setCta(true); earthCta.classList.add("is-on"); });
-        earthCta.addEventListener("click", openFootprintMap);
-      }
-      function openJourney() {
-        document.body.classList.add("to-map");
-        setTimeout(function () { location.href = "journey.html"; }, 380);
-      }
-      if (sunCta) {
-        sunCta.addEventListener("mouseenter", function () { setSunCta(true); sunCta.classList.add("is-on"); });
-        sunCta.addEventListener("click", openJourney);
-      }
+      canvas.addEventListener("pointerleave", function () { ctaOn = false; setHover(null, false); });
 
       /* when the Earth owns the page (close zoom) and the hand hovers it, the
          干支 rings step aside — the globe becomes the sole subject */
@@ -3104,9 +3039,14 @@
         // clean world + its footprint, nothing blocking it) and reassemble as you pull back out
         // to the natal-chart overview. Only near the Earth — a constellation is handled by soloBody.
         var nearEarth = controls.target.lengthSq() < 1.0;
-        var proximity = nearEarth ? Math.max(0, Math.min(1, (r - 8.5) / 8.0)) : 1;   // 0 at r≤8.5 → 1 at r≥16.5
+        // (true scale, build 267: r = 16.5 is 2.5 million km out, where the Earth is four pixels — the 时环 around the
+        //  globe could never be seen. It now stands from r ≈ 9.5 (≈ 40,000 km) and is gone by r ≤ 7, the close look.)
+        var proximity = nearEarth ? Math.max(0, Math.min(1, (r - 8.0) / 1.6)) : 1;   // 0 at r≤8 → 1 at r≥9.6
+        // …and while the Earth itself is the selection (its page is the footprint) the globe is the sole subject
+        var selEarth = false;
+        try { var sv = window.__space.selection ? window.__space.selection() : null; selEarth = !!(sv && sv.kind === "body" && sv.id === "earth"); } catch (eSe) {}
         var zoomOut = Math.max(0, Math.min(1, (camera.position.length() - 520) / 380));  // the solar-system gear-rings melt away as you pull out to galaxy scale (like the zodiac)
-        var want = (soloBody || (ctaOn && r < 16)) ? 0 : Math.min(proximity, 1 - zoomOut);
+        var want = (soloBody || selEarth || (ctaOn && r < 9)) ? 0 : Math.min(proximity, 1 - zoomOut);
         if (controls.isGround()) want = 0;   // lying on the ground, the sky must be pure — no gear-rings overhead
         if (Math.abs(ringFade - want) < 0.004) { ringFade = want; return; }
         ringFade += (want - ringFade) * 0.1;
@@ -3284,11 +3224,14 @@
         });
       }
       if (baseBtn) baseBtn.addEventListener("click", glideToBase);
+      // the way back to the simple list is the visitor's own choice, made from the tool capsule (__space.setSimpleView).
+      // The old standalone button keeps working, but it is no longer put on the scene: hidden unless it has been
+      // moved into the capsule.
       var exit3d = document.getElementById("exit3d");
-      if (exit3d) exit3d.addEventListener("click", function () {
-        try { localStorage.setItem(MOTION_KEY, "flat"); } catch (e) {}
-        location.reload();
-      });
+      if (exit3d) {
+        exit3d.addEventListener("click", function () { window.__space.setSimpleView(true); });
+        if (exit3d.parentElement === document.body) { exit3d.hidden = true; exit3d.style.display = "none"; }
+      }
       /* the entrance: once the armature is up and the visitor's place is known, wake on the ground */
       tryGroundEntrance = function () {
         Promise.race([basePromise, new Promise(function (res) { setTimeout(function () { res(null); }, 5000); })])   // the poster covers the wait; landing in the wrong city is worse
@@ -3304,6 +3247,8 @@
             canvas.style.transition = "opacity 1.25s ease";
             canvas.style.opacity = "1";
             skyLive();
+            // a visitor who left through the scene comes back to what they opened (a fresh visit has no record: it stays on the ground)
+            if (uiScene.restore) { try { uiScene.restore(); } catch (eRs) { uiScene.err = String(eRs && eRs.stack || eRs); } }
           });
       };
       window.__space.ground = {
@@ -3317,36 +3262,26 @@
         is: function () { return !!(controls && controls.isGround()); }
       };
 
-      /* ===== the TOUR: the nav asks, the camera travels, the door opens ===== */
-      window.__space.glideToBody = function (n, d, f) { lastTouch = performance.now(); userMoved = true; if (controls.isGround()) { controls.exitGroundMode(); groundHint(false); } glideToBody(n, d, f); };   // verification hook
-      window.__space.tour = function (name, href) {
+      /* ===== the TOUR: the nav asks, the camera travels, the thing is SELECTED — nothing opens by itself =====
+         A leaf with data-tour flies and selects; the card's one button opens its page. (The old tour opened the
+         page 850 ms after arrival: a first click that navigated.) */
+      window.__space.glideToBody = function (n, d, f) {   // verification hook: fly to a body by object name — it is selected, like any pick
+        lastTouch = performance.now(); userMoved = true;
+        var k = bodyKeyOf(n);
+        if (k) { selectDesc(descBody(k), { force: true, dist: d, frames: f }); return; }
+        if (controls.isGround()) { controls.exitGroundMode(); groundHint(false); }
+        glideToBody(n, d, f);
+      };
+      window.__space.tour = function (name) {
         lastTouch = performance.now(); userMoved = true; glide.onDone = null;
-        // (body/star/constellation destinations fly via flyTo, which departs vertically
-        // from the ground on its own; the classic radial glides below must exit manually)
-        if (controls.isGround() && (name === "footprint" || name === "pillars" || name === "zodiac")) {
-          controls.exitGroundMode(); groundHint(false);
-        }
-        if (name === "pillars" || name === "zodiac" || name === "footprint") { soloBody = null; clearSel(); }
-        if (name === "footprint") {
-          glide.axis = null; glide.step = 0; glide.frames = 110; glide.distTarget = 9;
-          glide.targetTo = new THREE.Vector3(0, 0, 0);
-          glide.onDone = openFootprintMap;
-        } else if (name === "sun") {
-          glideToBody("NyeSun", 21, 175);   /* the journey anchor: park where the blaze fills ~40° of sky */
-        } else if (name === "moon") {
-          glideToBody("NyeMoon", 5.2, 150);   /* a ~35° close-up of the real lunar face, a real ride away */
-          if (natalSky) { natalSky.highlight("leo", true); setTimeout(function () { natalSky.highlight("leo", false); }, 4200); }
-        } else if (name === "jupiter") {
-          glideToBody("NatalJupiter", 13, 190);
-          if (natalSky) { natalSky.highlight("cancer", true); setTimeout(function () { natalSky.highlight("cancer", false); }, 4200); }
-        } else if (name === "saturn") {
-          glideToBody("NatalSaturn", 16, 200);
-          if (natalSky) { natalSky.highlight("gemini", true); setTimeout(function () { natalSky.highlight("gemini", false); }, 4200); }
-        } else if (name === "venus") {
-          glideToBody("NatalVenus", 4.0, 170);
-        } else if (name === "mercury") {
-          glideToBody("NatalMercury", 2.2, 170);
-        } else if (name === "pillars" || name === "zodiac") {
+        if (!name) return;
+        if (name === "footprint") name = "earth";
+        if (BODY[name]) { selectDesc(descBody(name), { force: true, frames: TOUR_FRAMES[name] || null }); return; }
+        if (name.indexOf("star:") === 0) { selectDesc(descCon(name.slice(5)), { force: true }); return; }
+        if (name.indexOf("dso:") === 0) { selectDesc(descDso("dso_" + name.slice(4), null), { force: true }); return; }
+        if (name === "pillars" || name === "zodiac") {
+          if (controls.isGround()) { controls.exitGroundMode(); groundHint(false); }
+          soloBody = null; clearSel();
           /* return to the canonical framing: keep the current azimuth (the sky keeps
              turning) but restore the entrance elevation — never arrive edge-on */
           var hOff = camera.position.clone().sub(controls.target);
@@ -3355,15 +3290,15 @@
           var hDir = new THREE.Vector3(Math.sin(hAz) * Math.cos(hEl), Math.sin(hEl), Math.cos(hAz) * Math.cos(hEl));
           paramGlide({ camTo: HOME.clone().add(hDir.multiplyScalar(name === "pillars" ? 92 : 390)), targetTo: HOME.clone(),
             frames: name === "pillars" ? 130 : 150, ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 4, onDone: null });
-        } else if (name && name.indexOf("star:") === 0) {
-          focusConstellation(name.slice(5), 110);
         }
-        // the nav asks → the camera flies to that place in the chart → it HOVERS a
-        // beat so you register where the content lives → then the door opens
-        if (href) glide.onDone = function () { setTimeout(function () { location.href = href; }, 850); };
       };
-      document.querySelectorAll("[data-tour]").forEach(function (el) {
-        el.addEventListener("click", function (ev) { ev.preventDefault(); closeNavGroups(); window.__space.tour(el.getAttribute("data-tour"), el.getAttribute("data-href")); });
+      // delegated, so the binding survives a re-rendered nav. A modified click (new tab / window) stays a plain link.
+      document.addEventListener("click", function (ev) {
+        var el = ev.target && ev.target.closest ? ev.target.closest("[data-tour]") : null;
+        if (!el) return;
+        if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button > 0) return;
+        ev.preventDefault(); closeNavGroups();
+        window.__space.tour(el.getAttribute("data-tour"));
       });
       // accordion tour bar: click pins one group open (closing every other), click
       // again releases it, and clicking anywhere else — or firing any leaf — closes all
@@ -3409,12 +3344,20 @@
         controls.target.copy(nt); camera.position.add(_pm);
       }, true);
       addEventListener("pointerup", function () { panOn = false; });
-      canvas.addEventListener("wheel", function () {
-        lastTouch = performance.now(); userMoved = true;
+      var _whLast = 0, _whStart = 0;
+      function lowFlight() { return glideActive() && !controls.isGround() && camera.position.length() < 0.95 * (MOBILE ? 2.4 : 3.0) * 1.55; }   // a launch or a landing, still under the lowest orbit
+      canvas.addEventListener("wheel", function (e) {
+        var wn = performance.now();
+        if (wn - _whLast > 260) _whStart = Math.min(wn, e.timeStamp || wn);   // a new wheel gesture begins after a pause (stamped when the event was made — the controls' listener, which may launch, has already run)
+        _whLast = wn; lastTouch = wn; userMoved = true;
         // R5: scrolling during a flight hands control back instantly (the controls wheel handler
         // re-seeds zoomTarget from the live radius when externalDrive was set) — parity with pointerdown.
-        if (glideActive() && !controls.isGround()) { glide.frames = 0; glide.param = null; glide.onDone = null; }
-      }, { passive: true });
+        // CAPTURE phase: the controls' own capture listener stops propagation, which (per the DOM dispatch
+        // algorithm) silences non-capture listeners on this same element — this one never ran before.
+        // A flight born DURING this wheel gesture (the launch off the ground) is not cancelled by the
+        // rest of the same gesture — a trackpad keeps streaming for a second after the launch fires.
+        if (glideActive() && !controls.isGround() && !lowFlight() && (glide.t0 || 0) < _whStart) cancelFlight();
+      }, { passive: true, capture: true });
 
       // clean-click routing: a drag is never a click
       var pickRay = new THREE.Raycaster(), pickNdc = new THREE.Vector2(), _lastPickAt = 0;
@@ -3423,6 +3366,7 @@
          true-scale camera, the sky from the sky camera (always behind), and a planet too small to hit by ray
          is still caught within ~16 px of its true position — a real-scale planet is often under a pixel. */
       var _tpV = new THREE.Vector3();
+      var _tsEarthRec = { name: "Earth", T: new THREE.Vector3(), Rt: 0.95 * (MOBILE ? 2.4 : 3.0) };   // the Earth is the true-scale origin — it has no body record of its own
       function tsPickHits(ray, ndc, sx, sy, withFar) {
         var near, far = [];
         if (!_ts) {
@@ -3438,17 +3382,27 @@
         if (natalSky && natalSky.bodyGroup) near = near.concat(ray.intersectObject(natalSky.bodyGroup, true));
         var fh = Math.tan(nearCam.fov * Math.PI / 360);
         var nearSys = nearCam.position.distanceTo(_ts.sun.T) < _ts.nearSkip;   // light-years out, the planets are no longer under your hand
-        for (var i = 0; nearSys && i < _ts.bodies.length; i++) {
-          var b = _ts.bodies[i]; if (!b.obj.visible) continue;
+        near.sort(function (h1, h2) { return h1.distance - h2.distance; });
+        /* the bodies too small to hit: caught within ~16 px of their true place. Several often share a few pixels
+           (from the overview the Sun, Mercury, Venus, the Earth and the Moon are one bright point), so they are
+           ordered the way the eye reads them: the one nearest the pointer — and, among those within 6 px of it,
+           the one whose name the labels show there (the tags' own rank: Sun, Earth, Jupiter, …). They come after
+           whatever real surface the ray struck. */
+        var prox = [];
+        for (var i = 0; nearSys && i <= _ts.bodies.length; i++) {
+          var isE = i === _ts.bodies.length, b = isE ? _tsEarthRec : _ts.bodies[i];
+          if (isE) { if (controls.isGround()) continue; } else if (!b.obj.visible) continue;
           if (!tsProject(b.T, _tpV)) continue;
           var px = (_tpV.x * 0.5 + 0.5) * innerWidth, py = (-_tpV.y * 0.5 + 0.5) * innerHeight, dd = b.T.distanceTo(nearCam.position);
-          var rpx = b.Rt / Math.max(1e-9, dd) / fh * innerHeight * 0.5;
-          if (rpx < 16 && Math.hypot(px - sx, py - sy) < 16) {
-            var po = null; b.obj.traverse(function (c) { if (!po && c.userData && c.userData.nyePick) po = c; });
-            if (po) near.push({ object: po, distance: dd, point: b.T.clone() });
+          var rpx = b.Rt / Math.max(1e-9, dd) / fh * innerHeight * 0.5, sd = Math.hypot(px - sx, py - sy);
+          if (rpx < 16 && sd < 16) {
+            var po = null, pk = isE ? "earth" : null;
+            if (!isE) b.obj.traverse(function (c) { if (!po && c.userData && c.userData.nyePick) po = c; });
+            if (po || pk) prox.push({ object: po || nyeArmature.group, pick: pk, distance: dd, point: b.T.clone(), _k: sd < 6 ? 0 : sd, _rank: (TS_NAMES[b.name] || [0, 0, 0])[2] });
           }
         }
-        near.sort(function (h1, h2) { return h1.distance - h2.distance; });
+        prox.sort(function (h1, h2) { return (h1._k - h2._k) || (h2._rank - h1._rank); });
+        near = near.concat(prox);
         if (withFar) {
           // a true-scale nebula is often only a few pixels across: catch it within ~14 px of its true place
           for (var gi = 0; gi < _ts.frames.length; gi++) {
@@ -3478,8 +3432,6 @@
         if (!obj) return;
         soloBody = ({ NyeSun: "sun", NyeMoon: "moon", NatalJupiter: "jupiter", NatalSaturn: "saturn", NatalMercury: "mercury", NatalVenus: "venus", NatalMars: "mars", NatalUranus: "uranus", NatalNeptune: "neptune", NatalPluto: "pluto", NatalPlutoMoon: "charon" })[objName] || soloBody;
         clearSel();
-        var _bodyPick = ({ NyeSun: "sun", NyeMoon: "moon", NatalJupiter: "jupiter", NatalSaturn: "saturn", NatalMercury: "mercury", NatalVenus: "venus", NatalMars: "mars", NatalUranus: "uranus", NatalNeptune: "neptune", NatalPluto: "pluto", NatalPlutoMoon: "charon" })[objName];
-        if (_bodyPick) showDossier(_bodyPick, null);   // its dossier (blank now) can be filled later
         controls.setDistanceLimits(FOCUS_MIN[objName] || 5.0, 15000);   // AFTER clearSel — clearSel resets the floor to the earth-anchored 5.0; 15000 lets you pull back from any focused body to the full-system overview
         var w = navPos(obj);                                  // true scale: the body's ladder proxy (legacy: the body)
         var wT = obj.getWorldPosition(new THREE.Vector3());   // …while sunlight directions come from the TRUE geometry
@@ -3537,84 +3489,563 @@
           flyTo({ camTo: c.clone().sub(dir.multiplyScalar(85)), targetTo: c.clone(), lookAt: c.clone(), frames: nFrames ? Math.round(nFrames * 2.2) : null, fovKick: 5, onDone: null });
         } else return;
         soloBody = "sky"; clearSel();
-        showDossier("con_" + id, null);
         natalSky.highlight(id, true); setTimeout(function () { natalSky.highlight(id, false); }, 4200);
       }
-      window.__space.focusCon = focusConstellation;
+      window.__space.focusCon = function (id) { return selectDesc(descCon(id), { force: true }); };
 
-      /* the star protocol: first click gives the star the pivot and summons its door;
-         the second click (or the door itself) opens it. Nothing navigates by surprise. */
-      var selStar = null, starCta = document.getElementById("star-cta");
-      var focusCard = document.getElementById("focus-card");
-      function hideDossier() { if (focusCard) focusCard.classList.remove("is-on"); }
-      function showDossier(id, fallback) {
-        if (!focusCard) return;
-        var d = (DOSSIER && DOSSIER[id]) || null;
-        var nm = fallback || (natalSky && natalSky.getPickName ? natalSky.getPickName(id) : null) || null;
-        var tEn = (d && d.titleEn) || (nm && nm.en) || "";
-        var tZh = (d && d.titleZh) || (nm && nm.zh) || tEn;
-        if (!tEn && !(d && (d.blurbEn || d.blurbZh))) { hideDossier(); return; }   // truly nothing to show → stay invisible (honors the unlabeled-sky decree)
-        var status = d && d.status ? '<span class="focus-card__chip">' + d.status + '</span>' : "";
-        var blurb = d && (d.blurbEn || d.blurbZh) ? '<p class="focus-card__b"><span class="i18n-en">' + (d.blurbEn || "") + '</span><span class="i18n-zh">' + (d.blurbZh || d.blurbEn || "") + '</span></p>' : "";
-        var links = (d && d.links && d.links.length) ? '<div class="focus-card__links">' + d.links.map(function (l) { return '<a href="' + l.href + '" target="_blank" rel="noopener"><span class="i18n-en">' + (l.labelEn || l.href) + ' ↗</span><span class="i18n-zh">' + (l.labelZh || l.labelEn || l.href) + ' ↗</span></a>'; }).join("") + '</div>' : "";
-        focusCard.innerHTML = '<div class="focus-card__h"><span class="i18n-en">' + tEn + '</span><span class="i18n-zh">' + tZh + '</span>' + status + '</div>' + blurb + links;
-        focusCard.classList.add("is-on");
+      /* ===================== THE INSTRUMENT FRAME · one selection grammar =====================
+         Every pickable thing — a work star, the Sun, the Moon, the Earth, a planet, a deep-sky object, a
+         constellation — obeys one sentence: a click SELECTS it (and flies to a good framing; it never navigates),
+         the selected thing wears the reticle and fills the card, and the card's one primary button opens its page.
+         A second click on the selected thing (keyboard: Enter) opens it too. Empty sky, Esc or the card's close
+         let go. Nothing here is ever an instruction: the card holds names, the ring holds a position. */
+      var MAXCAM_SEL = (window.CosmicLOD ? window.CosmicLOD.MAXCAM : 46000);
+      var BODY_ORDER = ["sun", "mercury", "venus", "earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "charon"];   // outward from the Sun
+      var K_STAR = ["Star", "恒星"], K_PLANET = ["Planet", "行星"], K_MOON = ["Satellite", "卫星"], K_DWARF = ["Dwarf planet", "矮行星"], W_SOLAR = ["Solar System", "太阳系"];
+      var BODY = {   // obj: scene object · dist: the authored framing distance · href/open: the page it carries (open = the destination's short name)
+        sun:     { obj: "NyeSun",         dist: 21,  name: ["Sun", "太阳"],       kind: K_STAR,   where: W_SOLAR, href: "journey.html", open: ["Journey", "旅程"], con: "capricorn",
+                   page: { title: ["Journey", "旅程"], kick: ["Education · 2020—2026", "求学之路 · 2020—2026"], blurb: ["Shandong University → Brown University.", "山东大学 → 布朗大学。"] } },
+        mercury: { obj: "NatalMercury",   dist: 2.2, name: ["Mercury", "水星"],   kind: K_PLANET, where: W_SOLAR, href: "products/nyeclock.html", open: ["Nye Clock", "弐时仪"],
+                   page: { title: ["Nye Clock", "弐时仪"], kick: ["Product", "产品"], blurb: ["A working timepiece: the present moment rendered as the traditional 干支 cycles.", "一件真正运转的时计:把当下时刻渲染为传统干支周期。"] } },
+        venus:   { obj: "NatalVenus",     dist: 4.0, name: ["Venus", "金星"],     kind: K_PLANET, where: W_SOLAR, href: "products/omytea.html", open: ["Omytea", "Omytea"],
+                   page: { title: ["Omytea", "Omytea"], kick: ["Product", "产品"], blurb: ["Omytea is building a human–agent internet.", "Omytea 正在构建人与代理共同参与的互联网。"] } },
+        earth:   { obj: "NyeEarthMesh",   dist: 9,   name: ["Earth", "地球"],     kind: K_PLANET, where: W_SOLAR, href: "footprint.html", open: ["Footprint", "足迹"],
+                   page: { title: ["Footprint", "足迹"], kick: ["2023–2026", "2023–2026"], blurb: ["738,021 raw GPS points.", "738,021 个原始 GPS 点。"] } },
+        moon:    { obj: "NyeMoon",        dist: 5.2, name: ["Moon", "月球"],      kind: K_MOON,   where: ["Earth", "地球"], href: "music.html", open: ["Music", "音乐"], con: "leo",
+                   page: { title: ["Music", "音乐"], kick: ["Creation", "创造"], blurb: ["Three instruments, three ways of listening — carried alongside the physics.", "三件乐器,三种聆听的方式——与物理并行。"] } },
+        mars:    { obj: "NatalMars",      dist: 2.8, name: ["Mars", "火星"],      kind: K_PLANET, where: W_SOLAR },
+        jupiter: { obj: "NatalJupiter",   dist: 13,  name: ["Jupiter", "木星"],   kind: K_PLANET, where: W_SOLAR, href: "books/invitation.html", open: ["Invitation", "Invitation"], con: "cancer", work: "invitation" },
+        saturn:  { obj: "NatalSaturn",    dist: 16,  name: ["Saturn", "土星"],    kind: K_PLANET, where: W_SOLAR, href: "books/sovereign.html", open: ["Sovereign", "Sovereign"], con: "gemini", hug: 2.3, work: "sovereign" },
+        uranus:  { obj: "NatalUranus",    dist: 6.5, name: ["Uranus", "天王星"],  kind: K_PLANET, where: W_SOLAR, href: "products/swindo.html", open: ["Swindo", "Swindo"],
+                   page: { title: ["Swindo", "Swindo"], kick: ["Product", "产品"], blurb: ["A golf-motion software project in development.", "一个开发中的高尔夫动作软件项目。"] } },
+        neptune: { obj: "NatalNeptune",   dist: 6.2, name: ["Neptune", "海王星"], kind: K_PLANET, where: W_SOLAR, href: "books/heping.html", open: ["和平请柬", "和平请柬"], work: "heping" },
+        pluto:   { obj: "NatalPluto",     dist: 1.1, name: ["Pluto", "冥王星"],   kind: K_DWARF,  where: W_SOLAR },
+        charon:  { obj: "NatalPlutoMoon", dist: 0.7, name: ["Charon", "卡戎"],    kind: K_MOON,   where: ["Pluto", "冥王星"] }
+      };
+      var TOUR_FRAMES = { sun: 175, moon: 150, jupiter: 190, saturn: 200, venus: 170, mercury: 170, uranus: 210, neptune: 220 };   // the nav's authored ride lengths
+      function bodyKeyOf(objName) { for (var k in BODY) if (BODY[k].obj === objName) return k; return objName === "Earth" ? "earth" : null; }
+      function bodyObject(key) {
+        var B = BODY[key]; if (!B || !nyeArmature) return null;
+        return nyeArmature.group.getObjectByName(B.obj) || (natalSky && natalSky.group ? natalSky.group.getObjectByName(B.obj) : null);
       }
-      window.__space.showDossier = showDossier;
+      /* descriptors — what a pick IS: kind + key (identity), the card's words, and the page it opens (if any) */
+      function descBody(key) {
+        var B = BODY[key]; if (!B) return null;
+        return { kind: "body", key: key, title: B.name, kicker: [B.kind[0] + " · " + B.where[0], B.kind[1] + " · " + B.where[1]], href: B.href || "", open: B.open || null };
+      }
+      function descStar(info) {
+        if (!info || !info.id) return null;
+        var ci = natalSky && natalSky.getConInfo ? natalSky.getConInfo(info.constellationId) : null, n = ci ? ci.works : 0;
+        return { kind: "star", key: info.id, info: info, title: [info.titleEn, info.titleZh],
+                 kicker: [info.constellationEn + (n ? " · " + n : ""), info.constellationZh + (n ? " · " + n : "")], href: info.href || "", open: ["Open", "打开"] };
+      }
+      function descCon(id) {
+        var ci = natalSky && natalSky.getConInfo ? natalSky.getConInfo(id) : null; if (!ci) return null;
+        var nm = ci.name || {};
+        return { kind: "con", key: id, title: [nm.en || id, nm.zh || nm.en || id],
+                 kicker: ci.works ? ["Constellation · " + ci.works, "星座 · " + ci.works] : ["Constellation · Zodiac", "星座 · 黄道"], href: "", open: null };
+      }
+      function descDso(pick, shell) {   // pick: "dso_<id>"
+        var id = pick.slice(4);
+        if (!shell && natalSky && natalSky.dsoPicks) shell = natalSky.dsoPicks.getObjectByName("DSOPick_" + id) || null;
+        var ud = (shell && shell.userData) || {}, dz = (DOSSIER && DOSSIER[pick]) || null, nm = ud.dsoName || TS_EXTRA_NAMES[id] || null;
+        var tEn = (dz && dz.titleEn) || (nm && nm.en) || "", tZh = (dz && dz.titleZh) || (nm && nm.zh) || tEn;
+        var kind = ud.lssKind === "cluster" ? ["Galaxy cluster", "星系团"] : ud.lssKind === "supercluster" ? ["Supercluster", "超星系团"] : ["Deep sky", "深空"];
+        var where = (id.indexOf("lss_") === 0 || ud.dsoMinCam >= 9000) ? ["Cosmic Web", "宇宙网"]
+          : (ud.dsoMinCam >= 2600 || ud.dsoFromInside || id === "lmc" || id === "smc" || id === "sgrdwarf") ? ["Local Group", "本星系群"] : ["Milky Way", "银河系"];
+        return { kind: "dso", key: id, shell: shell, title: [tEn, tZh], kicker: [kind[0] + " · " + where[0], kind[1] + " · " + where[1]], href: "", open: null };
+      }
+      function sameDesc(a, b) { return !!(a && b && a.kind === b.kind && a.key === b.key); }
+
+      /* ---- the card: index.html owns its skeleton (#focus-kicker · #focus-title · #focus-body · a#focus-open ·
+              #focus-prev · #focus-next · #focus-close) and its CSS; this only fills it. Parts are looked up at use
+              time, and a missing part is simply skipped. ---- */
+      var focusCard = document.getElementById("focus-card");
+      function escHtml(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]; }); }
+      function setI18n(el, en, zh) {
+        if (!el) return;
+        if (!en && !zh) { el.textContent = ""; return; }   // truly empty → :empty collapses it
+        el.innerHTML = '<span class="i18n-en">' + escHtml(en || zh) + '</span><span class="i18n-zh">' + escHtml(zh || en) + '</span>';
+      }
+      function cardPart(id) { return focusCard ? focusCard.querySelector("#" + id) : null; }
+      function setShown(el, on) {   // a control that is not visible must not be focusable or announced
+        if (!el) return;
+        if (!!el._shown === !!on && el._shownSet) return;
+        el._shown = !!on; el._shownSet = true;
+        el.classList.toggle("is-on", !!on);
+        try { el.inert = !on; } catch (eI) {}
+        if (on) el.removeAttribute("aria-hidden"); else el.setAttribute("aria-hidden", "true");
+      }
+      function hideCard() { setShown(focusCard, false); document.body.classList.remove("sel-open"); }
+      /* what the card SAYS about a pick. A star or a body that carries a work speaks in that work's own record
+         (data/works.json — the same record its page is generated from): field, status, period, opening sentence.
+         A body that carries a page speaks in that page's own opening words (BODY[..].page). A thing that carries
+         nothing keeps its own name. None of this is instruction; all of it is the content. */
+      var WORKS = {};
+      try {
+        (window.__worksData = window.__worksData || fetch("/data/works.json").then(function (r) { return r.json(); }))
+          .then(function (wd) { ((wd && wd.works) || []).forEach(function (w) { WORKS[w.id] = w; }); if (sel) fillCard(sel); })
+          .catch(function () {});
+      } catch (eW) {}
+      function pair(v) { return !v ? ["", ""] : (typeof v === "string" ? [v, v] : [v.en || v.zh || "", v.zh || v.en || ""]); }
+      function i18nHtml(p) { return '<span class="i18n-en">' + escHtml(p[0] || p[1]) + '</span><span class="i18n-zh">' + escHtml(p[1] || p[0]) + '</span>'; }
+      function cardFacts(d) {
+        var f = { kicker: d.kicker, title: d.title, status: ["", ""], when: "", blurb: ["", ""] };
+        var B = d.kind === "body" ? BODY[d.key] : null;
+        var w = d.kind === "star" ? WORKS[d.key] : (B && B.work ? WORKS[B.work] : null);
+        if (w) {
+          var where = pair(w.where), ds = w.desc || {};
+          f.status = pair(w.status); f.when = w.period || "";
+          f.blurb = [(ds.en && ds.en[0]) || "", (ds.zh && ds.zh[0]) || ""];
+          if (B) {   // a body carrying a work: the work is the title, the body is where it is found (a star keeps its curated short title)
+            var kind = w.cls === "books" ? ["Book", "著作"] : where;
+            f.title = pair(w.title); f.kicker = [B.name[0] + " · " + kind[0], B.name[1] + " · " + kind[1]];
+          }
+          else if (where[0] || where[1]) f.kicker = where;
+        } else if (B && B.page) {
+          f.title = B.page.title; f.blurb = B.page.blurb || ["", ""];
+          f.kicker = [B.name[0] + " · " + B.page.kick[0], B.name[1] + " · " + B.page.kick[1]];
+        }
+        return f;
+      }
+      function hasSiblings(d) {
+        if (d.kind === "body" || d.kind === "con") return true;
+        if (d.kind === "star") { var ci = natalSky && natalSky.getConInfo ? natalSky.getConInfo(d.info.constellationId) : null; return !!(ci && ci.works > 1); }
+        return false;
+      }
+      function fillCard(d) {
+        if (!focusCard) return;
+        if (!d || !d.title || !d.title[0]) { hideCard(); return; }
+        var f = cardFacts(d);
+        setI18n(cardPart("focus-kicker"), f.kicker[0], f.kicker[1]);
+        setI18n(cardPart("focus-title"), f.title[0], f.title[1]);
+        // a body only where there is a page to open AND the data hook carries words for it (objects without a page: title + kicker only)
+        var dz = (DOSSIER && DOSSIER[d.kind === "con" ? "con_" + d.key : d.kind === "dso" ? "dso_" + d.key : d.key]) || null;
+        var bEl = cardPart("focus-body");
+        if (bEl) {
+          var bh = "", bl = (f.blurb[0] || f.blurb[1]) ? f.blurb : (d.href && dz && (dz.blurbEn || dz.blurbZh)) ? [dz.blurbEn, dz.blurbZh] : null;
+          if (f.status[0] || f.status[1]) bh += '<span class="focus-card__status">' + i18nHtml(f.status) + (f.when ? '<span class="focus-card__when"> · ' + escHtml(f.when) + '</span>' : "") + '</span>';
+          if (bl) bh += '<span class="focus-card__sum">' + i18nHtml(bl) + '</span>';
+          if (bh) bEl.innerHTML = bh; else bEl.textContent = "";
+        }
+        var oEl = cardPart("focus-open");
+        if (oEl) {
+          if (d.href && d.open) {
+            oEl.setAttribute("href", d.href);
+            if (/^https?:/.test(d.href)) { oEl.setAttribute("target", "_blank"); oEl.setAttribute("rel", "noopener"); } else { oEl.removeAttribute("target"); oEl.removeAttribute("rel"); }
+            setI18n(oEl, "Open ↗", "打开 ↗");   // the title already names what it opens
+          } else { oEl.removeAttribute("href"); oEl.removeAttribute("target"); oEl.textContent = ""; }   // nothing to open → no href (the CSS hides it)
+        }
+        var sib = hasSiblings(d), pv = cardPart("focus-prev"), nx = cardPart("focus-next");
+        if (pv) { pv.hidden = !sib; pv.disabled = !sib; }
+        if (nx) { nx.hidden = !sib; nx.disabled = !sib; }
+        setShown(focusCard, true);
+        document.body.classList.add("sel-open");   // CSS hook: the distance read-out steps aside where the card would sit on it
+      }
+      hideCard();
+
+      /* ---- selection state ---- */
+      var sel = null, _selSeq = 0, RETURN_KEY = "cv-return";
       function clearSel() {
-        selStar = null; if (starCta) starCta.classList.remove("is-on");
-        hideDossier();
+        sel = null; hideCard();
+        if (natalSky && natalSky.setSelectedNode) natalSky.setSelectedNode(null);
         try { window.dispatchEvent(new CustomEvent("space:star-clear")); } catch (e) {}
-        if (controls) controls.setDistanceLimits(5.0, (window.CosmicLOD ? window.CosmicLOD.MAXCAM : 46000));   // leaving any body-focus: the earth-anchored floor returns; ceiling stays at the cosmic-address MAXCAM so you can pull back to the web/observable tiers
+        if (controls) controls.setDistanceLimits(5.0, MAXCAM_SEL);   // leaving any body-focus: the earth-anchored floor returns; ceiling stays at the cosmic-address MAXCAM so you can pull back to the web/observable tiers
       }
       window.__space.clearSel = clearSel;
-      function openStarDoor() {
-        if (!selStar || !selStar.href) return;
-        if (/^https?:/.test(selStar.href)) { window.open(selStar.href, "_blank", "noopener"); return; }
-        document.body.classList.add("to-map");
-        var h = selStar.href;
-        setTimeout(function () { location.href = h; }, 380);
+      /* leaving through the scene: remember what was selected and how far out the camera stood, so coming back
+         (same tab, within 30 minutes) returns to it instead of the ground */
+      function saveReturn() {
+        if (!sel) return;
+        try {
+          sessionStorage.setItem(RETURN_KEY, JSON.stringify({ k: sel.kind, id: sel.key, r: +camera.position.length().toFixed(3), rad: +controls.getRadius().toFixed(3), t: Date.now() }));
+        } catch (e) {}
       }
-      function focusStar(info) {
-        if (!info) { clearSel(); return; }                       // a click into the void lets go
-        // (flyTo departs vertically when starting from the ground — no chain needed)
-        if (selStar && selStar.id === info.id) { openStarDoor(); return; }
-        selStar = info;
-        showDossier(info.id, { en: info.titleEn, zh: info.titleZh });
-        try { window.dispatchEvent(new CustomEvent("space:star-focus", { detail: info })); } catch (e) {}
-        if (starCta) {
-          var te = info.titleEn.length > 34 ? info.titleEn.slice(0, 33) + "…" : info.titleEn;
-          var tz = info.titleZh.length > 17 ? info.titleZh.slice(0, 16) + "…" : info.titleZh;
-          starCta.innerHTML = '<span class="i18n-en">Open · ' + te + ' ↗</span><span class="i18n-zh">打开 · ' + tz + ' ↗</span>';
-        }
-        var dir = info.world.clone().normalize(), tb = tsBodyAt(info.world), camTo;
-        if (tb) {
-          // true scale: a planet door is approached like any body — from its sunlit side, ~4 radii out
-          var toSunT = _ts.sun.T.clone().sub(tb.T).normalize(), side = dir.clone().negate().multiplyScalar(0.45).add(toSunT).normalize();
-          controls.setDistanceLimits(Math.max(0.3, tb.Ro * 1.5), 15000);
-          camTo = info.world.clone().addScaledVector(side, tb.Ro * 3.8);
-        } else camTo = info.world.clone().sub(dir.multiplyScalar(38));
-        flyTo({
-          camTo: camTo,
-          targetTo: info.world.clone(), lookAt: info.world.clone(),
-          fovKick: 5, onDone: null
-        });
+      function openSel() {
+        if (!sel || !sel.href) return false;
+        var h = sel.href;
+        if (/^https?:/.test(h)) { window.open(h, "_blank", "noopener"); return true; }
+        saveReturn();
+        document.body.classList.add("to-map");
+        setTimeout(function () { location.href = h; }, 380);
+        return true;
+      }
+      /* ---- the flights (each one lets go of the previous selection and sets its own distance limits) ---- */
+      function flyEarth(frames) {
+        soloBody = null; clearSel();
+        if (controls.isGround()) { ascendThen(null, BODY.earth.dist); return; }
+        var cl = Math.max(1e-3, camera.position.length()), dir = camera.position.clone().normalize();
+        if (!isFinite(dir.x) || dir.lengthSq() < 1e-8) dir.set(0.42, 0.26, 0.88).normalize();
+        paramGlide({ camTo: dir.multiplyScalar(BODY.earth.dist), targetTo: HOME.clone(),
+          frames: frames || Math.round(Math.max(54, Math.min(240, 54 + 46 * Math.abs(Math.log(cl / BODY.earth.dist))))),
+          ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: cl > 40 ? 4 : 0, onDone: null });
+      }
+      function flyStar(info) {
+        clearSel();
+        var dir = info.world.clone().normalize();
+        flyTo({ camTo: info.world.clone().sub(dir.multiplyScalar(38)), targetTo: info.world.clone(), lookAt: info.world.clone(), fovKick: 5, onDone: null });
         soloBody = "sky";
       }
-      if (starCta) starCta.addEventListener("click", openStarDoor);
+      function flyDesc(d, o) {
+        if (d.kind === "body") {
+          var B = BODY[d.key];
+          if (d.key === "earth") { flyEarth(o.frames); return; }
+          if (B.con && natalSky) { natalSky.highlight(B.con, true); (function (c) { setTimeout(function () { natalSky.highlight(c, false); }, 2800); })(B.con); }
+          glideToBody(B.obj, o.dist || B.dist, o.frames || null);
+        } else if (d.kind === "star") flyStar(d.info);
+        else if (d.kind === "con") focusConstellation(d.key, 110);
+        else if (d.kind === "dso") focusDeepSky(d.key, d.shell);
+      }
+      /* THE one entry: select + fly. Selecting what is already selected opens it (the second click) unless forced. */
+      function selectDesc(d, o) {
+        o = o || {};
+        if (!d) { clearSel(); return false; }
+        if (d.kind === "body" && !bodyObject(d.key)) return false;
+        if (sameDesc(sel, d) && !o.force) { openSel(); return true; }
+        lastTouch = performance.now(); userMoved = true;
+        flyDesc(d, o);
+        sel = d; d.arrived = false; d.homeR = 0; d.seq = ++_selSeq;
+        var after = o.onArrive || null;
+        function landed() { if (sel === d) { d.arrived = true; d.homeR = controls.getRadius(); } if (after) { try { after(); } catch (eA) {} } }
+        if (glideActive()) { glide.onDone = landed; if (o.instant && glide.param) glide.param.n = Math.min(glide.param.n, 8); }   // (a few frames, never one: the true-scale frame hand-over rides the glide)
+        else landed();
+        fillCard(d);
+        try { window.dispatchEvent(new CustomEvent("space:select", { detail: { kind: d.kind, id: d.key } })); } catch (e) {}
+        if (d.kind === "star") {
+          if (natalSky && natalSky.setSelectedNode) natalSky.setSelectedNode(d.key);
+          try { window.dispatchEvent(new CustomEvent("space:star-focus", { detail: d.info })); } catch (e2) {}
+          var stray = focusCard && focusCard.querySelector(".focus-card__atlas");   // an older listener's own prev/next block: the skeleton carries those now
+          if (stray) stray.remove();
+        }
+        return true;
+      }
+      function stepSel(dir) {   // the siblings: the other works of the same constellation · the other bodies, outward from the Sun · the other signs
+        if (!sel) return;
+        var list = null, i = -1, d = null;
+        if (sel.kind === "body") {
+          list = BODY_ORDER.filter(function (k) { return !!bodyObject(k); }); i = list.indexOf(sel.key);
+          if (i >= 0 && list.length > 1) d = descBody(list[(i + dir + list.length) % list.length]);
+        } else if (sel.kind === "star" && natalSky && natalSky.getNodes) {
+          var cid = sel.info.constellationId;
+          list = natalSky.getNodes().filter(function (n) { return n.constellationId === cid; });
+          for (var q = 0; q < list.length; q++) if (list[q].id === sel.key) i = q;
+          if (i >= 0 && list.length > 1) d = descStar(list[(i + dir + list.length) % list.length]);
+        } else if (sel.kind === "con" && natalSky && natalSky.getConIds) {
+          list = natalSky.getConIds(); i = list.indexOf(sel.key);
+          if (i >= 0 && list.length > 1) d = descCon(list[(i + dir + list.length) % list.length]);
+        }
+        if (d) selectDesc(d, { force: true });
+      }
+      document.addEventListener("click", function (ev) {   // the card's controls (delegated: the skeleton may be swapped under us)
+        var t = ev.target && ev.target.closest ? ev.target.closest("#focus-open, #focus-prev, #focus-next, #focus-close") : null;
+        if (!t || !focusCard || !focusCard.contains(t)) return;
+        if (t.id === "focus-open") {
+          if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button > 0) return;   // a new tab / window: the link stays a link
+          if (!sel || !sel.href || /^https?:/.test(sel.href)) return;                         // an outside link opens natively
+          ev.preventDefault(); openSel();
+        } else {
+          ev.preventDefault();
+          if (t.id === "focus-prev") stepSel(-1); else if (t.id === "focus-next") stepSel(1); else clearSel();
+        }
+      });
+      /* public hooks (search, the atlas, verification) — all speak the same grammar; none of them navigates */
+      function focusStar(info) { if (!info) { clearSel(); return; } selectDesc(descStar(info), { force: true }); }
       window.__space.focusStar = focusStar;
       window.__space.focusStarById = function (id) {
         var info = natalSky && natalSky.getNodeById ? natalSky.getNodeById(id) : null;
         if (!info) return false;
-        focusStar(info);
-        return true;
+        return selectDesc(descStar(info), { force: true });
       };
-      function focusGiant(objName, id, titleEn, titleZh, href, con) {
-        var o = natalSky && natalSky.group.getObjectByName(objName); if (!o) return;
-        if (con && natalSky) { natalSky.highlight(con, true); setTimeout(function () { natalSky.highlight(con, false); }, 4200); }
-        focusStar({ id: id, href: href, titleEn: titleEn, titleZh: titleZh, world: navPos(o) });
+      window.__space.focusGiant = function (objName) { var k = bodyKeyOf(objName); if (k) selectDesc(descBody(k), { force: true }); };
+      window.__space.selectBody = function (key) { return selectDesc(descBody(key), { force: true }); };
+      window.__space.selection = function () { return sel ? { kind: sel.kind, id: sel.key, href: sel.href, arrived: !!sel.arrived } : null; };
+
+      /* ---- what is under a screen point (ONE resolver for the click and for the hover ring) ----
+         Order: the Solar System (it is drawn in front of the sky) → a work star (more specific than the figure
+         it belongs to, or the cloud behind it) → the nearest deep-sky object / constellation shell. */
+      function pickDesc(sx, sy, forHover) {
+        if (!nyeArmature) return null;
+        pickNdc.x = (sx / innerWidth) * 2 - 1; pickNdc.y = -(sy / innerHeight) * 2 + 1;
+        var hits = tsPickHits(pickRay, pickNdc, sx, sy, true), ground = controls.isGround(), far = null;
+        var chartOn = !!(natalSky && natalSky.conPicks && natalSky.conPicks.visible);
+        for (var i = 0; i < hits.length; i++) {
+          if (hits[i].object.name === "NyeEarthPickShell") continue;   // the oversized shell is not the globe
+          var pick = hits[i].pick || null, o = hits[i].object, owner = null;
+          while (o && !pick) { if (o.userData && o.userData.nyePick) { pick = o.userData.nyePick; owner = o; } o = o.parent; }
+          if (!pick || !pick.indexOf) continue;                        // glyphs and rings never swallow a pick
+          if (pick.indexOf("dso_") === 0) { if (!far && dsoPickInScale(owner)) far = descDso(pick, owner); continue; }   // a deep-sky object, only at its own scale
+          if (pick.indexOf("con_") === 0) { if (!far && chartOn) far = descCon(pick.slice(4)); continue; }
+          if (pick === "beacon") {
+            // on the ground the camera sits INSIDE the beacon's pick bubble (and the raycaster ignores visible=false) — look PAST it
+            if (ground) continue;
+            return { kind: "beacon", key: "beacon" };
+          }
+          if (pick === "earth") {
+            if (ground) continue;   // you are standing on it — look past it to the sky
+            // only the globe itself: the hour ring, the day ring out at the lunar orbit and every glyph riding them are
+            // children of the Earth and walk up to "earth" too — and a second click on a selected Earth OPENS a page
+            if (!hits[i].pick && hits[i].point && hits[i].point.length() > _tsEarthRec.Rt * 1.3) continue;
+          }
+          if (BODY[pick]) return descBody(pick);
+        }
+        var np = natalSky && natalSky.pickAt ? natalSky.pickAt(sx, sy) : null;   // (a fresh pick, also for hover: the tooltip path's own cache is one event behind)
+        if (np && np.node) return descStar(np.node);
+        if (far) return far;
+        if (np && np.con) return descCon(np.con);
+        return null;
       }
-      window.__space.focusGiant = focusGiant;
+
+      /* ---- the reticle · the hover ring · the work-star markers ----
+         DOM over the canvas (no blending law to honour, crisp at any size), placed every frame AFTER the frame's
+         cameras are synced, with the camera that actually draws each thing — nearCam for the Solar System at true
+         scale, farCam for the sky, a cosmic tier's own camera for its landmarks — through tsProject, the very
+         projection the .ts-tags use. */
+      var skyUi = document.createElement("div"); skyUi.className = "sky-ui no-print"; skyUi.setAttribute("aria-hidden", "true");
+      document.body.appendChild(skyUi);
+      function mkRing(cls) {
+        var r = document.createElement("div"); r.className = "sky-ring " + cls; r.appendChild(document.createElement("i")); skyUi.appendChild(r);
+        return { el: r, on: false, d: -1, p: -2, fly: false };
+      }
+      var ringSel = mkRing("sky-ring--sel"), ringHov = mkRing("sky-ring--hover"), ringPre = [];
+      var _ank = { x: 0, y: 0, r: 0, ok: false }, _akV = new THREE.Vector3(), _akP = new THREE.Vector3(), _akS = new THREE.Vector3(), _akXY = new Float32Array(160);
+      var EARTH_R = 0.95 * (MOBILE ? 2.4 : 3.0);
+      function camFor(obj) {   // the camera that draws this object (true scale: one per layer)
+        if (!_ts) return camera;
+        var m = obj.layers.mask;
+        if (m & 1) return nearCam;
+        if (m & 2) return farCam;
+        for (var i = 0; i < TS_TIERS.length; i++) if (m & (1 << TS_TIERS[i].layer)) return TS_TIERS[i].cam;
+        return farCam;
+      }
+      function tsBodyRec(objName) { if (_ts) for (var i = 0; i < _ts.bodies.length; i++) if (_ts.bodies[i].name === objName) return _ts.bodies[i]; return null; }
+      function anchorCon(d, out) {   // a constellation is ringed as it is SEEN: the reach of its figure stars on the screen
+        var pts = d._stars || (d._stars = (natalSky && natalSky.getConStars ? natalSky.getConStars(d.key) : []));
+        var cam = _ts ? farCam : camera, W = innerWidth, H = innerHeight, n = 0, x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+        for (var i = 0; i < pts.length && n < 80; i++) {
+          if (!tsProject(pts[i], _akV, cam)) continue;
+          var x = (_akV.x * 0.5 + 0.5) * W, y = (-_akV.y * 0.5 + 0.5) * H;
+          _akXY[n * 2] = x; _akXY[n * 2 + 1] = y; n++;
+          if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+        }
+        if (n < 2 || n * 2 < pts.length) return out;   // most of it is behind the eye
+        var cx = (x0 + x1) * 0.5, cy = (y0 + y1) * 0.5, rr = 0;
+        for (var j = 0; j < n; j++) { var dd = Math.hypot(_akXY[j * 2] - cx, _akXY[j * 2 + 1] - cy); if (dd > rr) rr = dd; }
+        out.x = cx; out.y = cy; out.r = rr + 9; out.ok = true; return out;
+      }
+      function anchorOf(d, out) {   // screen centre + radius (px) of a descriptor; ok = false when it is behind the eye
+        var cam, R = 0;
+        out.ok = false;
+        if (d.kind === "body") {
+          var B = BODY[d.key], rec = d.key === "earth" ? null : tsBodyRec(B.obj);
+          if (d.key === "earth") { _akP.set(0, 0, 0); R = EARTH_R; cam = _ts ? nearCam : camera; }
+          else if (rec) { _akP.copy(rec.T); R = rec.Rt; cam = nearCam; }
+          else { var bo = d._obj || (d._obj = bodyObject(d.key)); if (!bo) return out; bo.getWorldPosition(_akP); cam = camera; }
+          R *= (B.hug || 1);
+        } else if (d.kind === "star") { _akP.copy(d.info.world); cam = _ts ? farCam : camera; }
+        else if (d.kind === "dso") {
+          var sh = d.shell; if (!sh || !sh.parent) return out;
+          sh.getWorldPosition(_akP); cam = camFor(sh);
+          if (sh.geometry) { if (!sh.geometry.boundingSphere) sh.geometry.computeBoundingSphere(); sh.getWorldScale(_akS); R = sh.geometry.boundingSphere.radius * _akS.x; }
+        } else if (d.kind === "con") return anchorCon(d, out);
+        else return out;
+        if (!tsProject(_akP, _akV, cam)) return out;
+        out.x = (_akV.x * 0.5 + 0.5) * innerWidth; out.y = (-_akV.y * 0.5 + 0.5) * innerHeight;
+        out.r = R > 0 ? R / Math.max(1e-12, _akP.distanceTo(cam.position)) / Math.tan(cam.fov * Math.PI / 360) * innerHeight * 0.5 : 0;
+        out.ok = true; return out;
+      }
+      function placeRing(R, d, flyP) {
+        var a = d ? anchorOf(d, _ank) : null, W = innerWidth, H = innerHeight, show = !!(a && a.ok);
+        if (show) {
+          var rad = Math.max(14, a.r + 5);                       // hug the thing; never smaller than a 28 px ring
+          if (rad > 0.48 * Math.min(W, H)) show = false;         // it fills the view — the subject needs no ring
+          else if (a.x < -rad || a.x > W + rad || a.y < -rad || a.y > H + rad) show = false;   // it left the screen
+          else {
+            var dia = Math.round(rad * 2);
+            if (dia !== R.d) { R.d = dia; R.el.style.width = R.el.style.height = dia + "px"; }
+            R.el.style.transform = "translate3d(" + (a.x - dia * 0.5).toFixed(1) + "px," + (a.y - dia * 0.5).toFixed(1) + "px,0)";
+          }
+        }
+        if (show !== R.on) { R.on = show; R.el.classList.toggle("is-on", show); }
+        var fly = show && flyP >= 0;
+        if (fly !== R.fly) { R.fly = fly; R.el.classList.toggle("is-flying", fly); }
+        if (fly) { var p = Math.round(flyP * 500) / 500; if (p !== R.p) { R.p = p; R.el.style.setProperty("--p", String(p)); } }
+      }
+      /* the hover ring keeps the doors' old hysteresis: it lingers ~240 ms after the hand leaves, so it never flickers */
+      var hov = null, hovOffT = null;
+      function setHover(d, now) {
+        if (d) {
+          if (hovOffT) { clearTimeout(hovOffT); hovOffT = null; }
+          if (!sameDesc(hov, d)) hov = d;
+        } else if (hov) {
+          if (now) { if (hovOffT) { clearTimeout(hovOffT); hovOffT = null; } hov = null; }
+          else if (!hovOffT) hovOffT = setTimeout(function () { hovOffT = null; hov = null; lastTouch = performance.now(); }, 240);
+        }
+      }
+      /* NAV ↔ SKY: the menu says which door is under the hand (window "cosmos:preview"); what that door leads to
+         brightens in the sky — the work stars for Research, a ring on the body a leaf flies to. Eased in CSS. */
+      var PREVIEW_GROUP = { research: ["star:capricorn", "star:gemini"], about: ["sun"], creation: ["jupiter", "saturn", "venus", "mercury", "moon"], footprint: ["earth"] };
+      var preview = null;
+      window.addEventListener("cosmos:preview", function (ev) {
+        var dt = ev && ev.detail, p = { cons: null, descs: [] };
+        lastTouch = performance.now();   // wake the frame loop: the hand is on the menu, not on the canvas
+        function add(name) {
+          if (!name) return;
+          if (name === "footprint") name = "earth";
+          if (BODY[name]) { var bd = descBody(name); if (bd) p.descs.push(bd); }
+          else if (name.indexOf("star:") === 0) (p.cons = p.cons || {})[name.slice(5)] = 1;
+        }
+        if (dt) { if (dt.tour) add(dt.tour); else (PREVIEW_GROUP[dt.group] || []).forEach(add); }
+        preview = (p.cons || p.descs.length) ? p : null;
+      });
+      /* WORK STARS READ AS DESTINATIONS: four quiet ticks around each one, while the chart is the sky in view.
+         What stands in front of the sky hides them too: the globe (and, on the ground, the land along the skyline),
+         and the body the visitor is parked at. */
+      var marks = null, _mkDir = new THREE.Vector3(), _mkOc = new THREE.Vector3();
+      function sm01(x) { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); }
+      function tickMarks() {
+        if (!marks) {
+          if (!natalSky || !natalSky.getNodes) return;
+          var nodes = natalSky.getNodes(); if (!nodes.length) return;
+          marks = nodes.map(function (n, i) {
+            var mEl = document.createElement("i"); mEl.className = "sky-mark"; mEl.style.setProperty("--d", (-((i * 1.37) % 6)).toFixed(2) + "s");
+            skyUi.appendChild(mEl);
+            return { el: mEl, con: n.constellationId, w: n.world, a: -1, x: -1e9, y: -1e9, lit: false };
+          });
+        }
+        var gain = (natalSky.markerGain ? natalSky.markerGain() : 0) * (1 - sm01((camera.position.length() - 900) / 400));
+        var cam = _ts ? farCam : camera, eye = _ts ? nearCam.position : camera.position, W = innerWidth, H = innerHeight;
+        var ground = controls.isGround(), e2 = eye.lengthSq(), fb = (_ts && _nav.b && !_nav.b.galactic && _nav.p >= 1) ? _nav.b : null;
+        for (var i = 0; i < marks.length; i++) {
+          var m = marks[i], a = 0, x = 0, y = 0;
+          if (gain > 0.01 && tsProject(m.w, _akV, cam)) {
+            x = (_akV.x * 0.5 + 0.5) * W; y = (-_akV.y * 0.5 + 0.5) * H;
+            if (x > -14 && x < W + 14 && y > -14 && y < H + 14) {
+              a = gain;
+              _mkDir.copy(m.w).sub(cam.position).normalize();
+              var b = eye.dot(_mkDir);
+              if (ground) a *= sm01((b / Math.sqrt(Math.max(1e-12, e2))) / 0.06);       // sine of the altitude: clear of the skyline by ~3°
+              else if (b < 0 && e2 - b * b < EARTH_R * EARTH_R * 1.03) a = 0;          // behind the globe
+              if (a > 0 && fb) {                                                        // behind the body you are parked at
+                _mkOc.copy(fb.T).sub(eye); var tp = _mkOc.dot(_mkDir);
+                if (tp > 0 && _mkOc.lengthSq() - tp * tp < fb.Rt * fb.Rt * 1.04) a = 0;
+              }
+            }
+          }
+          if (a > 0.01) {
+            var xi = Math.round(x), yi = Math.round(y);
+            if (xi !== m.x || yi !== m.y) { m.x = xi; m.y = yi; m.el.style.transform = "translate3d(" + xi + "px," + yi + "px,0)"; }
+          }
+          var aq = Math.round(a * 40) / 40;
+          if (aq !== m.a) { m.a = aq; m.el.style.opacity = String(aq); }
+          var lit = !!(preview && preview.cons && preview.cons[m.con]);
+          if (lit !== m.lit) { m.lit = lit; m.el.classList.toggle("is-lit", lit); }
+        }
+      }
+      var _fTot = 0, _rmCut = false;
+      uiScene.tick = function (dtF) {
+        if (!_ts) camera.updateMatrixWorld();   // before the true-scale world mounts, the navigation camera draws everything
+        // how far along the flight is — the reticle's ring draws it as an arc; nothing else on screen says "flying"
+        var p = -1;
+        if (glide.param) p = glide.param.t;
+        else if (glide.frames > 0) { if (!(_fTot >= glide.frames)) _fTot = glide.frames; p = 1 - glide.frames / _fTot; }
+        else _fTot = 0;
+        if (REDUCED) {   // reduced motion: the short cut happens behind a cross-fade — the scene dims out, re-appears at the destination
+          var cut = glideActive();
+          if (cut !== _rmCut) { _rmCut = cut; canvas.style.transition = cut ? "opacity .07s linear" : "opacity .2s linear"; canvas.style.opacity = cut ? "0.04" : "1"; }
+        }
+        // a cancelled flight leaves the lens mid-kick: ease it home
+        if (!(glide.param && glide.param.fovK) && Math.abs(camera.fov - BASE_FOV) > 0.01) {
+          camera.fov += (BASE_FOV - camera.fov) * (1 - Math.pow(0.8, dtF));
+          if (Math.abs(camera.fov - BASE_FOV) < 0.03) camera.fov = BASE_FOV;
+          camera.updateProjectionMatrix();
+        }
+        placeRing(ringSel, sel, p);
+        // (in flight the sky moves under a resting hand: what it "hovers" is stale — no hover ring until the hand moves again)
+        if (p >= 0 || uiScene.driving) { if (hov) setHover(null, true); }
+        placeRing(ringHov, hov && !sameDesc(hov, sel) ? hov : null, -1);
+        var np = preview ? preview.descs.length : 0;
+        for (var i = 0; i < Math.max(np, ringPre.length); i++) {
+          if (!ringPre[i]) ringPre[i] = mkRing("sky-ring--pre");
+          var pd = i < np ? preview.descs[i] : null;
+          placeRing(ringPre[i], pd && !sameDesc(pd, sel) ? pd : null, -1);
+        }
+        tickMarks();
+        if (RAIL) RAIL.update();
+      };
+
+      /* ---- RETURN STATE: come back to what you opened, not to the ground ----
+         A fresh visit always wakes on the ground. Only a visitor who LEFT through the scene (the card's button, a
+         second click, Enter) and returns in the same tab within 30 minutes is put back where they were. */
+      function restoreReturn() {
+        var rec = null;
+        try { var raw = sessionStorage.getItem(RETURN_KEY); if (raw) { sessionStorage.removeItem(RETURN_KEY); rec = JSON.parse(raw); } } catch (e) { rec = null; }
+        if (!rec || !rec.k || !rec.id || !(Date.now() - rec.t < 30 * 60 * 1000) || !natalSky) return false;
+        var d = rec.k === "body" ? descBody(rec.id) : rec.k === "star" ? descStar(natalSky.getNodeById ? natalSky.getNodeById(rec.id) : null) : rec.k === "con" ? descCon(rec.id) : null;
+        if (!d) return false;
+        return selectDesc(d, { force: true, instant: true, onArrive: function () {
+          if (rec.rad > 0 && isFinite(rec.rad)) controls.setRadius(rec.rad);   // the scale they left at (within this focus's own limits)
+        } });
+      }
+      uiScene.restore = restoreReturn;
+      addEventListener("pageshow", function (ev) {   // back/forward cache: the page returns exactly as it was left — only lift the leaving fade
+        if (!ev.persisted) return;
+        document.body.classList.remove("to-map");
+        try { sessionStorage.removeItem(RETURN_KEY); } catch (e) {}
+        lastTouch = performance.now();
+        if (!running) { running = true; requestAnimationFrame(frame); }
+      });
+
+      /* ---- KEYS: one gate for every scene key. Nothing acts while a modal is up (<html data-modal="1">), while
+              the hand is typing, or while the key belongs to an open layer / the menu. ---- */
+      function keyBlocked(e) {
+        if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return true;
+        if (root.dataset && root.dataset.modal === "1") return true;
+        var t = e.target, tag = (t && t.tagName) || "";
+        return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || !!(t && t.isContentEditable);
+      }
+      function keyInLayer(e) {   // arrows / Enter inside the menu, a dialog, a list or the slider belong to that control
+        var t = e.target;
+        return !!(t && t.closest && t.closest(".cosmos-nav, [role='dialog'], [role='menu'], [role='listbox'], [role='slider']"));
+      }
+      function escapeLadder() {   // a flight in progress stops where it is (the selection stays) · else the selection lets go · else nothing
+        if (glideActive() || uiScene.driving) {
+          var low = !controls.isGround() && camera.position.length() < EARTH_R * 1.55;   // under the lowest orbit: a launch or a landing
+          cancelFlight();
+          if (low) glideToBase();   // barely off the pad: "where you are" is the ground — settle back onto it
+          return true;
+        }
+        if (sel) { clearSel(); return true; }
+        return false;
+      }
+      document.addEventListener("keydown", function (e) {
+        if (keyBlocked(e)) return;
+        var k = e.key;
+        if (k === "Escape") { if (escapeLadder()) e.preventDefault(); return; }
+        if (k === "Enter") {
+          var tg = (e.target && e.target.tagName) || "";
+          if (tg === "A" || tg === "BUTTON" || tg === "SUMMARY" || keyInLayer(e)) return;   // Enter on a control activates that control
+          if (sel && sel.href) { e.preventDefault(); openSel(); }
+          return;
+        }
+        if (k === "b" || k === "B") { if (baseBtn && !controls.isGround()) { e.preventDefault(); glideToBase(); } return; }
+        if (k === "h" || k === "H") { if (homeBtn) { e.preventDefault(); goHome(); } return; }
+        var dir = (k === "]" || k === "ArrowUp" || k === "PageUp") ? 1 : (k === "[" || k === "ArrowDown" || k === "PageDown") ? -1 : 0;
+        if (!dir || !RAIL) return;
+        if (k !== "[" && k !== "]" && keyInLayer(e)) return;
+        e.preventDefault(); RAIL.step(dir);
+      });
+      /* verification hooks: headless tests drive the page with REAL input at these screen positions */
+      window.__space.ui = {
+        flying: function () { return glideActive() || uiScene.driving; },
+        err: function () { return uiScene.err; },
+        screenOf: function (kind, id) {
+          var d = kind === "body" ? descBody(id) : kind === "star" ? descStar(natalSky && natalSky.getNodeById ? natalSky.getNodeById(id) : null)
+                : kind === "con" ? descCon(id) : kind === "dso" ? descDso("dso_" + id, null) : null;
+          if (!d) return null;
+          var a = anchorOf(d, { x: 0, y: 0, r: 0, ok: false });
+          return a.ok ? { x: a.x, y: a.y, r: a.r } : null;
+        }
+      };
       /* a deep-sky wonder becomes the pivot: fly OUT past it along the Earth→cloud line, swung
          a little aside so the Sun and rings never crowd the frame, then orbit and zoom to admire.
          No content door — these are pure spectacle. */
@@ -3628,7 +4059,6 @@
         var w = obj.getWorldPosition(new THREE.Vector3());
         soloBody = (id === "galcore") ? "galcore" : "dso";   // the galactic centre keeps its galaxy; a lone nebula owns an empty frame
         clearSel();
-        showDossier("dso_" + id, shell && shell.userData && shell.userData.dsoName);
         controls.setDistanceLimits(fmin, Math.max(15000, vd * 1.6));   // far basins (Virgo/GA/Shapley…) are admired from supercluster distances — the ceiling must clear their viewDist
         var outward = w.clone().normalize();
         if (outward.lengthSq() < 1e-9) outward.set(0, 0, 1);
@@ -3642,27 +4072,62 @@
         var side = (shell && shell.userData && shell.userData.dsoFromInside) ? -1 : 1;
         flyTo({ camTo: w.clone().add(outward.multiplyScalar(vd * side)), targetTo: w.clone(), lookAt: w.clone(), frames: null, fovKick: 5, onDone: null });
       }
-      window.__space.focusDeepSky = focusDeepSky;
-      var _selV = new THREE.Vector3();
+      window.__space.focusDeepSky = function (id, shell) { return selectDesc(descDso("dso_" + id, shell || null), { force: true }); };
       /* return to the whole-sky overview — a smooth glide to the canonical home frame */
       var homeBtn = document.getElementById("cosmos-home");
+      /* 星盘全景 — the frame that holds the whole 干支 instrument (the 年 ring round the Earth, the 月 ring round the
+         Sun: about 3.6 AU from edge to edge), seen from ~40° above the ecliptic so both rings open and every
+         medallion faces a reader. The radius is computed, not authored: the instrument has to fit the narrower
+         half-angle of the viewport, so a phone stands further back. (At true scale the old fixed radius of 128
+         is 60 AU out, where the instrument is a speck beside the Sun.) */
+      var CHART_EL = 0.70;
+      function chartFrame() {
+        var out = { r: 128, dir: null };
+        try {
+          if (_ts && _ts.L && _ts.sun && nyeArmature && nyeArmature.eclipticNormalWorld) {
+            var au = _ts.sun.T.length(), halfV = camera.fov * Math.PI / 360, halfH = Math.atan(Math.tan(halfV) * camera.aspect), ext = 2.05 * au;
+            var D = Math.max(ext / Math.tan(0.86 * halfH), ext * 0.90 / Math.tan(0.80 * halfV));
+            out.r = Math.max(24, Math.min(128, _ts.L.Ginv(D)));
+            var n = nyeArmature.eclipticNormalWorld(new THREE.Vector3());
+            var cur = camera.position.clone().sub(controls.target); if (cur.lengthSq() < 1e-9) cur.copy(camera.position);
+            if (cur.lengthSq() < 1e-9) cur.set(0.6, 0.3, 0.74);
+            cur.normalize(); if (cur.dot(n) < 0) n.negate();           // stay on the side of the ecliptic the visitor is already on
+            var gN = nyeArmature.galacticNormalWorld ? nyeArmature.galacticNormalWorld(new THREE.Vector3()) : null;
+            if (gN && gN.lengthSq() > 0.5) {
+              // the 月 ring lies in the ecliptic and the 年 ring in the galactic plane, 60° apart: from the bisector of
+              // their two normals each is seen 30° off face-on — both rings open, neither edge-on
+              if (gN.dot(n) < 0) gN.negate();
+              out.dir = n.clone().add(gN).normalize();
+            } else {
+              var h = cur.clone().addScaledVector(n, -cur.dot(n));
+              if (h.lengthSq() < 1e-4) { h.set(1, 0, 0); h.addScaledVector(n, -h.dot(n)); }
+              out.dir = h.normalize().multiplyScalar(Math.cos(CHART_EL)).addScaledVector(n, Math.sin(CHART_EL)).normalize();
+            }
+          }
+        } catch (eCf) {}
+        _chartR = out.r; _chartAspect = camera.aspect;
+        return out;
+      }
+      var _chartR = 0, _chartAspect = 0;
+      function chartRadius() { return (_chartR && _chartAspect === camera.aspect) ? _chartR : chartFrame().r; }   // cached per viewport shape
       function goHome() {
         userMoved = true;   // "whole sky" is genuine navigation → lets the scale director build the orrery rings
         if (controls.isGround()) {
           // from the ground, "whole sky" is one clean launch all the way to the overview
           controls.exitGroundMode(); groundHint(false);
           clearSel(); soloBody = null;
-          var gdir = camera.position.clone().normalize();
-          paramGlide({ camTo: gdir.multiplyScalar(128), targetTo: HOME.clone(), frames: 220, ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 5, onDone: null });
+          var gcf = chartFrame(), gdir = gcf.dir || camera.position.clone().normalize();
+          paramGlide({ camTo: gdir.multiplyScalar(gcf.r), targetTo: HOME.clone(), frames: 220, ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 5, onDone: null });
           return;
         }
         clearSel(); soloBody = null;             // the whole chart returns — rings and all
         var az = (function () { var o = camera.position.clone().sub(controls.target); return (o.x * o.x + o.z * o.z > 1e-6) ? Math.atan2(o.x, o.z) : 0.8; })();
         var el = 0.26, dir = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
+        var cf = chartFrame(); if (cf.dir) dir.copy(cf.dir);
         // R9: the legacy exponential glide teleported 10-12% of the distance on frame one from deep
         // scales — route home through the authored paramGlide (smooth start, distance-scaled duration).
-        paramGlide({ camTo: HOME.clone().add(dir.multiplyScalar(128)), targetTo: HOME.clone(),
-          frames: Math.min(300, 90 + Math.round(55 * Math.abs(Math.log(Math.max(1, camera.position.length()) / 128)))),
+        paramGlide({ camTo: HOME.clone().add(dir.multiplyScalar(cf.r)), targetTo: HOME.clone(),
+          frames: Math.min(300, 90 + Math.round(55 * Math.abs(Math.log(Math.max(1, camera.position.length()) / cf.r)))),
           ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 5, onDone: null });   // home never navigates away
       }
       window.__space.goHome = goHome;
@@ -3670,7 +4135,7 @@
 
       /* ---- THE COSMIC ADDRESS RAIL: built once from window.CosmicLOD, highlighted per-frame
               from camLen. Clicking a tier flies the camera to that scale (its camLenPeak). ---- */
-      var LOD = window.CosmicLOD, railEl = document.getElementById("cosmos-rail"), railItems = [], _railCur = null;
+      var LOD = window.CosmicLOD, railEl = document.getElementById("cosmos-rail");
       function fallbackScaleTarget(id, peak) {
         if (id === "local-group") return skyDirWorld(0.712, 41.27, 5720 * 0.36);
         if (id === "virgo-supercluster") return skyDirWorld(12.44, 12.72, 4600);
@@ -3715,9 +4180,18 @@
       }
       function flyToScale(peak) {
         userMoved = true; clearSel(); soloBody = null;
-        if (controls.isGround()) { controls.exitGroundMode(); groundHint(false); }
-        var target = targetForScale(peak);
-        var dir = camera.position.clone().sub(controls.target || HOME); if (dir.lengthSq() < 1e-6) dir.set(0.42, 0.26, 0.88);
+        var target = targetForScale(peak), dir;
+        if (controls.isGround()) {
+          // off the pad: straight up from the base, leaning a little east so the ground slides beneath (the launch's own language)
+          controls.exitGroundMode(); groundHint(false);
+          var upG = camera.position.clone().normalize(), eastG = new THREE.Vector3().crossVectors(UP_Y, upG);
+          if (eastG.lengthSq() < 1e-6) eastG.set(1, 0, 0);
+          dir = upG.addScaledVector(eastG.normalize(), 0.4);
+        } else {
+          dir = camera.position.clone().sub(controls.target || HOME);
+          if (controls.target.lengthSq() > camera.position.lengthSq() * 4) dir.copy(camera.position);   // mid-launch the pivot is still a point up in the sky: rise from where you are
+        }
+        if (dir.lengthSq() < 1e-6) dir.set(0.42, 0.26, 0.88);
         dir.normalize();
         var frames = Math.round(90 + Math.abs(Math.log(peak / Math.max(1, camera.position.length()))) * 62);
         paramGlide({ camTo: cameraOnScaleSphere(target, dir, peak), targetTo: target, frames: Math.min(300, frames), ease: easeInOutCubic, targetEase: easeOutCubic, fovKick: 5.5, onDone: null });
@@ -3751,53 +4225,177 @@
         controls.target.add(delta);
         camera.position.add(delta);
       };
-      if (railEl && LOD) {
-        LOD.LAYERS.forEach(function (ly) {
-          if (ly.rail === false) return;                     // quiet tiers (the Local Sheet) are scene layers, not rail stops
-          var cap = "";                                      // no "10ˣ ly" science annotation — the rail is a clean navigation address (tier names only)
-          var it = document.createElement("button"); it.type = "button"; it.className = "cosmos-rail__i"; it.dataset.id = ly.id;
-          it.setAttribute("aria-label", (ly.label && (ly.label.en + " / " + ly.label.zh)) || ly.id);
-          it.innerHTML = '<span class="cosmos-rail__l"><span class="i18n-en">' + ly.label.en + '</span><span class="i18n-zh">' + ly.label.zh + '</span>' +
-            (cap ? '<span class="cosmos-rail__s">' + cap + '</span>' : "") + '</span><span class="cosmos-rail__t" aria-hidden="true"></span>';
-          it.addEventListener("click", function () { flyToScale(ly.camLenPeak); });
-          railEl.appendChild(it); railItems.push({ el: it, id: ly.id, peak: ly.camLenPeak });
-        });
-        // keyboard: [ / ] or ↑ / ↓ step the cosmic address; B = Base, H = Whole sky (skip when typing)
-        document.addEventListener("keydown", function (e) {
-          if (e.metaKey || e.ctrlKey || e.altKey) return;
-          var tag = (e.target && e.target.tagName) || "";
-          if (tag === "INPUT" || tag === "TEXTAREA" || (e.target && e.target.isContentEditable)) return;
-          var k = e.key;
-          if (k === "b" || k === "B") {
-            if (baseBtn && !controls.isGround()) { e.preventDefault(); baseBtn.click(); }
-            return;
-          }
-          if (k === "h" || k === "H") {
-            if (homeBtn) { e.preventDefault(); goHome(); }
-            return;
-          }
-          if (k !== "[" && k !== "]" && k !== "ArrowUp" && k !== "ArrowDown") return;
-          if (!railItems.length || controls.isGround()) return;
-          e.preventDefault();
-          var cur = -1;
-          for (var ri = 0; ri < railItems.length; ri++) if (railItems[ri].el.classList.contains("is-cur")) cur = ri;
-          if (cur < 0) cur = 0;
-          var next = (k === "]" || k === "ArrowDown") ? Math.min(railItems.length - 1, cur + 1) : Math.max(0, cur - 1);
-          if (next === cur && (k === "[" || k === "ArrowUp") && cur === 0) { if (baseBtn) baseBtn.click(); return; }
-          flyToScale(railItems[next].peak);
-        });
-      }
-      // nearest RAIL stop in log-space (currentLayerId may name a quiet tier like the Local Sheet;
-      // the rail then highlights its nearest listed neighbour, so the address never goes blank)
-      function railCurrentId(cl2) {
-        var L2 = Math.log(Math.max(1e-3, cl2)), best = null, bd = Infinity;
-        for (var i2 = 0; i2 < LOD.LAYERS.length; i2++) {
-          var ly2 = LOD.LAYERS[i2]; if (ly2.rail === false) continue;
-          var d2 = Math.abs(L2 - Math.log(ly2.camLenPeak));
-          if (d2 < bd) { bd = d2; best = ly2; }
+      /* ---- THE SCALE RAIL: a real vertical slider on the right edge, there from the first second ----
+         One tick per cosmic-address tier plus a ground stop at the bottom. The thumb rides the current scale
+         continuously: the ticks are evenly spaced and the scale runs logarithmically between neighbours, so every
+         tier owns the same reach of track (a pure log scale would crush the seven outer tiers into a third of it).
+         A tick flies to its tier; the thumb drags the scale itself — the wheel's own log-space ease, the pivot
+         returning to the Earth — and resting it on the ground stop lands. On the ground the thumb sits at the bottom. */
+      var RAIL = null;
+      if (railEl && LOD) (function () {
+        var gR = EARTH_R * 1.004;   // where the eye lies on the ground (scene units from the Earth's centre)
+        var stops = [{ id: "ground", r: gR, label: { en: "Ground", zh: "地面" } }];
+        LOD.LAYERS.forEach(function (ly) { if (ly.rail !== false) stops.push({ id: ly.id, r: ly.camLenPeak, label: ly.label }); });
+        var n = stops.length - 1, lnS = stops.map(function (s) { return Math.log(s.r); });
+        function c01(t) { return t < 0 ? 0 : t > 1 ? 1 : t; }
+        function tOf(r) {   // distance from the Earth's centre → 0..1 along the track
+          var L = Math.log(Math.max(1e-6, r));
+          if (L <= lnS[0]) return 0;
+          for (var i = 0; i < n; i++) if (L <= lnS[i + 1]) return (i + (L - lnS[i]) / (lnS[i + 1] - lnS[i])) / n;
+          return 1;
         }
-        return best ? best.id : null;
-      }
+        function rOf(t) { var u = c01(t) * n, i = Math.min(n - 1, Math.floor(u)); return Math.exp(lnS[i] + (u - i) * (lnS[i + 1] - lnS[i])); }
+        railEl.textContent = ""; railEl.classList.add("rail-v2"); railEl.hidden = true;
+        railEl.style.setProperty("--n", String(n));
+        var track = document.createElement("div"); track.className = "rail__track"; track.setAttribute("aria-hidden", "true"); railEl.appendChild(track);
+        function names(lb) { return '<span class="i18n-en">' + lb.en + '</span><span class="i18n-zh">' + lb.zh + '</span>'; }
+        // the ticks are marks, not controls: the rail is ONE slider — the whole 44px column is the target, and a click
+        // or tap anywhere on it goes to the nearest tick (so no tick needs a 44px box of its own on a short screen)
+        stops.forEach(function (s, i) {
+          var b = document.createElement("span"); b.className = "rail__tick"; b.dataset.id = s.id; b.setAttribute("aria-hidden", "true");
+          b.style.setProperty("--t", (i / n).toFixed(5));
+          b.innerHTML = '<i></i><span class="rail__tn">' + names(s.label) + '</span>';
+          railEl.appendChild(b); s.el = b;
+        });
+        var thumb = document.createElement("div"); thumb.className = "rail__thumb"; thumb.tabIndex = 0;
+        thumb.setAttribute("role", "slider"); thumb.setAttribute("aria-orientation", "vertical");
+        thumb.setAttribute("aria-label", "Scale · 尺度");
+        thumb.setAttribute("aria-valuemin", "0"); thumb.setAttribute("aria-valuemax", "100"); thumb.setAttribute("aria-valuenow", "0");
+        thumb.innerHTML = '<i aria-hidden="true"></i><span class="rail__name" aria-hidden="true"></span>';
+        railEl.appendChild(thumb);
+        var nameEl = thumb.querySelector(".rail__name");
+
+        var goal = null;   // the stop a scale flight is heading for (so repeated key presses keep stepping)
+        function goStop(i) {
+          lastTouch = performance.now(); goal = i;
+          if (i <= 0) { if (!controls.isGround()) glideToBase(); return; }
+          flyToScale(stops[i].r);
+        }
+        function nearest(t) { return Math.max(0, Math.min(n, Math.round(c01(t) * n))); }
+        function step(dir) {
+          lastTouch = performance.now();
+          if (controls.isGround() && !glideActive()) { if (dir > 0) ascendThen(null, 12); return; }   // off the pad: the launch
+          var j;
+          if (goal != null && glideActive()) j = goal + dir;
+          else {
+            var cl = camera.position.length();
+            if (dir > 0) { j = 1; while (j <= n && stops[j].r <= cl * 1.06) j++; }
+            else { j = n; while (j >= 1 && stops[j].r >= cl / 1.06) j--; }
+          }
+          if (j > n) return;
+          goStop(Math.max(0, j));
+        }
+        /* the thumb under the hand — and the whole rail under a finger: a press that travels along the rail (from
+           the thumb or from anywhere on the column) moves the scale by that travel; a press that stays put on a
+           tick is a click on that tick */
+        var drag = { on: false, id: -1, moved: false, onThumb: false, ate: false, y0: 0, t0: 0, t: 0, r: gR, coast: 0, lift: false };
+        function curT() { return controls.isGround() ? 0 : tOf(camera.position.length()); }
+        railEl.addEventListener("pointerdown", function (e) {
+          if (e.button > 0) return;
+          drag.on = true; drag.id = e.pointerId; drag.moved = false; drag.ate = false; drag.coast = 0; drag.lift = false;
+          drag.y0 = e.clientY; drag.t0 = curT(); drag.onThumb = thumb.contains(e.target);
+          if (drag.onThumb) {
+            e.preventDefault();
+            try { thumb.focus({ preventScroll: true }); } catch (eF) {}
+            railEl.classList.add("is-drag");
+          }
+          if (!trackH) measure();
+          lastTouch = performance.now();
+        });
+        railEl.addEventListener("pointermove", function (e) {
+          if (!drag.on || e.pointerId !== drag.id) return;
+          var dy = drag.y0 - e.clientY;
+          if (!drag.moved) {
+            if (Math.abs(dy) < (drag.onThumb ? 3 : 7)) return;
+            drag.moved = true; drag.ate = true; cancelFlight(); userMoved = true; goal = null;
+            try { railEl.setPointerCapture(e.pointerId); } catch (eC) {}
+            railEl.classList.add("is-drag");
+          }
+          drag.t = c01(drag.t0 + dy / Math.max(1, trackH)); drag.r = rOf(drag.t);
+          lastTouch = performance.now();
+        });
+        function endDrag(e) {
+          if (!drag.on || (e && e.pointerId != null && e.pointerId !== drag.id)) return;
+          drag.on = false; railEl.classList.remove("is-drag");
+          try { railEl.releasePointerCapture(drag.id); } catch (eR) {}
+          if (drag.moved) drag.coast = 90;   // let the ease finish where the hand left it
+          lastTouch = performance.now();
+        }
+        addEventListener("pointerup", endDrag, true); addEventListener("pointercancel", endDrag, true);
+        railEl.addEventListener("lostpointercapture", function (e) { if (e.target === railEl) endDrag(e); });   // (a touch's implicit capture on the thumb, handed over to the rail, bubbles a "lost" of its own — that is not the end of the drag)
+        function tAtY(y) { var rc = track.getBoundingClientRect(); return c01(1 - (y - rc.top) / Math.max(1, rc.height)); }
+        railEl.addEventListener("click", function (e) {
+          if (drag.ate) { drag.ate = false; return; }          // a swipe along the rail is not a click where it ended
+          if (thumb.contains(e.target)) return;
+          goStop(nearest(tAtY(e.clientY)));
+        });
+        var hot = -1;                                           // the tick under the mouse shows its name (touch has no hover: the name rides the thumb while the scale moves)
+        function setHot(i) { if (i === hot) return; if (hot >= 0) stops[hot].el.classList.remove("is-hot"); hot = i; if (hot >= 0) stops[hot].el.classList.add("is-hot"); }
+        railEl.addEventListener("pointermove", function (e) {
+          if (e.pointerType !== "mouse" || drag.moved) { setHot(-1); return; }
+          setHot(thumb.contains(e.target) ? -1 : nearest(tAtY(e.clientY)));
+        });
+        railEl.addEventListener("pointerleave", function () { setHot(-1); });
+        thumb.addEventListener("keydown", function (e) {
+          if (e.metaKey || e.ctrlKey || e.altKey || (root.dataset && root.dataset.modal === "1")) return;
+          var k = e.key, d = (k === "ArrowUp" || k === "ArrowRight" || k === "PageUp") ? 1 : (k === "ArrowDown" || k === "ArrowLeft" || k === "PageDown") ? -1 : 0;
+          if (d) { e.preventDefault(); e.stopPropagation(); step(d); }
+          else if (k === "Home") { e.preventDefault(); e.stopPropagation(); goStop(0); }
+          else if (k === "End") { e.preventDefault(); e.stopPropagation(); goStop(n); }
+        });
+        // while the thumb is held (and for the short coast after it is let go) this owns the camera's distance
+        uiScene.drive = function (dtF) {
+          var active = (drag.on && drag.moved) || drag.coast > 0;
+          if (!active || glideActive() || ptrDown) { drag.coast = 0; uiScene.driving = false; return; }
+          if (controls.isGround()) {
+            if (drag.t < 0.01) { uiScene.driving = false; return; }   // still resting on the ground stop
+            controls.exitGroundMode(); groundHint(false); soloBody = null; clearSel(); drag.lift = true;
+          } else if (sel || soloBody) { soloBody = null; clearSel(); }
+          uiScene.driving = true; userMoved = true;
+          var want = Math.max(gR * 1.07, drag.r), cl = Math.max(1e-6, camera.position.length());
+          var k = 1 - Math.pow(1 - 0.2, dtF), dl = Math.log(want) - Math.log(cl);
+          camera.position.setLength(Math.exp(Math.log(cl) + dl * k));
+          controls.target.lerp(HOME, k * 0.6);                    // the pivot comes home to the Earth as the scale takes over
+          if (drag.lift) camera.up.lerp(UP_Y, 1 - Math.pow(0.92, dtF)).normalize();
+          camera.lookAt(controls.target);
+          if (!drag.on) {
+            drag.coast -= dtF;
+            if (Math.abs(dl) < 0.004 || drag.coast <= 0) {
+              drag.coast = 0; uiScene.driving = false;
+              if (camera.position.length() < EARTH_R * 1.55) glideToBase();   // let go on the ground stop: land
+            }
+          }
+        };
+        var trackH = 0, lastT = -1, lastV = -1, lastI = -1, lastLoc = "", liveUntil = 0, wasLive = false;
+        function measure() { trackH = track.getBoundingClientRect().height || 0; lastT = -1; }
+        addEventListener("resize", measure);
+        function update() {
+          var up = !!_skyLiveDone;   // the 3-D scene is on screen (the poster has handed over)
+          if (railEl.hidden === up) { railEl.hidden = !up; if (up) measure(); }
+          if (!up) return;
+          if (!trackH) measure();
+          if (goal != null && !glideActive()) goal = null;
+          var held = (drag.on && drag.moved) || drag.coast > 0;
+          var t = held ? drag.t : (controls.isGround() ? 0 : tOf(camera.position.length()));
+          if (Math.abs(t - lastT) > 0.0003) {
+            if (lastT >= 0) liveUntil = performance.now() + 1200;   // the scale is changing: on a phone the tier name shows only now
+            lastT = t; thumb.style.transform = "translate3d(0," + (-t * trackH).toFixed(1) + "px,0)";
+            var v = Math.round(t * 100); if (v !== lastV) { lastV = v; thumb.setAttribute("aria-valuenow", String(v)); }
+          }
+          var live = held || performance.now() < liveUntil;
+          if (live !== wasLive) { wasLive = live; railEl.classList.toggle("is-live", live); }
+          var ci = (controls.isGround() && !held) ? 0 : nearest(t), loc = pageLocale();
+          if (ci === 0 && !held && !controls.isGround()) ci = 1;   // "Ground" names the thumb only while you stand on it (or rest the thumb there)
+          if (ci !== lastI || loc !== lastLoc) {
+            if (lastI >= 0 && stops[lastI]) stops[lastI].el.classList.remove("is-cur");
+            lastI = ci; lastLoc = loc;
+            stops[ci].el.classList.add("is-cur");
+            nameEl.innerHTML = names(stops[ci].label);
+            thumb.setAttribute("aria-valuetext", loc === "zh" ? stops[ci].label.zh : stops[ci].label.en);
+          }
+        }
+        RAIL = { update: update, step: step, go: goStop, stops: stops, tOf: tOf, rOf: rOf };
+      })();
       window.__space.flyToScale = flyToScale;
       /* headless-verification hook: jump straight to a scale (no glide) so screenshots can sample
          every tier deterministically. Counts as genuine navigation (userMoved) so lazy layers build. */
@@ -3818,124 +4416,38 @@
         if (controls.setRadius) controls.setRadius(orbitRadius);
         if (window.__space.uiTick) window.__space.uiTick();
       };
-      var quantumEl = document.getElementById("quantum-note");
-      var dataNoteEl = document.getElementById("cosmos-data-note");
-
       window.__space.uiTick = function () {
-        // zoomed back out BY HAND → the chart reassembles (never mid-flight). A deep-sky wonder is
-        // admired from far out (view-dist ~400), so its focus only releases when you truly pull away.
-        if (soloBody && soloBody !== "dso" && soloBody !== "galcore" && !glideActive() && controls.getRadius() > 130) { soloBody = null; clearSel(); }
-        if ((soloBody === "dso" || soloBody === "galcore") && !glideActive() && controls.getRadius() > Math.max(900, 3.2 * _focusVd)) { soloBody = null; clearSel(); }   // (a supercluster is admired from thousands of units: release relative to its own framing)
+        // zoomed back out BY HAND → the selection lets go and the chart reassembles — never mid-flight, and never
+        // before the selection has arrived once (a flight stopped with Esc keeps what is selected). A deep-sky
+        // wonder or a constellation is admired from far out, so each releases relative to its own framing.
+        var relR = (soloBody === "dso" || soloBody === "galcore") ? Math.max(900, 3.2 * _focusVd) : Math.max(130, sel && sel.homeR ? sel.homeR * 1.8 : 0);
+        if ((sel ? sel.arrived : !!soloBody) && !glideActive() && !uiScene.driving && controls.getRadius() > relR) { soloBody = null; clearSel(); }
         // constellations are apparent Earth-sky annotations, not physical 3-D galaxy structures.
         if (natalSky && natalSky.setZodiacFade) natalSky.setZodiacFade(camera.position.length() >= 1300 ? 1 : 0);
         // the orrery (esp. the SUN) must NEVER hide — it's the anchor you click to fly back to the solar
         // system. It stays drawn at every scale; the gear-rings fade themselves via ringFade, the Earth is a
         // cheap speck when tiny, and the Sun's glow keeps it findable from across the galaxy.
         if (nyeArmature && !nyeArmature.group.visible) nyeArmature.group.visible = true;
-        if (selStar && starCta) {
-          _selV.copy(selStar.world).project(camera);
-          if (_selV.z > 1 || Math.abs(_selV.x) > 1.05 || Math.abs(_selV.y) > 1.05) { starCta.classList.remove("is-on"); }
-          else {
-            starCta.style.left = ((_selV.x * 0.5 + 0.5) * innerWidth) + "px";
-            starCta.style.top = ((-_selV.y * 0.5 + 0.5) * innerHeight - 40) + "px";
-            starCta.classList.add("is-on");
-          }
-        }
+        // the dock: a button that is not shown is also out of the tab order and the accessibility tree (setShown)
+        var moving = glideActive() || uiScene.driving;
         // the "full view" affordance appears only once the visitor has left the overview
-        if (homeBtn) {
-          var away = soloBody || selStar || controls.getRadius() < 104 || controls.target.lengthSq() > 36;
-          homeBtn.classList.toggle("is-on", !!away && !glideActive());
-        }
-        // the "⌂ base" affordance appears whenever you're OFF the ground (and a base exists)
-        if (baseBtn) baseBtn.classList.toggle("is-on", !!baseGeo && !!nyeArmature && !controls.isGround() && !glideActive());
-        // THE COSMIC ADDRESS rail: reveal once you've left the ground; highlight the current tier
-        if (railEl && LOD) {
-          var offGround = !controls.isGround();
-          railEl.classList.toggle("is-on", offGround && !!natalSky && userMoved);
-          if (offGround) {
-            var curId = railCurrentId(camera.position.length());
-            if (curId !== _railCur) {
-              _railCur = curId;
-              for (var ri = 0; ri < railItems.length; ri++) railItems[ri].el.classList.toggle("is-cur", railItems[ri].id === curId);
-            }
-          }
-        }
-        // THE FLUCTUATION's whisper — one line, only at the loop's end, linking to the book it echoes
-        if (quantumEl && LOD) {
-          var _qW = LOD.weight(camera.position.length(), "fluctuation");
-          quantumEl.style.opacity = (_qW * 0.9).toFixed(3);
-          quantumEl.style.pointerEvents = _qW > 0.5 ? "auto" : "none";
-        }
-        // data-provenance note: fade in across the large-scale-structure scales (Virgo-SC → Cosmic Web),
-        // so the real-galaxy field (2M++ / 2MRS / UNGC) is honestly labelled; hidden near the ground and past the horizon.
-        if (dataNoteEl && LOD) {
-          var _dcl = camera.position.length();
-          var _dW = LOD.smooth(4200, 6000, _dcl) * (1 - LOD.smooth(80000, 95000, _dcl));
-          dataNoteEl.style.opacity = (_dW * 0.62).toFixed(3);
-        }
+        if (homeBtn) setShown(homeBtn, !!(soloBody || sel || Math.abs(Math.log(Math.max(1e-6, controls.getRadius()) / chartRadius())) > 0.10 || controls.target.lengthSq() > 36) && !moving);
+        // the "base" affordance appears whenever you're OFF the ground (and a base exists)
+        if (baseBtn) setShown(baseBtn, !!baseGeo && !!nyeArmature && !controls.isGround() && !moving);
       };
 
       addEventListener("click", function (e) {
         if (e.target !== canvas) return;              // DOM buttons/links are none of our business
-        if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 6) {
+        if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 6) {   // a press that moved is a drag, never a click
           _lastPickAt = performance.now(); e.stopImmediatePropagation(); e.preventDefault(); return;
         }
         if (!nyeArmature) return;
-        pickNdc.x = (e.clientX / innerWidth) * 2 - 1; pickNdc.y = -(e.clientY / innerHeight) * 2 + 1;
-        var hits = tsPickHits(pickRay, pickNdc, e.clientX, e.clientY, true);
-        for (var i = 0; i < hits.length; i++) {
-          if (hits[i].object.name === "NyeEarthPickShell") continue;   // the oversized shell is not the globe
-          var pick = null, o = hits[i].object, pickOwner = null;
-          while (o && !pick) {
-            if (o.userData && o.userData.nyePick) { pick = o.userData.nyePick; pickOwner = o; }
-            o = o.parent;
-          }
-          var isDso = pick && pick.indexOf && pick.indexOf("dso_") === 0;
-          var isCon = pick && pick.indexOf && pick.indexOf("con_") === 0;
-          if (!isDso && !isCon && pick !== "sun" && pick !== "moon" && pick !== "earth" && pick !== "jupiter" && pick !== "saturn" && pick !== "beacon" && pick !== "mercury" && pick !== "venus" && pick !== "mars" && pick !== "uranus" && pick !== "neptune" && pick !== "pluto" && pick !== "charon") continue;   // glyphs never swallow a click
-          if (isDso && !dsoPickInScale(pickOwner)) continue;
-          if (pick === "beacon") {                       // the beacon is the door home
-            // on the ground the camera sits INSIDE the beacon's pick bubble (and the
-            // raycaster ignores visible=false) — look PAST it to the real target
-            if (controls.isGround()) continue;
-            _lastPickAt = performance.now(); glideToBase(); e.stopImmediatePropagation(); return;
-          }
-          if (pick === "earth" && controls.isGround()) continue;   // you're standing on it (hour-ring ticks etc. walk to 'earth' at d≈0) — look PAST it to the sky
-          if (pick === "sun") {
-            if (natalSky) { natalSky.highlight("capricorn", true); setTimeout(function () { natalSky.highlight("capricorn", false); }, 2800); }
-            glideToBody("NyeSun", 21);
-          } else if (pick === "moon") {
-            if (natalSky) { natalSky.highlight("leo", true); setTimeout(function () { natalSky.highlight("leo", false); }, 2800); }
-            glideToBody("NyeMoon", 5.2);
-          } else if (pick === "jupiter") {
-            focusGiant("NatalJupiter", "jupiter", "An Invitation After Abundance", "An Invitation After Abundance", "books/invitation.html", "cancer");
-          } else if (pick === "saturn") {
-            focusGiant("NatalSaturn", "saturn", "Sovereign Scintillation", "Sovereign Scintillation", "books/sovereign.html", "gemini");
-          } else if (pick === "mercury") {
-            focusGiant("NatalMercury", "mercury", "Nye Clock 弐时仪", "弐时仪 · Nye Clock", "products/nyeclock.html", null);
-          } else if (pick === "venus") {
-            focusGiant("NatalVenus", "venus", "Omytea", "Omytea", "products/omytea.html", null);
-          } else if (pick === "mars") {
-            glideToBody("NatalMars", 2.8);
-          } else if (pick === "uranus") {
-            glideToBody("NatalUranus", 6.5);
-          } else if (pick === "neptune") {
-            glideToBody("NatalNeptune", 6.2);
-          } else if (pick === "pluto") {
-            glideToBody("NatalPluto", 1.1);
-          } else if (pick === "charon") {
-            glideToBody("NatalPlutoMoon", 0.7);
-          } else if (isDso) {
-            focusDeepSky(pick.slice(4), hits[i].object);   // a cosmic wonder: fly out to it, orbit it, admire — no door
-          } else if (isCon) {
-            focusConstellation(pick.slice(4), 110);        // a constellation: fly to it, it becomes the pivot, admire the figure
-          } else if (pick === "earth") {
-            glide.axis = null; glide.step = 0; glide.frames = 30; glide.distTarget = 7;
-            glide.targetTo = new THREE.Vector3(0, 0, 0);      // orbit the Earth itself
-          }
-          _lastPickAt = performance.now(); e.stopImmediatePropagation();
-          return;
-        }
+        var d = null;
+        try { d = pickDesc(e.clientX, e.clientY, false); } catch (eP) { d = null; }
+        if (!d) { if (sel) clearSel(); return; }       // empty sky lets go
+        _lastPickAt = performance.now();
+        if (d.kind === "beacon") { glideToBase(); return; }   // the beacon is the way home
+        selectDesc(d);                                 // select + fly; the same thing again opens its page
       }, true);
       canvas.addEventListener("dblclick", function () {
         if (performance.now() - _lastPickAt < 450) return;   // R14: two quick clicks on a body are an approach, not "go home"
@@ -3954,10 +4466,34 @@
     var QUALITY = {
       glow: (innerWidth < 700 || (navigator.deviceMemory || 8) <= 4) ? 1 : 0,   // glow-shed level: 0 full · 1 drop *Glow3 · 2 drop *Glow2
       ema: 18, prevT: 0, lastStep: 0, lastDprStep: 0,
+      watch: true, watchMs: 0, slowMs: 0, stuckMs: 0,                            // the first-run watchdog (see offerSimpleView)
       cap: Math.min(devicePixelRatio || 1, innerWidth < 700 ? 1.25 : 1.35),      // top resolution (already DPR-capped)
       floor: innerWidth < 700 ? 0.5 : 0.58, dpr: 0, applied: 0
     };
     QUALITY.dpr = QUALITY.cap; QUALITY.applied = QUALITY.cap;
+    try { if (localStorage.getItem("cv-slow") === "1") QUALITY.watch = false; } catch (eQ) {}
+    /* the scene is too heavy for this device. Always: flag it (__space.slow) and announce it (window "space:slow") so
+       the frame can bring its simple-view control forward, and put the offer into the existing recovery notice
+       (#scene-recovery, inside the All-pages layer). Only when the scene is effectively not running (`stuck`) does
+       that layer open by itself — a slow sky is still the sky; a list is never forced on a visitor for slowness. */
+    function offerSimpleView(stuck) {
+      window.__space.slow = stuck ? "stuck" : "slow";
+      try { localStorage.setItem("cv-slow", "1"); } catch (eS) {}
+      try { window.dispatchEvent(new CustomEvent("space:slow", { detail: { stuck: !!stuck } })); } catch (eE) {}
+      var rec = document.getElementById("scene-recovery"), msg = document.getElementById("scene-recovery-message");
+      if (!rec || !msg) return;
+      msg.innerHTML = '<span class="i18n-en">The sky runs slowly on this device. All pages are available below.</span><span class="i18n-zh">星空在此设备上运行缓慢。下方仍可浏览全部页面。</span>';
+      if (!rec.querySelector("[data-simple-view]")) {
+        var sb = document.createElement("button"); sb.type = "button"; sb.setAttribute("data-simple-view", "");
+        sb.innerHTML = '<span class="i18n-en">Simple view</span><span class="i18n-zh">简洁版</span>';
+        sb.addEventListener("click", function () { window.__space.setSimpleView(true); });
+        rec.appendChild(sb);
+      }
+      rec.hidden = false;
+      if (stuck && window.__openIndex) { try { window.__openIndex(); } catch (eO) {} }
+    }
+    window.__space.offerSimpleView = offerSimpleView;   // verification hook
+    window.__space.quality = function () { return { dpr: QUALITY.applied, cap: QUALITY.cap, floor: QUALITY.floor, glow: QUALITY.glow, ema: +QUALITY.ema.toFixed(1), watch: QUALITY.watch, slowMs: Math.round(QUALITY.slowMs) }; };
     window.__cvQuality = QUALITY.glow;
     function frame(t) {
       if (!running) return;
@@ -3965,7 +4501,7 @@
       var sec = (t || 0) * 0.001;
       var dt = Math.min(0.1, Math.max(0.001, sec - prevSec)); prevSec = sec;
       var dtF = Math.min(3, dt * 60);   // R10: frames-equivalent step — all authored 60fps constants scale by this (120Hz no longer runs 2×; capped so a stall never teleports an ease)
-      frameNo++;
+      frameNo++; window.__space.frames = frameNo;   // the loop's heartbeat (a watchdog can tell a slow start from a loop that is not running)
       // (frame cadence is measured inside the COSMOS block below, gated to full-rate active frames only,
       //  so the deliberate at-rest / inertial-tail throttle never fools the governor into degrading)
       if (COSMOS && controls) {
@@ -3974,7 +4510,7 @@
            drift is indistinguishable at 30fps, the GPU cools. Any touch, glide,
            entrance or stirred dust restores 60fps instantly. */
         var inputAge = nowMs - lastTouch;
-        var glid = glideActive() || controls.isSettling() || (!userMoved && nowMs < entranceUntil);   // flights AND the inertia/zoom settle stay at full rate (no 60→30 judder mid-coast)
+        var glid = glideActive() || controls.isSettling() || uiScene.driving || (!userMoved && nowMs < entranceUntil);   // flights AND the inertia/zoom settle stay at full rate (no 60→30 judder mid-coast)
         var freshInput = inputAge < 1150 || ptrDown || panOn;
         busy = freshInput || (inputAge < 3600) || glid || deepFusion.uniforms.uPointerAmt.value > 0.05;
         // DYNAMIC-RESOLUTION governor (the games trick: hold the frame budget by scaling internal
@@ -3984,7 +4520,25 @@
         // (resolution IS the fill-rate lever); only when even the floor resolution can't cope do we
         // shed the wide additive glow halos (natal-sky reads window.__cvQuality). Recover gently.
         if (freshInput || glid) {
-          if (QUALITY.prevT > 0) { var _qd = t - QUALITY.prevT; if (_qd > 4 && _qd < 500) QUALITY.ema += (_qd - QUALITY.ema) * 0.12; }
+          var _qd = QUALITY.prevT > 0 ? t - QUALITY.prevT : 0;
+          if (_qd > 4 && _qd < 500) QUALITY.ema += (_qd - QUALITY.ema) * 0.12;
+          /* FIRST-RUN WATCHDOG: every lever below is already shed (resolution at its floor, both glow tiers and the
+             bloom gone) and the scene STILL cannot hold ~20 fps through several seconds of active use → the simple view
+             is offered (offerSimpleView). Never a frozen page, and never a list merely because things are slow: the
+             All-pages layer opens by itself only when the loop is effectively not running (under ~8 fps / stalling).
+             Watches the first 20 s of active frames; fires at most once per browser. */
+          if (QUALITY.watch && _qd > 4) {
+            QUALITY.watchMs += Math.min(1000, _qd);
+            if (_qd >= 500) {   // a frame that took half a second or more: the loop is stalling, whatever the average says
+              QUALITY.slowMs += Math.min(1000, _qd); QUALITY.stuckMs += Math.min(1000, _qd);
+              if (QUALITY.stuckMs > 1500) { QUALITY.dpr = QUALITY.floor; if (QUALITY.glow < 2) { QUALITY.glow = 2; window.__cvQuality = 2; } }   // shed everything at once
+            } else if (QUALITY.applied <= QUALITY.floor + 0.07 && QUALITY.glow >= 2 && QUALITY.ema > 50) {
+              QUALITY.slowMs += _qd;
+              if (QUALITY.ema > 125) QUALITY.stuckMs += _qd;
+            } else if (QUALITY.ema < 42) { QUALITY.slowMs = 0; QUALITY.stuckMs = 0; }
+            if (QUALITY.slowMs > 4000) { QUALITY.watch = false; try { offerSimpleView(QUALITY.stuckMs > 2500); } catch (eOf) { uiScene.err = String(eOf && eOf.stack || eOf); } }
+            else if (QUALITY.watchMs > 20000) QUALITY.watch = false;
+          }
           QUALITY.prevT = t;
           if ((frameNo & 3) === 0) {
             var em = QUALITY.ema;
@@ -3993,12 +4547,16 @@
             // strictly rate-limited below — because setPixelRatio → setSize reallocates the WebGL drawing
             // buffer (a 2-16 ms stall). Build 207 applied on every non-deadband tick and let that stall
             // pollute the EMA → self-reinforcing hitch cascade during drag. Fixed here.
-            if (em > 24 && QUALITY.dpr > QUALITY.floor) QUALITY.dpr = Math.max(QUALITY.floor, QUALITY.dpr * 0.88);
+            if (em > 45) {   // far under budget (< ~22 fps): shed in big steps on every lever at once, before the frame rate collapses
+              if (QUALITY.dpr > QUALITY.floor) QUALITY.dpr = Math.max(QUALITY.floor, QUALITY.dpr * 0.72);
+              if (QUALITY.glow < 2 && nowMs - QUALITY.lastStep > 450) { QUALITY.glow++; window.__cvQuality = QUALITY.glow; QUALITY.lastStep = nowMs; }
+            }
+            else if (em > 24 && QUALITY.dpr > QUALITY.floor) QUALITY.dpr = Math.max(QUALITY.floor, QUALITY.dpr * 0.88);
             else if (em < 14 && QUALITY.dpr < QUALITY.cap) QUALITY.dpr = Math.min(QUALITY.cap, QUALITY.dpr * 1.05);
             // quantize to coarse rungs (0.12) so sub-rung dither can't fire, apply at most ~once/600 ms, and
             // DISCARD the realloc-polluted next interval (prevT=0) + reset the EMA so the stall never feeds back.
             var rung = Math.min(QUALITY.cap, Math.max(QUALITY.floor, Math.round(QUALITY.dpr / 0.12) * 0.12));
-            if (Math.abs(rung - QUALITY.applied) > 0.06 && nowMs - QUALITY.lastDprStep > 600) {
+            if (Math.abs(rung - QUALITY.applied) > 0.06 && nowMs - QUALITY.lastDprStep > (em > 45 ? 300 : 600)) {
               renderer.setPixelRatio(rung); QUALITY.applied = rung; QUALITY.lastDprStep = nowMs;
               if (composer) { composer.setPixelRatio(rung); composer.setSize(innerWidth, innerHeight); }
               QUALITY.prevT = 0; QUALITY.ema = 18;   // the realloc stall is not a real cadence sample
@@ -4060,7 +4618,7 @@
             if (F.fovK) { camera.fov = F.fov0; camera.updateProjectionMatrix(); }
             controls.target.copy(F.body);                    // the pivot IS the body now
             camera.up.copy(UP_Y); camera.lookAt(F.body);
-            glide.param = null;
+            glide.param = null; controls.syncZoom();
             if (glide.onDone) { var fF = glide.onDone; glide.onDone = null; fF(); }
           }
         } else if (glide.param) {
@@ -4079,7 +4637,7 @@
           }
           if (P.t >= 1) {
             if (P.fovK) { camera.fov = P.fov0; camera.updateProjectionMatrix(); }
-            glide.param = null;
+            glide.param = null; controls.syncZoom();
             if (glide.onDone) { var fP = glide.onDone; glide.onDone = null; fP(); }
           }
         }
@@ -4106,7 +4664,7 @@
         // NO perpetual auto-rotation: at rest the world holds still (static modelling → zero wasted GPU / heat).
         // The scene only moves under the visitor's own hand or a choreographed glide. (Ground breath kept — it's
         // a deliberate, brief ambiance while lying down, and ground mode is a held, low-cost view.)
-        if (controls.isGround() && !glideActive() && nowMs - lastTouch > 2500) controls.groundDrift(0.008 * dt);
+        if (!REDUCED && controls.isGround() && !glideActive() && nowMs - lastTouch > 2500) controls.groundDrift(0.008 * dt);
         // once truly back in space, restore the normal near-plane (ground views need 0.008).
         // At cosmic distances scale the near-plane with camLen (near = max(0.2, camLen·0.0005))
         // so depth precision stays sane out to the 46k ceiling — kills z-fighting on the web
@@ -4155,7 +4713,8 @@
         }
         // the entrance/glide owns the radius this frame → update() must NOT ease against it;
         // otherwise the wheel's log-target owns it. Recomputed every frame, so it clears cleanly.
-        controls.setExternalDrive(glideActive() || (!userMoved && nowMs < entranceUntil));
+        if (uiScene.drive) { try { uiScene.drive(dtF); } catch (eUd) { uiScene.driving = false; uiScene.err = String(eUd && eUd.stack || eUd); } }   // the rail thumb under the hand
+        controls.setExternalDrive(glideActive() || uiScene.driving || (!userMoved && nowMs < entranceUntil));
         controls.update(dtF);
         easeAddressPivot();
         if (!beltCentered && (!TRUE_SCALE || _tsFailed) && natalSky && nyeArmature) {   // one-shot: the WHOLE planetary system (planets + belt) orbits the SUN, not the Earth
@@ -4168,7 +4727,7 @@
           }
         }
         if (window.__space.applyRingFade) window.__space.applyRingFade();
-      if (window.__space.uiTick) window.__space.uiTick();
+      if (window.__space.uiTick) { try { window.__space.uiTick(); } catch (eUi) { uiScene.err = String(eUi && eUi.stack || eUi); } }
         if (!_refFar) _refFar = new THREE.Vector3();
         _refFar.set(0, 0, -800).project(camera);
         if (_refFar.z < 1 && isFinite(_refFar.x)) {
@@ -4200,7 +4759,8 @@
         camera.position.y += (targetCamY - camera.position.y) * 0.06;
         camera.lookAt(0, camera.position.y * 0.4, -300);
       }
-      if (busy) _clk += dt;                     // ACCUMULATE (not snap to sec): waking from rest must not fast-forward every uTime effect + the fusion rotation by the whole idle span — that was a visible lurch exactly when attention returns
+      if (REDUCED) { if (natalSky && _clk < 20) _clk += 10; }   // reduced motion: two steps carry the clock past the constellations' entrance pulse, then it stands still — no shimmer, no drift
+      else if (busy) _clk += dt;                // ACCUMULATE (not snap to sec): waking from rest must not fast-forward every uTime effect + the fusion rotation by the whole idle span — that was a visible lurch exactly when attention returns
       // LAZY-BY-SCALE: build the heavy far structures ONLY on genuine user navigation (userMoved gates out
       // the auto-entrance + the fallback deep-space dive, which both transiently fling the camera far). The
       // ground & whole-sky view therefore never pays for the galaxy / black hole / cosmic web.
@@ -4232,7 +4792,7 @@
         // 干支 GEAR-RINGS: solar-system-scale ornament — built ONLY when the visitor enters the orrery band
         // (never at init/ground, never at galaxy scale). The existing ringFade hides them once you pass ~900 out;
         // collectRingMats self-heals to pick up the freshly-built ring materials.
-        if (nyeArmature && nyeArmature.buildRings && _farCl > 18 && _farCl < 800 && !nyeArmature.hasRings()) nyeArmature.buildRings();
+        if (nyeArmature && nyeArmature.buildRings && _farCl > 6.2 && _farCl < 800 && !nyeArmature.hasRings()) nyeArmature.buildRings();
         // UNLOAD the inner solar system at galaxy scale (the Sun always persists): hide Moon/atmosphere/footprint
         // and the outer planets once you leave the solar system, so nothing paints overdraw at the wrong scale.
         if (nyeArmature && nyeArmature.setInnerDetail) nyeArmature.setInnerDetail(_farCl < 400, _farCl < 7800);
@@ -4245,6 +4805,7 @@
       if (deepFusion && deepFusion.group) deepFusion.group.rotation.y = _clk * 0.006;
       if (nyeArmature) nyeArmature.tick(_clk);
       if (_ts) { syncCams(); tsOverlayTick(); }   // the true-scale cameras for this frame (flare, air, moonlight, labels read them)
+      if (uiScene.tick) { try { uiScene.tick(dtF); } catch (eUt) { uiScene.err = String(eUt && eUt.stack || eUt); } }   // reticle · markers · rail thumb, placed with this frame's cameras
       var fc = _ts ? nearCam : camera, fDist = _ts ? 1.0 : 50;
       if (nyeArmature && nyeArmature.atmoFar) nyeArmature.atmoFar(fc.position);
       if (_flare) {
@@ -4279,6 +4840,9 @@
               var fAU = fc.position.distanceTo(_ts.sun.T) * _ts.kpu / 149597870.7;
               fade *= 1 - Math.max(0, Math.min(1, (Math.log(Math.max(fAU, 1e-9)) - Math.log(30)) / (Math.log(300) - Math.log(30))));
             }
+            // build 263: with the disc filling the view the eye has adapted (the photosphere stops down, nye-armature's
+            // uClose) — glare ghosts laid over a resolved surface only smear it
+            if (fs.sun.material && fs.sun.material.uniforms && fs.sun.material.uniforms.uClose) fade *= 1 - fs.sun.material.uniforms.uClose.value;
             var fovH = Math.tan(fc.fov * Math.PI / 360);
             for (var fi = 0; fi < fs.sprites.length; fi++) {
               var sp2 = fs.sprites[fi], d2 = sp2.userData._def;

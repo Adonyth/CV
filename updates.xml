@@ -6,6 +6,20 @@
   <language>en</language>
   <atom:link xmlns:atom="http://www.w3.org/2005/Atom" href="https://jiaxuanchen.pages.dev/updates.xml" rel="self" type="application/rss+xml"/>
     <item>
+      <title>Technical report on Zenodo (not peer reviewed): Open-system versus unitary density-matrix predictors on long-horizon predictive error.</title>
+      <link>https://doi.org/10.5281/zenodo.24050453</link>
+      <guid isPermaLink="false">2026-11-08-63974</guid>
+      <pubDate>Sun, 08 Nov 2026 00:00:00 +0000</pubDate>
+      <description>Technical report on Zenodo (not peer reviewed): Open-system versus unitary density-matrix predictors on long-horizon predictive error. · 技术报告发布于 Zenodo（未经同行评议）：Open-system versus unitary density-matrix predictors on long-horizon predictive error。</description>
+    </item>
+    <item>
+      <title>Forward-conditioned means and null calibration in onset-selected ringdown tests — manuscript submitted to Astronomy and Computing; no review outcome is asserted.</title>
+      <link>https://jiaxuanchen.pages.dev/research/ringdown.html</link>
+      <guid isPermaLink="false">2026-10-25-48567</guid>
+      <pubDate>Sun, 25 Oct 2026 00:00:00 +0000</pubDate>
+      <description>Forward-conditioned means and null calibration in onset-selected ringdown tests — manuscript submitted to Astronomy and Computing; no review outcome is asserted. · 《Forward-conditioned means and null calibration in onset-selected ringdown tests》—— 手稿已投稿 Astronomy and Computing；不主张任何审稿结果。</description>
+    </item>
+    <item>
       <title>omyteaai.com rebuilt as one architecture — personal agent networks, predictive world models, embodied intelligence and quantum-information research — on the same particle-field design.</title>
       <link>https://omyteaai.com</link>
       <guid isPermaLink="false">2026-10-18-17298</guid>
@@ -27,13 +41,6 @@
       <description>The Well (PolymathicAI) — two fixes merged upstream: ε propagated through the VRMSE/VMSE metrics (#92) and long-horizon validation curves averaged across batches (#93); written with Claude Code assistance, disclosed in the pull request. · The Well(PolymathicAI)—— 两处修复被上游合并:VRMSE/VMSE 指标中的 ε 传递(#92),以及长时程验证曲线改为跨批次平均(#93);借助 Claude Code 完成,已在合并请求中披露。</description>
     </item>
     <item>
-      <title>Coherent Strange-Current Contributions to X(2370) → ηηη — submitted to Physica Scripta.</title>
-      <link>https://jiaxuanchen.pages.dev/research/glueball.html</link>
-      <guid isPermaLink="false">2026-10-09-89445</guid>
-      <pubDate>Fri, 09 Oct 2026 00:00:00 +0000</pubDate>
-      <description>Coherent Strange-Current Contributions to X(2370) → ηηη — submitted to Physica Scripta. · 《X(2370) → ηηη 中的相干奇异流贡献》—— 已投稿 Physica Scripta。</description>
-    </item>
-    <item>
       <title>Swindo — ongoing product-engineering work on golf-motion capture, body calibration and interfaces.</title>
       <link>https://jiaxuanchen.pages.dev/products/swindo.html</link>
       <guid isPermaLink="false">2026-10-08-97919</guid>
@@ -41,18 +48,11 @@
       <description>Swindo — ongoing product-engineering work on golf-motion capture, body calibration and interfaces. · Swindo —— 高尔夫动作采集、身体参数校准与界面的产品工程工作持续进行中。</description>
     </item>
     <item>
-      <title>Digit Dependence under Translation-Conjugated Cyclic Rotation — submitted to Discrete Mathematics, Algorithms and Applications.</title>
-      <link>https://jiaxuanchen.pages.dev/research/digitRotation.html</link>
-      <guid isPermaLink="false">2026-09-22-8056</guid>
-      <pubDate>Tue, 22 Sep 2026 00:00:00 +0000</pubDate>
-      <description>Digit Dependence under Translation-Conjugated Cyclic Rotation — submitted to Discrete Mathematics, Algorithms and Applications. · 《平移共轭循环旋转的数位依赖》—— 已投稿 Discrete Mathematics, Algorithms and Applications。</description>
-    </item>
-    <item>
-      <title>Paper D — local modular data for half-line free fermions — submitted to the Journal of Mathematical Physics; preprint on Zenodo.</title>
+      <title>Paper D: version 2 preprint on Zenodo.</title>
       <link>https://jiaxuanchen.pages.dev/research/paperD.html</link>
-      <guid isPermaLink="false">2026-07-31-81113</guid>
+      <guid isPermaLink="false">2026-07-31-63866</guid>
       <pubDate>Fri, 31 Jul 2026 00:00:00 +0000</pubDate>
-      <description>Paper D — local modular data for half-line free fermions — submitted to the Journal of Mathematical Physics; preprint on Zenodo. · 论文 D —— 半直线自由费米子的局域模数据 —— 已投稿 Journal of Mathematical Physics;预印本见 Zenodo。</description>
+      <description>Paper D: version 2 preprint on Zenodo. · 论文 D：第二版预印本见 Zenodo。</description>
     </item>
     <item>
       <title>The universal-prior locality no-go — preprint posted on Zenodo.</title>
@@ -69,13 +69,6 @@
       <description>Two books out: An Invitation After Abundance (Kindle and print) and the Chinese-language 和平请柬 (hardcover) — parallel originals. · 两部专著出版:《An Invitation After Abundance》(Kindle 与纸质版)与中文专著《和平请柬》(精装)—— 两部平行的原创著作。</description>
     </item>
     <item>
-      <title>Paper D — half-line free fermions: local CAR &amp; modular scaling with a type-forced obstruction — submission package ready (AHP).</title>
-      <link>https://jiaxuanchen.pages.dev/research/paperD.html</link>
-      <guid isPermaLink="false">2026-07-85267</guid>
-      <pubDate>Wed, 01 Jul 2026 00:00:00 +0000</pubDate>
-      <description>Paper D — half-line free fermions: local CAR &amp; modular scaling with a type-forced obstruction — submission package ready (AHP). · 论文 D —— 半线自由费米子的局域模流标度与类型强制障碍 —— AHP 投稿包就绪。</description>
-    </item>
-    <item>
       <title>An Invitation After Abundance reaches 1,162 pages — publish-ready.</title>
       <link>https://jiaxuanchen.pages.dev/books/invitation.html</link>
       <guid isPermaLink="false">2026-23770</guid>
@@ -83,10 +76,10 @@
       <description>An Invitation After Abundance reaches 1,162 pages — publish-ready. · 《An Invitation After Abundance》达 1,162 页，具备出版条件。</description>
     </item>
     <item>
-      <title>Blazar jet-formation work (BP/BZ fitting, UCL) accepted at CONF-CIAP 2023.</title>
+      <title>Blazar jet-formation work (BP/BZ fitting, UCL) published in Theoretical and Natural Science 19, 169–175 (CONF-CIAP 2023 proceedings).</title>
       <link>https://jiaxuanchen.pages.dev/research/blazar.html</link>
-      <guid isPermaLink="false">2023-33784</guid>
+      <guid isPermaLink="false">2023-15384</guid>
       <pubDate>Sun, 01 Jan 2023 00:00:00 +0000</pubDate>
-      <description>Blazar jet-formation work (BP/BZ fitting, UCL) accepted at CONF-CIAP 2023. · 耀变体喷流形成机制工作（BP/BZ 拟合，UCL）被 CONF-CIAP 2023 录用。</description>
+      <description>Blazar jet-formation work (BP/BZ fitting, UCL) published in Theoretical and Natural Science 19, 169–175 (CONF-CIAP 2023 proceedings). · 耀变体喷流形成机制工作（BP/BZ 拟合，UCL）发表于 Theoretical and Natural Science 第 19 卷（CONF-CIAP 2023 会议论文集）。</description>
     </item>
 </channel></rss>

@@ -1,5 +1,7 @@
 # 站点内容图谱 v4 · The Content Atlas (build 31 起, 2026-07-02)
 
+> 内容清单最近一次按 `data/works.json` 核对:2026-11-14(31 项:科学研究 24 / 人文社科 4 / 著作 3)。
+
 > **硬规矩一**:全站除「完整履历 ↗」按钮外,任何入口严禁指向 cv.html。
 > **硬规矩二**:研究按**课题本身**命名,不出现仓库名/品牌名(ACAEXPL、Boltzmann、WMDB、Omytea 等)。
 > **硬规矩三**:导览栏只放**内容分类**(研究/履历/创造/足迹)。命盘、太阳、月亮、星座
@@ -19,41 +21,56 @@
 ## 一、内容分类(导览栏的四类 + 唯一 CV 入口)
 
 ### 1. 研究 Research
-**科学研究(18 题,摩羯座·日座主外)**
-| # | 课题 | 出处/状态 |
-|---|---|---|
-| 1 | 密度矩阵信念态世界模型(量子计算×世界模型理论;Lindblad 开系统扩展) | 纲领进行中,2 稿撰写中 |
-| 2 | 算法理想主义的模块化识别之界定(paper A) | FoP 备稿 |
-| 3 | 通用先验不选分解:有界字母表局域性 no-go(paper B) | 投稿轮转中 |
-| 4 | 跨语境缺口在玻恩规则推导中的复现(paper B2) | SciPost Phys. Core 备稿 |
-| 5 | 玻尔兹曼大脑(paper C1) | Synthese 方向 |
-| 6 | 他心问题(paper C2) | Synthese 方向 |
-| 7 | 半直线自由费米子的局域模流标度与类型强制障碍(paper D) | AHP 投稿包就绪 |
-| 8 | 玻恩规则与自然性 | 代表作课题,进行中 |
-| 9 | 铃宕泛音显著性的协方差依赖与真实噪声标定标准 | RASTI 备稿 |
-| 10 | 快子相边界分类(有限窗口证书) | 理论线进行中 |
-| 11 | 引力波族群特征显著性证书(GWTC-4) | 撰写中 |
-| 12 | CMS 喷流物理(PYTHIA 模拟/部分子级联/BSM 拓扑) | Brown Roloff 组 2024–26 |
-| 13 | 单壁碳纳米管 3ω 热学表征与统一有限加热丝阻抗理论 | Brown Kuehne 组,合著撰写中 |
-| 14 | 耀变体喷流形成机制(BP/BZ 拟合) | UCL;CONF-CIAP 2023 已录用 |
-| 15 | 在束 γ 能谱学:能量矩阵开窗鉴别剩余核素 | 山大 2022 |
-| 16 | 类轴子暗物质:光子生存概率约束参数空间 | 北师大 2022 |
-| 17 | MAXI J1348-630 黑洞 X 射线双星(NICER/NuSTAR) | 山大 2023–24,本科论文 |
-| 18 | TOI 恒星耀发光谱与系外行星宜居性 | 山大 2022–23 |
+> 本节由 `data/works.json` 生成(2026-11-14):全站 31 项 = 科学研究 24 / 人文社科 4 / 著作 3。
+> 标题、时间与阶段以 works.json 为唯一来源;阶段一律取最保守的真实表述。
+> 「星点」= 该项在 `data/natal-sky.json` 中有 dataNode(摩羯座 20 个、双子座 3 个);其余项只有页面,经菜单与搜索到达。
 
-**人文社科研究(3 题,双子座+土星·文字之座)**
-技术垄断租金(SSRN 6950759)· 栈权力:前沿 AI 与市场不矫正(再投轮)· 相机·棋手·引擎(认识论)
+**科学研究(24 题,摩羯座·日座主外)**
+| # | 课题 | 领域 / 单位 | 时间 | 阶段 | 星点 | 页面 |
+|---|---|---|---|---|---|---|
+| 1 | 密度矩阵信念态世界模型 | 预测与科学软件 | 2026 — | 研究原型 | ✦ | `research/worldmodel.html` |
+| 2 | 算法理想主义的模块化识别需要什么:一个基础性界定 | 物理基础 | 2024.05–2024.08 | 未发表工作手稿 | ✦ | `research/paperA.html` |
+| 3 | 通用先验不选出分解 | 物理基础 | 2024.05–2024.08 | 早期未发表手稿 | ✦ | `research/paperB.html` |
+| 4 | 通用先验自身无法选出优先分解:有界字母表下的局域性不可行定理,及同一缺口在玻恩规则推导中的逐路线映射 | 物理基础 | 2024.05–2024.08 | 公开预印本 · 2026 年 7 月 | ✦ | `research/paperB2.html` |
+| 5 | 观察者态本体论下的玻尔兹曼大脑 | 物理哲学 | 2024.05–2024.08 | 未发表研究材料 | ✦ | `research/paperC1.html` |
+| 6 | 观察者态本体论下的他心问题 | 物理哲学 | 2024.05–2024.08 | 未发表研究材料 | ✦ | `research/paperC2.html` |
+| 7 | 半直线自由费米子局域模数据的收敛，以及原始固定截断全局拟等价的局域性／通带障碍 | 数学物理 | 2024.05–2024.08 | 公开预印本 · 第二版，2026 年 7 月 31 日 | ✦ | `research/paperD.html` |
+| 8 | X(2370) → ηηη 中的相干奇异流贡献 | 粒子现象学 | 2026.08 | 未发表手稿 | ✦ | `research/glueball.html` |
+| 9 | 平移共轭循环旋转的数位依赖 | 离散数学与计算 | 2024.05–2024.08 | 未发表手稿 | ✦ | `research/digitRotation.html` |
+| 10 | 玻恩规则与自然性 | 物理基础 | 2024.05–2024.08 | 暂停的研究方向 | ✦ | `research/bornNaturalness.html` |
+| 11 | 铃宕泛音检验的校准诊断 | 引力波推断 | 2024.06; analysis 2026 | 已投稿手稿 · Astronomy and Computing，2026 年 10 月 | ✦ | `research/ringdown.html` |
+| 12 | 强过冷相变动力学与快子模式 | 粒子理论与相变动力学 | 2025.09; comparison 2026.10 | 未发表的计算与理论研究 | ✦ | `research/tachyon.html` |
+| 13 | 族群特征显著性与有限选择模拟 | 族群推断与统计诊断 | 2026 | 未发表分析与手稿 | ✦ | `research/gwPopulation.html` |
+| 14 | PYTHIA 指导学习：部分子簇射与喷注结构 | 布朗大学 | 2025.05–2025.09 | 指导学习与练习 | ✦ | `research/cmsJets.html` |
+| 15 | 碳纳米管热学表征（3ω 方法） | 布朗大学 Kuehne 组 | 2025.10–2026.02 | 参与研究 | ✦ | `research/cnt3omega.html` |
+| 16 | 耀变体喷流的形成机制 | 天体物理 · UCL 研究项目 | 2022.07–2023.01 | 已发表会议论文 · 2023 | ✦ | `research/blazar.html` |
+| 17 | 在束 γ 射线能谱学 | 核能谱 · 山东大学 | 2022 | 本科训练 | ✦ | `research/gammaSpec.html` |
+| 18 | 耀变体 γ 能谱中的类轴子粒子 | 暗物质现象学 · 北京师范大学 | 2022.03–2022.05 | 本科阶段项目 | ✦ | `research/alpDM.html` |
+| 19 | MAXI J1348-630 黑洞 X 射线双星 | X 射线天体物理 · 山东大学 | 2023.09–2024.05 | 本科毕业论文（分析训练） | ✦ | `research/maxi.html` |
+| 20 | TOI 恒星耀发光谱 | 恒星光谱 · 山东大学 | 2022.04–2023.04 | 已完成本科研究 | ✦ | `research/toiFlares.html` |
+| 21 | The Well：科学模拟评估 | 科学机器学习与评估 | 2026.07 | 研究进行中；软件贡献已合入 | — | `research/theWell.html` |
+| 22 | 语言模型校准与统计识别 | AI 评估与数理统计 | 2026 | 未发表的实证与理论研究 | — | `research/calibration.html` |
+| 23 | GW250114：后验约定与排除诊断 | 引力波推断 | 2026.06 | 未发表后验再分析 | — | `research/gw250114.html` |
+| 24 | 有限寄存器局域性与机器相关排序 | 数学基础与计算 | 2024.05–2024.08; manuscript 2026.09 | 未发表工作手稿 | — | `research/finiteRegister.html` |
+
+**人文社科研究(4 题,双子座+土星·文字之座)**
+| # | 课题 | 领域 / 单位 | 时间 | 阶段 | 星点 | 页面 |
+|---|---|---|---|---|---|---|
+| 1 | 生成式 AI 中的推理租金：知识垄断与非竞争性能力的计量访问 | 技术政治经济学 | 2026.01–2026.07 | 公开 SSRN 预印本 · 2026 年 9 月修订 | ✦ | `humanities/monopolyRent.html` |
+| 2 | 前沿 AI 与垄断自我纠正的局限：推理租金、算力瓶颈与平台锁定 | 政治经济学与产业组织 | 2026.01–2026.07 | 公开 SSRN 预印本 | ✦ | `humanities/stackPower.html` |
+| 3 | 相机、棋手、引擎：书写自身身处其中之系统的认识论 | 认识论与社会研究 | 2026.01–2026.07 | 公开 SSRN 预印本 | ✦ | `humanities/cpe.html` |
+| 4 | 公共 AI 算力计划公开记录的文献研究 | 技术政策与文献记录研究 | 2026.01–2026.07 | 工作手稿 | — | `humanities/publicAICompute.html` |
 
 ### 2. 履历 Journey(太阳本体 ☉)
 山东大学(威海)空间科学与技术理学学士 2020–2024 → Brown University 物理学理学硕士 2024–2026。
-研究经历时间轴:γ 能谱(2022)→ ALP(2022)→ TOI(2022–23)→ 耀变体/UCL(2022–23)→ MAXI(2023–24)→ CMS+CNT(2024–26)。
-**不写"独立研究者";清华 PhD 未入学不公开。**
+研究与训练时间轴:γ 能谱训练(2022)→ ALP(2022)→ TOI(2022–23)→ 耀变体/UCL(2022–23)→ MAXI 本科毕业论文(2023–24)→ PYTHIA 指导学习(2025)→ 碳纳米管 3ω 研究参与(2025–26)。
+**不写"独立研究者"。**
 
 ### 3. 创造 Creation
 | 子类 | 内容 | 场所 | 打开方式 |
 |---|---|---|---|
-| **著作**(2 本) | An Invitation After Abundance(~1,164 页,publish-ready)· Sovereign Scintillation Over Grand Fluctuation(成稿中) | 巨蟹座+木星(出版之星·冲日) | books/<id>.html |
-| **产品**(2 个) | Omytea(omyteaai.com·Console·GitHub·PyPI substrate·GolfCal-1k)· 弐时仪 Nye Clock(nyeclock.pages.dev) | 狮子座(月座·主内之火自造) | **直接官方外链** ✓ 已上导览 |
+| **著作**(3 本) | An Invitation After Abundance(自行出版著作 · 2026) · 和平请柬(自行出版著作 · 2026) · Sovereign Scintillation Over Grand Fluctuation(未出版著作手稿) | 巨蟹座+木星(出版之星·冲日) | books/<id>.html |
+| **产品**(3 个) | Omytea · Swindo · 弐时仪 Nye Clock | 见 v6(一物一页) | products/<id>.html(官方外链在页内) |
 | **音乐**(演奏) | 中国民族管弦乐团 · gamelan(甘美兰)· 中国古琴 —— **具体细节(团名/年代/照片/录音)待用户提供** | 狮子座(主内之火·舞台之座) | music.html 或逐项页 |
 
 ### 4. 足迹 Footprint(地球 ⊕)✓ 已建成 → footprint.html
@@ -63,14 +80,16 @@
 | 场所 | 天象依据 | 内容 | 页面 |
 |---|---|---|---|
 | 太阳本体 ☉ | 日在摩羯 11.8° | 履历 | journey.html |
-| 摩羯座星 | 日座·主外 | 科学研究 18 题(一星一题) | research/<id>.html |
-| 土星 ♄ + 双子座星 | 土星真实在双子 9.2° | 人文社科 3 题 | humanities/<id>.html |
-| 木星 ♃ + 巨蟹座星 | 木星真实在巨蟹 10.5°·冲日 | 著作 2 本 | books/<id>.html |
-| 狮子座星 | 月座·主内之火 | 产品(直接外链)+ 音乐 | 外链 / music.html |
+| 摩羯座星 | 日座·主外 | 科学研究 24 题(20 题有星点) | research/<id>.html |
+| 土星 ♄ + 双子座星 | 土星真实在双子 9.2° | 人文社科 4 题(3 题有星点) | humanities/<id>.html |
+| 木星 ♃ + 巨蟹座星 | 木星真实在巨蟹 10.5°·冲日 | 著作 3 本 | books/<id>.html |
+| 狮子座星 | 月座·主内之火 | 产品 + 音乐(现行落位见 v6) | products/<id>.html / music.html |
 | 月亮本体 ☾ | 月在狮子 20.5° | **纯意象,无内容挂载** | — |
 | 地球 ⊕ | — | 足迹 ✓ | footprint.html ✓ |
 
 ## 三、导览栏(顶部横栏 = 四分类 + CV;≤1360px 右上降档)
+
+> 三、四、五节是 build 31–34 时的建造记录,其中的数量(18 星、23 页、著作 2、产品 2 等)是当时的数字;现行数量见第一节。
 
 ```
 研究 [科学研究 ✓(暂:飞向摩羯)|人文社科(待土星+页面)]
@@ -112,12 +131,15 @@ tap-to-enter from the flat menu ("✦ 进入星空"), sticky via cv-motion, ✕ 
 ## v6 — ONE OBJECT · ONE PAGE · ONE ANCHOR (build 67)
 The aggregates are dead (research.html/humanities.html/books.html deleted; the SKY is
 the only index). Canonical mapping:
-  Capricorn ×18 → research/<id>.html   (each science topic, own star, own page)
-  Gemini ×3     → humanities/<id>.html
+  Capricorn     → research/<id>.html   (24 science topics, each its own page AND its own star — 2026-11-14:
+                  four real Capricornus stars added for the four that had none: τ, 46, 41, φ Cap)
+  Gemini        → humanities/<id>.html (4 topics, each its own star — the fourth sits on μ Gem)
   Jupiter       → books/invitation.html   (An Invitation After Abundance)
   Saturn        → books/sovereign.html    (Sovereign Scintillation)
+  Neptune       → books/heping.html       (和平请柬 — third book, added 2026-10; anchored 2026-11-14)
   Venus         → products/omytea.html    (all Omytea links INSIDE the page)
   Mercury       → products/nyeclock.html  (弐时仪)
+  Uranus        → products/swindo.html    (Swindo — anchored 2026-11-14)
   Moon          → music.html · Sun → journey.html · Earth → footprint
   Mars          → doorless sightseeing · Cancer/Leo → pure constellations (no nodes)
 Never re-add an aggregate/table page; never anchor one work to two objects.
