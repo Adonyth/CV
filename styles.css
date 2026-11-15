@@ -39,6 +39,7 @@
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+button,input,select,textarea{font-family:inherit;}   /* a control never falls back to the browser's system font */
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%; hanging-punctuation:first;}
 @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} }
 body{

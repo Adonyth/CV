@@ -36,7 +36,8 @@
     .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) grayscale(.6) brightness(.58) contrast(1.08) sepia(.16);}   /* OSM day tiles → the site's warm dark */
     .leaflet-control-attribution{background:rgba(11,10,9,.72)!important; color:var(--muted)!important; font-family:var(--mono); font-size:10px!important;}
     .leaflet-control-attribution a{color:var(--accent)!important;}
-    .leaflet-control-zoom a{background:rgba(11,10,9,.8)!important; color:var(--ink)!important; border-color:rgba(255,255,255,.12)!important;}
+    .leaflet-control-zoom a{background:rgba(11,10,9,.8)!important; color:var(--ink)!important; border-color:rgba(255,255,255,.12)!important; font-family:var(--mono)!important;}
+    .leaflet-container{font-family:var(--mono)!important;}   /* the map library's stylesheet names system fonts; ours are open-licence only */
     /* the unfolding globe intro sits above until it hands over */
     #unfold{position:fixed; inset:0; z-index:5; background:var(--page); transition:opacity .7s ease;}
     #unfold.done{opacity:0; pointer-events:none;}
