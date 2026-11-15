@@ -15,10 +15,14 @@
   <meta property="og:title" content="足迹 · Footprint — Jiaxuan Chen" />
   <meta property="og:description" content="738,021 raw GPS points, 2023–2026 — the real footprint of Jiaxuan Chen (陈嘉轩)." />
   <meta name="twitter:card" content="summary" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;500;600&family=Noto+Serif:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Symbols:wght@400;700&family=Noto+Sans+Symbols+2&family=Noto+Sans+Math&family=Noto+Sans+Mono&text=%E2%86%97%E2%9C%A6%E2%8C%82%E2%A7%89%E2%9F%B6%E2%9F%B5%E2%98%89%E2%98%BD%E2%98%BF%E2%99%80%E2%99%82%E2%99%83%E2%99%84%E2%81%BB%E2%81%BA%E2%81%B0%E2%81%B4%E2%81%B5%E2%81%B6%E2%81%B7%E2%81%B8%E2%81%B9&display=swap" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" />
   <style>
     :root{ --page:#0b0a09; --ink:#f4f0e8; --muted:#8a8276; --accent:#e0876a; --gold:#e8c37a; --hairline:rgba(255,255,255,.10); --read:#cbc4b6;
-           --mono:"JetBrains Mono",ui-monospace,Menlo,monospace; --serif:"Newsreader",Georgia,"Songti SC",serif; }
+           --mono:"JetBrains Mono","Noto Sans SC","Noto Sans Symbols","Noto Sans Symbols 2","Noto Sans Math","Noto Sans Mono",monospace; --serif:"Newsreader","Noto Serif","Noto Serif SC","Noto Sans Symbols","Noto Sans Symbols 2","Noto Sans Math","Noto Sans Mono",serif; }
     *{margin:0;padding:0;box-sizing:border-box;}
     html,body{height:100%;}
     body{background:var(--page); color:var(--ink); font-family:var(--serif); overflow:hidden;}
@@ -66,7 +70,7 @@
     @media(max-width:640px){ .map-title b{font-size:15px;} .map-title span{display:none;} }
     .stamp{position:fixed; right:20px; bottom:8px; z-index:10; font-family:var(--mono); font-size:10px; color:var(--muted); opacity:.7; pointer-events:none;}
   </style>
-  <link rel="stylesheet" href="craft.css?v=4" />
+  <link rel="stylesheet" href="craft.css?v=5" />
 </head>
 <body>
   <div id="map" role="img" aria-label="Footprint map — 738,021 raw GPS points across 2023–2026"></div>
@@ -119,6 +123,6 @@
   <script src="footprint-data.js?v=1"></script>
   <script type="module" src="footprint-map.js?v=5"></script>
   <script src="craft.js?v=2" defer></script>
-  <script src="search.js?v=8" defer></script>
+  <script src="search.js?v=9" defer></script>
 </body>
 </html>

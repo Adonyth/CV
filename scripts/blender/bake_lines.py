@@ -4,11 +4,12 @@
 
   data/flow-lines.bin   STREAMLINES of the Cosmicflows-4 velocity field (Courtois et al. 2023, A&A 670, L15), labelled by
                         the watershed basin they start in (Dupuy & Courtois 2023: 1 = Laniakea). This is what Laniakea
-                        IS: the volume whose galaxies all flow to one attractor. Lines run downstream and merge like
-                        tributaries, so the trunks toward each attractor stand out.
+                        IS: the volume whose galaxies all flow to one attractor. One line starts in every cell of
+                        the published 64^3 velocity grid inside the shown volume and runs to its attractor: the
+                        data's own density of lines, nothing chosen, thinned or merged.
   data/web-spines.bin   FILAMENT SPINES of the site's own density field (data/web-density.webp, from the real galaxy
                         survey): ridge lines of the smoothed field, the skeleton of the cosmic web.
-Both are baked geometry: the browser never sees a velocity field, it draws a few tens of thousands of segments.
+Both are baked geometry: the browser never sees a velocity field, it draws segments.
 Format (little-endian): "LNS1", uint32 nVerts, uint32 nLines, int16 xyz[nVerts*3] (supergalactic Mpc x 64, H0 = 70 as
 the galaxy files), uint8 attr[nVerts*4] (kind, brightness, arc-length lo, hi — arc length in units of 0.25 Mpc),
 uint32 lineStart[nLines].
@@ -62,49 +63,87 @@ def v_at(x):                                           # x (n,3) Mpc/h → km/s
 def basin_at(x):
     # NOTE the watershed grids are stored [SGZ][SGY][SGX] — the opposite of the velocity/density grids ([SGX][SGY][SGZ]).
     # Checked against the sky: read this way, label 1 holds us, Virgo, Centaurus, Norma and the Great Attractor, label 5
-    # Perseus, label 6 Shapley, label 3 Hercules; and streamlines of the velocity field seeded near us end at
-    # (-46, 11, -3) Mpc/h, the Great Attractor's known place.
+    # Perseus, label 6 Shapley, label 3 Hercules. Re-checked 2026-11-15 against the velocity field itself: of all 48
+    # axis orders and flips, this one agrees best by far with where streamlines actually end (purity 0.845, next
+    # 0.652), and label 1 holds 4,079 voxels = 1.94e6 (Mpc/h)^3, the paper's 2e6 for Laniakea.
+    # (An earlier note here said lines seeded near us end at (-46, 11, -3), "the Great Attractor's known place". That
+    # was wrong: in this 64^3 reconstruction they end at (-46, 11, +48) Mpc/h, by a density peak at (-39, -8, 55) —
+    # the classical Great Attractor's SGX and SGY, but ~50 Mpc/h higher in SGZ.)
     i = np.clip(np.floor((x + BOX / 2) / BOX * NB).astype(int), 0, NB - 1)
     return boa[i[:, 2], i[:, 1], i[:, 0]]
 
 
 vb = (np.argwhere(boa == 1)[:, ::-1] + 0.5) / NB * BOX - BOX / 2
 print("Laniakea: %d voxels, centroid %s Mpc/h, equivalent radius %.0f Mpc/h" % (len(vb), vb.mean(axis=0).round(0), (len(vb) * (BOX / NB) ** 3 * 3 / 4 / np.pi) ** (1 / 3)))
-seeds_l = vb[rng.choice(len(vb), 800, replace=False)] + rng.uniform(-3.9, 3.9, (800, 3))
-cand = rng.uniform(-230, 230, (60000, 3)); cand = cand[np.linalg.norm(cand, axis=1) < 230]
-cand = cand[basin_at(cand) != 1][:650]
-seeds = np.vstack([seeds_l, cand]); kinds_seed = basin_at(seeds)
-order = rng.permutation(len(seeds)); seeds, kinds_seed = seeds[order], kinds_seed[order]
 
-DS, CELL = 3.2, 6.5
-occ = {}
+# THE REAL SET (owner, 2026-11-15: "我想要真实的线的密度和数量"). No seeds of our own choosing, no thinning, no
+# merging of tributaries: ONE streamline from the centre of EVERY cell of the published velocity grid (64^3, 15.6 Mpc/h)
+# inside the volume the site shows, each followed all the way to where the flow stalls (its attractor) — the same
+# construction the watershed itself is made of. The density of lines is then the data's own: uniform where they start,
+# crowding into trunks where the flow converges.
+SEED_R = 200.0                                         # Mpc/h: the cosmic-web tier (its density box reaches 175)
+cc = (np.arange(NV) + 0.5) / NV * BOX - BOX / 2
+gx3, gy3, gz3 = np.meshgrid(cc, cc, cc, indexing="ij")
+seeds = np.stack([gx3.ravel(), gy3.ravel(), gz3.ravel()], axis=1)
+seeds = seeds[np.linalg.norm(seeds, axis=1) < SEED_R]
+kinds_seed = basin_at(seeds)
+DS, STALL, R_OUT, NSTEP = 3.2, 25.0, 330.0, 170
+n = len(seeds)
+P = np.full((NSTEP + 1, n, 3), np.nan); P[0] = seeds
+SPD = np.zeros((NSTEP + 1, n))
+alive = np.ones(n, bool); npt = np.ones(n, int)
+p = seeds.copy()
+for step in range(NSTEP):
+    idx = np.flatnonzero(alive)
+    if not len(idx):
+        break
+    v1 = v_at(p[idx]); n1 = np.linalg.norm(v1, axis=1)
+    SPD[step, idx] = n1
+    go = n1 >= STALL                                   # the flow stalls: an attractor
+    mid = p[idx] + 0.5 * DS * v1 / np.maximum(n1, 1e-9)[:, None]
+    v2 = v_at(mid); n2 = np.linalg.norm(v2, axis=1)
+    q = p[idx] + DS * v2 / np.maximum(n2, 1e-9)[:, None]
+    go &= np.linalg.norm(q, axis=1) <= R_OUT
+    if step >= 8:                                      # circling an attractor instead of arriving: stop there
+        back = P[step - 8, idx]
+        go &= np.linalg.norm(q - back, axis=1) > 2.2 * DS
+    ok = idx[go]
+    p[ok] = q[go]; P[step + 1, ok] = q[go]; npt[ok] += 1
+    alive[idx[~go]] = False
+
+
+def simplify(pts, tol):
+    """Ramer-Douglas-Peucker: drop the points a smooth line does not need (the file is drawn, not analysed)."""
+    keep = np.zeros(len(pts), bool); keep[0] = keep[-1] = True
+    stack = [(0, len(pts) - 1)]
+    while stack:
+        i, j = stack.pop()
+        if j <= i + 1:
+            continue
+        a, b = pts[i], pts[j]; ab = b - a; L = np.linalg.norm(ab)
+        seg = pts[i + 1:j] - a
+        d = np.linalg.norm(seg, axis=1) if L < 1e-9 else np.linalg.norm(np.cross(seg, ab / L), axis=1)
+        k = int(np.argmax(d))
+        if d[k] > tol:
+            keep[i + 1 + k] = True; stack += [(i, i + 1 + k), (i + 1 + k, j)]
+    return keep
+
+
 flow, fk, fb, ends = [], [], [], []
-for s0, k0 in zip(seeds, kinds_seed):
-    p = s0.copy(); pts = [p.copy()]; spd = []
-    for step in range(130):
-        v1 = v_at(p[None])[0]; n1 = np.linalg.norm(v1)
-        if n1 < 25.0:
-            break                                      # the flow stalls: an attractor
-        mid = p + 0.5 * DS * v1 / n1
-        v2 = v_at(mid[None])[0]; n2 = np.linalg.norm(v2)
-        p = p + DS * v2 / max(n2, 1e-9)
-        spd.append(n1)
-        if np.linalg.norm(p) > 330:
-            break
-        pts.append(p.copy())
-        key = tuple(np.floor(p / CELL).astype(int))
-        if step >= 3 and key in occ and occ[key] != len(flow):
-            break                                      # joined a line already drawn: tributaries merge into trunks
-    if len(pts) >= 5:
-        for q in pts:
-            occ.setdefault(tuple(np.floor(q / CELL).astype(int)), len(flow))
-        flow.append(np.array(pts) / H); fk.append(int(k0)); ends.append(pts[-1])
-        sp = np.array(spd + [spd[-1]] * (len(pts) - len(spd)))
-        fb.append(np.clip(0.35 + 0.65 * sp / 600.0, 0, 1))
+for i in rng.permutation(n):                           # random order: a phone may draw the first part of the file
+    m = npt[i]
+    if m < 4:
+        continue                                       # a cell sitting on an attractor: no line to draw
+    pts = P[:m, i]; spd = SPD[:m, i].copy(); spd[-1] = spd[-2]
+    kp = simplify(pts, 0.45)
+    flow.append(pts[kp] / H); fk.append(int(kinds_seed[i])); ends.append(pts[-1])
+    fb.append(np.clip(0.35 + 0.65 * spd[kp] / 600.0, 0, 1))
 ends = np.array(ends); fk_a = np.array(fk)
 le = ends[fk_a == 1]
-print("flow lines %d (Laniakea %d), points %d" % (len(flow), int((fk_a == 1).sum()), sum(len(l) for l in flow)))
-print("Laniakea lines end near (median) %s Mpc/h — the Great Attractor region is about (-47, 13, -5)" % np.median(le, axis=0).round(0))
+print("flow lines %d of %d cells (Laniakea %d), points %d; per basin %s" % (len(flow), n, int((fk_a == 1).sum()), sum(len(l) for l in flow),
+      dict(zip(*[x.tolist() for x in np.unique(fk_a, return_counts=True)]))))
+print("median length %.0f Mpc/h; Laniakea lines end near (median) %s Mpc/h (the classical Great Attractor is about (-47, 13, -5))" % (
+      np.median([np.linalg.norm(np.diff(l, axis=0), axis=1).sum() * H for l in flow]), np.median(le, axis=0).round(0)))
 nv, sz = write_lines(os.path.join(DATA, "flow-lines.bin"), flow, fk, fb)
 print("flow-lines.bin %d verts %d KB" % (nv, sz // 1024))
 

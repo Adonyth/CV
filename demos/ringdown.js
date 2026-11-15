@@ -88,7 +88,7 @@
       if (useOv) plot(MODES["221"], m1, 0.55, MODES["221"].col); ctx.globalAlpha = 1;
       // a soft "merger" marker at t=0
       ctx.fillStyle = "rgba(224,135,106,.5)"; ctx.fillRect(0, 12, 2, H - 24);
-      ctx.fillStyle = "rgba(233,224,210,.5)"; ctx.font = "11px 'JetBrains Mono',monospace";
+      ctx.fillStyle = "rgba(233,224,210,.5)"; ctx.font = "11px 'JetBrains Mono','Noto Sans SC','Noto Sans Symbols','Noto Sans Math',monospace";
       ctx.fillText("t = 0  (merger)", 8, 22); ctx.fillText("time →  (units of M)", W - 150, H - 10);
       requestAnimationFrame(draw);
     }

@@ -1199,8 +1199,8 @@ export function mountNyeArmature(THREE, scene, opts) {
      inside a transparent sphere — and nothing else: no gears, no metal, and NO LINES (no ring circles, no
      graduations, no orbit traces). The "ring" is the circle the spheres themselves stand in.
      What changed is only what true scale broke and what the old sprites lacked:
-       · the characters are drawn from a distance-field atlas (data/ring-glyphs.webp — the same 宋体 voice, baked,
-         so the stroke is razor-sharp at any size and identical on every machine);
+       · the characters are drawn from a distance-field atlas (data/ring-glyphs.webp — Noto Serif SC, 思源宋体, an
+         open-licence 宋体: baked, so the stroke is razor-sharp at any size and identical on every machine);
        · the sphere is a fine rim in the character's own colour around a clear, colourless inside — no fill, no
          highlight, no caustic, no halo; matte, always dimmer than the Sun. The eight natal characters are clear,
          the others of each circle are quieter and more transparent;
@@ -1213,7 +1213,7 @@ export function mountNyeArmature(THREE, scene, opts) {
   var _ringTex = null;
   function ringTextures() {
     if (_ringTex) return _ringTex;
-    const glyphs = new T.TextureLoader().load("data/ring-glyphs.webp?v=2");   // 6×4 tiles, one distance field per character (data, not colour)
+    const glyphs = new T.TextureLoader().load("data/ring-glyphs.webp?v=3");   // 6×4 tiles, one distance field per character (data, not colour)
     glyphs.generateMipmaps = false; glyphs.minFilter = T.LinearFilter; glyphs.magFilter = T.LinearFilter;
     glyphs.wrapS = glyphs.wrapT = T.ClampToEdgeWrapping;
     _ringTex = { glyphs: glyphs };
@@ -1443,12 +1443,12 @@ export function mountNyeArmature(THREE, scene, opts) {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, cv.width, cv.height);
     ctx.fillStyle = color;
-    ctx.font = '600 48px "Songti SC","STSong","Noto Serif SC",serif';
+    ctx.font = '600 48px "Noto Serif SC",serif';
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(text, 256, 78);
     ctx.fillStyle = "rgba(240,228,203,0.62)";
-    ctx.font = '500 22px "JetBrains Mono","SFMono-Regular",monospace';
+    ctx.font = '500 22px "JetBrains Mono","Noto Sans SC",monospace';
     ctx.fillText(extra && extra.sub ? extra.sub : "10×12 / 60", 256, 126);
     const tex = new T.CanvasTexture(cv);
     setTextureColorSpace(tex);

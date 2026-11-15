@@ -2806,7 +2806,7 @@
     var _tsModsP = TRUE_SCALE
       ? Promise.all([import("./ephemeris.js?v=1"), import("./truescale.js?v=2")]).then(function (m) { return { eph: m[0], ladder: m[1] }; }).catch(function () { return null; })
       : Promise.resolve(null);
-    Promise.all([import("./nye-armature.js?v=55"), _tsModsP]).then(function (mods2) {
+    Promise.all([import("./nye-armature.js?v=56"), _tsModsP]).then(function (mods2) {
       var mod = mods2[0];
       _tsMods = mods2[1]; if (!_tsMods) _tsFailed = true;
       try {
@@ -2929,7 +2929,7 @@
     ]).then(function (arr) {
       var natalData = arr[0], lssData = arr[1];
       DOSSIER = natalData.dossier || {};
-      return import("./natal-sky.js?v=170").then(function (mod) {
+      return import("./natal-sky.js?v=172").then(function (mod) {
         natalOpts = {
           tex: tex, vertexShader: DEEP_VERTEX_SHADER, fragmentShader: DEEP_FRAGMENT_SHADER,
           group: COSMOS ? natalRoot : deepFusion.group, R_STAR: COSMOS ? 410 : 372,

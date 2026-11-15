@@ -249,13 +249,23 @@ export function buildNatalSky(THREE, scene, data, opts) {
 
   /* ---------------- planet glyphs (☉ in Capricorn, ☾ in Leo, …) ---------------- */
   var GLYPH = { sun: "☉", moon: "☽", mercury: "☿", venus: "♀", mars: "♂", jupiter: "♃", saturn: "♄" };
+  /* Text drawn on a canvas uses the site's open-licence web fonts only (Noto Serif SC, Noto Sans Symbols, Newsreader —
+     all SIL OFL). A canvas does not wait for a web font, so a label is painted at once with whatever is ready and
+     painted again, into the same texture, when its font has arrived. */
+  function whenFont(spec, text, repaint) {
+    try { if (document.fonts && document.fonts.load) document.fonts.load(spec, text).then(function (ff) { if (ff && ff.length) repaint(); }).catch(function () {}); } catch (eF) {}
+  }
   function glyphSprite(ch, sizeScale, bright) {
     var cv = document.createElement("canvas"); cv.width = cv.height = 128;
-    var g = cv.getContext("2d"); g.clearRect(0, 0, 128, 128);
-    g.fillStyle = bright ? "rgba(244,234,210,0.98)" : "rgba(224,135,106,0.92)";
-    g.font = '700 78px "Songti SC","STSong","Noto Serif SC",serif';
-    g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(ch, 64, 68);
+    var g = cv.getContext("2d"), GF = '700 78px "Noto Sans Symbols","Noto Sans Symbols 2","Noto Sans Math","Noto Serif SC",serif';
+    function paint() {
+      g.clearRect(0, 0, 128, 128);
+      g.fillStyle = bright ? "rgba(244,234,210,0.98)" : "rgba(224,135,106,0.92)";
+      g.font = GF; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(ch, 64, 68);
+    }
+    paint();
     var tex = new T.CanvasTexture(cv);
+    whenFont(GF, ch, function () { paint(); tex.needsUpdate = true; });
     if ("colorSpace" in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
     var m = new T.SpriteMaterial({ map: tex, transparent: true, opacity: bright ? 0.98 : 0.88, depthWrite: false, depthTest: false, blending: T.AdditiveBlending, fog: false });
     if ("toneMapped" in m) m.toneMapped = false;
@@ -1225,9 +1235,15 @@ export function buildNatalSky(THREE, scene, data, opts) {
       // the two line sets (build 265), fetched only now — when the large-scale tiers are actually being built
       (function () {
         function grab(url, cb) { fetch(url).then(function (r) { return r.ok ? r.arrayBuffer() : null; }).then(function (b) { if (b) { try { cb(b); } catch (eL) {} } }).catch(function () {}); }
-        grab("data/flow-lines.bin?v=1", function (b) {
-          var L1 = makeLineLayer("CosmicWebLinesFlow", b, AX, AY, AZ, K, { flow: true, kind: 1, keep: 0.5, width: 1.1, gain: 0.42, near: [25, 110], fadeIn: [25, 85], farDim: [120, 240, 0.0],
-            color: function () { return [255, 210, 132]; } });   // Laniakea's own flow only (basin 1), a few hundred paths, warm; gone by the web tier
+        grab("data/flow-lines.bin?v=2", function (b) {
+          // THE REAL SET (owner, 2026-11-15): every streamline of the published Cosmicflows-4 velocity field — one from
+          // each cell of its 64^3 grid inside this volume, 8,738 of them, each drawn whole from its cell to its
+          // attractor, in every watershed basin. Nothing is thinned on a desktop; a phone draws the first third of the
+          // (randomly ordered) file. Laniakea — the basin we are in — is warm; its neighbours are cool.
+          var FLOW_COL = { 1: [255, 208, 128], 2: [146, 184, 255], 3: [188, 166, 255], 4: [124, 212, 204], 5: [255, 160, 152],
+                           6: [255, 178, 120], 7: [162, 172, 198], 8: [150, 198, 172], 9: [208, 188, 152] };
+          var L1 = makeLineLayer("CosmicWebLinesFlow", b, AX, AY, AZ, K, { flow: true, keep: mobile ? 0.34 : 1, width: 0.62, gain: 0.030, near: [18, 70], fadeIn: [25, 85], farDim: [180, 620, 0.38],
+            color: function (k) { return FLOW_COL[k] || [170, 176, 190]; } });
           if (L1) { belt.add(L1); _newLines = true; }
         });
         grab("data/web-spines.bin?v=1", function (b) {
@@ -1469,8 +1485,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
   /* LINES OF THE LARGE-SCALE TIERS (build 265) — baked offline by scripts/blender/bake_lines.py, drawn here as ribbons:
      every segment is a camera-facing quad a few pixels wide with a soft cross-profile (a 1-px GL line is a hair on a
      high-density screen, and cannot glow). Two sets, same format ("LNS1"):
-       data/flow-lines.bin  streamlines of the Cosmicflows-4 velocity field, coloured by watershed basin — warm for
-                            Laniakea (basin 1), cool for its neighbours. A slow pulse travels downstream: the flow.
+       data/flow-lines.bin  streamlines of the Cosmicflows-4 velocity field — one from every cell of its published grid,
+                            all of them drawn — coloured by watershed basin: warm for Laniakea (basin 1), cool for
+                            its neighbours. A slow brighter stretch travels downstream: the flow.
        data/web-spines.bin  ridge lines of the site's own galaxy density field: the skeleton of the cosmic web.
      The browser only draws segments — the velocity field never leaves the bake. Alpha-gate output as the volumes. */
   function makeLineLayer(name, buf, AX, AY, AZ, K, opt) {
@@ -1546,10 +1563,9 @@ export function buildNatalSky(THREE, scene, data, opts) {
         "void main(){",
         "  float prof = exp(-3.2 * vE * vE);",
         "  float pulse = 1.0;",
-        // a flow is drawn as what moves, not as a wire: short lit stretches drifting downstream, comet-shaped (a soft
-        // tail, a brighter head), with the path between them only a breath of light. Whole streamlines, drawn solid,
-        // bury the structure under a tangle of hair.
-        "  if (uFlow > 0.5) { float ph = fract(vT * 0.0125 - uTime * 0.040); pulse = smoothstep(0.80, 0.975, ph) * (1.0 - smoothstep(0.975, 1.0, ph)); }",
+        // a flow line is drawn WHOLE (the owner wants the data's real lines, not an impression of them); what moves
+        // along it is only a slightly brighter stretch drifting downstream, so the direction of the flow can be read
+        "  if (uFlow > 0.5) { float ph = fract(vT * 0.0125 - uTime * 0.040); pulse = 0.46 + 0.54 * smoothstep(0.80, 0.975, ph) * (1.0 - smoothstep(0.975, 1.0, ph)); }",
         "  vec3 D = vC * (vB * prof * pulse * uFade * uGain);",
         "  float L = max(D.r, max(D.g, D.b)); if (L < 0.0004) discard;",
         "  float a = sqrt(min(L, 1.0)); vec2 fc = gl_FragCoord.xy;",
@@ -3228,22 +3244,22 @@ export function buildNatalSky(THREE, scene, data, opts) {
   function ensureCosmicWeb() { if (_webBuilt) return; _webBuilt = true; if (!_NOLSS) _buildQ.push(function () { buildLargeScaleStructure(o.lss); }); }
   function ensureUniverse() { if (_uniBuilt) return; _uniBuilt = true; _buildQ.push(buildObservableUniverse, buildBeyondHorizonBoundary); }          // CMB horizon shell (the outer boundary beyond the mapped structure)
 
-  /* ---------------- constellation names: IN-SCENE Songti sprites (same craft as the 干支 glyphs) ---------------- */
+  /* ---------------- constellation names: IN-SCENE serif sprites (Noto Serif SC / Newsreader, both open-licence) ---------------- */
   function nameTexture(zh, en, key, loc) {
     var cv = document.createElement("canvas"); cv.width = 512; cv.height = 224;
-    var ctx = cv.getContext("2d"); ctx.clearRect(0, 0, 512, 224);
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    if (loc === "zh") {
+    var ctx = cv.getContext("2d");
+    var spec = (key ? "600 " : "500 ") + (loc === "zh" ? '76px "Noto Serif SC",serif' : '54px "Newsreader","Noto Serif","Noto Serif SC",serif');
+    var text = loc === "zh" ? zh : en.toUpperCase();
+    function paint() {
+      ctx.clearRect(0, 0, 512, 224);
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillStyle = key ? "rgba(236,147,118,0.98)" : "rgba(216,204,186,0.85)";
-      ctx.font = (key ? "600 " : "500 ") + '76px "Songti SC","STSong","Noto Serif SC",serif';
-      ctx.fillText(zh, 256, 112);
-    } else {
-      ctx.fillStyle = key ? "rgba(236,147,118,0.98)" : "rgba(216,204,186,0.85)";
-      ctx.font = (key ? "600 " : "500 ") + '54px "Newsreader",Georgia,serif';
-      ctx.fillText(en.toUpperCase(), 256, 112);
+      ctx.font = spec; ctx.fillText(text, 256, 112);
     }
+    paint();
     var tx = new T.CanvasTexture(cv);
     if ("colorSpace" in tx && T.SRGBColorSpace) tx.colorSpace = T.SRGBColorSpace;
+    whenFont(spec, text, function () { paint(); tx.needsUpdate = true; });
     return tx;
   }
   function makeNameSprite(zh, en, key, loc) {

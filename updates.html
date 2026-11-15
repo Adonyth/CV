@@ -17,26 +17,27 @@
   <link rel="alternate" type="application/rss+xml" title="Jiaxuan Chen — Latest" href="/updates.xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Serif:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Symbols:wght@400;700&family=Noto+Sans+Symbols+2&family=Noto+Sans+Math&family=Noto+Sans+Mono&text=%E2%86%97%E2%9C%A6%E2%8C%82%E2%A7%89%E2%9F%B6%E2%9F%B5%E2%98%89%E2%98%BD%E2%98%BF%E2%99%80%E2%99%82%E2%99%83%E2%99%84%E2%81%BB%E2%81%BA%E2%81%B0%E2%81%B4%E2%81%B5%E2%81%B6%E2%81%B7%E2%81%B8%E2%81%B9&display=swap" />
   <style>
     *{margin:0;box-sizing:border-box}
-    body{background:#0b0a09;color:#e9e0d2;font-family:'Newsreader',Georgia,serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+    body{background:#0b0a09;color:#e9e0d2;font-family:'Newsreader','Noto Serif','Noto Serif SC',serif;line-height:1.6;-webkit-font-smoothing:antialiased}
     .wrap{max-width:760px;margin:0 auto;padding:64px 24px 96px}
     .chrome{display:flex;justify-content:space-between;align-items:center;margin-bottom:40px}
-    .back{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.05em;color:#b9ab93;text-decoration:none;
+    .back{font-family:'JetBrains Mono','Noto Sans SC','Noto Sans Symbols','Noto Sans Math',monospace;font-size:12px;letter-spacing:.05em;color:#b9ab93;text-decoration:none;
       border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:9px 16px;transition:color .2s ease,border-color .2s ease,background .2s ease}
     .back:hover{color:#e6b989;border-color:#e0876a}
-    .lang button{background:none;border:0;color:#8f8067;font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;padding:4px 6px}
+    .lang button{background:none;border:0;color:#8f8067;font-family:'JetBrains Mono','Noto Sans SC','Noto Sans Symbols','Noto Sans Math',monospace;font-size:12px;cursor:pointer;padding:4px 6px}
     .lang button[aria-pressed="true"]{color:#f4ecdf}
-    .eyebrow{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;color:#e0876a;margin-bottom:10px}
-    h1{font-family:'Newsreader',Georgia,serif;font-size:clamp(31px,2.2rem + 1.1vw,46px);font-weight:500;letter-spacing:-.01em;margin-bottom:8px}
+    .eyebrow{font-family:'JetBrains Mono','Noto Sans SC','Noto Sans Symbols','Noto Sans Math',monospace;font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;color:#e0876a;margin-bottom:10px}
+    h1{font-family:'Newsreader','Noto Serif','Noto Serif SC',serif;font-size:clamp(31px,2.2rem + 1.1vw,46px);font-weight:500;letter-spacing:-.01em;margin-bottom:8px}
     .sub{color:#b9ab93;margin-bottom:40px}
-    .rss{color:#8f8067;font-family:'JetBrains Mono',monospace;font-size:12px;text-decoration:none}
+    .rss{color:#8f8067;font-family:'JetBrains Mono','Noto Sans SC','Noto Sans Symbols','Noto Sans Math',monospace;font-size:12px;text-decoration:none}
     .rss:hover{color:#e0876a}
     ol{list-style:none}
     li{padding:22px 0;border-top:1px solid rgba(255,255,255,.09);display:flex;gap:22px;flex-wrap:wrap}
     li:first-child{border-top:0}
-    .date{font-family:'JetBrains Mono',monospace;font-size:13px;color:#9a8a6f;min-width:88px;padding-top:3px;letter-spacing:.02em}
+    .date{font-family:'JetBrains Mono','Noto Sans SC','Noto Sans Symbols','Noto Sans Math',monospace;font-size:13px;color:#9a8a6f;min-width:88px;padding-top:3px;letter-spacing:.02em}
     .body{flex:1;min-width:240px}
     .body a.go{color:inherit;text-decoration:none;border-bottom:1px solid rgba(224,150,90,.35)}
     .body a.go:hover{color:#e6b989;border-color:#e6b989}
@@ -49,7 +50,7 @@
     .foot{margin-top:64px;}
     .foot__rule{height:1px; background:rgba(255,255,255,.08); margin-bottom:22px;}
     .foot__nav{display:flex; flex-wrap:wrap; gap:12px 20px; align-items:baseline;}
-    .foot__nav a, .foot__nav span.lbl{font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.06em; color:#8f8067; text-decoration:none;}
+    .foot__nav a, .foot__nav span.lbl{font-family:'JetBrains Mono','Noto Sans SC','Noto Sans Symbols','Noto Sans Math',monospace; font-size:12px; letter-spacing:.06em; color:#8f8067; text-decoration:none;}
     .foot__nav a:hover{color:#e0876a;} .foot__nav a.cur{color:#f4ecdf;}
     .foot__nav .lbl{font-size:11px; color:#e8c37a; text-transform:uppercase; letter-spacing:.14em;}
     /* language toggle as the same pill the other pages use */
@@ -57,7 +58,7 @@
     .lang button{border-radius:999px; padding:6px 11px; letter-spacing:.06em;}
     .lang button[aria-pressed="true"]{background:#e0876a; color:#1a1109;}
   </style>
-  <link rel="stylesheet" href="craft.css?v=4" />
+  <link rel="stylesheet" href="craft.css?v=5" />
 </head>
 <body>
   <div class="wrap">
@@ -97,6 +98,6 @@
   </script>
   <script src="/magnet.js?v=2"></script>
   <script src="/craft.js?v=2" defer></script>
-  <script src="/search.js?v=8" defer></script>
+  <script src="/search.js?v=9" defer></script>
 </body>
 </html>

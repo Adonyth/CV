@@ -38,7 +38,7 @@ def work_li(w):
 
 
 parts = ['<noscript><div class="site-index" style="max-width:820px;margin:0 auto;padding:56px 24px;'
-         'font-family:Georgia,serif;color:#e9e0d2;background:#0b0a09;line-height:1.7">',
+         'font-family:\'Newsreader\',\'Noto Serif SC\',serif;color:#e9e0d2;background:#0b0a09;line-height:1.7">',
          '<h1>Jiaxuan Chen · 陈嘉轩</h1>',
          f'<p><a href="cv.html">CV / 履历</a> · <a href="cv.pdf">Detailed CV PDF / 详细简历（{cv_date()}）</a></p>']
 

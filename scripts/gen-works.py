@@ -42,8 +42,8 @@ CSS = """
   --accent:#e0876a; --gold:#e8c37a; --hairline:rgba(255,255,255,.10);
   /* added: one reading-contrast step, a same-hue tint of the locked ramp */
   --read:#cbc4b6;
-  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
-  --serif:"Newsreader",Georgia,"Songti SC",serif;
+  --mono:"JetBrains Mono","Noto Sans SC","Noto Sans Symbols","Noto Sans Symbols 2","Noto Sans Math","Noto Sans Mono",monospace;
+  --serif:"Newsreader","Noto Serif","Noto Serif SC","Noto Sans Symbols","Noto Sans Symbols 2","Noto Sans Math","Noto Sans Mono",serif;
   /* the single 8px spacing scale — kills 14/16/26/34/44/52 */
   --s0:4px; --s1:8px; --s2:12px; --s3:16px; --s4:24px;
   --s5:32px; --s6:48px; --s7:64px; --s8:96px; --s9:128px;
@@ -352,14 +352,15 @@ def page(title, body, depth=0, pager=False, desc="", path=None, jsonld=None):
   <meta name="twitter:card" content="summary_large_image" />{ld}
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Serif:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Symbols:wght@400;700&family=Noto+Sans+Symbols+2&family=Noto+Sans+Math&family=Noto+Sans+Mono&text=%E2%86%97%E2%9C%A6%E2%8C%82%E2%A7%89%E2%9F%B6%E2%9F%B5%E2%98%89%E2%98%BD%E2%98%BF%E2%99%80%E2%99%82%E2%99%83%E2%99%84%E2%81%BB%E2%81%BA%E2%81%B0%E2%81%B4%E2%81%B5%E2%81%B6%E2%81%B7%E2%81%B8%E2%81%B9&display=swap" />
   <style>{CSS}</style>
-  <link rel="stylesheet" href="{pre}craft.css?v=4" />
+  <link rel="stylesheet" href="{pre}craft.css?v=5" />
 </head>
 <body>
 {body}
   <script src="{pre}magnet.js?v=2"></script>
-  <script src="{pre}search.js?v=8" defer></script>
+  <script src="{pre}search.js?v=9" defer></script>
   <script src="{pre}craft.js?v=2" defer></script>
   <script>{LANG_JS}{keynav}</script>
 </body>
