@@ -1606,7 +1606,10 @@ export function mountNyeArmature(THREE, scene, opts) {
         return A.SiderealTime(A.MakeTime ? A.MakeTime(d) : d) * (Math.PI / 12);
       } catch (e) {}
     }
-    return (d.getUTCHours() + d.getUTCMinutes() / 60 + d.getUTCSeconds() / 3600) * (Math.PI / 12);
+    // Earth Rotation Angle (IERS): the armature is J2000 equatorial, so this needs no astronomy-engine. UT hours x 15
+    // (the old line) was solar time and turned the Earth up to ~180 deg away from the Sun's true side (checked 2026-11-20).
+    const days = d.getTime() / 86400000 + 2440587.5 - 2451545.0;
+    return ((360 * (0.7790572732640 + 1.00273781191135448 * days)) % 360) * (Math.PI / 180);
   }
 
   function sexagenaryIndex(stemIndex, branchIndex) {

@@ -2806,7 +2806,7 @@
     var _tsModsP = TRUE_SCALE
       ? Promise.all([import("./ephemeris.js?v=1"), import("./truescale.js?v=2")]).then(function (m) { return { eph: m[0], ladder: m[1] }; }).catch(function () { return null; })
       : Promise.resolve(null);
-    Promise.all([import("./nye-armature.js?v=56"), _tsModsP]).then(function (mods2) {
+    Promise.all([import("./nye-armature.js?v=57"), _tsModsP]).then(function (mods2) {
       var mod = mods2[0];
       _tsMods = mods2[1]; if (!_tsMods) _tsFailed = true;
       try {
